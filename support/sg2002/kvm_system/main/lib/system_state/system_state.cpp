@@ -37,6 +37,19 @@ int get_nic_state(const char* interface_name)
 	return ret;
 }
 
+static std::string uplink_name(void)
+{
+	std::ifstream file("/etc/kvm/network/l2-uplink");
+	std::string name;
+	if(file && std::getline(file, name)){
+		while(!name.empty() && (name.back() == '\r' || name.back() == '\n' || name.back() == ' ')){
+			name.pop_back();
+		}
+		if(!name.empty()) return name;
+	}
+	return "eth0";
+}
+
 int get_ping_allow_state(void)
 {
 	if(access("/etc/kvm/stop_ping", F_OK) == 0) {
@@ -52,15 +65,15 @@ int get_ip_addr(ip_addr_t ip_type)
 {
 	switch (ip_type){
 		case ETH_IP: // eth_addr
-			if(strcmp(ip_address()["eth0"].c_str(), (char*)kvm_sys_state.eth_addr) != 0){
-				if(*(ip_address()["eth0"].c_str()) == 0){
+			if(strcmp(ip_address()[uplink_name()].c_str(), (char*)kvm_sys_state.eth_addr) != 0){
+				if(*(ip_address()[uplink_name()].c_str()) == 0){
 					printf("can`t get ip addr\r\n");
 					kvm_sys_state.eth_addr[0] = 0;
 					return 0;
 				} 
 				for(int i = 0; i <= 15; i++)
 				{
-					kvm_sys_state.eth_addr[i] = *(ip_address()["eth0"].c_str() + i);
+					kvm_sys_state.eth_addr[i] = *(ip_address()[uplink_name()].c_str() + i);
 					printf("%c", kvm_sys_state.eth_addr[i]);
 				}
 				printf("\r\n");
@@ -113,7 +126,7 @@ int get_ip_addr(ip_addr_t ip_type)
 				memset( kvm_sys_state.eth_route, 0, sizeof( kvm_sys_state.eth_route ) );
 				char Cmd[100]={0};
 				memset( Cmd, 0, sizeof( Cmd ) );
-				sprintf( Cmd,"ip route | grep -i '^default' | grep -i 'eth0' | awk '{print $3}'");
+				sprintf( Cmd,"ip route | grep -i '^default' | grep -i '%s' | awk '{print $3}'", uplink_name().c_str());
 				FILE* fp = popen( Cmd, "r" );
 				if ( NULL == fp )
 				{
@@ -186,7 +199,7 @@ int get_ip_addr(ip_addr_t ip_type)
 int chack_net_state(ip_addr_t use_ip_type)
 {
 	char Cmd[100]={0};
-	if		(use_ip_type == ETH_ROUTE)  sprintf( Cmd,"ping -I eth0 -w 1 %s > /dev/null", kvm_sys_state.eth_route);
+	if		(use_ip_type == ETH_ROUTE)  sprintf( Cmd,"ping -I %s -w 1 %s > /dev/null", uplink_name().c_str(), kvm_sys_state.eth_route);
 	else if	(use_ip_type == WiFi_ROUTE) sprintf( Cmd,"ping -I wlan0 -w 1 %s > /dev/null", kvm_sys_state.wifi_route);
 	else return -1;	// 不支持的端口
 	if(system(Cmd) == 0){	// 256：不通； = 0：通
@@ -395,11 +408,11 @@ void kvm_update_hdmi_res(void)
 void kvm_update_eth_state(void)
 {	
 	static uint8_t nic_state = 0;
-	nic_state = get_nic_state("eth0");
+	nic_state = get_nic_state(uplink_name().c_str());
 
 	if(nic_state == NIC_STATE_RUNNING){
 		// Get IP
-		if(strcmp(ip_address()["eth0"].c_str(), (char*)kvm_sys_state.eth_addr) != 0){
+		if(strcmp(ip_address()[uplink_name()].c_str(), (char*)kvm_sys_state.eth_addr) != 0){
 			if(get_ip_addr(ETH_IP)){
 				kvm_sys_state.eth_state = 2;
 			} else {
