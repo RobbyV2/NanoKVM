@@ -38,6 +38,7 @@ And `S03usbdev stop` tears out the whole gadget, so the existing runtime toggle 
 | D7 | Two escape hatches are used rather than fought: write the current default gateway to `/etc/kvm/gateway`, which `system_state.cpp` already prefers over its `ip route` grep, and patch the two Go interface classifiers to treat `br*` as wired plus the four `system_state.cpp` sites to read the uplink name from `/etc/kvm/network/l2-uplink`. Detail below. |
 | D8 | The five `S95nanokvm` firewall rules are rewritten against the uplink name. `br_netfilter` is not loaded. Reasoning below. |
 | D9 | Dead-man rollback. Snapshot to disk before the first mutation, arm a pending marker with a deadline before mutating, restore unless disarmed, with a boot-time check so a power cut inside the window also recovers. Verification before disarming requires all three of an IPv4 address on `br0`, a default route through it whose gateway answers, and an inbound liveness proof. `wlan0` is never enslaved. |
+| D10 | The gadget network protocol is a USB profile choice, not a bridge one, and it is NCM or RNDIS. ECM is not offered: there is no `f_ecm` branch in `S03usbdev`, no `ecm` `FunctionKind`, no compile case and no capability entry anywhere in the tree, so a three-way selector would offer a mode the gadget layer cannot build. The two that exist are surfaced on the existing Virtual Network control under Settings, Device, driven by the presentation profile, because the choice decides what the gadget presents to the attached host whether or not a bridge exists. The bridge names the active protocol in its panel, read from the presentation snapshot, and offers no control that would duplicate that one. It enslaves whichever network function is present. |
 
 ## Kernel and image
 
@@ -149,7 +150,7 @@ Steps 1 through 12 hold the management address. Step 13 runs after the dead-man 
 10. Re-install the five `S95nanokvm` rules against `br0` and delete the five naming `eth0`.
 11. Verify. All three of the checks below must pass.
 12. Disarm. Remove `pending.json` and write `last-known-good.json` in one atomic sequence, marking the bridge enabled.
-13. Enslave `usb0`, if the profile has a gadget NIC. Ask the presentation manager to apply a profile carrying `ncm.usb0` or `rndis.usb0`, which adds one function symlink around a bind cycle and leaves HID untouched, then `ip link set usb0 master br0` and `ip link set usb0 up`. This step takes its own smaller snapshot and its own rollback, since its worst case is a host with no network rather than a device with no management plane.
+13. Enslave `usb0`, if the profile has a gadget NIC. `presentation.Manager.NIC` reports it, and reports none when no network function is linked into `configs/c.1`, which is probed rather than read off a `/boot` sentinel. Whether that function is `ncm.usb0` or `rndis.usb0` is D10's choice and not this step's: the bridge enslaves whichever is present, then `ip link set usb0 master br0` and `ip link set usb0 up`. This step takes its own smaller snapshot and its own rollback, since its worst case is a host with no network rather than a device with no management plane.
 
 ### Verification
 
@@ -200,6 +201,8 @@ Any failure restores the snapshot, restores `l2-uplink`, restores `/etc/kvm/gate
 | `support/sg2002/kvm_system/main/lib/system_state/system_state.cpp` | modify: one `uplink_name()` helper, four call sites |
 | `web/src/api/network/bridge.ts` | new |
 | `web/src/pages/desktop/menu/settings/network/` | modify: one toggle, one confirmation modal, one state panel |
+| `web/src/pages/desktop/menu/settings/device/virtual-devices.tsx` | modify: the NCM/RNDIS selector on the existing Virtual Network control, D10 |
+| `web/src/api/virtual-device.ts` | modify: an optional protocol on the update call |
 | `web/src/i18n/locales/*.ts` | modify: all 24 |
 
 The apply modal stays, on the same rule the other two programs use. Enabling the bridge moves the address the caller is talking to, so the action can cut the caller's own connection, and it is the kind of thing a modal exists for.
