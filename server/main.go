@@ -14,6 +14,7 @@ import (
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/router"
 	"NanoKVM-Server/service/bridge"
+	"NanoKVM-Server/service/passthrough"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
 	"NanoKVM-Server/utils"
@@ -35,6 +36,9 @@ func initialize() {
 	}
 
 	logger.Init()
+	if err := passthrough.GetManager().Recover(); err != nil {
+		log.Printf("recover usb passthrough: %v", err)
+	}
 
 	// init screen parameters
 	_ = common.GetScreen()
@@ -127,5 +131,8 @@ func run() {
 }
 
 func dispose() {
+	if err := passthrough.GetManager().Close(); err != nil {
+		log.Printf("stop usb passthrough: %v", err)
+	}
 	common.GetKvmVision().Close()
 }

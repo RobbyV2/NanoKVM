@@ -214,6 +214,60 @@ func (m *Manager) SetLUN(ctx context.Context, lun LUN) error {
 	return m.withGadgetLock(func() error { return m.setLUN(ctx, lun) })
 }
 
+// Raw-gadget runs on the same UDC and udc->driver is a single pointer, so
+// passthrough can only start once this gadget is unbound. HID is closed and
+// stays closed: f_hid deletes /dev/hidgN in hidg_unbind, so there is nothing to
+// reopen until ReclaimUDC binds again, which is why this is not withGadgetLock.
+func (m *Manager) SurrenderUDC() (string, error) {
+	if err := m.ready(); err != nil {
+		return "", err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	udcs, err := m.ops.ListUDC()
+	if err != nil {
+		return "", fmt.Errorf("surrender udc: %w", err)
+	}
+
+	h := m.quiescer()
+	if h != nil {
+		h.Lock()
+		h.CloseNoLock()
+		h.Unlock()
+	}
+	// The unbind is what makes the closed devices unreopenable. If it fails the
+	// gadget still owns the UDC and /dev/hidgN is still there, so leaving the
+	// devices closed would cost a keyboard for a session that never started.
+	if err := m.ops.UnbindUDC(); err != nil {
+		return "", errors.Join(fmt.Errorf("surrender udc: %w", err), reopenHID(h))
+	}
+	return udcs[0], nil
+}
+
+func (m *Manager) ReclaimUDC() error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+	return m.withGadgetLock(m.bind)
+}
+
+func (m *Manager) UDCBound() (bool, error) {
+	if err := m.ready(); err != nil {
+		return false, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	data, err := m.ops.ReadFile(udcAttr)
+	if err != nil {
+		return false, fmt.Errorf("read %s: %w", udcAttr, err)
+	}
+	return strings.TrimSpace(string(data)) != "", nil
+}
+
 func (m *Manager) Rebind(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
@@ -299,6 +353,19 @@ func (m *Manager) withHIDQuiesced(fn func() error) (err error) {
 		}
 	}()
 	return fn()
+}
+
+func reopenHID(h HIDQuiescer) error {
+	if h == nil {
+		return nil
+	}
+
+	h.Lock()
+	defer h.Unlock()
+	if err := h.OpenNoLockWithRetry(hidQuiesceTimeout, hidQuiesceRetryDelay); err != nil {
+		return fmt.Errorf("reopen hid devices: %w", err)
+	}
+	return nil
 }
 
 func (m *Manager) quiescer() HIDQuiescer {

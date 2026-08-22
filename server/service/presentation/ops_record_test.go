@@ -14,6 +14,7 @@ type RecordOps struct {
 	dirs   map[string]bool
 	links  map[string]string
 	udcs   []string
+	unbind error
 	bound  string
 	role   string
 	resets int
@@ -173,9 +174,19 @@ func (r *RecordOps) BindUDC(name string) error {
 	return nil
 }
 
+func (r *RecordOps) FailUnbind(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.unbind = err
+}
+
 func (r *RecordOps) UnbindUDC() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if r.unbind != nil {
+		return r.unbind
+	}
 	r.record(Op{Kind: OpUnbind, Path: udcAttr})
 	r.files[udcAttr] = []byte(emptyUDCName)
 	r.bound = ""

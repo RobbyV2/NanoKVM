@@ -2,6 +2,9 @@ package presentation
 
 import (
 	"context"
+	"errors"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -122,5 +125,84 @@ func TestSnapshotReportsTheEndpointBudget(t *testing.T) {
 	}
 	if snapshot.Headroom != (EndpointUse{}) {
 		t.Fatalf("headroom = %+v, want none left", snapshot.Headroom)
+	}
+}
+
+// SurrenderUDC indexes udcs[0] the way apply and bind do, so ListUDC refusing
+// anything but exactly one entry is the only thing keeping that index in range.
+// The check runs before the gadget is touched, so a failure leaves it bound.
+func TestSurrenderUDCFailsWhenTheUDCIsGone(t *testing.T) {
+	manager, ops := newTestManager(t)
+	hid := &fakeHID{}
+	manager.SetHID(hid)
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("reclaim udc: %v", err)
+	}
+
+	quiesced := len(hid.Events())
+
+	ops.SetUDC()
+	udc, err := manager.SurrenderUDC()
+	if !errors.Is(err, ErrUDCCount) {
+		t.Fatalf("err = %v, want the udc count error", err)
+	}
+	if udc != "" {
+		t.Fatalf("udc = %q, want empty", udc)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+	if events := hid.Events(); len(events) != quiesced {
+		t.Fatalf("hid events = %v, want the %d from the bind", events, quiesced)
+	}
+}
+
+// The close happens before the unbind, so an unbind that fails has taken the
+// keyboard away for a session that never starts. The devices have to come back.
+func TestSurrenderUDCReopensHIDWhenTheUnbindFails(t *testing.T) {
+	manager, ops := newTestManager(t)
+	hid := &fakeHID{}
+	manager.SetHID(hid)
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("reclaim udc: %v", err)
+	}
+
+	quiesced := len(hid.Events())
+	refused := errors.New("device or resource busy")
+	ops.FailUnbind(refused)
+
+	if _, err := manager.SurrenderUDC(); !errors.Is(err, refused) {
+		t.Fatalf("err = %v, want %v", err, refused)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+
+	events := hid.Events()
+	closed := slices.Index(events[quiesced:], "close")
+	reopened := slices.IndexFunc(events[quiesced:], func(event string) bool {
+		return strings.HasPrefix(event, "open ")
+	})
+	if closed < 0 || reopened < closed {
+		t.Fatalf("hid events = %v, want a close then a reopen after the bind", events)
+	}
+}
+
+func TestUDCBoundTracksSurrenderAndReclaim(t *testing.T) {
+	manager, _ := newTestManager(t)
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("reclaim: %v", err)
+	}
+	if bound, err := manager.UDCBound(); err != nil || !bound {
+		t.Fatalf("bound after reclaim = %t, %v, want true", bound, err)
+	}
+	if _, err := manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+	if bound, err := manager.UDCBound(); err != nil || bound {
+		t.Fatalf("bound after surrender = %t, %v, want false", bound, err)
 	}
 }

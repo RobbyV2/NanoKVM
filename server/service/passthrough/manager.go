@@ -1,0 +1,521 @@
+package passthrough
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
+
+	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/presentation"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	proxyLog = "/tmp/usb-proxy.log"
+
+	portsPerHub    = 8
+	locateTimeout  = 5 * time.Second
+	locateInterval = 100 * time.Millisecond
+	stopTimeout    = 5 * time.Second
+)
+
+var udcClassDir = "/sys/class/udc"
+
+var (
+	ErrSessionActive = errors.New("passthrough: a session is already running")
+	ErrNoSession     = errors.New("passthrough: no session is running")
+	ErrRefusedBinary = errors.New("passthrough: refusing to run")
+	ErrNotEnumerated = errors.New("passthrough: the imported device did not enumerate")
+	ErrAmbiguous     = errors.New("passthrough: imported device location is ambiguous")
+	ErrDescriptors   = errors.New("passthrough: cannot validate USB descriptors")
+	ErrIsochronous   = errors.New("passthrough: isochronous devices are not supported")
+	ErrNoUDCDriver   = errors.New("passthrough: cannot resolve the udc driver")
+)
+
+// The presentation manager owns configfs and the gadget lock, so the UDC is
+// taken and given back through it rather than through a second writer.
+type Gadget interface {
+	SurrenderUDC() (string, error)
+	ReclaimUDC() error
+	UDCBound() (bool, error)
+}
+
+type VHCI interface {
+	Attach(ctx context.Context, exporter string, busID string) (Attachment, error)
+	Detach(port uint32) error
+	Locate(ctx context.Context, attachment Attachment) (Local, error)
+}
+
+type Process interface {
+	Pid() int
+	Terminate() error
+	Wait() error
+}
+
+type Spawner interface {
+	Start(argv []string) (Process, error)
+}
+
+// Where the imported device landed on this device's own host stack. usb-proxy
+// opens it through libusb, so what it needs is the local bus and address and
+// not the exporter's.
+type Local struct {
+	Bus     uint32
+	Address uint32
+	Path    string
+}
+
+type Session struct {
+	Exporter  string
+	BusID     string
+	UDC       string
+	Port      uint32
+	Hub       Hub
+	Device    Device
+	Local     Local
+	Pid       int
+	StartedAt time.Time
+
+	proc Process
+	done chan struct{}
+	err  error
+}
+
+type Manager struct {
+	gadget  Gadget
+	vhci    VHCI
+	proxy   Spawner
+	modules ModuleLoader
+	orphans func() error
+
+	mu      sync.Mutex
+	session *Session
+}
+
+var (
+	managerOnce    sync.Once
+	defaultManager *Manager
+)
+
+func GetManager() *Manager {
+	managerOnce.Do(func() {
+		defaultManager = NewManager(presentation.GetManager(), kernelVHCI{}, execSpawner{}, Insmod{})
+	})
+	return defaultManager
+}
+
+func NewManager(gadget Gadget, vhci VHCI, proxy Spawner, modules ModuleLoader) *Manager {
+	return &Manager{
+		gadget:  gadget,
+		vhci:    vhci,
+		proxy:   proxy,
+		modules: modules,
+		orphans: stopProxyOrphans,
+	}
+}
+
+// Passthrough is a mode, like the normal and hid-only split: raw-gadget and the
+// configfs gadget cannot share a UDC, so starting one surrenders the keyboard,
+// the mouse and the virtual media for its duration.
+func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session != nil {
+		return nil, ErrSessionActive
+	}
+	binary, err := installProxy()
+	if err != nil {
+		return nil, err
+	}
+	if err := m.modules.Load(sessionModules...); err != nil {
+		return nil, err
+	}
+
+	attachment, err := m.vhci.Attach(ctx, exporter, busID)
+	if err != nil {
+		return nil, err
+	}
+	state := recoveryState{Port: attachment.Port}
+	if err := saveRecoveryState(state); err != nil {
+		return nil, errors.Join(err, m.vhci.Detach(attachment.Port))
+	}
+
+	local, err := m.vhci.Locate(ctx, attachment)
+	if err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+	if err := validateDescriptors(local.Path); err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+
+	state.Reclaim = true
+	if err := saveRecoveryState(state); err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+
+	udc, err := m.gadget.SurrenderUDC()
+	if err != nil {
+		return nil, errors.Join(err, m.restore(state))
+	}
+
+	driver, err := udcDriver(udc)
+	if err != nil {
+		return nil, errors.Join(err, m.restore(state))
+	}
+
+	proc, err := m.proxy.Start(proxyArgv(binary, udc, driver, local))
+	if err != nil {
+		return nil, errors.Join(err, m.restore(state))
+	}
+
+	session := &Session{
+		Exporter:  exporter,
+		BusID:     busID,
+		UDC:       udc,
+		Port:      attachment.Port,
+		Hub:       attachment.Hub,
+		Device:    attachment.Device,
+		Local:     local,
+		Pid:       proc.Pid(),
+		StartedAt: time.Now(),
+		proc:      proc,
+		done:      make(chan struct{}),
+	}
+	m.session = session
+
+	go m.supervise(session)
+	log.Debugf("passthrough: %s from %s on port %d, pid %d", busID, exporter, session.Port, session.Pid)
+	return session, nil
+}
+
+func (m *Manager) Stop() error {
+	m.mu.Lock()
+	session := m.session
+	m.mu.Unlock()
+
+	if session == nil {
+		return ErrNoSession
+	}
+	if err := session.proc.Terminate(); err != nil {
+		return err
+	}
+
+	<-session.done
+	return session.err
+}
+
+func (m *Manager) Close() error {
+	m.mu.Lock()
+	active := m.session != nil
+	m.mu.Unlock()
+	if !active {
+		return nil
+	}
+	return m.Stop()
+}
+
+func (m *Manager) Recover() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session != nil {
+		return ErrSessionActive
+	}
+	state, err := loadRecoveryState()
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return errors.Join(err, m.orphans())
+	}
+	if err := m.orphans(); err != nil {
+		return err
+	}
+	return m.restore(state)
+}
+
+// The watchdog. A crashed proxy takes the keyboard and the mouse with it, so
+// the restore hangs off the proxy's exit and covers a stop, an unexpected exit
+// and a crash with one path.
+func (m *Manager) supervise(session *Session) {
+	waitErr := session.proc.Wait()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session.err = m.restore(recoveryState{Port: session.Port, Reclaim: true})
+	if m.session == session {
+		m.session = nil
+	}
+	if waitErr != nil {
+		log.Warnf("passthrough: usb-proxy exited: %s", waitErr)
+	}
+	if session.err != nil {
+		log.Errorf("passthrough: restore after usb-proxy exited: %s", session.err)
+	}
+	close(session.done)
+}
+
+// The gadget comes back before the port goes away: a user without a keyboard is
+// a worse state than a vhci port that outlives its proxy by a moment.
+func (m *Manager) restore(state recoveryState) error {
+	bound, boundErr := m.gadget.UDCBound()
+	var reclaimErr error
+	if boundErr == nil && state.Reclaim && !bound {
+		reclaimErr = m.gadget.ReclaimUDC()
+	}
+	detachErr := m.vhci.Detach(state.Port)
+	err := errors.Join(boundErr, reclaimErr, detachErr)
+	if err == nil {
+		err = clearRecoveryState()
+	}
+	return err
+}
+
+func (m *Manager) detach(state recoveryState) error {
+	err := m.vhci.Detach(state.Port)
+	if err == nil {
+		err = clearRecoveryState()
+	}
+	return err
+}
+
+func (m *Manager) Status() proto.GetPassthroughRsp {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session := m.session
+	if session == nil {
+		return proto.GetPassthroughRsp{}
+	}
+	return proto.GetPassthroughRsp{
+		Active:         true,
+		Exporter:       session.Exporter,
+		UDC:            session.UDC,
+		Port:           session.Port,
+		Hub:            string(session.Hub),
+		Bus:            session.Local.Bus,
+		Address:        session.Local.Address,
+		Pid:            session.Pid,
+		HIDSurrendered: true,
+		StartedAt:      session.StartedAt,
+		Device: &proto.PassthroughDevice{
+			BusID:     session.BusID,
+			IDVendor:  hex4(session.Device.IDVendor),
+			IDProduct: hex4(session.Device.IDProduct),
+			Speed:     session.Device.Speed.String(),
+			Class:     session.Device.DeviceClass,
+		},
+	}
+}
+
+// usb-proxy matches on vendor and product id, which would just as happily bind
+// a local device carrying the same pair, so the imported device is named by the
+// bus and address vhci gave it. Every element here is a number from the import
+// or a name read out of sysfs; no request string reaches an argv.
+func proxyArgv(binary string, udc string, driver string, local Local) []string {
+	return []string{
+		binary,
+		"--device", udc,
+		"--driver", driver,
+		"--device_bus", strconv.FormatUint(uint64(local.Bus), 10),
+		"--device_addr", strconv.FormatUint(uint64(local.Address), 10),
+		"--auto_remap_endpoints",
+	}
+}
+
+// raw-gadget is opened against a UDC name and its driver name, and the default
+// is the dummy_udc pair. The driver is read back rather than hardcoded so it
+// cannot drift from the device the presentation manager just unbound.
+func udcDriver(udc string) (string, error) {
+	target, err := os.Readlink(filepath.Join(udcClassDir, udc, "device", "driver"))
+	if err != nil {
+		return "", fmt.Errorf("%w for %s: %w", ErrNoUDCDriver, udc, err)
+	}
+
+	driver := filepath.Base(target)
+	if driver == "." || driver == string(filepath.Separator) {
+		return "", fmt.Errorf("%w for %s: %q", ErrNoUDCDriver, udc, target)
+	}
+	return driver, nil
+}
+
+type kernelVHCI struct{}
+
+func (kernelVHCI) Attach(ctx context.Context, exporter string, busID string) (Attachment, error) {
+	return Attach(ctx, exporter, busID)
+}
+
+func (kernelVHCI) Detach(port uint32) error {
+	return Detach(port)
+}
+
+func (kernelVHCI) Locate(ctx context.Context, attachment Attachment) (Local, error) {
+	return locate(ctx, attachment)
+}
+
+// vhci hands the device to the local host stack, which enumerates it and gives
+// it a bus and address of its own. Ports 0..7 are the hs root hub's 1..8 and
+// 8..15 are the ss root hub's, so the port index is what ties an attachment
+// back to a sysfs device.
+func locate(ctx context.Context, attachment Attachment) (Local, error) {
+	devpath := strconv.FormatUint(uint64(attachment.Port%portsPerHub+1), 10)
+	deadline := time.Now().Add(locateTimeout)
+
+	for {
+		local, err := findLocal(devpath, attachment.Hub, attachment.Device)
+		if err == nil {
+			return local, nil
+		}
+		if ctx.Err() != nil || time.Now().After(deadline) {
+			return Local{}, err
+		}
+
+		select {
+		case <-ctx.Done():
+		case <-time.After(locateInterval):
+		}
+	}
+}
+
+func findLocal(devpath string, hub Hub, device Device) (Local, error) {
+	matches, err := filepath.Glob(filepath.Join(vhciRoot, "usb*", "*-*"))
+	if err != nil {
+		return Local{}, fmt.Errorf("scan %s: %w", vhciRoot, err)
+	}
+
+	var found []Local
+	for _, dir := range matches {
+		if attribute(dir, "devpath") != devpath {
+			continue
+		}
+		rootSpeed, err := strconv.ParseFloat(attribute(filepath.Dir(dir), "speed"), 64)
+		if err != nil || (rootSpeed >= 5000) != (hub == HubSuper) {
+			continue
+		}
+		if attribute(dir, "idVendor") != hex4(device.IDVendor) || attribute(dir, "idProduct") != hex4(device.IDProduct) {
+			continue
+		}
+
+		bus, busErr := strconv.ParseUint(attribute(dir, "busnum"), 10, 32)
+		address, addressErr := strconv.ParseUint(attribute(dir, "devnum"), 10, 32)
+		if err := errors.Join(busErr, addressErr); err != nil {
+			return Local{}, fmt.Errorf("read bus and address of %s: %w", dir, err)
+		}
+		found = append(found, Local{Bus: uint32(bus), Address: uint32(address), Path: dir})
+	}
+	if len(found) > 1 {
+		return Local{}, fmt.Errorf("%w: %s on the %s root port %s", ErrAmbiguous, device.BusID, hub, devpath)
+	}
+	if len(found) == 1 {
+		return found[0], nil
+	}
+	return Local{}, fmt.Errorf("%w: %s on root port %s", ErrNotEnumerated, device.BusID, devpath)
+}
+
+func attribute(dir string, name string) string {
+	data, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func validateDescriptors(devicePath string) error {
+	raw, err := os.ReadFile(filepath.Join(devicePath, "descriptors"))
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrDescriptors, err)
+	}
+	for offset := 0; offset < len(raw); {
+		if len(raw)-offset < 2 {
+			return fmt.Errorf("%w: truncated descriptor at %d", ErrDescriptors, offset)
+		}
+		length := int(raw[offset])
+		if length < 2 || offset+length > len(raw) {
+			return fmt.Errorf("%w: invalid length %d at %d", ErrDescriptors, length, offset)
+		}
+		if raw[offset+1] == 5 {
+			if length < 4 {
+				return fmt.Errorf("%w: truncated endpoint at %d", ErrDescriptors, offset)
+			}
+			if raw[offset+3]&0x03 == 0x01 {
+				return ErrIsochronous
+			}
+		}
+		offset += length
+	}
+	return nil
+}
+
+func hex4(value uint16) string {
+	return fmt.Sprintf("%04x", value)
+}
+
+type execSpawner struct{}
+
+// The single spawn point, taking an already split argv the way bridge's
+// Commander does, so a string that somehow reached here still cannot name a
+// binary the design did not intend.
+func (execSpawner) Start(argv []string) (Process, error) {
+	if len(argv) == 0 || argv[0] != proxyBinary {
+		return nil, fmt.Errorf("%w: %v", ErrRefusedBinary, argv)
+	}
+
+	file, err := os.OpenFile(proxyLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", proxyLog, err)
+	}
+
+	// Not CommandContext: the proxy outlives the request that started it, and
+	// its lifetime is the session the watchdog supervises.
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Stdout, cmd.Stderr = file, file
+
+	if err := cmd.Start(); err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("start %s: %w", argv[0], err)
+	}
+	return &execProcess{cmd: cmd, log: file}, nil
+}
+
+type execProcess struct {
+	cmd    *exec.Cmd
+	log    *os.File
+	exited atomic.Bool
+}
+
+func (p *execProcess) Pid() int {
+	return p.cmd.Process.Pid
+}
+
+func (p *execProcess) Terminate() error {
+	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("terminate usb-proxy: %w", err)
+	}
+
+	time.AfterFunc(stopTimeout, func() {
+		if p.exited.Load() {
+			return
+		}
+		_ = p.cmd.Process.Kill()
+	})
+	return nil
+}
+
+func (p *execProcess) Wait() error {
+	err := p.cmd.Wait()
+	p.exited.Store(true)
+	_ = p.log.Close()
+	return err
+}
