@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/utils"
 )
 
 // ---------------------------------------------------------------------------
@@ -889,6 +890,176 @@ func TestRecoverPendingWithNoSnapshot(t *testing.T) {
 	}
 	if !errors.Is(err, ErrNoSnapshot) {
 		t.Fatalf("RecoverPending = %v, want ErrNoSnapshot", err)
+	}
+}
+
+// bootRestore is what S29bridge does to the store: it restored the device
+// itself, because it has to run before S30eth addresses anything, and moves the
+// armed marker aside rather than deleting it.
+func bootRestore(t *testing.T, h *harness) {
+	t.Helper()
+
+	if err := os.Remove(uplinkPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("remove uplink: %v", err)
+	}
+	if err := os.Remove(h.store.lastKnownGoodPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("remove last-known-good: %v", err)
+	}
+	if err := os.Rename(h.store.pendingPath(), h.store.recoveredPath()); err != nil {
+		t.Fatalf("move the marker aside: %v", err)
+	}
+}
+
+// The record the shell leaves has to survive to the server, which starts sixty
+// scripts later. Deleting it loses the only account of why the device is back
+// on eth0, and a GET after a power cut mid-apply reports a bare disabled that
+// an operator cannot tell from a bridge that was never enabled.
+func TestTheBootRestoreLeavesAnOutcomeTheServerReports(t *testing.T) {
+	h := newHarness(t)
+
+	armed := Pending{
+		Operation:    operationEnable,
+		SnapshotPath: h.store.SnapshotPath(),
+		ArmedAt:      h.clock,
+		Deadline:     h.clock.Add(DefaultWindow),
+	}
+	if err := h.store.Arm(armed); err != nil {
+		t.Fatalf("Arm: %v", err)
+	}
+	if err := WriteUplink(BridgeName); err != nil {
+		t.Fatalf("WriteUplink: %v", err)
+	}
+
+	bootRestore(t, h)
+
+	// The moved marker is the armed one verbatim, which is what lets the shell
+	// leave a record without authoring a file.
+	recovered, err := h.store.Recovered()
+	if err != nil || recovered == nil {
+		t.Fatalf("Recovered = %v, %v, want the marker S29bridge moved aside", recovered, err)
+	}
+	if recovered.Operation != armed.Operation || !recovered.ArmedAt.Equal(armed.ArmedAt) {
+		t.Fatalf("recovered marker = %+v, want %+v", *recovered, armed)
+	}
+
+	adopted, err := h.mgr.RecoverPending(context.Background())
+	if err != nil {
+		t.Fatalf("RecoverPending: %v", err)
+	}
+	if !adopted {
+		t.Fatal("the server ignored the record S29bridge left")
+	}
+
+	// The shell already put the interfaces back; the server touches none.
+	if len(h.net.trace()) != 0 {
+		t.Fatalf("adopting the record ran %v", h.net.trace())
+	}
+
+	status, err := h.mgr.Status(context.Background())
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if status.LastApply == nil {
+		t.Fatal("GET reports no lastApply after a power cut mid-apply")
+	}
+	if status.State != proto.BridgeRolledBack || status.LastApply.Enabled {
+		t.Fatalf("GET reports %+v, want a rolled-back disable", status.LastApply)
+	}
+	if !strings.Contains(status.LastApply.Message, operationEnable) {
+		t.Errorf("message %q does not name the interrupted operation", status.LastApply.Message)
+	}
+	if status.Uplink != StockUplink {
+		t.Fatalf("uplink = %q, want eth0", status.Uplink)
+	}
+}
+
+// The second boot after the cut. The marker is gone, so S29bridge restores
+// nothing, and the outcome the server adopted says disabled, so the script's
+// enabled check does not re-create br0 either.
+func TestASecondBootNeitherRestoresNorAdoptsAgain(t *testing.T) {
+	h := newHarness(t)
+
+	if err := h.store.Arm(Pending{
+		Operation: operationDisable, SnapshotPath: h.store.SnapshotPath(),
+		ArmedAt: h.clock, Deadline: h.clock.Add(DefaultWindow),
+	}); err != nil {
+		t.Fatalf("Arm: %v", err)
+	}
+	bootRestore(t, h)
+
+	if _, err := h.mgr.RecoverPending(context.Background()); err != nil {
+		t.Fatalf("RecoverPending: %v", err)
+	}
+
+	first, err := h.store.LastKnownGood()
+	if err != nil || first == nil {
+		t.Fatalf("LastKnownGood = %v, %v", first, err)
+	}
+	if first.Enabled {
+		t.Fatal("the adopted outcome says enabled, so S29bridge re-creates br0 on the next boot")
+	}
+
+	// Nothing is left for the next boot to act on.
+	if pending, _ := h.store.Pending(); pending != nil {
+		t.Fatal("an armed marker survived the recovery")
+	}
+	if recovered, _ := h.store.Recovered(); recovered != nil {
+		t.Fatal("the record survived being adopted, so every later boot re-reports it")
+	}
+
+	h.clock = h.clock.Add(time.Hour)
+	again, err := h.mgr.RecoverPending(context.Background())
+	if err != nil {
+		t.Fatalf("second RecoverPending: %v", err)
+	}
+	if again {
+		t.Fatal("the second boot recovered again")
+	}
+
+	second, _ := h.store.LastKnownGood()
+	if second == nil || !second.AppliedAt.Equal(first.AppliedAt) {
+		t.Fatalf("the second boot rewrote the outcome: %+v then %+v", first, second)
+	}
+	if len(h.net.trace()) != 0 {
+		t.Fatalf("the second boot ran %v", h.net.trace())
+	}
+}
+
+// Both files present means the server died inside an apply after a boot that
+// had already recovered an earlier one. The armed marker is the live one and
+// takes the restore.
+func TestAnArmedMarkerOutranksAnAdoptedRecord(t *testing.T) {
+	h := newHarness(t)
+
+	snapshot, err := Capture(context.Background(), h.mgr.ip)
+	if err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+	path, err := h.store.WriteSnapshot(snapshot)
+	if err != nil {
+		t.Fatalf("WriteSnapshot: %v", err)
+	}
+
+	if err := h.store.Arm(Pending{
+		Operation: operationDisable, SnapshotPath: path,
+		ArmedAt: h.clock, Deadline: h.clock.Add(DefaultWindow),
+	}); err != nil {
+		t.Fatalf("Arm: %v", err)
+	}
+	if err := utils.WriteFileAtomic(h.store.recoveredPath(), []byte(`{"operation":"enable"}`), fileMode); err != nil {
+		t.Fatalf("seed recovered.json: %v", err)
+	}
+
+	if _, err := h.mgr.RecoverPending(context.Background()); err != nil {
+		t.Fatalf("RecoverPending: %v", err)
+	}
+
+	lkg, _ := h.store.LastKnownGood()
+	if lkg == nil || !strings.Contains(lkg.Message, operationDisable) {
+		t.Fatalf("outcome = %+v, want the armed disable rather than the adopted enable", lkg)
+	}
+	if len(h.net.trace()) == 0 {
+		t.Fatal("an armed marker was adopted rather than restored")
 	}
 }
 

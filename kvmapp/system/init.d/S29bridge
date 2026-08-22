@@ -6,6 +6,7 @@ UPLINK_DIR=/etc/kvm/network
 UPLINK="$UPLINK_DIR/l2-uplink"
 STATE_DIR=/etc/kvm/presentation/network
 PENDING="$STATE_DIR/pending.json"
+RECOVERED="$STATE_DIR/recovered.json"
 LAST_GOOD="$STATE_DIR/last-known-good.json"
 
 teardown() {
@@ -16,8 +17,17 @@ teardown() {
 
 # An armed marker means the apply that wrote it never reached its disarm, so the
 # device comes back on stock eth0: no uplink file, no recorded intent to bridge.
+#
+# The marker is moved aside rather than deleted, because it is the only record
+# of why the device is on eth0 and the server at S95 reports it as the last
+# apply. A rename is the whole write: it cannot leave a partial file, and it
+# clears the marker in the same operation, so a second boot cannot restore
+# twice. The rm keeps that last part true on the filesystem where a rename
+# somehow fails, since a marker left armed is the one outcome that strands the
+# device in a restore loop.
 restore_stock() {
-    rm -f "$UPLINK" "$LAST_GOOD" "$PENDING"
+    rm -f "$UPLINK" "$LAST_GOOD"
+    mv "$PENDING" "$RECOVERED" 2>/dev/null || rm -f "$PENDING"
     sync
 }
 

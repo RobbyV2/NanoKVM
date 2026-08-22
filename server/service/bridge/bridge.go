@@ -672,21 +672,56 @@ func (m *Manager) restoreFrom(ctx context.Context, pending Pending) error {
 	return restoreErr
 }
 
-// The boot-time half of the dead-man. It restores unconditionally when a marker
-// exists, without consulting the deadline: a marker that survived a reboot means
-// the process that armed it never disarmed, and the deadline is measured against
-// a clock this device likely did not keep across the power cut.
+// The server's half of the boot-time dead-man, run before any route is served.
+//
+// A marker still armed here means this process died inside an apply without a
+// reboot, since S29bridge consumes one at every boot. It is restored
+// unconditionally, without consulting the deadline: the process that armed it
+// never disarmed, and the deadline is measured against a clock this device
+// likely did not keep across the cut.
+//
+// Otherwise the shell already restored, at S29, because it has to run before
+// S30eth addresses anything, and all that is left is to adopt the record it
+// moved aside.
 func (m *Manager) RecoverPending(ctx context.Context) (bool, error) {
 	pending, err := m.store.Pending()
 	if err != nil {
 		return false, err
 	}
-	if pending == nil {
-		return false, nil
+	if pending != nil {
+		log.Warnf("bridge: found armed pending marker from %s, restoring", pending.ArmedAt)
+		return true, m.restoreFrom(ctx, *pending)
 	}
 
-	log.Warnf("bridge: found armed pending marker from %s, restoring", pending.ArmedAt)
-	return true, m.restoreFrom(ctx, *pending)
+	return m.adoptRecovered()
+}
+
+// Turns S29bridge's record into the outcome GET reports. The device is already
+// back on eth0, so this writes no interfaces: without it a power cut mid-apply
+// comes back as a bare "disabled" with no lastApply, and the operator has no
+// way to tell it from a bridge that was never enabled.
+func (m *Manager) adoptRecovered() (bool, error) {
+	recovered, err := m.store.Recovered()
+	if err != nil || recovered == nil {
+		return false, err
+	}
+
+	uplink := ReadUplink()
+	lkg := LastKnownGood{
+		Enabled: uplink == BridgeName,
+		Uplink:  uplink,
+		State:   proto.BridgeRolledBack,
+		Message: fmt.Sprintf("%s armed at %s was interrupted; restored at boot",
+			recovered.Operation, recovered.ArmedAt.UTC().Format(time.RFC3339)),
+		AppliedAt: m.now().UTC(),
+	}
+
+	// The outcome is durable before the record is cleared, so an interruption
+	// between them leaves it to be adopted again rather than lost.
+	if err := m.store.WriteLastKnownGood(lkg); err != nil {
+		return true, err
+	}
+	return true, m.store.ClearRecovered()
 }
 
 func (m *Manager) hasIPv4(ctx context.Context, dev string) bool {

@@ -65,10 +65,22 @@ func NewService() *Service {
 // The import points bridge at presentation and never the other way, since the
 // presentation manager knows nothing about a bridge.
 func newService(live Liveness) *Service {
-	return &Service{manager: New(Config{
+	service := &Service{manager: New(Config{
 		Liveness: live,
 		Gadget:   presentation.GetManager(),
 	})}
+
+	// Before any route is registered, so the first GET already reports what the
+	// boot check found. S29bridge leaves its record here for exactly this read.
+	ctx, cancel := context.WithTimeout(context.Background(), restoreWindow)
+	defer cancel()
+
+	if recovered, err := service.manager.RecoverPending(ctx); err != nil {
+		log.Errorf("bridge: boot recovery failed: %s", err)
+	} else if recovered {
+		log.Warnf("bridge: adopted the outcome of an apply that never finished")
+	}
+	return service
 }
 
 func (s *Service) GetBridge(c *gin.Context) {

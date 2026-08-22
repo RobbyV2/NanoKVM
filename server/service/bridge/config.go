@@ -49,6 +49,12 @@ const (
 	pendingName       = "pending.json"
 	lastKnownGoodName = "last-known-good.json"
 
+	// Where S29bridge moves an armed marker it acted on. The script has to run
+	// before S30eth and therefore before the server exists, so it performs the
+	// restore itself; the rename is what leaves the server something to report
+	// instead of a device that is silently back on eth0 for no recorded reason.
+	recoveredName = "recovered.json"
+
 	dirMode  os.FileMode = 0o755
 	fileMode os.FileMode = 0o600
 )
@@ -158,6 +164,8 @@ func (s *Store) pendingPath() string { return filepath.Join(s.dir, pendingName) 
 
 func (s *Store) lastKnownGoodPath() string { return filepath.Join(s.dir, lastKnownGoodName) }
 
+func (s *Store) recoveredPath() string { return filepath.Join(s.dir, recoveredName) }
+
 // AtomicFile fsyncs before the rename, which is what makes step 1 meaningful:
 // a power cut after this point leaves a complete record on disk.
 func (s *Store) WriteSnapshot(snapshot *Snapshot) (string, error) {
@@ -218,8 +226,33 @@ func (s *Store) Arm(pending Pending) error {
 func (s *Store) Pending() (*Pending, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return readMarker(s.pendingPath())
+}
 
-	data, err := os.ReadFile(s.pendingPath())
+// The marker S29bridge already acted on. It is the armed record verbatim, moved
+// by a rename, so it names the operation that was interrupted and when it was
+// armed without the shell having had to author a file.
+func (s *Store) Recovered() (*Pending, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return readMarker(s.recoveredPath())
+}
+
+// Removed only once the outcome it describes is durable, so an interruption
+// between the two leaves it to be adopted again on the next boot rather than
+// losing it.
+func (s *Store) ClearRecovered() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := os.Remove(s.recoveredPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return utils.SyncDir(s.dir)
+}
+
+func readMarker(path string) (*Pending, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -229,7 +262,7 @@ func (s *Store) Pending() (*Pending, error) {
 
 	var pending Pending
 	if err := json.Unmarshal(data, &pending); err != nil {
-		return nil, fmt.Errorf("decode pending: %w", err)
+		return nil, fmt.Errorf("decode %s: %w", filepath.Base(path), err)
 	}
 	return &pending, nil
 }
