@@ -5,11 +5,13 @@ import (
 
 	"NanoKVM-Server/authn"
 	"NanoKVM-Server/middleware"
+	"NanoKVM-Server/service/bridge"
 	"NanoKVM-Server/service/network"
 )
 
 func networkRouter(r *gin.Engine) {
 	service := network.NewService()
+	bridgeService := bridge.NewService()
 
 	r.POST("/api/network/wifi", service.ConnectWifiNoAuth)    // connect Wi-Fi without auth (only available in ap mode)
 	r.POST("/api/network/wifi/verify", service.VerifyApLogin) // verify ap login
@@ -31,4 +33,8 @@ func networkRouter(r *gin.Engine) {
 	admin.POST("/network/wifi/disconnect", service.DisconnectWifi) // disconnect Wi-Fi
 	admin.GET("/network/dns", service.GetDNS)                      // get DNS configuration
 	admin.POST("/network/dns", service.SetDNS)                     // set DNS configuration
+
+	admin.GET("/network/bridge", bridgeService.GetBridge)            // bridge state, ports, armed marker, last apply
+	admin.POST("/network/bridge", bridgeService.SetBridge)           // enable or disable the bridge
+	admin.POST("/network/bridge/revert", bridgeService.RevertBridge) // force-restore the snapshot
 }
