@@ -2,6 +2,9 @@ package bridge
 
 import (
 	"context"
+	"net"
+	"net/http"
+	"sync"
 
 	"NanoKVM-Server/config"
 	"NanoKVM-Server/proto"
@@ -15,16 +18,43 @@ type Service struct {
 	manager *Manager
 }
 
-// The witness targets the listener the server actually serves.
-func NewService() *Service {
-	conf := config.GetInstance()
+var (
+	witnessOnce sync.Once
+	witness     *ListenerWitness
+)
 
-	scheme, port := "http", conf.Port.Http
-	if conf.Proto == "https" {
-		scheme, port = "https", conf.Port.Https
+// One witness per process. The middleware that records and the transaction that
+// reads have to be the same object: two would leave gate three consulting a map
+// nothing ever writes to. The scheme and port target the listener the server
+// actually serves, which is what the self-connect fallback dials.
+func Witness() *ListenerWitness {
+	witnessOnce.Do(func() {
+		conf := config.GetInstance()
+
+		scheme, port := "http", conf.Port.Http
+		if conf.Proto == "https" {
+			scheme, port = "https", conf.Port.Https
+		}
+		witness = NewListenerWitness(scheme, port)
+	})
+	return witness
+}
+
+// RecordListener is the strong form of gate three. http.LocalAddrContextKey
+// carries the address the connection was accepted on, so a request from a real
+// client is proof that the management plane answered at that address over the
+// wire, which is the one thing a gateway ping and a self-connect cannot show.
+func RecordListener(w *ListenerWitness) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if addr, ok := c.Request.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
+			w.Record(addr.String())
+		}
+		c.Next()
 	}
+}
 
-	return newService(NewListenerWitness(scheme, port))
+func NewService() *Service {
+	return newService(Witness())
 }
 
 // The wiring NewService performs once it has resolved the listener. The config

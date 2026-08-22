@@ -13,6 +13,7 @@ import (
 	"NanoKVM-Server/logger"
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/router"
+	"NanoKVM-Server/service/bridge"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
 	"NanoKVM-Server/utils"
@@ -66,6 +67,9 @@ func run() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+	// Ahead of the routes, so the bridge's third verification gate sees every
+	// request a client makes over the uplink and not only the bridge ones.
+	r.Use(bridge.RecordListener(bridge.Witness()))
 	if conf.Authentication == "disable" {
 		r.Use(cors.AllowAll())
 	}

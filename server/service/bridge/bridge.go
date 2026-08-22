@@ -389,9 +389,9 @@ type Liveness interface {
 	SelfConnect(ctx context.Context, addr string) error
 }
 
-// Records the local address of accepted requests. With nothing wired into the
-// HTTP middleware, Observed is always false and verification falls through to
-// the self-connect, which is the safe direction.
+// Records the local address of accepted requests, fed by RecordListener. With
+// no client watching nothing is recorded, Observed stays false and verification
+// falls through to the self-connect, which is the safe direction.
 type ListenerWitness struct {
 	mu     sync.Mutex
 	seen   map[string]time.Time
