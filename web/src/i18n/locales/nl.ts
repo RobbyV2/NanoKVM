@@ -511,6 +511,47 @@ const nl = {
           description: 'HTTPS-protocol inschakelen',
           tip: 'Let op: HTTPS gebruiken kan de latentie verhogen, vooral in MJPEG-videomodus.'
         },
+        bridge: {
+          title: 'Netwerkbrug',
+          twoDevices:
+            'Je router ziet NanoKVM en de bestuurde computer als twee afzonderlijke apparaten, elk met een eigen adres.',
+          loading: 'Laden...',
+          state: 'Status',
+          states: {
+            disabled: 'Uitgeschakeld',
+            enabled: 'Ingeschakeld',
+            rolledBack: 'Teruggedraaid',
+            failed: 'Mislukt',
+            pending: 'Bezig'
+          },
+          uplink: 'Uplink',
+          ports: 'Poorten',
+          up: 'actief',
+          down: 'inactief',
+          enableTitle: 'Netwerkbrug inschakelen?',
+          disableTitle: 'Netwerkbrug uitschakelen?',
+          reconnect:
+            'De beheerverbinding wordt kort verbroken en hersteld terwijl het adres verhuist.',
+          rollback:
+            'Als de verificatie mislukt, wordt de vorige configuratie automatisch hersteld.',
+          enableBtn: 'Inschakelen',
+          disableBtn: 'Uitschakelen',
+          cancelBtn: 'Annuleren',
+          interrupted:
+            'De verbinding werd tijdens het toepassen verbroken. De huidige status wordt opnieuw gecontroleerd.',
+          pendingNotice: 'Een wijziging van de brug is nog bezig of is voortijdig afgebroken.',
+          revert: 'Vorige configuratie herstellen',
+          rolledBackNotice:
+            'De laatste wijziging is teruggedraaid en de vorige configuratie is hersteld.',
+          verifyFailed: 'Verificatie mislukt: {{gates}}',
+          gates: {
+            address: 'adres',
+            gateway: 'gateway',
+            inbound: 'inkomende verbinding'
+          },
+          failedNotice:
+            'De laatste wijziging kon niet ongedaan worden gemaakt. NanoKVM is mogelijk alleen bereikbaar via het wifi-toegangspunt of een seriële console.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configureer DNS-servers voor NanoKVM',

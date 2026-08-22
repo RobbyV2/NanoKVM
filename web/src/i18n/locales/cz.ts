@@ -504,6 +504,45 @@ const cz = {
           description: 'Povolit protokol HTTPS',
           tip: 'Upozornění: Použití HTTPS může zvýšit latenci, zejména v režimu videa MJPEG.'
         },
+        bridge: {
+          title: 'Síťový most',
+          twoDevices:
+            'Router uvidí NanoKVM a ovládaný počítač jako dvě samostatná zařízení, každé s vlastní adresou.',
+          loading: 'Načítání...',
+          state: 'Stav',
+          states: {
+            disabled: 'Vypnuto',
+            enabled: 'Zapnuto',
+            rolledBack: 'Vráceno zpět',
+            failed: 'Selhalo',
+            pending: 'Probíhá'
+          },
+          uplink: 'Uplink',
+          ports: 'Porty',
+          up: 'aktivní',
+          down: 'neaktivní',
+          enableTitle: 'Zapnout síťový most?',
+          disableTitle: 'Vypnout síťový most?',
+          reconnect:
+            'Během přesunu adresy se správcovské spojení na chvíli přeruší a znovu naváže.',
+          rollback: 'Pokud ověření selže, předchozí konfigurace se automaticky obnoví.',
+          enableBtn: 'Zapnout',
+          disableBtn: 'Vypnout',
+          cancelBtn: 'Zrušit',
+          interrupted: 'Spojení bylo během aplikování přerušeno. Probíhá opětovná kontrola stavu.',
+          pendingNotice: 'Změna mostu stále probíhá nebo byla přerušena před dokončením.',
+          revert: 'Obnovit předchozí konfiguraci',
+          rolledBackNotice:
+            'Poslední změna byla vrácena zpět a předchozí konfigurace byla obnovena.',
+          verifyFailed: 'Ověření selhalo: {{gates}}',
+          gates: {
+            address: 'adresa',
+            gateway: 'brána',
+            inbound: 'příchozí spojení'
+          },
+          failedNotice:
+            'Poslední změnu se nepodařilo vrátit zpět. NanoKVM může být dostupné jen přes Wi-Fi AP nebo sériovou konzoli.'
+        },
         dns: {
           title: 'DNS',
           description: 'Nastavit DNS servery pro NanoKVM',

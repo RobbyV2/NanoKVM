@@ -512,6 +512,48 @@ const de = {
           description: 'HTTPS-Protokoll aktivieren',
           tip: 'Hinweis: Die Verwendung von HTTPS kann die Latenz erhöhen, besonders im MJPEG-Videomodus.'
         },
+        bridge: {
+          title: 'Netzwerkbrücke',
+          twoDevices:
+            'Ihr Router sieht NanoKVM und den gesteuerten Computer als zwei separate Geräte mit jeweils eigener Adresse.',
+          loading: 'Wird geladen...',
+          state: 'Status',
+          states: {
+            disabled: 'Deaktiviert',
+            enabled: 'Aktiviert',
+            rolledBack: 'Zurückgesetzt',
+            failed: 'Fehlgeschlagen',
+            pending: 'Läuft'
+          },
+          uplink: 'Uplink',
+          ports: 'Ports',
+          up: 'verbunden',
+          down: 'getrennt',
+          enableTitle: 'Netzwerkbrücke aktivieren?',
+          disableTitle: 'Netzwerkbrücke deaktivieren?',
+          reconnect:
+            'Die Verwaltungsverbindung wird kurz getrennt und neu aufgebaut, während die Adresse umzieht.',
+          rollback:
+            'Schlägt die Überprüfung fehl, wird die vorherige Konfiguration automatisch wiederhergestellt.',
+          enableBtn: 'Aktivieren',
+          disableBtn: 'Deaktivieren',
+          cancelBtn: 'Abbrechen',
+          interrupted:
+            'Die Verbindung wurde während der Anwendung unterbrochen. Der aktuelle Status wird erneut geprüft.',
+          pendingNotice:
+            'Eine Änderung der Brücke läuft noch oder wurde vor dem Abschluss unterbrochen.',
+          revert: 'Vorherige Konfiguration wiederherstellen',
+          rolledBackNotice:
+            'Die letzte Änderung wurde zurückgenommen und die vorherige Konfiguration wiederhergestellt.',
+          verifyFailed: 'Überprüfung fehlgeschlagen: {{gates}}',
+          gates: {
+            address: 'Adresse',
+            gateway: 'Gateway',
+            inbound: 'eingehende Verbindung'
+          },
+          failedNotice:
+            'Die letzte Änderung konnte nicht rückgängig gemacht werden. NanoKVM ist möglicherweise nur über den WLAN-AP oder eine serielle Konsole erreichbar.'
+        },
         dns: {
           title: 'DNS',
           description: 'DNS-Server für NanoKVM konfigurieren',

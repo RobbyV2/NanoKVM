@@ -506,6 +506,43 @@ const ja = {
           description: 'HTTPS プロトコルを有効にする',
           tip: '注意：HTTPS を使用すると、特に MJPEG ビデオモードで遅延が増加する可能性があります。'
         },
+        bridge: {
+          title: 'ネットワークブリッジ',
+          twoDevices:
+            'ルーターは NanoKVM と制御対象のコンピューターを、それぞれ独自のアドレスを持つ 2 台の別々のデバイスとして認識します。',
+          loading: '読み込み中...',
+          state: '状態',
+          states: {
+            disabled: '無効',
+            enabled: '有効',
+            rolledBack: 'ロールバック済み',
+            failed: '失敗',
+            pending: '実行中'
+          },
+          uplink: 'アップリンク',
+          ports: 'ポート',
+          up: 'リンクアップ',
+          down: 'リンクダウン',
+          enableTitle: 'ネットワークブリッジを有効にしますか？',
+          disableTitle: 'ネットワークブリッジを無効にしますか？',
+          reconnect: 'アドレスの移動中、管理接続は一時的に切断されてから再接続します。',
+          rollback: '検証に失敗した場合、以前の構成が自動的に復元されます。',
+          enableBtn: '有効にする',
+          disableBtn: '無効にする',
+          cancelBtn: 'キャンセル',
+          interrupted: '適用中に接続が中断されました。現在の状態を再確認しています。',
+          pendingNotice: 'ブリッジの変更がまだ実行中か、完了前に中断されました。',
+          revert: '以前の構成に戻す',
+          rolledBackNotice: '前回の変更はロールバックされ、以前の構成が復元されました。',
+          verifyFailed: '検証に失敗しました: {{gates}}',
+          gates: {
+            address: 'アドレス',
+            gateway: 'ゲートウェイ',
+            inbound: '受信接続'
+          },
+          failedNotice:
+            '前回の変更を取り消せませんでした。NanoKVM には Wi-Fi AP またはシリアルコンソール経由でしかアクセスできない可能性があります。'
+        },
         dns: {
           title: 'DNS',
           description: 'NanoKVM の DNS サーバーを設定',

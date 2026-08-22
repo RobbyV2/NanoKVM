@@ -511,6 +511,48 @@ const it = {
           description: 'Abilita protocollo HTTPS',
           tip: "Attenzione: l'uso di HTTPS può aumentare la latenza, soprattutto in modalità video MJPEG."
         },
+        bridge: {
+          title: 'Bridge di rete',
+          twoDevices:
+            'Il router vede NanoKVM e il computer controllato come due dispositivi distinti, ciascuno con il proprio indirizzo.',
+          loading: 'Caricamento...',
+          state: 'Stato',
+          states: {
+            disabled: 'Disattivato',
+            enabled: 'Attivato',
+            rolledBack: 'Ripristinato',
+            failed: 'Non riuscito',
+            pending: 'In corso'
+          },
+          uplink: 'Uplink',
+          ports: 'Porte',
+          up: 'attiva',
+          down: 'inattiva',
+          enableTitle: 'Attivare il bridge di rete?',
+          disableTitle: 'Disattivare il bridge di rete?',
+          reconnect:
+            'La connessione di gestione si interromperà brevemente e si riconnetterà mentre l’indirizzo viene spostato.',
+          rollback:
+            'Se la verifica non riesce, la configurazione precedente viene ripristinata automaticamente.',
+          enableBtn: 'Attiva',
+          disableBtn: 'Disattiva',
+          cancelBtn: 'Annulla',
+          interrupted:
+            'La connessione si è interrotta durante l’applicazione. Verifica dello stato attuale in corso.',
+          pendingNotice:
+            'Una modifica del bridge è ancora in corso o è stata interrotta prima di completarsi.',
+          revert: 'Ripristina la configurazione precedente',
+          rolledBackNotice:
+            'L’ultima modifica è stata annullata ed è stata ripristinata la configurazione precedente.',
+          verifyFailed: 'Verifica non riuscita: {{gates}}',
+          gates: {
+            address: 'indirizzo',
+            gateway: 'gateway',
+            inbound: 'connessione in entrata'
+          },
+          failedNotice:
+            'Non è stato possibile annullare l’ultima modifica. NanoKVM potrebbe essere raggiungibile solo tramite l’AP Wi-Fi o una console seriale.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configura i server DNS per NanoKVM',

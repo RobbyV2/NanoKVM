@@ -489,6 +489,41 @@ const zh = {
           description: '启用 HTTPS 协议',
           tip: '注意：使用 HTTPS 可能导致延迟增加，特别是在 MJPEG 视频模式下。'
         },
+        bridge: {
+          title: '网络桥接',
+          twoDevices: '路由器会将 NanoKVM 和被控电脑视为两台独立设备，各自拥有自己的地址。',
+          loading: '加载中...',
+          state: '状态',
+          states: {
+            disabled: '已禁用',
+            enabled: '已启用',
+            rolledBack: '已回滚',
+            failed: '失败',
+            pending: '进行中'
+          },
+          uplink: '上行接口',
+          ports: '端口',
+          up: '已连接',
+          down: '未连接',
+          enableTitle: '启用网络桥接？',
+          disableTitle: '禁用网络桥接？',
+          reconnect: '地址迁移期间，管理连接会短暂断开并重新连接。',
+          rollback: '如果验证失败，将自动恢复到之前的网络配置。',
+          enableBtn: '启用',
+          disableBtn: '禁用',
+          cancelBtn: '取消',
+          interrupted: '应用过程中连接中断，正在重新检查当前状态。',
+          pendingNotice: '桥接变更仍在进行中，或在完成前被中断。',
+          revert: '恢复之前的配置',
+          rolledBackNotice: '上次变更已回滚，之前的网络配置已恢复。',
+          verifyFailed: '验证失败：{{gates}}',
+          gates: {
+            address: '地址',
+            gateway: '网关',
+            inbound: '入站连接'
+          },
+          failedNotice: '上次变更未能撤销。可能只能通过 Wi-Fi AP 或串口控制台访问 NanoKVM。'
+        },
         dns: {
           title: 'DNS',
           description: '配置 NanoKVM 使用的 DNS 服务器',

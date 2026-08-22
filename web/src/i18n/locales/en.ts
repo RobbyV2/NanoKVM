@@ -503,6 +503,46 @@ const en = {
           description: 'Enable HTTPS protocol',
           tip: 'Be aware: Using HTTPS can increase latency, especially with MJPEG video mode.'
         },
+        bridge: {
+          title: 'Network Bridge',
+          twoDevices:
+            'Your router sees NanoKVM and the controlled computer as two separate devices, each with its own address.',
+          loading: 'Loading...',
+          state: 'State',
+          states: {
+            disabled: 'Disabled',
+            enabled: 'Enabled',
+            rolledBack: 'Rolled back',
+            failed: 'Failed',
+            pending: 'In progress'
+          },
+          uplink: 'Uplink',
+          ports: 'Ports',
+          up: 'up',
+          down: 'down',
+          enableTitle: 'Enable the network bridge?',
+          disableTitle: 'Disable the network bridge?',
+          reconnect: 'Management will briefly disconnect and reconnect while the address moves.',
+          rollback: 'If verification fails, the previous configuration is restored automatically.',
+          enableBtn: 'Enable',
+          disableBtn: 'Disable',
+          cancelBtn: 'Cancel',
+          interrupted:
+            'The connection was interrupted while applying. Re-checking the current state.',
+          pendingNotice:
+            'A bridge change is still in progress, or was interrupted before it finished.',
+          revert: 'Restore previous configuration',
+          rolledBackNotice:
+            'The last change was rolled back and the previous configuration was restored.',
+          verifyFailed: 'Verification failed: {{gates}}',
+          gates: {
+            address: 'address',
+            gateway: 'gateway',
+            inbound: 'inbound connection'
+          },
+          failedNotice:
+            'The last change could not be undone. NanoKVM may only be reachable over the Wi-Fi AP or a serial console.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configure DNS servers for NanoKVM',

@@ -508,6 +508,46 @@ const es = {
           description: 'Habilitar protocolo HTTPS',
           tip: 'Aviso: Usar HTTPS puede aumentar la latencia, especialmente en modo de vídeo MJPEG.'
         },
+        bridge: {
+          title: 'Puente de red',
+          twoDevices:
+            'Tu router verá NanoKVM y el ordenador controlado como dos dispositivos independientes, cada uno con su propia dirección.',
+          loading: 'Cargando...',
+          state: 'Estado',
+          states: {
+            disabled: 'Desactivado',
+            enabled: 'Activado',
+            rolledBack: 'Revertido',
+            failed: 'Fallido',
+            pending: 'En curso'
+          },
+          uplink: 'Enlace ascendente',
+          ports: 'Puertos',
+          up: 'activo',
+          down: 'inactivo',
+          enableTitle: '¿Activar el puente de red?',
+          disableTitle: '¿Desactivar el puente de red?',
+          reconnect:
+            'La conexión de administración se desconectará y volverá a conectarse brevemente mientras se mueve la dirección.',
+          rollback:
+            'Si la verificación falla, se restaura automáticamente la configuración anterior.',
+          enableBtn: 'Activar',
+          disableBtn: 'Desactivar',
+          cancelBtn: 'Cancelar',
+          interrupted:
+            'La conexión se interrumpió durante la aplicación. Comprobando de nuevo el estado actual.',
+          pendingNotice: 'Un cambio del puente sigue en curso o se interrumpió antes de terminar.',
+          revert: 'Restaurar la configuración anterior',
+          rolledBackNotice: 'El último cambio se revirtió y se restauró la configuración anterior.',
+          verifyFailed: 'Error de verificación: {{gates}}',
+          gates: {
+            address: 'dirección',
+            gateway: 'puerta de enlace',
+            inbound: 'conexión entrante'
+          },
+          failedNotice:
+            'No se pudo deshacer el último cambio. Puede que solo se pueda acceder a NanoKVM por el AP Wi-Fi o una consola serie.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configura los servidores DNS para NanoKVM',

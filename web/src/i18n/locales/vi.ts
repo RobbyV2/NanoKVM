@@ -500,6 +500,47 @@ const vi = {
           description: 'Bật giao thức HTTPS',
           tip: 'Lưu ý: Sử dụng HTTPS có thể tăng độ trễ, đặc biệt trong chế độ video MJPEG.'
         },
+        bridge: {
+          title: 'Cầu nối mạng',
+          twoDevices:
+            'Bộ định tuyến sẽ thấy NanoKVM và máy tính được điều khiển là hai thiết bị riêng biệt, mỗi thiết bị có địa chỉ riêng.',
+          loading: 'Đang tải...',
+          state: 'Trạng thái',
+          states: {
+            disabled: 'Đã tắt',
+            enabled: 'Đã bật',
+            rolledBack: 'Đã khôi phục',
+            failed: 'Thất bại',
+            pending: 'Đang xử lý'
+          },
+          uplink: 'Uplink',
+          ports: 'Cổng',
+          up: 'hoạt động',
+          down: 'không hoạt động',
+          enableTitle: 'Bật cầu nối mạng?',
+          disableTitle: 'Tắt cầu nối mạng?',
+          reconnect:
+            'Kết nối quản lý sẽ ngắt trong giây lát rồi kết nối lại khi địa chỉ được chuyển.',
+          rollback: 'Nếu việc xác minh thất bại, cấu hình trước đó sẽ được khôi phục tự động.',
+          enableBtn: 'Bật',
+          disableBtn: 'Tắt',
+          cancelBtn: 'Hủy',
+          interrupted:
+            'Kết nối bị gián đoạn trong khi áp dụng. Đang kiểm tra lại trạng thái hiện tại.',
+          pendingNotice:
+            'Thay đổi cầu nối vẫn đang diễn ra hoặc đã bị gián đoạn trước khi hoàn tất.',
+          revert: 'Khôi phục cấu hình trước đó',
+          rolledBackNotice:
+            'Thay đổi gần nhất đã được hoàn tác và cấu hình trước đó đã được khôi phục.',
+          verifyFailed: 'Xác minh thất bại: {{gates}}',
+          gates: {
+            address: 'địa chỉ',
+            gateway: 'cổng mặc định',
+            inbound: 'kết nối đến'
+          },
+          failedNotice:
+            'Không thể hoàn tác thay đổi gần nhất. Có thể chỉ truy cập được NanoKVM qua điểm phát Wi-Fi hoặc cổng serial.'
+        },
         dns: {
           title: 'DNS',
           description: 'Cấu hình máy chủ DNS cho NanoKVM',

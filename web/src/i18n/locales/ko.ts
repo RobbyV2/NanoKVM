@@ -499,6 +499,43 @@ const ko = {
           description: 'HTTPS 프로토콜 활성화',
           tip: '주의: HTTPS 사용 시 특히 MJPEG 비디오 모드에서 지연 시간이 증가할 수 있습니다.'
         },
+        bridge: {
+          title: '네트워크 브리지',
+          twoDevices:
+            '라우터는 NanoKVM과 제어 대상 컴퓨터를 각각 고유한 주소를 가진 두 개의 별도 장치로 인식합니다.',
+          loading: '불러오는 중...',
+          state: '상태',
+          states: {
+            disabled: '비활성화됨',
+            enabled: '활성화됨',
+            rolledBack: '롤백됨',
+            failed: '실패',
+            pending: '진행 중'
+          },
+          uplink: '업링크',
+          ports: '포트',
+          up: '연결됨',
+          down: '연결 끊김',
+          enableTitle: '네트워크 브리지를 활성화할까요?',
+          disableTitle: '네트워크 브리지를 비활성화할까요?',
+          reconnect: '주소가 이동하는 동안 관리 연결이 잠시 끊겼다가 다시 연결됩니다.',
+          rollback: '검증에 실패하면 이전 구성이 자동으로 복원됩니다.',
+          enableBtn: '활성화',
+          disableBtn: '비활성화',
+          cancelBtn: '취소',
+          interrupted: '적용 중 연결이 끊겼습니다. 현재 상태를 다시 확인하는 중입니다.',
+          pendingNotice: '브리지 변경이 아직 진행 중이거나 완료되기 전에 중단되었습니다.',
+          revert: '이전 구성 복원',
+          rolledBackNotice: '마지막 변경이 롤백되어 이전 구성이 복원되었습니다.',
+          verifyFailed: '검증 실패: {{gates}}',
+          gates: {
+            address: '주소',
+            gateway: '게이트웨이',
+            inbound: '인바운드 연결'
+          },
+          failedNotice:
+            '마지막 변경을 취소하지 못했습니다. NanoKVM에 Wi-Fi AP 또는 시리얼 콘솔로만 접근할 수 있습니다.'
+        },
         dns: {
           title: 'DNS',
           description: 'NanoKVM의 DNS 서버 설정',

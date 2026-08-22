@@ -507,6 +507,46 @@ const hu = {
           description: 'HTTPS protokoll engedélyezése',
           tip: 'Figyelem: A HTTPS használata növelheti a késleltetést, különösen MJPEG videó módban.'
         },
+        bridge: {
+          title: 'Hálózati híd',
+          twoDevices:
+            'A router a NanoKVM-et és a vezérelt számítógépet két külön eszközként látja, mindegyiket saját címmel.',
+          loading: 'Betöltés...',
+          state: 'Állapot',
+          states: {
+            disabled: 'Kikapcsolva',
+            enabled: 'Bekapcsolva',
+            rolledBack: 'Visszaállítva',
+            failed: 'Sikertelen',
+            pending: 'Folyamatban'
+          },
+          uplink: 'Uplink',
+          ports: 'Portok',
+          up: 'aktív',
+          down: 'inaktív',
+          enableTitle: 'Bekapcsolja a hálózati hidat?',
+          disableTitle: 'Kikapcsolja a hálózati hidat?',
+          reconnect:
+            'A cím áthelyezése közben a felügyeleti kapcsolat rövid időre megszakad, majd újra létrejön.',
+          rollback: 'Ha az ellenőrzés sikertelen, a korábbi konfiguráció automatikusan visszaáll.',
+          enableBtn: 'Bekapcsolás',
+          disableBtn: 'Kikapcsolás',
+          cancelBtn: 'Mégse',
+          interrupted:
+            'A kapcsolat megszakadt az alkalmazás közben. A jelenlegi állapot újraellenőrzése folyik.',
+          pendingNotice: 'A híd módosítása még folyamatban van, vagy befejezés előtt megszakadt.',
+          revert: 'Korábbi konfiguráció visszaállítása',
+          rolledBackNotice:
+            'A legutóbbi módosítás visszavonásra került, és a korábbi konfiguráció visszaállt.',
+          verifyFailed: 'Az ellenőrzés sikertelen: {{gates}}',
+          gates: {
+            address: 'cím',
+            gateway: 'átjáró',
+            inbound: 'bejövő kapcsolat'
+          },
+          failedNotice:
+            'A legutóbbi módosítást nem sikerült visszavonni. A NanoKVM lehet, hogy csak a Wi-Fi AP-n vagy soros konzolon érhető el.'
+        },
         dns: {
           title: 'DNS',
           description: 'DNS-kiszolgálók beállítása a NanoKVM számára',

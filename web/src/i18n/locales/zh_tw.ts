@@ -486,6 +486,41 @@ const zh_tw = {
           description: '啟用 HTTPS 協議',
           tip: '啟用 HTTPS 可以提高安全性，但可能會增加傳輸延遲，特別是使用 MJPEG 格式傳輸時。'
         },
+        bridge: {
+          title: '網路橋接',
+          twoDevices: '路由器會將 NanoKVM 與被控電腦視為兩台獨立裝置，各自擁有自己的位址。',
+          loading: '載入中...',
+          state: '狀態',
+          states: {
+            disabled: '已停用',
+            enabled: '已啟用',
+            rolledBack: '已還原',
+            failed: '失敗',
+            pending: '進行中'
+          },
+          uplink: '上行介面',
+          ports: '連接埠',
+          up: '已連線',
+          down: '未連線',
+          enableTitle: '啟用網路橋接？',
+          disableTitle: '停用網路橋接？',
+          reconnect: '位址移轉期間，管理連線會短暫中斷並重新連線。',
+          rollback: '若驗證失敗，將自動還原先前的網路設定。',
+          enableBtn: '啟用',
+          disableBtn: '停用',
+          cancelBtn: '取消',
+          interrupted: '套用過程中連線中斷，正在重新檢查目前狀態。',
+          pendingNotice: '橋接變更仍在進行中，或在完成前被中斷。',
+          revert: '還原先前的設定',
+          rolledBackNotice: '上次變更已還原，先前的網路設定已恢復。',
+          verifyFailed: '驗證失敗：{{gates}}',
+          gates: {
+            address: '位址',
+            gateway: '閘道',
+            inbound: '傳入連線'
+          },
+          failedNotice: '上次變更無法復原。可能只能透過 Wi-Fi AP 或序列主控台存取 NanoKVM。'
+        },
         dns: {
           title: 'DNS',
           description: '設定 NanoKVM 使用的 DNS 伺服器',

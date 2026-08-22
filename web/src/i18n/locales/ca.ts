@@ -504,6 +504,46 @@ const ca = {
           description: 'Activa el protocol HTTPS',
           tip: 'Atenció: Usar HTTPS pot augmentar la latència, sobretot amb vídeo MJPEG.'
         },
+        bridge: {
+          title: 'Pont de xarxa',
+          twoDevices:
+            'El teu encaminador veurà el NanoKVM i l’ordinador controlat com dos dispositius separats, cadascun amb la seva pròpia adreça.',
+          loading: 'Carregant...',
+          state: 'Estat',
+          states: {
+            disabled: 'Desactivat',
+            enabled: 'Activat',
+            rolledBack: 'Revertit',
+            failed: 'Ha fallat',
+            pending: 'En curs'
+          },
+          uplink: 'Enllaç ascendent',
+          ports: 'Ports',
+          up: 'actiu',
+          down: 'inactiu',
+          enableTitle: 'Vols activar el pont de xarxa?',
+          disableTitle: 'Vols desactivar el pont de xarxa?',
+          reconnect:
+            'La connexió d’administració es desconnectarà i es tornarà a connectar breument mentre es mou l’adreça.',
+          rollback: 'Si la verificació falla, es restaura automàticament la configuració anterior.',
+          enableBtn: 'Activa',
+          disableBtn: 'Desactiva',
+          cancelBtn: 'Cancel·la',
+          interrupted:
+            'La connexió s’ha interromput durant l’aplicació. S’està tornant a comprovar l’estat actual.',
+          pendingNotice: 'Un canvi del pont encara està en curs o s’ha interromput abans d’acabar.',
+          revert: 'Restaura la configuració anterior',
+          rolledBackNotice:
+            'L’últim canvi s’ha revertit i s’ha restaurat la configuració anterior.',
+          verifyFailed: 'La verificació ha fallat: {{gates}}',
+          gates: {
+            address: 'adreça',
+            gateway: 'passarel·la',
+            inbound: 'connexió entrant'
+          },
+          failedNotice:
+            'No s’ha pogut desfer l’últim canvi. Pot ser que només es pugui accedir al NanoKVM per l’AP Wi-Fi o una consola sèrie.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configura els servidors DNS per a NanoKVM',

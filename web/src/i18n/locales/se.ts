@@ -503,6 +503,47 @@ const se = {
           description: 'Aktivera HTTPS-protokoll',
           tip: 'Observera: Användning av HTTPS kan öka fördröjningen, särskilt med MJPEG-läge.'
         },
+        bridge: {
+          title: 'Nätverksbrygga',
+          twoDevices:
+            'Din router ser NanoKVM och den styrda datorn som två separata enheter, var och en med sin egen adress.',
+          loading: 'Laddar...',
+          state: 'Status',
+          states: {
+            disabled: 'Inaktiverad',
+            enabled: 'Aktiverad',
+            rolledBack: 'Återställd',
+            failed: 'Misslyckades',
+            pending: 'Pågår'
+          },
+          uplink: 'Upplänk',
+          ports: 'Portar',
+          up: 'aktiv',
+          down: 'inaktiv',
+          enableTitle: 'Aktivera nätverksbryggan?',
+          disableTitle: 'Inaktivera nätverksbryggan?',
+          reconnect: 'Hanteringsanslutningen bryts kort och återansluter medan adressen flyttas.',
+          rollback:
+            'Om verifieringen misslyckas återställs den tidigare konfigurationen automatiskt.',
+          enableBtn: 'Aktivera',
+          disableBtn: 'Inaktivera',
+          cancelBtn: 'Avbryt',
+          interrupted:
+            'Anslutningen bröts under tillämpningen. Kontrollerar nuvarande status igen.',
+          pendingNotice:
+            'En ändring av bryggan pågår fortfarande eller avbröts innan den blev klar.',
+          revert: 'Återställ tidigare konfiguration',
+          rolledBackNotice:
+            'Den senaste ändringen återkallades och den tidigare konfigurationen återställdes.',
+          verifyFailed: 'Verifieringen misslyckades: {{gates}}',
+          gates: {
+            address: 'adress',
+            gateway: 'gateway',
+            inbound: 'inkommande anslutning'
+          },
+          failedNotice:
+            'Den senaste ändringen kunde inte ångras. NanoKVM kanske bara går att nå via Wi-Fi-accesspunkten eller en seriell konsol.'
+        },
         dns: {
           title: 'DNS',
           description: 'Konfigurera DNS-servrar för NanoKVM',

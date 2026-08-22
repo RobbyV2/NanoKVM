@@ -504,6 +504,48 @@ const da = {
           description: 'Aktiver HTTPS-protokol',
           tip: 'Bemærk: Brug af HTTPS kan øge forsinkelsen, især med MJPEG-videotilstand.'
         },
+        bridge: {
+          title: 'Netværksbro',
+          twoDevices:
+            'Din router ser NanoKVM og den styrede computer som to separate enheder, hver med sin egen adresse.',
+          loading: 'Indlæser...',
+          state: 'Status',
+          states: {
+            disabled: 'Deaktiveret',
+            enabled: 'Aktiveret',
+            rolledBack: 'Rullet tilbage',
+            failed: 'Mislykkedes',
+            pending: 'I gang'
+          },
+          uplink: 'Uplink',
+          ports: 'Porte',
+          up: 'aktiv',
+          down: 'inaktiv',
+          enableTitle: 'Aktivér netværksbroen?',
+          disableTitle: 'Deaktivér netværksbroen?',
+          reconnect:
+            'Administrationsforbindelsen afbrydes kortvarigt og genoprettes, mens adressen flyttes.',
+          rollback:
+            'Hvis verifikationen mislykkes, gendannes den tidligere konfiguration automatisk.',
+          enableBtn: 'Aktivér',
+          disableBtn: 'Deaktivér',
+          cancelBtn: 'Annuller',
+          interrupted:
+            'Forbindelsen blev afbrudt under anvendelsen. Den aktuelle status kontrolleres igen.',
+          pendingNotice:
+            'En ændring af broen er stadig i gang eller blev afbrudt, før den blev færdig.',
+          revert: 'Gendan tidligere konfiguration',
+          rolledBackNotice:
+            'Den seneste ændring blev rullet tilbage, og den tidligere konfiguration blev gendannet.',
+          verifyFailed: 'Verifikationen mislykkedes: {{gates}}',
+          gates: {
+            address: 'adresse',
+            gateway: 'gateway',
+            inbound: 'indgående forbindelse'
+          },
+          failedNotice:
+            'Den seneste ændring kunne ikke fortrydes. NanoKVM kan muligvis kun nås via Wi-Fi-adgangspunktet eller en seriel konsol.'
+        },
         dns: {
           title: 'DNS',
           description: 'Konfigurer DNS-servere til NanoKVM',

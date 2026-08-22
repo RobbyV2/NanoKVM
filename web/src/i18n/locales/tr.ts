@@ -506,6 +506,44 @@ const tr = {
           description: 'HTTPS protokolünü etkinleştir',
           tip: 'HTTPS protokolü bağlantıda gecikmeye sebep olabilir, özellikle MJPEG görüntü modu ile.'
         },
+        bridge: {
+          title: 'Ağ köprüsü',
+          twoDevices:
+            'Yönlendiriciniz NanoKVM ile kontrol edilen bilgisayarı, her biri kendi adresine sahip iki ayrı cihaz olarak görür.',
+          loading: 'Yükleniyor...',
+          state: 'Durum',
+          states: {
+            disabled: 'Devre dışı',
+            enabled: 'Etkin',
+            rolledBack: 'Geri alındı',
+            failed: 'Başarısız',
+            pending: 'Sürüyor'
+          },
+          uplink: 'Uplink',
+          ports: 'Bağlantı noktaları',
+          up: 'bağlı',
+          down: 'bağlı değil',
+          enableTitle: 'Ağ köprüsü etkinleştirilsin mi?',
+          disableTitle: 'Ağ köprüsü devre dışı bırakılsın mı?',
+          reconnect: 'Adres taşınırken yönetim bağlantısı kısa süre kopar ve yeniden kurulur.',
+          rollback: 'Doğrulama başarısız olursa önceki yapılandırma otomatik olarak geri yüklenir.',
+          enableBtn: 'Etkinleştir',
+          disableBtn: 'Devre dışı bırak',
+          cancelBtn: 'İptal',
+          interrupted:
+            'Uygulama sırasında bağlantı kesildi. Geçerli durum yeniden kontrol ediliyor.',
+          pendingNotice: 'Köprü değişikliği hâlâ sürüyor veya tamamlanmadan kesildi.',
+          revert: 'Önceki yapılandırmayı geri yükle',
+          rolledBackNotice: 'Son değişiklik geri alındı ve önceki yapılandırma geri yüklendi.',
+          verifyFailed: 'Doğrulama başarısız: {{gates}}',
+          gates: {
+            address: 'adres',
+            gateway: 'ağ geçidi',
+            inbound: 'gelen bağlantı'
+          },
+          failedNotice:
+            'Son değişiklik geri alınamadı. NanoKVM yalnızca Wi-Fi AP veya seri konsol üzerinden erişilebilir olabilir.'
+        },
         dns: {
           title: 'DNS',
           description: 'NanoKVM için DNS sunucularını yapılandır',

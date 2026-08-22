@@ -510,6 +510,48 @@ const fr = {
           description: 'Activer le protocole HTTPS',
           tip: "Attention : l'utilisation de HTTPS peut augmenter la latence, surtout en mode vidéo MJPEG."
         },
+        bridge: {
+          title: 'Pont réseau',
+          twoDevices:
+            'Votre routeur voit NanoKVM et l’ordinateur contrôlé comme deux appareils distincts, chacun avec sa propre adresse.',
+          loading: 'Chargement...',
+          state: 'État',
+          states: {
+            disabled: 'Désactivé',
+            enabled: 'Activé',
+            rolledBack: 'Restauré',
+            failed: 'Échec',
+            pending: 'En cours'
+          },
+          uplink: 'Liaison montante',
+          ports: 'Ports',
+          up: 'actif',
+          down: 'inactif',
+          enableTitle: 'Activer le pont réseau ?',
+          disableTitle: 'Désactiver le pont réseau ?',
+          reconnect:
+            'La connexion d’administration sera brièvement interrompue puis rétablie pendant le déplacement de l’adresse.',
+          rollback:
+            'Si la vérification échoue, la configuration précédente est restaurée automatiquement.',
+          enableBtn: 'Activer',
+          disableBtn: 'Désactiver',
+          cancelBtn: 'Annuler',
+          interrupted:
+            'La connexion a été interrompue pendant l’application. Vérification de l’état actuel en cours.',
+          pendingNotice:
+            'Une modification du pont est encore en cours ou a été interrompue avant la fin.',
+          revert: 'Restaurer la configuration précédente',
+          rolledBackNotice:
+            'La dernière modification a été annulée et la configuration précédente restaurée.',
+          verifyFailed: 'Échec de la vérification : {{gates}}',
+          gates: {
+            address: 'adresse',
+            gateway: 'passerelle',
+            inbound: 'connexion entrante'
+          },
+          failedNotice:
+            'La dernière modification n’a pas pu être annulée. NanoKVM n’est peut-être accessible que via le point d’accès Wi-Fi ou une console série.'
+        },
         dns: {
           title: 'DNS',
           description: 'Configurer les serveurs DNS pour NanoKVM',

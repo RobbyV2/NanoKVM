@@ -505,6 +505,46 @@ const id = {
           description: 'Aktifkan protokol HTTPS',
           tip: 'Perhatian: Menggunakan HTTPS dapat meningkatkan latensi, terutama pada mode video MJPEG.'
         },
+        bridge: {
+          title: 'Jembatan jaringan',
+          twoDevices:
+            'Router Anda melihat NanoKVM dan komputer yang dikendalikan sebagai dua perangkat terpisah, masing-masing dengan alamatnya sendiri.',
+          loading: 'Memuat...',
+          state: 'Status',
+          states: {
+            disabled: 'Nonaktif',
+            enabled: 'Aktif',
+            rolledBack: 'Dikembalikan',
+            failed: 'Gagal',
+            pending: 'Sedang berjalan'
+          },
+          uplink: 'Uplink',
+          ports: 'Port',
+          up: 'aktif',
+          down: 'nonaktif',
+          enableTitle: 'Aktifkan jembatan jaringan?',
+          disableTitle: 'Nonaktifkan jembatan jaringan?',
+          reconnect:
+            'Koneksi manajemen akan terputus sebentar lalu tersambung kembali saat alamat dipindahkan.',
+          rollback: 'Jika verifikasi gagal, konfigurasi sebelumnya dipulihkan secara otomatis.',
+          enableBtn: 'Aktifkan',
+          disableBtn: 'Nonaktifkan',
+          cancelBtn: 'Batal',
+          interrupted:
+            'Koneksi terputus saat menerapkan perubahan. Memeriksa ulang status saat ini.',
+          pendingNotice: 'Perubahan jembatan masih berjalan atau terhenti sebelum selesai.',
+          revert: 'Pulihkan konfigurasi sebelumnya',
+          rolledBackNotice:
+            'Perubahan terakhir dibatalkan dan konfigurasi sebelumnya telah dipulihkan.',
+          verifyFailed: 'Verifikasi gagal: {{gates}}',
+          gates: {
+            address: 'alamat',
+            gateway: 'gerbang',
+            inbound: 'koneksi masuk'
+          },
+          failedNotice:
+            'Perubahan terakhir tidak dapat dibatalkan. NanoKVM mungkin hanya dapat dijangkau melalui AP Wi-Fi atau konsol serial.'
+        },
         dns: {
           title: 'DNS',
           description: 'Konfigurasi server DNS untuk NanoKVM',

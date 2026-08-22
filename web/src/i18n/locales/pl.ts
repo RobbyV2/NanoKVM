@@ -508,6 +508,47 @@ const pl = {
           description: 'Włącz protokół HTTPS',
           tip: 'Uwaga: użycie HTTPS może zwiększyć opóźnienie, szczególnie w trybie wideo MJPEG.'
         },
+        bridge: {
+          title: 'Mostek sieciowy',
+          twoDevices:
+            'Router widzi NanoKVM i sterowany komputer jako dwa osobne urządzenia, każde z własnym adresem.',
+          loading: 'Ładowanie...',
+          state: 'Stan',
+          states: {
+            disabled: 'Wyłączony',
+            enabled: 'Włączony',
+            rolledBack: 'Wycofano',
+            failed: 'Niepowodzenie',
+            pending: 'W toku'
+          },
+          uplink: 'Łącze nadrzędne',
+          ports: 'Porty',
+          up: 'aktywny',
+          down: 'nieaktywny',
+          enableTitle: 'Włączyć mostek sieciowy?',
+          disableTitle: 'Wyłączyć mostek sieciowy?',
+          reconnect:
+            'Połączenie zarządzania zostanie na chwilę przerwane i nawiązane ponownie podczas przenoszenia adresu.',
+          rollback:
+            'Jeśli weryfikacja się nie powiedzie, poprzednia konfiguracja zostanie automatycznie przywrócona.',
+          enableBtn: 'Włącz',
+          disableBtn: 'Wyłącz',
+          cancelBtn: 'Anuluj',
+          interrupted:
+            'Połączenie zostało przerwane podczas stosowania zmian. Trwa ponowne sprawdzanie stanu.',
+          pendingNotice: 'Zmiana mostka wciąż trwa lub została przerwana przed zakończeniem.',
+          revert: 'Przywróć poprzednią konfigurację',
+          rolledBackNotice:
+            'Ostatnia zmiana została wycofana, a poprzednia konfiguracja przywrócona.',
+          verifyFailed: 'Weryfikacja nie powiodła się: {{gates}}',
+          gates: {
+            address: 'adres',
+            gateway: 'brama',
+            inbound: 'połączenie przychodzące'
+          },
+          failedNotice:
+            'Nie udało się cofnąć ostatniej zmiany. NanoKVM może być dostępny tylko przez punkt dostępowy Wi-Fi lub konsolę szeregową.'
+        },
         dns: {
           title: 'DNS',
           description: 'Skonfiguruj serwery DNS dla NanoKVM',
