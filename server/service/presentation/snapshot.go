@@ -11,6 +11,11 @@ const (
 	lunDir       = "lun.0"
 
 	diskFunctionName = string(FunctionMassStorage) + "." + diskInstance
+
+	// f_ncm and f_rndis both take the interface name from the function
+	// instance, so the gadget NIC is usb0 on this device and this package is
+	// what knows it.
+	GadgetNIC = netInstance
 )
 
 type Snapshot struct {

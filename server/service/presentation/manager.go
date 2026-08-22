@@ -116,6 +116,22 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 	return snapshot, nil
 }
 
+// The bridge's step 13 asks for the gadget NIC by name. It is reported only
+// when a network function is actually linked into configs/c.1, since a profile
+// that merely mentions one leaves no usb0 for "ip link set usb0 master br0" to
+// find. Snapshot probes the linkage rather than a /boot sentinel, so an NCM
+// gadget stops being reported as an RNDIS one (H10).
+func (m *Manager) NIC(context.Context) (string, error) {
+	snapshot, err := m.Snapshot()
+	if err != nil {
+		return "", err
+	}
+	if !snapshot.HasNetwork() {
+		return "", nil
+	}
+	return GadgetNIC, nil
+}
+
 func (m *Manager) Apply(ctx context.Context, name string) error {
 	if err := m.ready(); err != nil {
 		return err

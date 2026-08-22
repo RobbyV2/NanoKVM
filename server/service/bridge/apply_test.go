@@ -204,6 +204,31 @@ func TestEnableWithNoGadgetNIC(t *testing.T) {
 	notInTrace(t, h.net.trace(), "usb0")
 }
 
+// The presentation manager being unable to say what the gadget NIC is says
+// nothing about the management address, which is already up and verified by the
+// time step 13 asks. The transaction reports the failure and stands.
+func TestEnableSurvivesAGadgetThatCannotReportItsNIC(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.gadget = fakeGadget{err: errors.New("usb gadget unavailable")}
+
+	rsp, err := h.mgr.Enable(context.Background())
+	if err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+	if rsp.State != proto.BridgeEnabled {
+		t.Fatalf("state = %q (%s), want enabled", rsp.State, rsp.Message)
+	}
+	if !strings.Contains(rsp.Message, "usb gadget unavailable") {
+		t.Errorf("message %q does not report the gadget failure", rsp.Message)
+	}
+
+	lkg, err := h.store.LastKnownGood()
+	if err != nil || lkg == nil || lkg.State != proto.BridgeEnabled {
+		t.Fatalf("recorded %+v, %v, want an enabled br0", lkg, err)
+	}
+	notInTrace(t, h.net.trace(), "usb0")
+}
+
 func TestEnableRecordsTheOutcomeBeforeReturning(t *testing.T) {
 	h := newHarness(t)
 

@@ -5,6 +5,7 @@ import (
 
 	"NanoKVM-Server/config"
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/presentation"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -14,9 +15,7 @@ type Service struct {
 	manager *Manager
 }
 
-// The witness targets the listener the server actually serves. Nothing calls
-// its Record, so the inbound gate always takes the self-connect fallback until
-// the HTTP middleware is wired into it.
+// The witness targets the listener the server actually serves.
 func NewService() *Service {
 	conf := config.GetInstance()
 
@@ -25,7 +24,21 @@ func NewService() *Service {
 		scheme, port = "https", conf.Port.Https
 	}
 
-	return &Service{manager: New(Config{Liveness: NewListenerWitness(scheme, port)})}
+	return newService(NewListenerWitness(scheme, port))
+}
+
+// The wiring NewService performs once it has resolved the listener. The config
+// lookup is the only part of it a test cannot run, so the gadget half lives
+// here: without it Gadget is nil, enable step 13 never runs, and a transparent
+// Layer-2 bridge comes up with one port.
+//
+// The import points bridge at presentation and never the other way, since the
+// presentation manager knows nothing about a bridge.
+func newService(live Liveness) *Service {
+	return &Service{manager: New(Config{
+		Liveness: live,
+		Gadget:   presentation.GetManager(),
+	})}
 }
 
 func (s *Service) GetBridge(c *gin.Context) {
