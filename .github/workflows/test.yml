@@ -1,0 +1,146 @@
+name: NanoKVM Tests
+
+# The gate. package.yml builds the artifact but runs nothing, so before this
+# existed every test in the tree ran only when a human remembered to, including
+# the twenty golden traces in server/service/presentation/testdata that are the
+# entire acceptance criteria for the gadget refactor.
+#
+# No paths filter: a required check that is skipped on some pull requests never
+# reports at all, and people wait on this one.
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: gofmt
+        working-directory: server
+        run: |
+          # gofmt -l exits 0 whether or not it listed anything, so the exit code
+          # has to be built here.
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt would rewrite these files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        working-directory: server
+        # Every package, picoclaw and ws included: vet type-checks and compiles
+        # but never links, so the riscv64 libkvm.so the two of them need at link
+        # time is not reached here.
+        run: go vet ./...
+
+      - name: Resolve testable packages
+        id: packages
+        working-directory: server
+        run: |
+          # service/picoclaw and service/ws reach common/kvm_vision.go, whose
+          # cgo LDFLAGS are "-L../dl_lib -lkvm". dl_lib/libkvm.so is a riscv64
+          # shared object, so ld on an x86_64 runner skips it as incompatible
+          # and the two test binaries fail to link. Excluded here by name rather
+          # than with continue-on-error, which would hide a real failure in
+          # every other package too.
+          excluded=$(printf '%s\n' \
+            NanoKVM-Server/service/picoclaw \
+            NanoKVM-Server/service/ws)
+          all=$(go list ./...)
+
+          # A rename would otherwise silently drop the guard and turn the job
+          # red. Not a while-read over a pipe: that loop is a subshell and its
+          # exit would not fail the step.
+          for pkg in $excluded; do
+            if ! echo "$all" | grep -qxF "$pkg"; then
+              echo "::error::$pkg no longer exists, update the exclusion in this workflow"
+              exit 1
+            fi
+          done
+
+          packages=$(echo "$all" | grep -vxF "$excluded" | tr '\n' ' ')
+          echo "Testing: $packages"
+          echo "list=$packages" >> "$GITHUB_OUTPUT"
+
+      - name: go test
+        working-directory: server
+        env:
+          PACKAGES: ${{ steps.packages.outputs.list }}
+        run: |
+          # shellcheck disable=SC2086 # PACKAGES is a space-separated list of import paths.
+          go test $PACKAGES
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up pnpm
+        run: |
+          npm install --global pnpm@11
+          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: web
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        working-directory: web
+        # eslint exits non-zero on errors and zero on warnings, which is exactly
+        # the policy wanted here. There are 16 warnings today, all
+        # react-hooks/exhaustive-deps. Do not add --max-warnings: pinning the
+        # count makes an unrelated change to any component fail this job.
+        run: pnpm exec eslint src
+
+      - name: Build
+        working-directory: web
+        run: pnpm build
