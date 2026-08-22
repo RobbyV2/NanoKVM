@@ -22,6 +22,7 @@ DOCKER_BUILD_ARGS := --build-arg DOCKER_UID=$(UID) --build-arg DOCKER_GID=$(GID)
 
 # Build commands
 GO_BUILD_CMD := cd /home/build/NanoKVM/server && go mod tidy && CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 CC=riscv64-unknown-linux-musl-gcc CGO_CFLAGS="-mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d" go build
+EDID_PROFILES_CMD := cd /home/build/NanoKVM/server && go run ../scripts/gen_edid_profiles.go
 SUPPORT_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoKVM/support/sg2002 && ./build kvm_system && ./build kvm_system add_to_kvmapp
 VISION_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoKVM/support/sg2002 && ./build kvm_vision && ./build kvm_vision add_to_kvmapp
 RELEASE_BUILD_CMD := /home/build/NanoKVM/scripts/build-in-container.sh
@@ -46,7 +47,7 @@ NEWT_BUILD_CMD := cd /home/build/NanoKVM/third_party/newt && CGO_ENABLED=0 GOOS=
 TUNNELS_BUILD_CMD := mkdir -p $(TUNNELS_DIR) && $(WSTUNNEL_BUILD_CMD) && $(NEWT_BUILD_CMD)
 
 .PHONY: help check-root builder-image rebuild-image check-image shell app support vision \
-        web tunnels release-build package release all clean
+        web tunnels edid-profiles release-build package release all clean
 
 # Default target
 all: app support
@@ -66,6 +67,7 @@ help:
 	@echo "  vision        - Build video libraries (libkvm.so)"
 	@echo "  web           - Build the frontend into web/dist"
 	@echo "  tunnels       - Build wstunnel + newt seeds into kvmapp/tunnels"
+	@echo "  edid-profiles - Regenerate the shipped EDID profile table"
 	@echo "  all           - Build both app and support (default)"
 	@echo "  release-build - Build every riscv64 release artifact in one pass"
 	@echo "  package       - Assemble nanokvm_<VERSION>.tar.gz + latest.json"
@@ -131,6 +133,12 @@ vision: check-root builder-image
 release-build: check-root builder-image
 	@echo "Building release artifacts..."
 	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(RELEASE_BUILD_CMD)'
+
+# Regenerate server/service/edid/profiles_gen.go from the pinned linuxhw/EDID
+# commit named in scripts/gen_edid_profiles.go. Needs network.
+edid-profiles: check-root builder-image
+	@echo "Generating EDID profiles..."
+	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(EDID_PROFILES_CMD)'
 
 # Build the frontend (runs on the host; the builder image has no Node)
 web:
