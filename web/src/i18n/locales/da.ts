@@ -324,6 +324,25 @@ const da = {
         interlaced: 'Den foretrukne opløsning er interlaced.',
         tooLarge:
           'Den foretrukne opløsning er større end 1920x1080 ved 60 Hz, hvilket er mere, end NanoKVM kan optage.',
+        recovery: 'Gendannelse',
+        recoveryNeeded:
+          'Den seneste skrivning blev ikke verificeret, så EDID-området i videochippen er i en ukendt tilstand. Gendan fabriks-EDID for at gøre tilstanden kendt igen.',
+        recoveryDesc:
+          'Skriv et kendt EDID tilbage til videochippen, hvis et anvendt EDID efterlod værten uden billede.',
+        restoreFactory: 'Gendan fabriks-EDID',
+        restoreBackup: 'Gendan forrige EDID',
+        restoreTitle: 'Gendan dette EDID?',
+        restoreFactoryTarget: 'Det fabriks-EDID, som NanoKVM blev leveret med.',
+        restoreBackupTarget: 'Den nyeste sikkerhedskopi, anvendt {{time}}.',
+        restoreNotice:
+          'En gendannelse skrives på samme måde som en anvendelse og har de samme konsekvenser.',
+        restored: 'EDID gendannet og verificeret.',
+        restoreFailed: 'Gendannelse af EDID mislykkedes.',
+        restoreOkBtn: 'Gendan',
+        hardware: 'Registreret hardware: {{hardware}}',
+        hardwareUnknown: 'Ukendt',
+        confirmWord: 'ANVEND',
+        confirmPrompt: 'Skriv {{word}} for at aktivere knappen Anvend.',
         okBtn: 'Anvend',
         cancelBtn: 'Annuller'
       },

@@ -323,6 +323,25 @@ const ca = {
         interlaced: 'La resolució preferida és entrellaçada.',
         tooLarge:
           'La resolució preferida supera els 1920x1080 a 60 Hz, més del que pot capturar el NanoKVM.',
+        recovery: 'Recuperació',
+        recoveryNeeded:
+          "L'última escriptura no s'ha verificat, de manera que la zona EDID del xip de vídeo es troba en un estat desconegut. Restaura l'EDID de fàbrica per tornar a un estat conegut.",
+        recoveryDesc:
+          "Torna a escriure un EDID conegut al xip de vídeo quan el que has aplicat ha deixat l'amfitrió sense imatge.",
+        restoreFactory: "Restaura l'EDID de fàbrica",
+        restoreBackup: "Restaura l'EDID anterior",
+        restoreTitle: 'Vols restaurar aquest EDID?',
+        restoreFactoryTarget: "L'EDID de fàbrica amb què es lliura el NanoKVM.",
+        restoreBackupTarget: 'La còpia més recent, aplicada el {{time}}.',
+        restoreNotice:
+          "Una restauració s'escriu igual que una aplicació i té les mateixes conseqüències.",
+        restored: 'EDID restaurat i verificat.',
+        restoreFailed: "No s'ha pogut restaurar l'EDID.",
+        restoreOkBtn: 'Restaura',
+        hardware: 'Maquinari detectat: {{hardware}}',
+        hardwareUnknown: 'Desconegut',
+        confirmWord: 'APLICA',
+        confirmPrompt: "Escriu {{word}} per activar el botó d'aplicar.",
         okBtn: 'Aplica',
         cancelBtn: 'Cancel·la'
       },

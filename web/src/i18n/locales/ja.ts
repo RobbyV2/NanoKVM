@@ -325,6 +325,24 @@ const ja = {
         interlaced: '推奨タイミングはインターレースです。',
         tooLarge:
           '推奨タイミングが 1920x1080 60 Hz を超えており、NanoKVM のキャプチャ能力を上回ります。',
+        recovery: '復旧',
+        recoveryNeeded:
+          '直前の書き込みが検証されなかったため、映像チップの EDID 領域は不明な状態です。工場出荷時の EDID を復元して、既知の状態に戻してください。',
+        recoveryDesc:
+          '適用した EDID でホストの画面が出なくなった場合に、既知の EDID を映像チップへ書き戻します。',
+        restoreFactory: '工場出荷時の EDID を復元',
+        restoreBackup: '以前の EDID を復元',
+        restoreTitle: 'この EDID を復元しますか？',
+        restoreFactoryTarget: 'NanoKVM に同梱されている工場出荷時の EDID です。',
+        restoreBackupTarget: '最新のバックアップです（適用日時 {{time}}）。',
+        restoreNotice: '復元は適用と同じ方法で書き込まれ、同じ影響があります。',
+        restored: 'EDID を復元し、検証しました。',
+        restoreFailed: 'EDID の復元に失敗しました。',
+        restoreOkBtn: '復元',
+        hardware: '検出されたハードウェア: {{hardware}}',
+        hardwareUnknown: '不明',
+        confirmWord: '適用',
+        confirmPrompt: '適用ボタンを有効にするには {{word}} と入力してください。',
         okBtn: '適用',
         cancelBtn: 'キャンセル'
       },

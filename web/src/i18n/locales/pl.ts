@@ -326,6 +326,25 @@ const pl = {
         interlaced: 'Preferowane taktowanie jest z przeplotem.',
         tooLarge:
           'Preferowane taktowanie przekracza 1920x1080 przy 60 Hz, czyli więcej, niż NanoKVM może przechwycić.',
+        recovery: 'Odzyskiwanie',
+        recoveryNeeded:
+          'Ostatni zapis nie został zweryfikowany, więc obszar EDID w układzie wideo jest w nieznanym stanie. Przywróć fabryczny EDID, aby stan znów był znany.',
+        recoveryDesc:
+          'Zapisz znany EDID z powrotem w układzie wideo, jeśli zastosowany EDID pozostawił hosta bez obrazu.',
+        restoreFactory: 'Przywróć fabryczny EDID',
+        restoreBackup: 'Przywróć poprzedni EDID',
+        restoreTitle: 'Przywrócić ten EDID?',
+        restoreFactoryTarget: 'Fabryczny EDID dostarczany z NanoKVM.',
+        restoreBackupTarget: 'Najnowsza kopia zapasowa, zastosowana {{time}}.',
+        restoreNotice:
+          'Przywracanie jest zapisywane tak samo jak zastosowanie i ma te same konsekwencje.',
+        restored: 'EDID przywrócony i zweryfikowany.',
+        restoreFailed: 'Przywracanie EDID nie powiodło się.',
+        restoreOkBtn: 'Przywróć',
+        hardware: 'Wykryty sprzęt: {{hardware}}',
+        hardwareUnknown: 'Nieznany',
+        confirmWord: 'ZASTOSUJ',
+        confirmPrompt: 'Wpisz {{word}}, aby odblokować przycisk zastosowania.',
         okBtn: 'Zastosuj',
         cancelBtn: 'Anuluj'
       },

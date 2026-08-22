@@ -322,6 +322,25 @@ const se = {
         interlaced: 'Den föredragna upplösningen är sammanflätad.',
         tooLarge:
           'Den föredragna upplösningen är större än 1920x1080 vid 60 Hz, vilket är mer än NanoKVM kan fånga.',
+        recovery: 'Återställning',
+        recoveryNeeded:
+          'Den senaste skrivningen verifierades inte, så EDID-området i videochippet är i ett okänt tillstånd. Återställ fabriks-EDID för att få ett känt tillstånd igen.',
+        recoveryDesc:
+          'Skriv tillbaka ett känt EDID till videochippet om det du tillämpade lämnade värden utan bild.',
+        restoreFactory: 'Återställ fabriks-EDID',
+        restoreBackup: 'Återställ föregående EDID',
+        restoreTitle: 'Vill du återställa det här EDID:t?',
+        restoreFactoryTarget: 'Fabriks-EDID:t som NanoKVM levereras med.',
+        restoreBackupTarget: 'Den senaste säkerhetskopian, tillämpad {{time}}.',
+        restoreNotice:
+          'En återställning skrivs på samma sätt som en tillämpning och har samma konsekvenser.',
+        restored: 'EDID återställt och verifierat.',
+        restoreFailed: 'Det gick inte att återställa EDID.',
+        restoreOkBtn: 'Återställ',
+        hardware: 'Identifierad hårdvara: {{hardware}}',
+        hardwareUnknown: 'Okänd',
+        confirmWord: 'TILLÄMPA',
+        confirmPrompt: 'Skriv {{word}} för att aktivera tillämpa-knappen.',
         okBtn: 'Tillämpa',
         cancelBtn: 'Avbryt'
       },

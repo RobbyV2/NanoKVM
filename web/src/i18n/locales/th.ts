@@ -317,6 +317,23 @@ const th = {
         interlaced: 'ความละเอียดที่ต้องการเป็นแบบอินเทอร์เลซ',
         tooLarge:
           'ความละเอียดที่ต้องการสูงกว่า 1920x1080 ที่ 60 Hz ซึ่งเกินกว่าที่ NanoKVM จับภาพได้',
+        recovery: 'การกู้คืน',
+        recoveryNeeded:
+          'การเขียนครั้งล่าสุดไม่ผ่านการตรวจสอบ พื้นที่ EDID ในชิปวิดีโอจึงอยู่ในสถานะที่ไม่ทราบ ให้กู้คืน EDID จากโรงงานเพื่อให้กลับสู่สถานะที่ทราบอีกครั้ง',
+        recoveryDesc: 'เขียน EDID ที่ทราบกลับลงในชิปวิดีโอ เมื่อ EDID ที่ใช้ไปทำให้โฮสต์ไม่มีภาพ',
+        restoreFactory: 'กู้คืน EDID จากโรงงาน',
+        restoreBackup: 'กู้คืน EDID ก่อนหน้า',
+        restoreTitle: 'กู้คืน EDID นี้หรือไม่?',
+        restoreFactoryTarget: 'EDID จากโรงงานที่มาพร้อมกับ NanoKVM',
+        restoreBackupTarget: 'ข้อมูลสำรองล่าสุด ใช้งานเมื่อ {{time}}',
+        restoreNotice: 'การกู้คืนเขียนด้วยวิธีเดียวกับการใช้งาน และมีผลกระทบเช่นเดียวกัน',
+        restored: 'กู้คืนและตรวจสอบ EDID เรียบร้อยแล้ว',
+        restoreFailed: 'กู้คืน EDID ไม่สำเร็จ',
+        restoreOkBtn: 'กู้คืน',
+        hardware: 'ฮาร์ดแวร์ที่ตรวจพบ: {{hardware}}',
+        hardwareUnknown: 'ไม่ทราบ',
+        confirmWord: 'ยืนยัน',
+        confirmPrompt: 'พิมพ์ {{word}} เพื่อเปิดใช้งานปุ่มใช้งาน',
         okBtn: 'ใช้งาน',
         cancelBtn: 'ยกเลิก'
       },

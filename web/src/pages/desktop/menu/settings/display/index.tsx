@@ -4,9 +4,10 @@ import { DownloadIcon, HistoryIcon, LoaderCircleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/edid.ts';
-import type { EdidStatus } from '@/api/edid.ts';
+import type { EdidResult, EdidStatus } from '@/api/edid.ts';
 
 import { Preset } from './preset.tsx';
+import { Recovery } from './recovery.tsx';
 import { Summary } from './summary.tsx';
 
 type DisplayProps = {
@@ -19,9 +20,19 @@ export const Display = ({ setIsLocked }: DisplayProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [status, setStatus] = useState<EdidStatus>();
+  const [result, setResult] = useState<EdidResult>();
   const [errMsg, setErrMsg] = useState('');
 
   const backup = status?.backups?.[0];
+
+  // the flash left the edid region half written, and only a restore leaves it known again
+  const needsRecovery = result?.state === 'needs_recovery';
+  const canRestore = needsRecovery || !!backup || !!status?.factoryAvailable;
+
+  function restored() {
+    setResult(undefined);
+    getStatus();
+  }
 
   useEffect(() => {
     getStatus();
@@ -128,9 +139,26 @@ export const Display = ({ setIsLocked }: DisplayProps) => {
           <Preset
             active={status?.active}
             preflight={status?.preflight}
+            result={result}
+            setResult={setResult}
             setIsLocked={setIsLocked}
             onSuccess={getStatus}
           />
+
+          {canRestore && (
+            <>
+              <Divider className="opacity-50" />
+
+              <Recovery
+                needsRecovery={needsRecovery}
+                factoryAvailable={!!status?.factoryAvailable}
+                backup={backup}
+                preflight={status?.preflight}
+                setIsLocked={setIsLocked}
+                onSuccess={restored}
+              />
+            </>
+          )}
         </>
       )}
     </>

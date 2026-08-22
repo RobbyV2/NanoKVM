@@ -325,6 +325,25 @@ const id = {
         interlaced: 'Timing pilihan bersifat interlaced.',
         tooLarge:
           'Timing pilihan lebih besar dari 1920x1080 pada 60 Hz, melebihi kemampuan tangkap NanoKVM.',
+        recovery: 'Pemulihan',
+        recoveryNeeded:
+          'Penulisan terakhir tidak terverifikasi, sehingga area EDID pada chip video berada dalam keadaan yang tidak diketahui. Pulihkan EDID pabrik agar keadaannya diketahui kembali.',
+        recoveryDesc:
+          'Tulis kembali EDID yang diketahui ke chip video ketika EDID yang diterapkan membuat host tidak menampilkan gambar.',
+        restoreFactory: 'Pulihkan EDID pabrik',
+        restoreBackup: 'Pulihkan EDID sebelumnya',
+        restoreTitle: 'Pulihkan EDID ini?',
+        restoreFactoryTarget: 'EDID pabrik yang disertakan bersama NanoKVM.',
+        restoreBackupTarget: 'Cadangan terbaru, diterapkan {{time}}.',
+        restoreNotice:
+          'Pemulihan ditulis dengan cara yang sama seperti penerapan, dengan konsekuensi yang sama.',
+        restored: 'EDID dipulihkan dan diverifikasi.',
+        restoreFailed: 'Gagal memulihkan EDID.',
+        restoreOkBtn: 'Pulihkan',
+        hardware: 'Perangkat keras terdeteksi: {{hardware}}',
+        hardwareUnknown: 'Tidak diketahui',
+        confirmWord: 'TERAPKAN',
+        confirmPrompt: 'Ketik {{word}} untuk mengaktifkan tombol terapkan.',
         okBtn: 'Terapkan',
         cancelBtn: 'Batal'
       },

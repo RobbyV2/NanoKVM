@@ -328,6 +328,25 @@ const nl = {
         interlaced: 'De voorkeurstiming is geïnterlinieerd.',
         tooLarge:
           'De voorkeurstiming is groter dan 1920x1080 bij 60 Hz, meer dan NanoKVM kan vastleggen.',
+        recovery: 'Herstel',
+        recoveryNeeded:
+          'De laatste schrijfactie is niet geverifieerd, dus het EDID-gebied van de videochip verkeert in een onbekende staat. Herstel de fabrieks-EDID om weer een bekende staat te krijgen.',
+        recoveryDesc:
+          'Schrijf een bekende EDID terug naar de videochip als een toegepaste EDID de host zonder beeld heeft achtergelaten.',
+        restoreFactory: 'Fabrieks-EDID herstellen',
+        restoreBackup: 'Vorige EDID herstellen',
+        restoreTitle: 'Deze EDID herstellen?',
+        restoreFactoryTarget: 'De fabrieks-EDID waarmee NanoKVM is geleverd.',
+        restoreBackupTarget: 'De meest recente back-up, toegepast op {{time}}.',
+        restoreNotice:
+          'Een herstel wordt op dezelfde manier geschreven als een toepassing en heeft dezelfde gevolgen.',
+        restored: 'EDID hersteld en geverifieerd.',
+        restoreFailed: 'Het herstellen van de EDID is mislukt.',
+        restoreOkBtn: 'Herstellen',
+        hardware: 'Gedetecteerde hardware: {{hardware}}',
+        hardwareUnknown: 'Onbekend',
+        confirmWord: 'TOEPASSEN',
+        confirmPrompt: 'Typ {{word}} om de knop Toepassen in te schakelen.',
         okBtn: 'Toepassen',
         cancelBtn: 'Annuleren'
       },

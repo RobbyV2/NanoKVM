@@ -81,6 +81,11 @@ export function apply(profile: string, data: string) {
   return http.post('/api/vm/edid/apply', { profile, data }, { timeout: applyTimeout });
 }
 
+// re-flash the factory image or a stored backup, through the same path as apply
+export function restore(source: string, id: string) {
+  return http.post('/api/vm/edid/restore', { source, id }, { timeout: applyTimeout });
+}
+
 // download the bytes of the last verified flash
 export function downloadEdid() {
   return http

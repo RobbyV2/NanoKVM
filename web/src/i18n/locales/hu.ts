@@ -326,6 +326,25 @@ const hu = {
         interlaced: 'A preferált időzítés váltottsoros.',
         tooLarge:
           'A preferált időzítés nagyobb, mint 1920x1080 60 Hz-en, amit a NanoKVM már nem tud rögzíteni.',
+        recovery: 'Helyreállítás',
+        recoveryNeeded:
+          'A legutóbbi írás nem lett ellenőrizve, így a videochip EDID-területe ismeretlen állapotban van. Állítsa vissza a gyári EDID-et, hogy az állapot ismét ismert legyen.',
+        recoveryDesc:
+          'Írjon vissza egy ismert EDID-et a videochipre, ha az alkalmazott EDID kép nélkül hagyta a gazdagépet.',
+        restoreFactory: 'Gyári EDID visszaállítása',
+        restoreBackup: 'Előző EDID visszaállítása',
+        restoreTitle: 'Visszaállítja ezt az EDID-et?',
+        restoreFactoryTarget: 'A NanoKVM-mel szállított gyári EDID.',
+        restoreBackupTarget: 'A legutóbbi mentés, alkalmazva: {{time}}.',
+        restoreNotice:
+          'A visszaállítás ugyanúgy íródik, mint az alkalmazás, és ugyanazokkal a következményekkel jár.',
+        restored: 'Az EDID visszaállítva és ellenőrizve.',
+        restoreFailed: 'Az EDID visszaállítása nem sikerült.',
+        restoreOkBtn: 'Visszaállítás',
+        hardware: 'Észlelt hardver: {{hardware}}',
+        hardwareUnknown: 'Ismeretlen',
+        confirmWord: 'ALKALMAZ',
+        confirmPrompt: 'Írja be: {{word}}, hogy az alkalmazás gomb aktívvá váljon.',
         okBtn: 'Alkalmaz',
         cancelBtn: 'Mégse'
       },

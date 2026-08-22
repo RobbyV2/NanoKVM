@@ -324,6 +324,24 @@ const tr = {
         interlaced: 'Tercih edilen zamanlama taramalı (interlaced).',
         tooLarge:
           'Tercih edilen zamanlama 1920x1080 60 Hz üzerinde; bu, NanoKVM’nin yakalayabileceğinden fazla.',
+        recovery: 'Kurtarma',
+        recoveryNeeded:
+          'Son yazma doğrulanmadı, bu nedenle video yongasındaki EDID alanı bilinmeyen bir durumda. Durumu yeniden bilinir hâle getirmek için fabrika EDID’sini geri yükleyin.',
+        recoveryDesc:
+          'Uygulanan EDID ana makineyi görüntüsüz bıraktıysa, video yongasına bilinen bir EDID’yi geri yazın.',
+        restoreFactory: 'Fabrika EDID’sini geri yükle',
+        restoreBackup: 'Önceki EDID’yi geri yükle',
+        restoreTitle: 'Bu EDID geri yüklensin mi?',
+        restoreFactoryTarget: 'NanoKVM ile birlikte gelen fabrika EDID’si.',
+        restoreBackupTarget: 'En son yedek, {{time}} tarihinde uygulandı.',
+        restoreNotice: 'Geri yükleme, uygulama ile aynı şekilde yazılır ve aynı sonuçları doğurur.',
+        restored: 'EDID geri yüklendi ve doğrulandı.',
+        restoreFailed: 'EDID geri yüklenemedi.',
+        restoreOkBtn: 'Geri yükle',
+        hardware: 'Algılanan donanım: {{hardware}}',
+        hardwareUnknown: 'Bilinmiyor',
+        confirmWord: 'UYGULA',
+        confirmPrompt: 'Uygula düğmesini etkinleştirmek için {{word}} yazın.',
         okBtn: 'Uygula',
         cancelBtn: 'İptal'
       },

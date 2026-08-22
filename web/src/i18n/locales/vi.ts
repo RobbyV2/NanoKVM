@@ -321,6 +321,24 @@ const vi = {
         interlaced: 'Chế độ ưu tiên là quét xen kẽ.',
         tooLarge:
           'Chế độ ưu tiên lớn hơn 1920x1080 ở 60 Hz, vượt quá khả năng thu hình của NanoKVM.',
+        recovery: 'Khôi phục',
+        recoveryNeeded:
+          'Lần ghi gần nhất không được xác minh, nên vùng EDID trong chip video đang ở trạng thái không xác định. Hãy khôi phục EDID gốc để đưa nó về trạng thái đã biết.',
+        recoveryDesc:
+          'Ghi lại một EDID đã biết vào chip video khi EDID vừa áp dụng khiến máy chủ không còn hình ảnh.',
+        restoreFactory: 'Khôi phục EDID gốc',
+        restoreBackup: 'Khôi phục EDID trước đó',
+        restoreTitle: 'Khôi phục EDID này?',
+        restoreFactoryTarget: 'EDID gốc được cấp kèm NanoKVM.',
+        restoreBackupTarget: 'Bản sao lưu mới nhất, đã áp dụng lúc {{time}}.',
+        restoreNotice: 'Việc khôi phục được ghi giống như khi áp dụng và có cùng hậu quả.',
+        restored: 'Đã khôi phục và xác minh EDID.',
+        restoreFailed: 'Khôi phục EDID thất bại.',
+        restoreOkBtn: 'Khôi phục',
+        hardware: 'Phần cứng phát hiện được: {{hardware}}',
+        hardwareUnknown: 'Không xác định',
+        confirmWord: 'ÁP DỤNG',
+        confirmPrompt: 'Nhập {{word}} để bật nút áp dụng.',
         okBtn: 'Áp dụng',
         cancelBtn: 'Hủy'
       },

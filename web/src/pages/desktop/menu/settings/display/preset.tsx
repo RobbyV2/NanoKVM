@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Button, Modal, Select } from 'antd';
+import { Button, Input, Modal, Select } from 'antd';
 import { UploadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,8 +11,17 @@ import { buildChecks, Checks, formatMode, Summary } from './summary.tsx';
 type PresetProps = {
   active?: EdidSummary;
   preflight?: EdidPreflight;
+  result?: EdidResult;
+  setResult: (result?: EdidResult) => void;
   setIsLocked: (isLocked: boolean) => void;
   onSuccess: () => void;
+};
+
+// /etc/kvm/hw names the board, and the tool's own labels for it are these three
+const hardwareNames: Record<string, string> = {
+  CUBE_A: 'NanoKVM Cube (alpha)',
+  CUBE_B: 'NanoKVM Cube (beta)',
+  PCIE_A: 'NanoKVM PCIe'
 };
 
 // exactly one of profile and data is sent, the other stays empty
@@ -22,7 +31,22 @@ type Selection = {
   summary: Partial<EdidSummary>;
 };
 
-export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProps) => {
+// the board and chip the preflight detected, empty when it identified neither
+function hardwareName(preflight?: EdidPreflight): string {
+  const product = preflight?.product ? hardwareNames[preflight.product] : undefined;
+  if (!product) return '';
+
+  return preflight?.chip ? `${product} · ${preflight.chip}` : product;
+}
+
+export const Preset = ({
+  active,
+  preflight,
+  result,
+  setResult,
+  setIsLocked,
+  onSuccess
+}: PresetProps) => {
   const { t } = useTranslation();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,11 +55,18 @@ export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProp
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<EdidProfile[]>([]);
   const [selection, setSelection] = useState<Selection>();
-  const [result, setResult] = useState<EdidResult>();
+  const [confirmation, setConfirmation] = useState('');
   const [errMsg, setErrMsg] = useState('');
 
   const checks = buildChecks(selection?.summary, preflight);
   const hasError = checks.some((check) => check.level === 'error');
+
+  // on cube the power cycle after a bad flash is a trip to the device, so the
+  // confirmation is typed there; on pcie the tool resets hdmi over gpio itself
+  const needsTypedConfirm = !!preflight?.requiresPowerCycle;
+  const confirmWord = t('settings.display.confirmWord');
+  const isConfirmed =
+    !needsTypedConfirm || confirmation.trim().toLowerCase() === confirmWord.toLowerCase();
 
   useEffect(() => {
     getProfiles();
@@ -121,6 +152,7 @@ export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProp
 
   function openModal() {
     if (isLoading || isApplying || hasError || !selection) return;
+    setConfirmation('');
     setIsModalOpen(true);
   }
 
@@ -130,7 +162,7 @@ export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProp
   }
 
   function apply() {
-    if (isApplying || !selection) return;
+    if (isApplying || !selection || !isConfirmed) return;
     setIsApplying(true);
     setIsLocked(true);
     setErrMsg('');
@@ -244,6 +276,7 @@ export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProp
         okText={t('settings.display.okBtn')}
         cancelText={t('settings.display.cancelBtn')}
         confirmLoading={isApplying}
+        okButtonProps={{ disabled: !isConfirmed }}
         onOk={apply}
         onCancel={closeModal}
       >
@@ -264,10 +297,31 @@ export const Preset = ({ active, preflight, setIsLocked, onSuccess }: PresetProp
             {selection && <Summary summary={selection.summary} />}
           </div>
 
+          <span className="text-sm text-neutral-400">
+            {t('settings.display.hardware', {
+              hardware: hardwareName(preflight) || t('settings.display.hardwareUnknown')
+            })}
+          </span>
+
           <span className="text-sm">{t('settings.display.hdmiNotice')}</span>
 
           {preflight?.requiresPowerCycle && (
             <span className="text-sm text-amber-500">{t('settings.display.powerCycleNotice')}</span>
+          )}
+
+          {needsTypedConfirm && (
+            <div className="flex flex-col space-y-2">
+              <span className="text-sm">
+                {t('settings.display.confirmPrompt', { word: confirmWord })}
+              </span>
+
+              <Input
+                value={confirmation}
+                placeholder={confirmWord}
+                disabled={isApplying}
+                onChange={(e) => setConfirmation(e.target.value)}
+              />
+            </div>
           )}
         </div>
       </Modal>

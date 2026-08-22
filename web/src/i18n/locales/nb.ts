@@ -325,6 +325,25 @@ const nb = {
         interlaced: 'Foretrukket oppløsning er linjeflettet.',
         tooLarge:
           'Foretrukket oppløsning er større enn 1920x1080 ved 60 Hz, som er mer enn NanoKVM kan fange opp.',
+        recovery: 'Gjenoppretting',
+        recoveryNeeded:
+          'Den siste skrivingen ble ikke verifisert, så EDID-området i videobrikken er i en ukjent tilstand. Gjenopprett fabrikk-EDID for å få en kjent tilstand igjen.',
+        recoveryDesc:
+          'Skriv en kjent EDID tilbake til videobrikken hvis den du tok i bruk lot verten stå uten bilde.',
+        restoreFactory: 'Gjenopprett fabrikk-EDID',
+        restoreBackup: 'Gjenopprett forrige EDID',
+        restoreTitle: 'Gjenopprette denne EDID-en?',
+        restoreFactoryTarget: 'Fabrikk-EDID-en som NanoKVM ble levert med.',
+        restoreBackupTarget: 'Den nyeste sikkerhetskopien, tatt i bruk {{time}}.',
+        restoreNotice:
+          'En gjenoppretting skrives på samme måte som en bruk, med de samme konsekvensene.',
+        restored: 'EDID gjenopprettet og verifisert.',
+        restoreFailed: 'Gjenoppretting av EDID mislyktes.',
+        restoreOkBtn: 'Gjenopprett',
+        hardware: 'Oppdaget maskinvare: {{hardware}}',
+        hardwareUnknown: 'Ukjent',
+        confirmWord: 'BRUK',
+        confirmPrompt: 'Skriv {{word}} for å aktivere bruk-knappen.',
         okBtn: 'Bruk',
         cancelBtn: 'Avbryt'
       },

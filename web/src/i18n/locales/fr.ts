@@ -328,6 +328,25 @@ const fr = {
         interlaced: 'La résolution préférée est entrelacée.',
         tooLarge:
           'La résolution préférée dépasse 1920x1080 à 60 Hz, soit plus que ce que NanoKVM peut capturer.',
+        recovery: 'Récupération',
+        recoveryNeeded:
+          "La dernière écriture n'a pas été vérifiée, la zone EDID de la puce vidéo est donc dans un état inconnu. Restaurez l'EDID d'usine pour revenir à un état connu.",
+        recoveryDesc:
+          "Réécrit un EDID connu sur la puce vidéo lorsque celui qui a été appliqué a laissé l'hôte sans image.",
+        restoreFactory: "Restaurer l'EDID d'usine",
+        restoreBackup: "Restaurer l'EDID précédent",
+        restoreTitle: 'Restaurer cet EDID ?',
+        restoreFactoryTarget: "L'EDID d'usine livré avec le NanoKVM.",
+        restoreBackupTarget: 'La sauvegarde la plus récente, appliquée le {{time}}.',
+        restoreNotice:
+          "Une restauration s'écrit de la même manière qu'une application et a les mêmes conséquences.",
+        restored: 'EDID restauré et vérifié.',
+        restoreFailed: "Échec de la restauration de l'EDID.",
+        restoreOkBtn: 'Restaurer',
+        hardware: 'Matériel détecté : {{hardware}}',
+        hardwareUnknown: 'Inconnu',
+        confirmWord: 'APPLIQUER',
+        confirmPrompt: "Saisissez {{word}} pour activer le bouton d'application.",
         okBtn: 'Appliquer',
         cancelBtn: 'Annuler'
       },

@@ -330,6 +330,25 @@ const de = {
         interlaced: 'Das bevorzugte Timing ist im Zeilensprungverfahren.',
         tooLarge:
           'Das bevorzugte Timing ist größer als 1920x1080 bei 60 Hz und damit mehr, als NanoKVM aufnehmen kann.',
+        recovery: 'Wiederherstellung',
+        recoveryNeeded:
+          'Der letzte Schreibvorgang wurde nicht verifiziert, daher ist der EDID-Bereich des Video-Chips in einem unbekannten Zustand. Stellen Sie das werkseitige EDID wieder her, um einen bekannten Zustand herzustellen.',
+        recoveryDesc:
+          'Schreibt ein bekanntes EDID zurück auf den Video-Chip, wenn ein angewendetes EDID den Host ohne Bild zurückgelassen hat.',
+        restoreFactory: 'Werks-EDID wiederherstellen',
+        restoreBackup: 'Vorheriges EDID wiederherstellen',
+        restoreTitle: 'Dieses EDID wiederherstellen?',
+        restoreFactoryTarget: 'Das werkseitige EDID, mit dem NanoKVM ausgeliefert wird.',
+        restoreBackupTarget: 'Die neueste Sicherung, angewendet am {{time}}.',
+        restoreNotice:
+          'Eine Wiederherstellung wird genauso geschrieben wie eine Anwendung und hat dieselben Folgen.',
+        restored: 'EDID wiederhergestellt und verifiziert.',
+        restoreFailed: 'Die Wiederherstellung des EDID ist fehlgeschlagen.',
+        restoreOkBtn: 'Wiederherstellen',
+        hardware: 'Erkannte Hardware: {{hardware}}',
+        hardwareUnknown: 'Unbekannt',
+        confirmWord: 'ANWENDEN',
+        confirmPrompt: 'Geben Sie {{word}} ein, um die Schaltfläche zum Anwenden zu aktivieren.',
         okBtn: 'Anwenden',
         cancelBtn: 'Abbrechen'
       },

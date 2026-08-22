@@ -326,6 +326,25 @@ const es = {
         interlaced: 'La resolución preferida es entrelazada.',
         tooLarge:
           'La resolución preferida supera 1920x1080 a 60 Hz, más de lo que NanoKVM puede capturar.',
+        recovery: 'Recuperación',
+        recoveryNeeded:
+          'La última escritura no se verificó, por lo que la zona EDID del chip de vídeo está en un estado desconocido. Restaura el EDID de fábrica para volver a un estado conocido.',
+        recoveryDesc:
+          'Vuelve a escribir un EDID conocido en el chip de vídeo cuando el que aplicaste dejó al host sin imagen.',
+        restoreFactory: 'Restaurar EDID de fábrica',
+        restoreBackup: 'Restaurar EDID anterior',
+        restoreTitle: '¿Restaurar este EDID?',
+        restoreFactoryTarget: 'El EDID de fábrica con el que se entrega NanoKVM.',
+        restoreBackupTarget: 'La copia más reciente, aplicada el {{time}}.',
+        restoreNotice:
+          'Una restauración se escribe igual que una aplicación y tiene las mismas consecuencias.',
+        restored: 'EDID restaurado y verificado.',
+        restoreFailed: 'No se pudo restaurar el EDID.',
+        restoreOkBtn: 'Restaurar',
+        hardware: 'Hardware detectado: {{hardware}}',
+        hardwareUnknown: 'Desconocido',
+        confirmWord: 'APLICAR',
+        confirmPrompt: 'Escribe {{word}} para habilitar el botón de aplicar.',
         okBtn: 'Aplicar',
         cancelBtn: 'Cancelar'
       },

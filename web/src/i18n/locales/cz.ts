@@ -325,6 +325,24 @@ const cz = {
         interlaced: 'Preferované časování je prokládané.',
         tooLarge:
           'Preferované časování je vyšší než 1920x1080 při 60 Hz, tedy více, než dokáže NanoKVM zachytit.',
+        recovery: 'Obnovení',
+        recoveryNeeded:
+          'Poslední zápis se nepodařilo ověřit, takže oblast EDID ve video čipu je v neznámém stavu. Obnovte tovární EDID, aby byl stav opět známý.',
+        recoveryDesc:
+          'Zapište do video čipu známé EDID, pokud po použití jiného zůstal hostitel bez obrazu.',
+        restoreFactory: 'Obnovit tovární EDID',
+        restoreBackup: 'Obnovit předchozí EDID',
+        restoreTitle: 'Obnovit toto EDID?',
+        restoreFactoryTarget: 'Tovární EDID dodávané s NanoKVM.',
+        restoreBackupTarget: 'Nejnovější záloha, použitá {{time}}.',
+        restoreNotice: 'Obnovení se zapisuje stejně jako použití a má stejné důsledky.',
+        restored: 'EDID bylo obnoveno a ověřeno.',
+        restoreFailed: 'Obnovení EDID se nezdařilo.',
+        restoreOkBtn: 'Obnovit',
+        hardware: 'Zjištěný hardware: {{hardware}}',
+        hardwareUnknown: 'Neznámý',
+        confirmWord: 'POTVRDIT',
+        confirmPrompt: 'Pro odemknutí tlačítka pro použití napište {{word}}.',
         okBtn: 'Použít',
         cancelBtn: 'Zrušit'
       },

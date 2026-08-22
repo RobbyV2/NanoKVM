@@ -326,6 +326,24 @@ const en = {
         interlaced: 'The preferred timing is interlaced.',
         tooLarge:
           'The preferred timing is larger than 1920x1080 at 60 Hz, which is more than NanoKVM can capture.',
+        recovery: 'Recovery',
+        recoveryNeeded:
+          'The last write did not verify, so the EDID area of the video chip is in an unknown state. Restore the factory EDID to make it known again.',
+        recoveryDesc:
+          'Write a known EDID back to the video chip when an applied one left the host without a picture.',
+        restoreFactory: 'Restore factory EDID',
+        restoreBackup: 'Restore previous EDID',
+        restoreTitle: 'Restore this EDID?',
+        restoreFactoryTarget: 'The factory EDID that NanoKVM shipped with.',
+        restoreBackupTarget: 'The most recent backup, applied {{time}}.',
+        restoreNotice: 'A restore is written the same way as an apply, with the same consequences.',
+        restored: 'EDID restored and verified.',
+        restoreFailed: 'Restoring the EDID failed.',
+        restoreOkBtn: 'Restore',
+        hardware: 'Detected hardware: {{hardware}}',
+        hardwareUnknown: 'Unknown',
+        confirmWord: 'APPLY',
+        confirmPrompt: 'Type {{word}} to enable the apply button.',
         okBtn: 'Apply',
         cancelBtn: 'Cancel'
       },
