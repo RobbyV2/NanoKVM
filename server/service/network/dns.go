@@ -458,7 +458,7 @@ func getFallbackIPv4Interface() string {
 }
 
 func getDNSInterfaceType(name string) string {
-	if strings.HasPrefix(name, "eth") || strings.HasPrefix(name, "en") {
+	if strings.HasPrefix(name, "eth") || strings.HasPrefix(name, "en") || strings.HasPrefix(name, "br") {
 		return "Wired"
 	}
 

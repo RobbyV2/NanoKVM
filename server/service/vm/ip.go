@@ -66,7 +66,7 @@ func getInterfaceInfo(iface net.Interface) *InterfaceInfo {
 }
 
 func getInterfaceType(iface net.Interface) string {
-	if strings.HasPrefix(iface.Name, "eth") || strings.HasPrefix(iface.Name, "en") {
+	if strings.HasPrefix(iface.Name, "eth") || strings.HasPrefix(iface.Name, "en") || strings.HasPrefix(iface.Name, "br") {
 		return Wired
 	}
 
