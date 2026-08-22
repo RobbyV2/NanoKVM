@@ -39,3 +39,6 @@ kvmapp/kvm_system/kvm_system
 
 # Tunnel seeds built by "make tunnels"
 kvmapp/tunnels/*.gz
+
+# usb-proxy seed built by "make passthrough"
+kvmapp/passthrough/*.gz

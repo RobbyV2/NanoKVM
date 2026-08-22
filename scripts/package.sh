@@ -18,6 +18,8 @@
 #   kvmapp/server/dl_lib/libkvm.so  freshly built video library (optional)
 #   kvmapp/tunnels/*.gz             gzipped tunnel seeds, staged uncompressed
 #                                   under build/tunnels/ for the arch check
+#   kvmapp/passthrough/usb-proxy.gz gzipped usb-proxy seed, staged uncompressed
+#                                   under build/passthrough/ for the arch check
 #   web/dist/                       built frontend
 #
 # Usage: scripts/package.sh <version>
@@ -85,12 +87,16 @@ require_file "$ROOT/build/tunnels/wstunnel" "run: make tunnels"
 require_file "$ROOT/build/tunnels/newt" "run: make tunnels"
 require_file "$ROOT/kvmapp/tunnels/wstunnel.gz" "run: make tunnels"
 require_file "$ROOT/kvmapp/tunnels/newt.gz" "run: make tunnels"
+# Same for the usb-proxy seed the passthrough manager extracts on first use.
+require_file "$ROOT/build/passthrough/usb-proxy" "run: make passthrough"
+require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
 
 require_riscv64 "$ROOT/server/NanoKVM-Server"
 require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
 require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
 require_riscv64 "$ROOT/build/tunnels/wstunnel"
 require_riscv64 "$ROOT/build/tunnels/newt"
+require_riscv64 "$ROOT/build/passthrough/usb-proxy"
 
 echo "[INFO] staging nanokvm_$VERSION"
 # Clear the whole output directory: release.yml uploads build/release/nanokvm_*

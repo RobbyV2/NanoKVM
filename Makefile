@@ -21,7 +21,10 @@ DOCKER_RUN_BASE := docker run -e UID=$(UID) -e GID=$(GID) -v $(PWD):/home/build/
 DOCKER_BUILD_ARGS := --build-arg DOCKER_UID=$(UID) --build-arg DOCKER_GID=$(GID)
 
 # Build commands
-GO_BUILD_CMD := cd /home/build/NanoKVM/server && go mod tidy && CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 CC=riscv64-unknown-linux-musl-gcc CGO_CFLAGS="-mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d" go build
+# C906 arch flags for the Sophgo host-tools toolchain, shared by the cgo build
+# and the usb-proxy cross build.
+RISCV_ARCH_FLAGS := -mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d
+GO_BUILD_CMD := cd /home/build/NanoKVM/server && go mod tidy && CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 CC=riscv64-unknown-linux-musl-gcc CGO_CFLAGS="$(RISCV_ARCH_FLAGS)" go build
 EDID_PROFILES_CMD := cd /home/build/NanoKVM/server && go run ../scripts/gen_edid_profiles.go
 SUPPORT_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoKVM/support/sg2002 && ./build kvm_system && ./build kvm_system add_to_kvmapp
 VISION_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoKVM/support/sg2002 && ./build kvm_vision && ./build kvm_vision add_to_kvmapp
@@ -46,8 +49,31 @@ WSTUNNEL_BUILD_CMD := cd /home/build/NanoKVM/third_party/wstunnel && CARGO_HOME=
 NEWT_BUILD_CMD := cd /home/build/NanoKVM/third_party/newt && CGO_ENABLED=0 GOOS=linux GOARCH=riscv64 go build -trimpath -ldflags="-s -w -X main.newtVersion=$(NEWT_VERSION) -X main.newtPlatform=linux_riscv64" -o $(TUNNELS_DIR)/newt
 TUNNELS_BUILD_CMD := mkdir -p $(TUNNELS_DIR) && $(WSTUNNEL_BUILD_CMD) && $(NEWT_BUILD_CMD)
 
+# usb-proxy is C++ and links against libusb and jsoncpp, neither of which the
+# builder image has a riscv64 copy of, so both are cross-built statically into
+# the seed. The custom base image then needs only its musl loader.
+PASSTHROUGH_DIR := /home/build/NanoKVM/build/passthrough
+PASSTHROUGH_DEPS := $(PASSTHROUGH_DIR)/deps
+LIBUSB_VERSION := 1.0.26
+LIBUSB_SHA256 := 12ce7a61fc9854d1d2a1ffe095f7b5fac19ddba095c259e6067a46500381b5a5
+LIBUSB_URL := https://github.com/libusb/libusb/releases/download/v$(LIBUSB_VERSION)/libusb-$(LIBUSB_VERSION).tar.bz2
+JSONCPP_VERSION := 1.9.5
+JSONCPP_SHA256 := f409856e5920c18d0c2fb85276e24ee607d2a09b5e7d5f0a371368903c275da2
+JSONCPP_URL := https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/$(JSONCPP_VERSION).tar.gz
+LIBUSB_BUILD_CMD := cd $(PASSTHROUGH_DIR) && wget -qO libusb.tar.bz2 $(LIBUSB_URL) && echo "$(LIBUSB_SHA256)  libusb.tar.bz2" | sha256sum -c - && tar -xjf libusb.tar.bz2 && cd libusb-$(LIBUSB_VERSION) && ./configure --host=riscv64-unknown-linux-musl --prefix=$(PASSTHROUGH_DEPS) --enable-static --disable-shared --disable-udev CFLAGS="-Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections" && make -j$$(nproc) && make install
+# jsoncpp ships a CMake build whose only cross input would be a toolchain file;
+# three translation units archived into one library is the whole of it.
+JSONCPP_BUILD_CMD := cd $(PASSTHROUGH_DIR) && wget -qO jsoncpp.tar.gz $(JSONCPP_URL) && echo "$(JSONCPP_SHA256)  jsoncpp.tar.gz" | sha256sum -c - && tar -xzf jsoncpp.tar.gz && cd jsoncpp-$(JSONCPP_VERSION) && riscv64-unknown-linux-musl-g++ -Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections -Iinclude -c src/lib_json/json_reader.cpp src/lib_json/json_value.cpp src/lib_json/json_writer.cpp && riscv64-unknown-linux-musl-ar rcs $(PASSTHROUGH_DEPS)/lib/libjsoncpp.a json_reader.o json_value.o json_writer.o && mkdir -p $(PASSTHROUGH_DEPS)/include/json && cp -a include/json/. $(PASSTHROUGH_DEPS)/include/json/
+# The arch flags have to reach the link line too, which is why the fork carries
+# $(CFLAGS) there: without them ld picks /lib/ld-musl-riscv64xthead.so.1 while
+# the device runs /lib/ld-musl-riscv64v0p7_xthead.so.1 and nothing starts.
+# PKG_CONFIG_LIBDIR confines the fork's Lua probe to the cross prefix; at its
+# default it can find the host's x86 Lua and inject it into a cross link.
+USB_PROXY_BUILD_CMD := cd /home/build/NanoKVM/third_party/usb-proxy && make clean && PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$(PASSTHROUGH_DEPS)/lib/pkgconfig PKG_CONFIG_SYSROOT_DIR= CXX=riscv64-unknown-linux-musl-g++ CFLAGS="-Wall -Wextra -Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections -I$(PASSTHROUGH_DEPS)/include -I$(PASSTHROUGH_DEPS)/include/libusb-1.0" LDFLAGS="-static -Wl,--gc-sections -L$(PASSTHROUGH_DEPS)/lib" make && riscv64-unknown-linux-musl-strip usb-proxy && cp -f usb-proxy $(PASSTHROUGH_DIR)/usb-proxy
+PASSTHROUGH_BUILD_CMD := rm -rf $(PASSTHROUGH_DEPS) $(PASSTHROUGH_DIR)/libusb-$(LIBUSB_VERSION) $(PASSTHROUGH_DIR)/jsoncpp-$(JSONCPP_VERSION) && mkdir -p $(PASSTHROUGH_DEPS)/include $(PASSTHROUGH_DEPS)/lib && $(LIBUSB_BUILD_CMD) && $(JSONCPP_BUILD_CMD) && $(USB_PROXY_BUILD_CMD)
+
 .PHONY: help check-root builder-image rebuild-image check-image shell app support vision \
-        web tunnels edid-profiles release-build package release all clean
+        web tunnels passthrough edid-profiles release-build package release all clean
 
 # Default target
 all: app support
@@ -67,6 +93,7 @@ help:
 	@echo "  vision        - Build video libraries (libkvm.so)"
 	@echo "  web           - Build the frontend into web/dist"
 	@echo "  tunnels       - Build wstunnel + newt seeds into kvmapp/tunnels"
+	@echo "  passthrough   - Build the usb-proxy seed into kvmapp/passthrough"
 	@echo "  edid-profiles - Regenerate the shipped EDID profile table"
 	@echo "  all           - Build both app and support (default)"
 	@echo "  release-build - Build every riscv64 release artifact in one pass"
@@ -155,8 +182,17 @@ tunnels: check-root builder-image
 	@gzip -9 -n -c build/tunnels/wstunnel > kvmapp/tunnels/wstunnel.gz
 	@gzip -9 -n -c build/tunnels/newt > kvmapp/tunnels/newt.gz
 
+# Cross-build usb-proxy and seed it into kvmapp/passthrough, on the same terms
+# as the tunnels: staged uncompressed under build/ for package.sh's arch check,
+# shipped gzipped, and gzip -n for the same reproducibility reason.
+passthrough: check-root builder-image
+	@echo "Building usb-proxy..."
+	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(PASSTHROUGH_BUILD_CMD)'
+	@mkdir -p kvmapp/passthrough
+	@gzip -9 -n -c build/passthrough/usb-proxy > kvmapp/passthrough/usb-proxy.gz
+
 # Assemble the release package and its manifest
-package: tunnels
+package: tunnels passthrough
 	@if [ -z "$(VERSION)" ]; then \
 		echo "VERSION is required, e.g. make package VERSION=2.4.4"; \
 		exit 1; \

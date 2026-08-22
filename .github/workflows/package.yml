@@ -233,9 +233,16 @@ jobs:
             DOCKER_TTY= \
             IMAGE_NAME="${{ steps.image.outputs.ref }}"
 
+      - name: Build usb-proxy
+        run: |
+          make passthrough \
+            DOCKER_TTY= \
+            IMAGE_NAME="${{ steps.image.outputs.ref }}"
+
       - name: Assemble package
-        # package now depends on tunnels, so it needs the pulled builder image
-        # too; without IMAGE_NAME make would fall back to building one locally.
+        # package now depends on tunnels and passthrough, so it needs the pulled
+        # builder image too; without IMAGE_NAME make would fall back to building
+        # one locally.
         run: |
           make package \
             VERSION="${{ steps.version.outputs.version }}" \
