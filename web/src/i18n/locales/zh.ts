@@ -326,6 +326,9 @@ const zh = {
         restoreNotice: '恢复与应用采用相同的写入方式，后果也相同。',
         restored: 'EDID 已恢复并校验通过。',
         restoreFailed: 'EDID 恢复失败。',
+        mismatchTitle: '写入内容与读回内容',
+        mismatchWritten: '已写入',
+        mismatchRead: '读回',
         restoreOkBtn: '恢复',
         hardware: '检测到的硬件：{{hardware}}',
         hardwareUnknown: '未知',
@@ -525,6 +528,8 @@ const zh = {
             gateway: '网关',
             inbound: '入站连接'
           },
+          inboundWeak:
+            '入站检查仅通过 NanoKVM 自连接完成。这只能证明 Web 服务正在监听且本机可达，并不能证明来自网络的请求可以到达。',
           failedNotice: '上次变更未能撤销。可能只能通过 Wi-Fi AP 或串口控制台访问 NanoKVM。'
         },
         dns: {
@@ -631,6 +636,8 @@ const zh = {
         binaryRevert: '恢复固件自带版本',
         binaryRevertDesc: '确定要删除已上传的可执行文件并恢复固件自带的版本吗？',
         serverWarning: '未加限制的服务器相当于开放代理',
+        noHealthSignal:
+          '该服务不提供健康状态信号，因此 NanoKVM 只能确认进程正在运行，无法确认隧道是否已连接。',
         memoryWarning: '同时运行多个远程访问服务可能会耗尽内存',
         okBtn: '确定',
         cancelBtn: '取消'

@@ -340,6 +340,9 @@ const hu = {
           'A visszaállítás ugyanúgy íródik, mint az alkalmazás, és ugyanazokkal a következményekkel jár.',
         restored: 'Az EDID visszaállítva és ellenőrizve.',
         restoreFailed: 'Az EDID visszaállítása nem sikerült.',
+        mismatchTitle: 'Kiírt és visszaolvasott adat',
+        mismatchWritten: 'Kiírt',
+        mismatchRead: 'Visszaolvasott',
         restoreOkBtn: 'Visszaállítás',
         hardware: 'Észlelt hardver: {{hardware}}',
         hardwareUnknown: 'Ismeretlen',
@@ -547,6 +550,8 @@ const hu = {
             gateway: 'átjáró',
             inbound: 'bejövő kapcsolat'
           },
+          inboundWeak:
+            'A bejövő ellenőrzés csak azért sikerült, mert a NanoKVM önmagához kapcsolódott. Ez azt bizonyítja, hogy a webszolgáltatás figyel és helyben elérhető, nem azt, hogy a hálózat felől érkező kérés eljut hozzá.',
           failedNotice:
             'A legutóbbi módosítást nem sikerült visszavonni. A NanoKVM lehet, hogy csak a Wi-Fi AP-n vagy soros konzolon érhető el.'
         },
@@ -656,6 +661,8 @@ const hu = {
         binaryRevertDesc:
           'Törli a feltöltött binárist, és visszaállítja a firmware-rel szállított változatot?',
         serverWarning: 'A korlátozás nélküli kiszolgáló nyílt proxyként működik',
+        noHealthSignal:
+          'Ez a szolgáltatás nem jelez állapotot, így a NanoKVM csak azt tudja, hogy a folyamat fut, azt nem, hogy az alagút kapcsolódott-e.',
         memoryWarning: 'Több távoli elérési szolgáltatás egyidejű futtatása kimerítheti a memóriát',
         okBtn: 'Igen',
         cancelBtn: 'Nem'

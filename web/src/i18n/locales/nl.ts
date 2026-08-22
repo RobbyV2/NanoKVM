@@ -342,6 +342,9 @@ const nl = {
           'Een herstel wordt op dezelfde manier geschreven als een toepassing en heeft dezelfde gevolgen.',
         restored: 'EDID hersteld en geverifieerd.',
         restoreFailed: 'Het herstellen van de EDID is mislukt.',
+        mismatchTitle: 'Geschreven en teruggelezen',
+        mismatchWritten: 'Geschreven',
+        mismatchRead: 'Teruggelezen',
         restoreOkBtn: 'Herstellen',
         hardware: 'Gedetecteerde hardware: {{hardware}}',
         hardwareUnknown: 'Onbekend',
@@ -552,6 +555,8 @@ const nl = {
             gateway: 'gateway',
             inbound: 'inkomende verbinding'
           },
+          inboundWeak:
+            'De inkomende controle slaagde alleen doordat NanoKVM verbinding met zichzelf maakte. Dat bewijst dat de webdienst luistert en lokaal bereikbaar is, niet dat een verzoek vanaf het netwerk aankomt.',
           failedNotice:
             'De laatste wijziging kon niet ongedaan worden gemaakt. NanoKVM is mogelijk alleen bereikbaar via het wifi-toegangspunt of een seriële console.'
         },
@@ -662,6 +667,8 @@ const nl = {
         binaryRevertDesc:
           'Het geüploade binaire bestand verwijderen en de meegeleverde versie herstellen?',
         serverWarning: 'Een server zonder beperkingen werkt als open proxy',
+        noHealthSignal:
+          'Deze dienst meldt geen gezondheidsstatus, dus NanoKVM weet alleen dat het proces draait, niet of de tunnel verbonden is.',
         memoryWarning: 'Meerdere toegangsdiensten tegelijk uitvoeren kan het geheugen uitputten',
         okBtn: 'Ja',
         cancelBtn: 'Nee'

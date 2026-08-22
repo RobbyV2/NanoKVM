@@ -338,6 +338,9 @@ const ja = {
         restoreNotice: '復元は適用と同じ方法で書き込まれ、同じ影響があります。',
         restored: 'EDID を復元し、検証しました。',
         restoreFailed: 'EDID の復元に失敗しました。',
+        mismatchTitle: '書き込んだ内容と読み戻した内容',
+        mismatchWritten: '書き込み',
+        mismatchRead: '読み戻し',
         restoreOkBtn: '復元',
         hardware: '検出されたハードウェア: {{hardware}}',
         hardwareUnknown: '不明',
@@ -543,6 +546,8 @@ const ja = {
             gateway: 'ゲートウェイ',
             inbound: '受信接続'
           },
+          inboundWeak:
+            '受信確認は NanoKVM が自分自身に接続することでのみ成立しました。これは Web サービスが待ち受けていて本体から到達できることを示すだけで、ネットワークからの要求が届くことを示すものではありません。',
           failedNotice:
             '前回の変更を取り消せませんでした。NanoKVM には Wi-Fi AP またはシリアルコンソール経由でしかアクセスできない可能性があります。'
         },
@@ -652,6 +657,8 @@ const ja = {
         binaryRevertDesc:
           'アップロードしたバイナリを削除し、ファームウェア同梱のものに戻しますか？',
         serverWarning: '制限のないサーバーはオープンプロキシになります',
+        noHealthSignal:
+          'このサービスはヘルス情報を出力しないため、NanoKVM はプロセスが動作していることしか確認できず、トンネルが接続済みかどうかは分かりません。',
         memoryWarning:
           '複数のリモートアクセスサービスを同時に実行するとメモリが不足する場合があります',
         okBtn: 'はい',

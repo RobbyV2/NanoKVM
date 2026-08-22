@@ -339,6 +339,9 @@ const en = {
         restoreNotice: 'A restore is written the same way as an apply, with the same consequences.',
         restored: 'EDID restored and verified.',
         restoreFailed: 'Restoring the EDID failed.',
+        mismatchTitle: 'What was written and what came back',
+        mismatchWritten: 'Written',
+        mismatchRead: 'Read back',
         restoreOkBtn: 'Restore',
         hardware: 'Detected hardware: {{hardware}}',
         hardwareUnknown: 'Unknown',
@@ -543,6 +546,8 @@ const en = {
             gateway: 'gateway',
             inbound: 'inbound connection'
           },
+          inboundWeak:
+            'The inbound check passed only because NanoKVM connected to itself. That proves the web service is listening and reachable on this device, not that a request from the network reaches it.',
           failedNotice:
             'The last change could not be undone. NanoKVM may only be reachable over the Wi-Fi AP or a serial console.'
         },
@@ -652,6 +657,8 @@ const en = {
         binaryRevertDesc:
           'Delete the uploaded binary and restore the version shipped with the firmware?',
         serverWarning: 'An unrestricted server acts as an open proxy',
+        noHealthSignal:
+          'This service reports no health signal, so NanoKVM can only tell that the process is running, not whether the tunnel is connected.',
         memoryWarning: 'Running several remote access services at once may exhaust memory',
         okBtn: 'Yes',
         cancelBtn: 'No'

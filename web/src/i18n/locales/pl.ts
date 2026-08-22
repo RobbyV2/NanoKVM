@@ -340,6 +340,9 @@ const pl = {
           'Przywracanie jest zapisywane tak samo jak zastosowanie i ma te same konsekwencje.',
         restored: 'EDID przywrócony i zweryfikowany.',
         restoreFailed: 'Przywracanie EDID nie powiodło się.',
+        mismatchTitle: 'Zapisane i odczytane z powrotem',
+        mismatchWritten: 'Zapisane',
+        mismatchRead: 'Odczytane z powrotem',
         restoreOkBtn: 'Przywróć',
         hardware: 'Wykryty sprzęt: {{hardware}}',
         hardwareUnknown: 'Nieznany',
@@ -549,6 +552,8 @@ const pl = {
             gateway: 'brama',
             inbound: 'połączenie przychodzące'
           },
+          inboundWeak:
+            'Kontrola połączenia przychodzącego przeszła tylko dlatego, że NanoKVM połączył się sam ze sobą. Dowodzi to, że usługa sieciowa nasłuchuje i jest osiągalna lokalnie, a nie że żądanie z sieci do niej dociera.',
           failedNotice:
             'Nie udało się cofnąć ostatniej zmiany. NanoKVM może być dostępny tylko przez punkt dostępowy Wi-Fi lub konsolę szeregową.'
         },
@@ -658,6 +663,8 @@ const pl = {
         binaryRevertDesc:
           'Usunąć przesłany plik binarny i przywrócić wersję dostarczoną z firmware?',
         serverWarning: 'Serwer bez ograniczeń działa jak otwarte proxy',
+        noHealthSignal:
+          'Ta usługa nie zgłasza stanu, więc NanoKVM wie tylko, że proces działa, a nie czy tunel jest połączony.',
         memoryWarning: 'Uruchomienie kilku usług zdalnego dostępu naraz może wyczerpać pamięć',
         okBtn: 'Tak',
         cancelBtn: 'Nie'

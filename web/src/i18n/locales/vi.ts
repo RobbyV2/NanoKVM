@@ -334,6 +334,9 @@ const vi = {
         restoreNotice: 'Việc khôi phục được ghi giống như khi áp dụng và có cùng hậu quả.',
         restored: 'Đã khôi phục và xác minh EDID.',
         restoreFailed: 'Khôi phục EDID thất bại.',
+        mismatchTitle: 'Dữ liệu đã ghi và đọc lại',
+        mismatchWritten: 'Đã ghi',
+        mismatchRead: 'Đọc lại',
         restoreOkBtn: 'Khôi phục',
         hardware: 'Phần cứng phát hiện được: {{hardware}}',
         hardwareUnknown: 'Không xác định',
@@ -541,6 +544,8 @@ const vi = {
             gateway: 'cổng mặc định',
             inbound: 'kết nối đến'
           },
+          inboundWeak:
+            'Kiểm tra kết nối đến chỉ đạt vì NanoKVM tự kết nối tới chính nó. Điều đó chứng tỏ dịch vụ web đang lắng nghe và truy cập được tại chỗ, chứ không chứng tỏ một yêu cầu từ mạng đến được nó.',
           failedNotice:
             'Không thể hoàn tác thay đổi gần nhất. Có thể chỉ truy cập được NanoKVM qua điểm phát Wi-Fi hoặc cổng serial.'
         },
@@ -649,6 +654,8 @@ const vi = {
         binaryRevert: 'Khôi phục tệp đi kèm',
         binaryRevertDesc: 'Xóa tệp nhị phân đã tải lên và khôi phục tệp đi kèm firmware?',
         serverWarning: 'Máy chủ không giới hạn sẽ trở thành proxy mở',
+        noHealthSignal:
+          'Dịch vụ này không báo tín hiệu tình trạng, nên NanoKVM chỉ biết tiến trình đang chạy chứ không biết đường hầm đã kết nối hay chưa.',
         memoryWarning: 'Chạy nhiều dịch vụ truy cập từ xa cùng lúc có thể làm cạn bộ nhớ',
         okBtn: 'Có',
         cancelBtn: 'Không'

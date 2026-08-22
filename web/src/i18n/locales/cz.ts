@@ -338,6 +338,9 @@ const cz = {
         restoreNotice: 'Obnovení se zapisuje stejně jako použití a má stejné důsledky.',
         restored: 'EDID bylo obnoveno a ověřeno.',
         restoreFailed: 'Obnovení EDID se nezdařilo.',
+        mismatchTitle: 'Zapsáno a přečteno zpět',
+        mismatchWritten: 'Zapsáno',
+        mismatchRead: 'Přečteno zpět',
         restoreOkBtn: 'Obnovit',
         hardware: 'Zjištěný hardware: {{hardware}}',
         hardwareUnknown: 'Neznámý',
@@ -543,6 +546,8 @@ const cz = {
             gateway: 'brána',
             inbound: 'příchozí spojení'
           },
+          inboundWeak:
+            'Kontrola příchozího spojení prošla jen proto, že se NanoKVM připojil sám k sobě. To dokazuje, že webová služba naslouchá a je dostupná lokálně, nikoli že k ní dorazí požadavek ze sítě.',
           failedNotice:
             'Poslední změnu se nepodařilo vrátit zpět. NanoKVM může být dostupné jen přes Wi-Fi AP nebo sériovou konzoli.'
         },
@@ -651,6 +656,8 @@ const cz = {
         binaryRevert: 'Obnovit binární soubor z firmwaru',
         binaryRevertDesc: 'Smazat nahraný binární soubor a obnovit verzi dodanou s firmwarem?',
         serverWarning: 'Server bez omezení funguje jako otevřená proxy',
+        noHealthSignal:
+          'Tato služba nehlásí stav, takže NanoKVM ví jen to, že proces běží, nikoli zda je tunel připojen.',
         memoryWarning: 'Souběžný běh více služeb vzdáleného přístupu může vyčerpat paměť',
         okBtn: 'Ano',
         cancelBtn: 'Ne'

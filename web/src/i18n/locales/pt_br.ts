@@ -338,6 +338,9 @@ const pt_br = {
           'Uma restauração é gravada da mesma forma que uma aplicação e tem as mesmas consequências.',
         restored: 'EDID restaurado e verificado.',
         restoreFailed: 'Falha ao restaurar o EDID.',
+        mismatchTitle: 'Escrito e relido',
+        mismatchWritten: 'Escrito',
+        mismatchRead: 'Relido',
         restoreOkBtn: 'Restaurar',
         hardware: 'Hardware detectado: {{hardware}}',
         hardwareUnknown: 'Desconhecido',
@@ -547,6 +550,8 @@ const pt_br = {
             gateway: 'gateway',
             inbound: 'conexão de entrada'
           },
+          inboundWeak:
+            'A verificação de entrada só passou porque o NanoKVM se conectou a si mesmo. Isso prova que o serviço web está escutando e acessível localmente, não que uma requisição vinda da rede chegue até ele.',
           failedNotice:
             'Não foi possível desfazer a última alteração. O NanoKVM pode estar acessível apenas pelo AP Wi-Fi ou por um console serial.'
         },
@@ -655,6 +660,8 @@ const pt_br = {
         binaryRevert: 'Restaurar binário do firmware',
         binaryRevertDesc: 'Excluir o binário enviado e restaurar o que acompanha o firmware?',
         serverWarning: 'Um servidor sem restrições funciona como proxy aberto',
+        noHealthSignal:
+          'Este serviço não informa estado de saúde, então o NanoKVM só sabe que o processo está em execução, não se o túnel está conectado.',
         memoryWarning:
           'Executar vários serviços de acesso remoto ao mesmo tempo pode esgotar a memória',
         okBtn: 'Sim',

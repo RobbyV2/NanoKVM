@@ -337,6 +337,9 @@ const ca = {
           "Una restauració s'escriu igual que una aplicació i té les mateixes conseqüències.",
         restored: 'EDID restaurat i verificat.',
         restoreFailed: "No s'ha pogut restaurar l'EDID.",
+        mismatchTitle: 'Escrit i rellegit',
+        mismatchWritten: 'Escrit',
+        mismatchRead: 'Rellegit',
         restoreOkBtn: 'Restaura',
         hardware: 'Maquinari detectat: {{hardware}}',
         hardwareUnknown: 'Desconegut',
@@ -544,6 +547,8 @@ const ca = {
             gateway: 'passarel·la',
             inbound: 'connexió entrant'
           },
+          inboundWeak:
+            "La comprovació d'entrada només ha passat perquè el NanoKVM s'ha connectat a si mateix. Això demostra que el servei web escolta i és accessible localment, no que hi arribi una petició des de la xarxa.",
           failedNotice:
             'No s’ha pogut desfer l’últim canvi. Pot ser que només es pugui accedir al NanoKVM per l’AP Wi-Fi o una consola sèrie.'
         },
@@ -651,6 +656,8 @@ const ca = {
         binaryRevert: 'Restaura el binari inclòs',
         binaryRevertDesc: 'Voleu suprimir el binari pujat i restaurar el que inclou el firmware?',
         serverWarning: 'Un servidor sense restriccions actua com a proxy obert',
+        noHealthSignal:
+          "Aquest servei no informa de cap senyal d'estat, així que el NanoKVM només sap que el procés s'executa, no si el túnel està connectat.",
         memoryWarning: 'Executar diversos serveis d’accés remot alhora pot esgotar la memòria',
         okBtn: 'Sí',
         cancelBtn: 'No'

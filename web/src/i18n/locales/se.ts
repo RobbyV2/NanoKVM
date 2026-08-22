@@ -336,6 +336,9 @@ const se = {
           'En återställning skrivs på samma sätt som en tillämpning och har samma konsekvenser.',
         restored: 'EDID återställt och verifierat.',
         restoreFailed: 'Det gick inte att återställa EDID.',
+        mismatchTitle: 'Skrivet och återläst',
+        mismatchWritten: 'Skrivet',
+        mismatchRead: 'Återläst',
         restoreOkBtn: 'Återställ',
         hardware: 'Identifierad hårdvara: {{hardware}}',
         hardwareUnknown: 'Okänd',
@@ -544,6 +547,8 @@ const se = {
             gateway: 'gateway',
             inbound: 'inkommande anslutning'
           },
+          inboundWeak:
+            'Kontrollen av inkommande trafik gick igenom bara för att NanoKVM anslöt till sig själv. Det visar att webbtjänsten lyssnar och nås lokalt, inte att en begäran från nätverket kommer fram.',
           failedNotice:
             'Den senaste ändringen kunde inte ångras. NanoKVM kanske bara går att nå via Wi-Fi-accesspunkten eller en seriell konsol.'
         },
@@ -652,6 +657,8 @@ const se = {
         binaryRevertDesc:
           'Ta bort den uppladdade binärfilen och återställa den som medföljer firmware?',
         serverWarning: 'En server utan begränsningar fungerar som en öppen proxy',
+        noHealthSignal:
+          'Tjänsten rapporterar ingen hälsostatus, så NanoKVM vet bara att processen körs, inte om tunneln är ansluten.',
         memoryWarning: 'Att köra flera fjärråtkomsttjänster samtidigt kan ta slut på minnet',
         okBtn: 'Ja',
         cancelBtn: 'Nej'

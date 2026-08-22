@@ -344,6 +344,9 @@ const de = {
           'Eine Wiederherstellung wird genauso geschrieben wie eine Anwendung und hat dieselben Folgen.',
         restored: 'EDID wiederhergestellt und verifiziert.',
         restoreFailed: 'Die Wiederherstellung des EDID ist fehlgeschlagen.',
+        mismatchTitle: 'Geschrieben und zurückgelesen',
+        mismatchWritten: 'Geschrieben',
+        mismatchRead: 'Zurückgelesen',
         restoreOkBtn: 'Wiederherstellen',
         hardware: 'Erkannte Hardware: {{hardware}}',
         hardwareUnknown: 'Unbekannt',
@@ -554,6 +557,8 @@ const de = {
             gateway: 'Gateway',
             inbound: 'eingehende Verbindung'
           },
+          inboundWeak:
+            'Die Prüfung eingehender Verbindungen gelang nur, weil NanoKVM sich mit sich selbst verbunden hat. Das belegt, dass der Webdienst lauscht und lokal erreichbar ist, nicht aber, dass eine Anfrage aus dem Netzwerk ankommt.',
           failedNotice:
             'Die letzte Änderung konnte nicht rückgängig gemacht werden. NanoKVM ist möglicherweise nur über den WLAN-AP oder eine serielle Konsole erreichbar.'
         },
@@ -663,6 +668,8 @@ const de = {
         binaryRevertDesc:
           'Die hochgeladene Binärdatei löschen und die Version aus der Firmware wiederherstellen?',
         serverWarning: 'Ein Server ohne Einschränkungen wirkt wie ein offener Proxy',
+        noHealthSignal:
+          'Dieser Dienst meldet keinen Zustand, daher weiß NanoKVM nur, dass der Prozess läuft, nicht ob der Tunnel verbunden ist.',
         memoryWarning:
           'Mehrere gleichzeitig laufende Fernzugriffsdienste können den Speicher erschöpfen',
         okBtn: 'Ja',

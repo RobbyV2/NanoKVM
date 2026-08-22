@@ -323,6 +323,9 @@ const zh_tw = {
         restoreNotice: '復原與套用採用相同的寫入方式，後果也相同。',
         restored: 'EDID 已復原並通過驗證。',
         restoreFailed: 'EDID 復原失敗。',
+        mismatchTitle: '寫入內容與讀回內容',
+        mismatchWritten: '已寫入',
+        mismatchRead: '讀回',
         restoreOkBtn: '復原',
         hardware: '偵測到的硬體：{{hardware}}',
         hardwareUnknown: '未知',
@@ -522,6 +525,8 @@ const zh_tw = {
             gateway: '閘道',
             inbound: '傳入連線'
           },
+          inboundWeak:
+            '入站檢查僅透過 NanoKVM 自我連線完成。這只能證明 Web 服務正在接聽且本機可達，並不能證明來自網路的請求可以抵達。',
           failedNotice: '上次變更無法復原。可能只能透過 Wi-Fi AP 或序列主控台存取 NanoKVM。'
         },
         dns: {
@@ -628,6 +633,8 @@ const zh_tw = {
         binaryRevert: '還原內建執行檔',
         binaryRevertDesc: '確定要刪除已上傳的執行檔並還原韌體內建的版本嗎？',
         serverWarning: '未加限制的伺服器等同開放式代理',
+        noHealthSignal:
+          '此服務不提供健康狀態訊號，因此 NanoKVM 只能確認行程正在執行，無法確認通道是否已連線。',
         memoryWarning: '同時執行多個遠端存取服務可能會耗盡記憶體',
         okBtn: '確定',
         cancelBtn: '取消'

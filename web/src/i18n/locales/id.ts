@@ -339,6 +339,9 @@ const id = {
           'Pemulihan ditulis dengan cara yang sama seperti penerapan, dengan konsekuensi yang sama.',
         restored: 'EDID dipulihkan dan diverifikasi.',
         restoreFailed: 'Gagal memulihkan EDID.',
+        mismatchTitle: 'Yang ditulis dan yang dibaca kembali',
+        mismatchWritten: 'Ditulis',
+        mismatchRead: 'Dibaca kembali',
         restoreOkBtn: 'Pulihkan',
         hardware: 'Perangkat keras terdeteksi: {{hardware}}',
         hardwareUnknown: 'Tidak diketahui',
@@ -545,6 +548,8 @@ const id = {
             gateway: 'gerbang',
             inbound: 'koneksi masuk'
           },
+          inboundWeak:
+            'Pemeriksaan masuk lolos hanya karena NanoKVM menghubungi dirinya sendiri. Itu membuktikan layanan web sedang mendengarkan dan dapat dijangkau secara lokal, bukan bahwa permintaan dari jaringan sampai kepadanya.',
           failedNotice:
             'Perubahan terakhir tidak dapat dibatalkan. NanoKVM mungkin hanya dapat dijangkau melalui AP Wi-Fi atau konsol serial.'
         },
@@ -653,6 +658,8 @@ const id = {
         binaryRevert: 'Kembalikan biner bawaan',
         binaryRevertDesc: 'Hapus biner yang diunggah dan kembalikan versi bawaan firmware?',
         serverWarning: 'Server tanpa pembatasan berfungsi sebagai proxy terbuka',
+        noHealthSignal:
+          'Layanan ini tidak melaporkan sinyal kesehatan, jadi NanoKVM hanya tahu prosesnya berjalan, bukan apakah terowongannya tersambung.',
         memoryWarning:
           'Menjalankan beberapa layanan akses jarak jauh sekaligus dapat menghabiskan memori',
         okBtn: 'Ya',

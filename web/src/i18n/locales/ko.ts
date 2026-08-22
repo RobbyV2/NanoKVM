@@ -333,6 +333,9 @@ const ko = {
         restoreNotice: '복원은 적용과 같은 방식으로 기록되며 동일한 영향을 미칩니다.',
         restored: 'EDID를 복원하고 검증했습니다.',
         restoreFailed: 'EDID 복원에 실패했습니다.',
+        mismatchTitle: '기록한 내용과 다시 읽은 내용',
+        mismatchWritten: '기록됨',
+        mismatchRead: '다시 읽음',
         restoreOkBtn: '복원',
         hardware: '감지된 하드웨어: {{hardware}}',
         hardwareUnknown: '알 수 없음',
@@ -536,6 +539,8 @@ const ko = {
             gateway: '게이트웨이',
             inbound: '인바운드 연결'
           },
+          inboundWeak:
+            '인바운드 검사는 NanoKVM이 자기 자신에 연결해서만 통과했습니다. 이는 웹 서비스가 대기 중이고 기기 내부에서 도달 가능하다는 것만 증명할 뿐, 네트워크에서 온 요청이 도달한다는 뜻은 아닙니다.',
           failedNotice:
             '마지막 변경을 취소하지 못했습니다. NanoKVM에 Wi-Fi AP 또는 시리얼 콘솔로만 접근할 수 있습니다.'
         },
@@ -643,6 +648,8 @@ const ko = {
         binaryRevert: '기본 제공 파일로 되돌리기',
         binaryRevertDesc: '업로드한 실행 파일을 삭제하고 펌웨어에 포함된 파일로 되돌리시겠습니까?',
         serverWarning: '제한 없는 서버는 개방형 프록시가 됩니다',
+        noHealthSignal:
+          '이 서비스는 상태 신호를 제공하지 않으므로 NanoKVM은 프로세스가 실행 중인지만 알 수 있고 터널이 연결되었는지는 알 수 없습니다.',
         memoryWarning: '여러 원격 접속 서비스를 동시에 실행하면 메모리가 부족할 수 있습니다',
         okBtn: '네',
         cancelBtn: '아니오'

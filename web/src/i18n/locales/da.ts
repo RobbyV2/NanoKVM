@@ -338,6 +338,9 @@ const da = {
           'En gendannelse skrives på samme måde som en anvendelse og har de samme konsekvenser.',
         restored: 'EDID gendannet og verificeret.',
         restoreFailed: 'Gendannelse af EDID mislykkedes.',
+        mismatchTitle: 'Skrevet og læst tilbage',
+        mismatchWritten: 'Skrevet',
+        mismatchRead: 'Læst tilbage',
         restoreOkBtn: 'Gendan',
         hardware: 'Registreret hardware: {{hardware}}',
         hardwareUnknown: 'Ukendt',
@@ -546,6 +549,8 @@ const da = {
             gateway: 'gateway',
             inbound: 'indgående forbindelse'
           },
+          inboundWeak:
+            'Kontrollen af indgående trafik lykkedes kun, fordi NanoKVM forbandt til sig selv. Det viser, at webtjenesten lytter og kan nås lokalt, ikke at en forespørgsel fra netværket når frem.',
           failedNotice:
             'Den seneste ændring kunne ikke fortrydes. NanoKVM kan muligvis kun nås via Wi-Fi-adgangspunktet eller en seriel konsol.'
         },
@@ -654,6 +659,8 @@ const da = {
         binaryRevert: 'Gendan medfølgende binærfil',
         binaryRevertDesc: 'Slet den uploadede binærfil og gendan den, der følger med firmwaren?',
         serverWarning: 'En server uden begrænsninger fungerer som en åben proxy',
+        noHealthSignal:
+          'Denne tjeneste rapporterer ingen helbredsstatus, så NanoKVM ved kun, at processen kører, ikke om tunnelen er forbundet.',
         memoryWarning: 'Flere fjernadgangstjenester ad gangen kan opbruge hukommelsen',
         okBtn: 'Ja',
         cancelBtn: 'Nej'

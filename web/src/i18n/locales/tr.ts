@@ -337,6 +337,9 @@ const tr = {
         restoreNotice: 'Geri yükleme, uygulama ile aynı şekilde yazılır ve aynı sonuçları doğurur.',
         restored: 'EDID geri yüklendi ve doğrulandı.',
         restoreFailed: 'EDID geri yüklenemedi.',
+        mismatchTitle: 'Yazılan ve geri okunan',
+        mismatchWritten: 'Yazılan',
+        mismatchRead: 'Geri okunan',
         restoreOkBtn: 'Geri yükle',
         hardware: 'Algılanan donanım: {{hardware}}',
         hardwareUnknown: 'Bilinmiyor',
@@ -544,6 +547,8 @@ const tr = {
             gateway: 'ağ geçidi',
             inbound: 'gelen bağlantı'
           },
+          inboundWeak:
+            'Gelen bağlantı denetimi yalnızca NanoKVM kendine bağlandığı için geçti. Bu, web hizmetinin dinlediğini ve yerel olarak erişilebildiğini gösterir; ağdan gelen bir isteğin ulaştığını göstermez.',
           failedNotice:
             'Son değişiklik geri alınamadı. NanoKVM yalnızca Wi-Fi AP veya seri konsol üzerinden erişilebilir olabilir.'
         },
@@ -652,6 +657,8 @@ const tr = {
         binaryRevertDesc:
           'Yüklenen ikili dosya silinip ürün yazılımıyla gelen sürüm geri yüklensin mi?',
         serverWarning: 'Kısıtlanmamış bir sunucu açık proxy gibi davranır',
+        noHealthSignal:
+          'Bu hizmet sağlık bilgisi bildirmiyor, bu yüzden NanoKVM yalnızca sürecin çalıştığını bilir, tünelin bağlı olup olmadığını bilmez.',
         memoryWarning:
           'Aynı anda birden fazla uzaktan erişim hizmeti çalıştırmak belleği tüketebilir',
         okBtn: 'Evet',

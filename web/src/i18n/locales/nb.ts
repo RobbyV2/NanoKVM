@@ -339,6 +339,9 @@ const nb = {
           'En gjenoppretting skrives på samme måte som en bruk, med de samme konsekvensene.',
         restored: 'EDID gjenopprettet og verifisert.',
         restoreFailed: 'Gjenoppretting av EDID mislyktes.',
+        mismatchTitle: 'Skrevet og lest tilbake',
+        mismatchWritten: 'Skrevet',
+        mismatchRead: 'Lest tilbake',
         restoreOkBtn: 'Gjenopprett',
         hardware: 'Oppdaget maskinvare: {{hardware}}',
         hardwareUnknown: 'Ukjent',
@@ -545,6 +548,8 @@ const nb = {
             gateway: 'gateway',
             inbound: 'innkommende tilkobling'
           },
+          inboundWeak:
+            'Kontrollen av innkommende trafikk gikk gjennom bare fordi NanoKVM koblet til seg selv. Det viser at webtjenesten lytter og er tilgjengelig lokalt, ikke at en forespørsel fra nettverket kommer frem.',
           failedNotice:
             'Den siste endringen kunne ikke angres. NanoKVM er kanskje bare tilgjengelig via Wi-Fi-tilgangspunktet eller en seriell konsoll.'
         },
@@ -654,6 +659,8 @@ const nb = {
         binaryRevertDesc:
           'Slette den opplastede binærfilen og gjenopprette den som følger med fastvaren?',
         serverWarning: 'En server uten begrensninger fungerer som en åpen proxy',
+        noHealthSignal:
+          'Denne tjenesten rapporterer ingen helsestatus, så NanoKVM vet bare at prosessen kjører, ikke om tunnelen er tilkoblet.',
         memoryWarning: 'Å kjøre flere fjerntilgangstjenester samtidig kan tømme minnet',
         okBtn: 'Ja',
         cancelBtn: 'Nei'
