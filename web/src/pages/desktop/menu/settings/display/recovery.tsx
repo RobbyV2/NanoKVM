@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import * as api from '@/api/edid.ts';
 import type { EdidBackup, EdidPreflight, EdidResult } from '@/api/edid.ts';
 
+import { Mismatch } from './mismatch.tsx';
+
 // the restore endpoint takes the factory image or one history entry
 type Target = 'factory' | 'history';
 
@@ -126,9 +128,10 @@ export const Recovery = ({
         )}
 
         {result && !result.verified && (
-          <div className="flex flex-col space-y-1">
+          <div className="flex flex-col space-y-2">
             <span className="text-red-500">{t('settings.display.restoreFailed')}</span>
             {result.message && <span className="text-xs text-neutral-500">{result.message}</span>}
+            <Mismatch result={result} />
           </div>
         )}
       </div>

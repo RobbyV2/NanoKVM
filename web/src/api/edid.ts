@@ -59,6 +59,12 @@ export type EdidResult = {
   requiresPowerCycle: boolean;
   message: string;
   summary?: EdidSummary;
+
+  // what the tool wrote and what it read back, on needs_recovery only: the tool
+  // has no read primitive, so these dumps are the only evidence of what the
+  // chip took
+  writtenHex?: string;
+  readHex?: string;
 };
 
 // get the active edid, the preflight and the backup history

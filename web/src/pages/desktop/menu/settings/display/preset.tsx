@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import * as api from '@/api/edid.ts';
 import type { EdidPreflight, EdidProfile, EdidResult, EdidSummary } from '@/api/edid.ts';
 
+import { Mismatch } from './mismatch.tsx';
 import { Checks, Summary } from './summary.tsx';
 import { buildChecks, formatMode, hardwareName } from './utils.ts';
 
@@ -245,12 +246,13 @@ export const Preset = ({
         )}
 
         {result && !result.verified && (
-          <div className="flex flex-col space-y-1">
+          <div className="flex flex-col space-y-2">
             <span className="text-red-500">{t('settings.display.applyFailed')}</span>
             {result.retryable && (
               <span className="text-xs text-amber-500">{t('settings.display.busy')}</span>
             )}
             {result.message && <span className="text-xs text-neutral-500">{result.message}</span>}
+            <Mismatch result={result} />
           </div>
         )}
       </div>
