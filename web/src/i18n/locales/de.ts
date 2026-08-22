@@ -518,6 +518,49 @@ const de = {
         okBtn: 'Ja',
         cancelBtn: 'Nein'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Lädt...',
+        notInstall: 'Nicht installiert',
+        notConfigured: 'Nicht konfiguriert',
+        stopped: 'Gestoppt',
+        running: 'Läuft',
+        connected: 'Verbunden',
+        error: 'Fehler',
+        arguments: 'Argumente',
+        argumentsTip: 'Kommandozeilenargumente, die dem Dienst beim Start übergeben werden.',
+        env: 'Umgebungsvariablen',
+        envKey: 'Name',
+        envValue: 'Wert',
+        envAdd: 'Variable hinzufügen',
+        envRemove: 'Entfernen',
+        configured: 'Konfiguriert',
+        save: 'Speichern',
+        saved: 'Konfiguration gespeichert',
+        start: 'Start',
+        stop: 'Stoppen',
+        restart: 'Neu starten',
+        logs: 'Protokoll',
+        logsEmpty: 'Noch keine Protokolleinträge',
+        refresh: 'Aktualisieren',
+        binary: 'Binärdatei',
+        binaryShipped: 'Mit der Firmware geliefert',
+        binaryCustom: 'Eigene Binärdatei',
+        binaryUpload: 'Binärdatei hochladen',
+        binaryRevert: 'Mitgelieferte Binärdatei wiederherstellen',
+        binaryRevertDesc:
+          'Die hochgeladene Binärdatei löschen und die Version aus der Firmware wiederherstellen?',
+        serverWarning: 'Ein Server ohne Einschränkungen wirkt wie ein offener Proxy',
+        memoryWarning:
+          'Mehrere gleichzeitig laufende Fernzugriffsdienste können den Speicher erschöpfen',
+        okBtn: 'Ja',
+        cancelBtn: 'Nein'
+      },
       update: {
         title: 'Nach Aktualisierungen suchen',
         queryFailed: 'Version konnte nicht abgefragt werden',

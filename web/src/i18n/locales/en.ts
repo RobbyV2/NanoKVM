@@ -511,6 +511,48 @@ const en = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Loading...',
+        notInstall: 'Not installed',
+        notConfigured: 'Not configured',
+        stopped: 'Stopped',
+        running: 'Running',
+        connected: 'Connected',
+        error: 'Error',
+        arguments: 'Arguments',
+        argumentsTip: 'Command line arguments passed to the service at startup.',
+        env: 'Environment variables',
+        envKey: 'Name',
+        envValue: 'Value',
+        envAdd: 'Add variable',
+        envRemove: 'Remove',
+        configured: 'Configured',
+        save: 'Save',
+        saved: 'Configuration saved',
+        start: 'Start',
+        stop: 'Stop',
+        restart: 'Restart',
+        logs: 'Logs',
+        logsEmpty: 'No logs yet',
+        refresh: 'Refresh',
+        binary: 'Binary',
+        binaryShipped: 'Shipped with firmware',
+        binaryCustom: 'Custom upload',
+        binaryUpload: 'Upload binary',
+        binaryRevert: 'Restore bundled binary',
+        binaryRevertDesc:
+          'Delete the uploaded binary and restore the version shipped with the firmware?',
+        serverWarning: 'An unrestricted server acts as an open proxy',
+        memoryWarning: 'Running several remote access services at once may exhaust memory',
+        okBtn: 'Yes',
+        cancelBtn: 'No'
+      },
       update: {
         title: 'Check for Updates',
         queryFailed: 'Get version failed',

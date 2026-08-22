@@ -515,6 +515,48 @@ const pl = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Ładowanie...',
+        notInstall: 'Nie zainstalowano',
+        notConfigured: 'Nie skonfigurowano',
+        stopped: 'Zatrzymano',
+        running: 'Działa',
+        connected: 'Połączono',
+        error: 'Błąd',
+        arguments: 'Argumenty',
+        argumentsTip: 'Argumenty wiersza poleceń przekazywane usłudze przy uruchomieniu.',
+        env: 'Zmienne środowiskowe',
+        envKey: 'Nazwa',
+        envValue: 'Wartość',
+        envAdd: 'Dodaj zmienną',
+        envRemove: 'Usuń',
+        configured: 'Skonfigurowano',
+        save: 'Zapisz',
+        saved: 'Konfiguracja zapisana',
+        start: 'Uruchom',
+        stop: 'Zatrzymaj',
+        restart: 'Uruchom ponownie',
+        logs: 'Dzienniki',
+        logsEmpty: 'Brak wpisów w dzienniku',
+        refresh: 'Odśwież',
+        binary: 'Plik binarny',
+        binaryShipped: 'Dostarczony z firmware',
+        binaryCustom: 'Własny plik binarny',
+        binaryUpload: 'Prześlij plik binarny',
+        binaryRevert: 'Przywróć plik z firmware',
+        binaryRevertDesc:
+          'Usunąć przesłany plik binarny i przywrócić wersję dostarczoną z firmware?',
+        serverWarning: 'Serwer bez ograniczeń działa jak otwarte proxy',
+        memoryWarning: 'Uruchomienie kilku usług zdalnego dostępu naraz może wyczerpać pamięć',
+        okBtn: 'Tak',
+        cancelBtn: 'Nie'
+      },
       update: {
         title: 'Sprawdź aktualizacje',
         queryFailed: 'Uzyskanie wersji nie powiodło się',

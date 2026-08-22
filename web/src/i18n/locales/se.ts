@@ -509,6 +509,48 @@ const se = {
         okBtn: 'Ja',
         cancelBtn: 'Nej'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Laddar...',
+        notInstall: 'Inte installerad',
+        notConfigured: 'Inte konfigurerad',
+        stopped: 'Stoppad',
+        running: 'Körs',
+        connected: 'Ansluten',
+        error: 'Fel',
+        arguments: 'Argument',
+        argumentsTip: 'Kommandoradsargument som skickas till tjänsten vid start.',
+        env: 'Miljövariabler',
+        envKey: 'Namn',
+        envValue: 'Värde',
+        envAdd: 'Lägg till variabel',
+        envRemove: 'Ta bort',
+        configured: 'Konfigurerad',
+        save: 'Spara',
+        saved: 'Konfigurationen har sparats',
+        start: 'Starta',
+        stop: 'Stoppa',
+        restart: 'Starta om',
+        logs: 'Logg',
+        logsEmpty: 'Inga loggposter ännu',
+        refresh: 'Uppdatera',
+        binary: 'Binärfil',
+        binaryShipped: 'Medföljer firmware',
+        binaryCustom: 'Egen binärfil',
+        binaryUpload: 'Ladda upp binärfil',
+        binaryRevert: 'Återställ medföljande binärfil',
+        binaryRevertDesc:
+          'Ta bort den uppladdade binärfilen och återställa den som medföljer firmware?',
+        serverWarning: 'En server utan begränsningar fungerar som en öppen proxy',
+        memoryWarning: 'Att köra flera fjärråtkomsttjänster samtidigt kan ta slut på minnet',
+        okBtn: 'Ja',
+        cancelBtn: 'Nej'
+      },
       update: {
         title: 'Sök efter uppdateringar',
         queryFailed: 'Kunde inte hämta version',

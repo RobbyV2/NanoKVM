@@ -512,6 +512,48 @@ const id = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Memuat...',
+        notInstall: 'Belum terpasang',
+        notConfigured: 'Belum dikonfigurasi',
+        stopped: 'Berhenti',
+        running: 'Berjalan',
+        connected: 'Terhubung',
+        error: 'Kesalahan',
+        arguments: 'Argumen',
+        argumentsTip: 'Argumen baris perintah yang diberikan ke layanan saat dijalankan.',
+        env: 'Variabel lingkungan',
+        envKey: 'Nama',
+        envValue: 'Nilai',
+        envAdd: 'Tambah variabel',
+        envRemove: 'Hapus',
+        configured: 'Terkonfigurasi',
+        save: 'Simpan',
+        saved: 'Konfigurasi disimpan',
+        start: 'Mulai',
+        stop: 'Hentikan',
+        restart: 'Mulai ulang',
+        logs: 'Log',
+        logsEmpty: 'Belum ada log',
+        refresh: 'Segarkan',
+        binary: 'Berkas biner',
+        binaryShipped: 'Bawaan firmware',
+        binaryCustom: 'Biner khusus',
+        binaryUpload: 'Unggah biner',
+        binaryRevert: 'Kembalikan biner bawaan',
+        binaryRevertDesc: 'Hapus biner yang diunggah dan kembalikan versi bawaan firmware?',
+        serverWarning: 'Server tanpa pembatasan berfungsi sebagai proxy terbuka',
+        memoryWarning:
+          'Menjalankan beberapa layanan akses jarak jauh sekaligus dapat menghabiskan memori',
+        okBtn: 'Ya',
+        cancelBtn: 'Tidak'
+      },
       update: {
         title: 'Periksa pembaruan',
         queryFailed: 'Gagal mendapatkan versi',

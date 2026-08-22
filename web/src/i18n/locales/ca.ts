@@ -510,6 +510,47 @@ const ca = {
         okBtn: 'Sí',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Carregant...',
+        notInstall: 'No instal·lat',
+        notConfigured: 'Sense configurar',
+        stopped: 'Aturat',
+        running: 'En execució',
+        connected: 'Connectat',
+        error: 'Error',
+        arguments: 'Arguments',
+        argumentsTip: 'Arguments de línia d’ordres que es passen al servei en iniciar-se.',
+        env: 'Variables d’entorn',
+        envKey: 'Nom',
+        envValue: 'Valor',
+        envAdd: 'Afegeix una variable',
+        envRemove: 'Elimina',
+        configured: 'Configurada',
+        save: 'Desa',
+        saved: 'Configuració desada',
+        start: 'Inicia',
+        stop: 'Atura',
+        restart: 'Reinicia',
+        logs: 'Registres',
+        logsEmpty: 'Encara no hi ha registres',
+        refresh: 'Actualitza',
+        binary: 'Binari',
+        binaryShipped: 'Inclòs al firmware',
+        binaryCustom: 'Binari personalitzat',
+        binaryUpload: 'Puja un binari',
+        binaryRevert: 'Restaura el binari inclòs',
+        binaryRevertDesc: 'Voleu suprimir el binari pujat i restaurar el que inclou el firmware?',
+        serverWarning: 'Un servidor sense restriccions actua com a proxy obert',
+        memoryWarning: 'Executar diversos serveis d’accés remot alhora pot esgotar la memòria',
+        okBtn: 'Sí',
+        cancelBtn: 'No'
+      },
       update: {
         title: 'Comprova actualitzacions',
         queryFailed: 'Error en obtenir la versió',

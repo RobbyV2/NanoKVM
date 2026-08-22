@@ -511,6 +511,47 @@ const da = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Indlæser...',
+        notInstall: 'Ikke installeret',
+        notConfigured: 'Ikke konfigureret',
+        stopped: 'Stoppet',
+        running: 'Kører',
+        connected: 'Forbundet',
+        error: 'Fejl',
+        arguments: 'Argumenter',
+        argumentsTip: 'Kommandolinjeargumenter, der sendes til tjenesten ved opstart.',
+        env: 'Miljøvariabler',
+        envKey: 'Navn',
+        envValue: 'Værdi',
+        envAdd: 'Tilføj variabel',
+        envRemove: 'Fjern',
+        configured: 'Konfigureret',
+        save: 'Gem',
+        saved: 'Konfigurationen er gemt',
+        start: 'Start',
+        stop: 'Stop',
+        restart: 'Genstart',
+        logs: 'Log',
+        logsEmpty: 'Ingen logposter endnu',
+        refresh: 'Opdater',
+        binary: 'Binærfil',
+        binaryShipped: 'Følger med firmwaren',
+        binaryCustom: 'Egen binærfil',
+        binaryUpload: 'Upload binærfil',
+        binaryRevert: 'Gendan medfølgende binærfil',
+        binaryRevertDesc: 'Slet den uploadede binærfil og gendan den, der følger med firmwaren?',
+        serverWarning: 'En server uden begrænsninger fungerer som en åben proxy',
+        memoryWarning: 'Flere fjernadgangstjenester ad gangen kan opbruge hukommelsen',
+        okBtn: 'Ja',
+        cancelBtn: 'Nej'
+      },
       update: {
         title: 'Kontroller for opdatering',
         queryFailed: 'Opdateringskontrol mislykkedes',

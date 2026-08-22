@@ -517,6 +517,49 @@ const nl = {
         okBtn: 'Ja',
         cancelBtn: 'Nee'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Laden...',
+        notInstall: 'Niet geïnstalleerd',
+        notConfigured: 'Niet geconfigureerd',
+        stopped: 'Gestopt',
+        running: 'Actief',
+        connected: 'Verbonden',
+        error: 'Fout',
+        arguments: 'Argumenten',
+        argumentsTip:
+          'Opdrachtregelargumenten die bij het starten aan de service worden meegegeven.',
+        env: 'Omgevingsvariabelen',
+        envKey: 'Naam',
+        envValue: 'Waarde',
+        envAdd: 'Variabele toevoegen',
+        envRemove: 'Verwijderen',
+        configured: 'Ingesteld',
+        save: 'Opslaan',
+        saved: 'Configuratie opgeslagen',
+        start: 'Starten',
+        stop: 'Stoppen',
+        restart: 'Opnieuw starten',
+        logs: 'Logboek',
+        logsEmpty: 'Nog geen logregels',
+        refresh: 'Vernieuwen',
+        binary: 'Binair bestand',
+        binaryShipped: 'Meegeleverd met de firmware',
+        binaryCustom: 'Eigen binair bestand',
+        binaryUpload: 'Binair bestand uploaden',
+        binaryRevert: 'Meegeleverd bestand herstellen',
+        binaryRevertDesc:
+          'Het geüploade binaire bestand verwijderen en de meegeleverde versie herstellen?',
+        serverWarning: 'Een server zonder beperkingen werkt als open proxy',
+        memoryWarning: 'Meerdere toegangsdiensten tegelijk uitvoeren kan het geheugen uitputten',
+        okBtn: 'Ja',
+        cancelBtn: 'Nee'
+      },
       update: {
         title: 'Controleren op updates',
         queryFailed: 'Ophalen versie mislukt',

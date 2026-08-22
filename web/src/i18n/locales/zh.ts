@@ -501,6 +501,47 @@ const zh = {
         okBtn: '确认',
         cancelBtn: '取消'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: '加载中...',
+        notInstall: '未安装',
+        notConfigured: '未配置',
+        stopped: '已停止',
+        running: '运行中',
+        connected: '已连接',
+        error: '错误',
+        arguments: '启动参数',
+        argumentsTip: '启动服务时传入的命令行参数。',
+        env: '环境变量',
+        envKey: '名称',
+        envValue: '值',
+        envAdd: '添加变量',
+        envRemove: '移除',
+        configured: '已配置',
+        save: '保存',
+        saved: '配置已保存',
+        start: '启动',
+        stop: '停止',
+        restart: '重启',
+        logs: '日志',
+        logsEmpty: '暂无日志',
+        refresh: '刷新',
+        binary: '可执行文件',
+        binaryShipped: '固件自带',
+        binaryCustom: '自行上传',
+        binaryUpload: '上传可执行文件',
+        binaryRevert: '恢复固件自带版本',
+        binaryRevertDesc: '确定要删除已上传的可执行文件并恢复固件自带的版本吗？',
+        serverWarning: '未加限制的服务器相当于开放代理',
+        memoryWarning: '同时运行多个远程访问服务可能会耗尽内存',
+        okBtn: '确定',
+        cancelBtn: '取消'
+      },
       update: {
         title: '检查更新',
         queryFailed: '获取版本号失败',

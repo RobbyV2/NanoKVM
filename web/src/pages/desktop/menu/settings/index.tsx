@@ -7,6 +7,7 @@ import {
   BadgeInfoIcon,
   BotIcon,
   CircleArrowUpIcon,
+  CoffeeIcon,
   NetworkIcon,
   PaletteIcon,
   SettingsIcon,
@@ -20,6 +21,7 @@ import * as api from '@/api/application.ts';
 import * as ls from '@/lib/localstorage.ts';
 import { keyboardLockAtom } from '@/jotai/keyboard.ts';
 import { submenuOpenCountAtom } from '@/jotai/settings.ts';
+import { Newt as NewtIcon } from '@/components/icons/newt';
 import { Tailscale as TailscaleIcon } from '@/components/icons/tailscale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -30,6 +32,7 @@ import { Device } from './device';
 import { MCP } from './mcp';
 import { Network } from './network';
 import { Tailscale } from './tailscale';
+import { Tunnel } from './tunnel';
 import { Update } from './update';
 
 export const Settings = () => {
@@ -58,6 +61,16 @@ export const Settings = () => {
             id: 'tailscale',
             icon: <TailscaleIcon />,
             component: <Tailscale setIsLocked={setIsLocked} />
+          },
+          {
+            id: 'wstunnel',
+            icon: <CoffeeIcon size={16} />,
+            component: <Tunnel service="wstunnel" setIsLocked={setIsLocked} />
+          },
+          {
+            id: 'newt',
+            icon: <NewtIcon size={16} />,
+            component: <Tunnel service="newt" setIsLocked={setIsLocked} />
           },
           {
             id: 'update',

@@ -510,6 +510,47 @@ const vi = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Đang tải...',
+        notInstall: 'Chưa cài đặt',
+        notConfigured: 'Chưa cấu hình',
+        stopped: 'Đã dừng',
+        running: 'Đang chạy',
+        connected: 'Đã kết nối',
+        error: 'Lỗi',
+        arguments: 'Tham số',
+        argumentsTip: 'Các tham số dòng lệnh được truyền cho dịch vụ khi khởi động.',
+        env: 'Biến môi trường',
+        envKey: 'Tên',
+        envValue: 'Giá trị',
+        envAdd: 'Thêm biến',
+        envRemove: 'Xóa',
+        configured: 'Đã cấu hình',
+        save: 'Lưu',
+        saved: 'Đã lưu cấu hình',
+        start: 'Bắt đầu',
+        stop: 'Dừng',
+        restart: 'Khởi động lại',
+        logs: 'Nhật ký',
+        logsEmpty: 'Chưa có nhật ký',
+        refresh: 'Làm mới',
+        binary: 'Tệp nhị phân',
+        binaryShipped: 'Đi kèm firmware',
+        binaryCustom: 'Tệp nhị phân tùy chỉnh',
+        binaryUpload: 'Tải lên tệp nhị phân',
+        binaryRevert: 'Khôi phục tệp đi kèm',
+        binaryRevertDesc: 'Xóa tệp nhị phân đã tải lên và khôi phục tệp đi kèm firmware?',
+        serverWarning: 'Máy chủ không giới hạn sẽ trở thành proxy mở',
+        memoryWarning: 'Chạy nhiều dịch vụ truy cập từ xa cùng lúc có thể làm cạn bộ nhớ',
+        okBtn: 'Có',
+        cancelBtn: 'Không'
+      },
       update: {
         title: 'Kiểm tra cập nhật',
         queryFailed: 'Lấy phiên bản thất bại',

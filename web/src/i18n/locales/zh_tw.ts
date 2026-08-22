@@ -498,6 +498,47 @@ const zh_tw = {
         okBtn: '確認',
         cancelBtn: '取消'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: '載入中...',
+        notInstall: '尚未安裝',
+        notConfigured: '尚未設定',
+        stopped: '已停止',
+        running: '執行中',
+        connected: '已連線',
+        error: '錯誤',
+        arguments: '啟動參數',
+        argumentsTip: '啟動服務時傳入的命令列參數。',
+        env: '環境變數',
+        envKey: '名稱',
+        envValue: '值',
+        envAdd: '新增變數',
+        envRemove: '移除',
+        configured: '已設定',
+        save: '儲存',
+        saved: '設定已儲存',
+        start: '啟動',
+        stop: '停止',
+        restart: '重新啟動',
+        logs: '日誌',
+        logsEmpty: '尚無日誌',
+        refresh: '重新整理',
+        binary: '執行檔',
+        binaryShipped: '韌體內建',
+        binaryCustom: '自行上傳',
+        binaryUpload: '上傳執行檔',
+        binaryRevert: '還原內建執行檔',
+        binaryRevertDesc: '確定要刪除已上傳的執行檔並還原韌體內建的版本嗎？',
+        serverWarning: '未加限制的伺服器等同開放式代理',
+        memoryWarning: '同時執行多個遠端存取服務可能會耗盡記憶體',
+        okBtn: '確定',
+        cancelBtn: '取消'
+      },
       update: {
         title: '檢查更新',
         queryFailed: '取得版本號失敗',

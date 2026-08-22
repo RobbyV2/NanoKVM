@@ -513,6 +513,49 @@ const tr = {
         okBtn: 'Evet',
         cancelBtn: 'Hayır'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Yükleniyor...',
+        notInstall: 'Kurulu değil',
+        notConfigured: 'Yapılandırılmamış',
+        stopped: 'Durduruldu',
+        running: 'Çalışıyor',
+        connected: 'Bağlandı',
+        error: 'Hata',
+        arguments: 'Argümanlar',
+        argumentsTip: 'Başlatılırken hizmete aktarılan komut satırı argümanları.',
+        env: 'Ortam değişkenleri',
+        envKey: 'Ad',
+        envValue: 'Değer',
+        envAdd: 'Değişken ekle',
+        envRemove: 'Kaldır',
+        configured: 'Yapılandırıldı',
+        save: 'Kaydet',
+        saved: 'Yapılandırma kaydedildi',
+        start: 'Başlat',
+        stop: 'Durdur',
+        restart: 'Yeniden başlat',
+        logs: 'Günlükler',
+        logsEmpty: 'Henüz günlük kaydı yok',
+        refresh: 'Yenile',
+        binary: 'İkili dosya',
+        binaryShipped: 'Ürün yazılımıyla birlikte gelir',
+        binaryCustom: 'Özel ikili dosya',
+        binaryUpload: 'İkili dosya yükle',
+        binaryRevert: 'Yerleşik ikili dosyayı geri yükle',
+        binaryRevertDesc:
+          'Yüklenen ikili dosya silinip ürün yazılımıyla gelen sürüm geri yüklensin mi?',
+        serverWarning: 'Kısıtlanmamış bir sunucu açık proxy gibi davranır',
+        memoryWarning:
+          'Aynı anda birden fazla uzaktan erişim hizmeti çalıştırmak belleği tüketebilir',
+        okBtn: 'Evet',
+        cancelBtn: 'Hayır'
+      },
       update: {
         title: 'Güncelleştirmeleri kontrol et',
         queryFailed: 'Sürüm bilgisi alınamadı',

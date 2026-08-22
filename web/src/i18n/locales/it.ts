@@ -517,6 +517,48 @@ const it = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Caricamento...',
+        notInstall: 'Non installato',
+        notConfigured: 'Non configurato',
+        stopped: 'Arrestato',
+        running: 'In esecuzione',
+        connected: 'Connesso',
+        error: 'Errore',
+        arguments: 'Argomenti',
+        argumentsTip: 'Argomenti da riga di comando passati al servizio all’avvio.',
+        env: 'Variabili d’ambiente',
+        envKey: 'Nome',
+        envValue: 'Valore',
+        envAdd: 'Aggiungi variabile',
+        envRemove: 'Rimuovi',
+        configured: 'Configurata',
+        save: 'Salva',
+        saved: 'Configurazione salvata',
+        start: 'Avvia',
+        stop: 'Arresta',
+        restart: 'Riavvia',
+        logs: 'Log',
+        logsEmpty: 'Nessun log al momento',
+        refresh: 'Aggiorna',
+        binary: 'Binario',
+        binaryShipped: 'Incluso nel firmware',
+        binaryCustom: 'Binario personalizzato',
+        binaryUpload: 'Carica binario',
+        binaryRevert: 'Ripristina il binario incluso',
+        binaryRevertDesc:
+          'Eliminare il binario caricato e ripristinare quello incluso nel firmware?',
+        serverWarning: 'Un server senza restrizioni funziona da proxy aperto',
+        memoryWarning: 'Eseguire più servizi di accesso remoto insieme può esaurire la memoria',
+        okBtn: 'Sì',
+        cancelBtn: 'No'
+      },
       update: {
         title: 'Controlla Aggiornamenti',
         queryFailed: 'Impossibile ottenere la versione',

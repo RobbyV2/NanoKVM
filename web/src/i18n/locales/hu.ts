@@ -515,6 +515,48 @@ const hu = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Betöltés...',
+        notInstall: 'Nincs telepítve',
+        notConfigured: 'Nincs beállítva',
+        stopped: 'Leállítva',
+        running: 'Fut',
+        connected: 'Csatlakozva',
+        error: 'Hiba',
+        arguments: 'Argumentumok',
+        argumentsTip: 'A szolgáltatásnak indításkor átadott parancssori argumentumok.',
+        env: 'Környezeti változók',
+        envKey: 'Név',
+        envValue: 'Érték',
+        envAdd: 'Változó hozzáadása',
+        envRemove: 'Eltávolítás',
+        configured: 'Beállítva',
+        save: 'Mentés',
+        saved: 'A beállítások elmentve',
+        start: 'Indítás',
+        stop: 'Leállítás',
+        restart: 'Újraindítás',
+        logs: 'Naplók',
+        logsEmpty: 'Még nincsenek naplóbejegyzések',
+        refresh: 'Frissítés',
+        binary: 'Bináris',
+        binaryShipped: 'A firmware része',
+        binaryCustom: 'Egyéni bináris',
+        binaryUpload: 'Bináris feltöltése',
+        binaryRevert: 'Gyári bináris visszaállítása',
+        binaryRevertDesc:
+          'Törli a feltöltött binárist, és visszaállítja a firmware-rel szállított változatot?',
+        serverWarning: 'A korlátozás nélküli kiszolgáló nyílt proxyként működik',
+        memoryWarning: 'Több távoli elérési szolgáltatás egyidejű futtatása kimerítheti a memóriát',
+        okBtn: 'Igen',
+        cancelBtn: 'Nem'
+      },
       update: {
         title: 'Frissítés keresése',
         queryFailed: 'Verzió lekérdezése sikertelen',

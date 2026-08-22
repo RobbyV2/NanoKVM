@@ -511,6 +511,48 @@ const nb = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Laster...',
+        notInstall: 'Ikke installert',
+        notConfigured: 'Ikke konfigurert',
+        stopped: 'Stoppet',
+        running: 'Kjører',
+        connected: 'Tilkoblet',
+        error: 'Feil',
+        arguments: 'Argumenter',
+        argumentsTip: 'Kommandolinjeargumenter som sendes til tjenesten ved oppstart.',
+        env: 'Miljøvariabler',
+        envKey: 'Navn',
+        envValue: 'Verdi',
+        envAdd: 'Legg til variabel',
+        envRemove: 'Fjern',
+        configured: 'Konfigurert',
+        save: 'Lagre',
+        saved: 'Konfigurasjonen er lagret',
+        start: 'Start',
+        stop: 'Stopp',
+        restart: 'Start på nytt',
+        logs: 'Logg',
+        logsEmpty: 'Ingen loggoppføringer ennå',
+        refresh: 'Oppdater',
+        binary: 'Binærfil',
+        binaryShipped: 'Følger med fastvaren',
+        binaryCustom: 'Egen binærfil',
+        binaryUpload: 'Last opp binærfil',
+        binaryRevert: 'Gjenopprett medfølgende binærfil',
+        binaryRevertDesc:
+          'Slette den opplastede binærfilen og gjenopprette den som følger med fastvaren?',
+        serverWarning: 'En server uten begrensninger fungerer som en åpen proxy',
+        memoryWarning: 'Å kjøre flere fjerntilgangstjenester samtidig kan tømme minnet',
+        okBtn: 'Ja',
+        cancelBtn: 'Nei'
+      },
       update: {
         title: 'Se etter oppdatering',
         queryFailed: 'Kunne ikke hente versjon',

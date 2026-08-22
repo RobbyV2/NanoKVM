@@ -514,6 +514,48 @@ const ru = {
         okBtn: 'Да',
         cancelBtn: 'Нет'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Загрузка...',
+        notInstall: 'Не установлено',
+        notConfigured: 'Не настроено',
+        stopped: 'Остановлено',
+        running: 'Работает',
+        connected: 'Подключено',
+        error: 'Ошибка',
+        arguments: 'Аргументы',
+        argumentsTip: 'Аргументы командной строки, передаваемые службе при запуске.',
+        env: 'Переменные окружения',
+        envKey: 'Имя',
+        envValue: 'Значение',
+        envAdd: 'Добавить переменную',
+        envRemove: 'Удалить',
+        configured: 'Задано',
+        save: 'Сохранить',
+        saved: 'Настройки сохранены',
+        start: 'Запустить',
+        stop: 'Остановить',
+        restart: 'Перезапустить',
+        logs: 'Журнал',
+        logsEmpty: 'Записей в журнале пока нет',
+        refresh: 'Обновить',
+        binary: 'Исполняемый файл',
+        binaryShipped: 'Входит в прошивку',
+        binaryCustom: 'Загруженный файл',
+        binaryUpload: 'Загрузить файл',
+        binaryRevert: 'Вернуть файл из прошивки',
+        binaryRevertDesc: 'Удалить загруженный исполняемый файл и вернуть версию из прошивки?',
+        serverWarning: 'Сервер без ограничений работает как открытый прокси',
+        memoryWarning:
+          'Одновременный запуск нескольких служб удалённого доступа может исчерпать память',
+        okBtn: 'Да',
+        cancelBtn: 'Нет'
+      },
       update: {
         title: 'Проверить обновления',
         queryFailed: 'Получить версию не удалось',

@@ -512,6 +512,47 @@ const uk = {
         okBtn: 'Так',
         cancelBtn: 'Ні'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Завантаження...',
+        notInstall: 'Не встановлено',
+        notConfigured: 'Не налаштовано',
+        stopped: 'Зупинено',
+        running: 'Працює',
+        connected: 'Підключено',
+        error: 'Помилка',
+        arguments: 'Аргументи',
+        argumentsTip: 'Аргументи командного рядка, які передаються службі під час запуску.',
+        env: 'Змінні середовища',
+        envKey: 'Назва',
+        envValue: 'Значення',
+        envAdd: 'Додати змінну',
+        envRemove: 'Видалити',
+        configured: 'Задано',
+        save: 'Зберегти',
+        saved: 'Налаштування збережено',
+        start: 'Запустити',
+        stop: 'Зупинити',
+        restart: 'Перезапустити',
+        logs: 'Журнал',
+        logsEmpty: 'Записів у журналі поки немає',
+        refresh: 'Оновити',
+        binary: 'Виконуваний файл',
+        binaryShipped: 'Входить до прошивки',
+        binaryCustom: 'Завантажений файл',
+        binaryUpload: 'Завантажити файл',
+        binaryRevert: 'Повернути файл із прошивки',
+        binaryRevertDesc: 'Видалити завантажений виконуваний файл і повернути версію з прошивки?',
+        serverWarning: 'Сервер без обмежень працює як відкритий проксі',
+        memoryWarning: 'Одночасний запуск кількох служб віддаленого доступу може вичерпати пам’ять',
+        okBtn: 'Так',
+        cancelBtn: 'Ні'
+      },
       update: {
         title: 'Перевірити оновлення',
         queryFailed: 'Не вдалося отримати версію',

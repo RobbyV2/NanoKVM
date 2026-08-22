@@ -507,6 +507,47 @@ const ko = {
         okBtn: '네',
         cancelBtn: '아니오'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: '불러오는 중...',
+        notInstall: '설치되지 않음',
+        notConfigured: '구성되지 않음',
+        stopped: '중지됨',
+        running: '실행 중',
+        connected: '연결됨',
+        error: '오류',
+        arguments: '인수',
+        argumentsTip: '서비스를 시작할 때 전달되는 명령줄 인수입니다.',
+        env: '환경 변수',
+        envKey: '이름',
+        envValue: '값',
+        envAdd: '변수 추가',
+        envRemove: '제거',
+        configured: '설정됨',
+        save: '저장',
+        saved: '설정이 저장되었습니다',
+        start: '시작',
+        stop: '중지',
+        restart: '다시 시작',
+        logs: '로그',
+        logsEmpty: '아직 로그가 없습니다',
+        refresh: '새로고침',
+        binary: '실행 파일',
+        binaryShipped: '펌웨어 기본 제공',
+        binaryCustom: '업로드한 파일',
+        binaryUpload: '실행 파일 업로드',
+        binaryRevert: '기본 제공 파일로 되돌리기',
+        binaryRevertDesc: '업로드한 실행 파일을 삭제하고 펌웨어에 포함된 파일로 되돌리시겠습니까?',
+        serverWarning: '제한 없는 서버는 개방형 프록시가 됩니다',
+        memoryWarning: '여러 원격 접속 서비스를 동시에 실행하면 메모리가 부족할 수 있습니다',
+        okBtn: '네',
+        cancelBtn: '아니오'
+      },
       update: {
         title: '업데이트 확인',
         queryFailed: '버전 확인 실패',

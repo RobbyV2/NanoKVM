@@ -517,6 +517,49 @@ const fr = {
         okBtn: 'Oui',
         cancelBtn: 'Non'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Chargement...',
+        notInstall: 'Non installé',
+        notConfigured: 'Non configuré',
+        stopped: 'Arrêté',
+        running: 'En cours d’exécution',
+        connected: 'Connecté',
+        error: 'Erreur',
+        arguments: 'Arguments',
+        argumentsTip: 'Arguments de ligne de commande transmis au service au démarrage.',
+        env: 'Variables d’environnement',
+        envKey: 'Nom',
+        envValue: 'Valeur',
+        envAdd: 'Ajouter une variable',
+        envRemove: 'Supprimer',
+        configured: 'Configurée',
+        save: 'Enregistrer',
+        saved: 'Configuration enregistrée',
+        start: 'Démarrer',
+        stop: 'Arrêter',
+        restart: 'Redémarrer',
+        logs: 'Journaux',
+        logsEmpty: 'Aucun journal pour le moment',
+        refresh: 'Actualiser',
+        binary: 'Binaire',
+        binaryShipped: 'Fourni avec le firmware',
+        binaryCustom: 'Binaire personnalisé',
+        binaryUpload: 'Téléverser un binaire',
+        binaryRevert: 'Restaurer le binaire fourni',
+        binaryRevertDesc:
+          'Supprimer le binaire téléversé et restaurer celui fourni avec le firmware ?',
+        serverWarning: 'Un serveur sans restriction agit comme un proxy ouvert',
+        memoryWarning:
+          'Exécuter plusieurs services d’accès distant à la fois peut épuiser la mémoire',
+        okBtn: 'Oui',
+        cancelBtn: 'Non'
+      },
       update: {
         title: 'Vérifier les mises à jour',
         queryFailed: 'Impossible de vérifier les mises à jour. Veuillez réessayer.',

@@ -513,6 +513,47 @@ const cz = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: 'Načítání...',
+        notInstall: 'Nenainstalováno',
+        notConfigured: 'Nenakonfigurováno',
+        stopped: 'Zastaveno',
+        running: 'Běží',
+        connected: 'Připojeno',
+        error: 'Chyba',
+        arguments: 'Argumenty',
+        argumentsTip: 'Argumenty příkazové řádky předané službě při spuštění.',
+        env: 'Proměnné prostředí',
+        envKey: 'Název',
+        envValue: 'Hodnota',
+        envAdd: 'Přidat proměnnou',
+        envRemove: 'Odebrat',
+        configured: 'Nastaveno',
+        save: 'Uložit',
+        saved: 'Konfigurace uložena',
+        start: 'Spustit',
+        stop: 'Zastavit',
+        restart: 'Restartovat',
+        logs: 'Protokoly',
+        logsEmpty: 'Zatím žádné záznamy',
+        refresh: 'Obnovit',
+        binary: 'Binární soubor',
+        binaryShipped: 'Součást firmwaru',
+        binaryCustom: 'Vlastní binární soubor',
+        binaryUpload: 'Nahrát binární soubor',
+        binaryRevert: 'Obnovit binární soubor z firmwaru',
+        binaryRevertDesc: 'Smazat nahraný binární soubor a obnovit verzi dodanou s firmwarem?',
+        serverWarning: 'Server bez omezení funguje jako otevřená proxy',
+        memoryWarning: 'Souběžný běh více služeb vzdáleného přístupu může vyčerpat paměť',
+        okBtn: 'Ano',
+        cancelBtn: 'Ne'
+      },
       update: {
         title: 'Zkontrolovat aktualizaci',
         queryFailed: 'Nepodařilo se získat verzi',

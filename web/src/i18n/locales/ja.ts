@@ -515,6 +515,49 @@ const ja = {
         okBtn: 'はい',
         cancelBtn: 'いいえ'
       },
+      wstunnel: {
+        title: 'wstunnel'
+      },
+      newt: {
+        title: 'Newt'
+      },
+      tunnel: {
+        loading: '読み込み中...',
+        notInstall: '未インストール',
+        notConfigured: '未設定',
+        stopped: '停止中',
+        running: '実行中',
+        connected: '接続済み',
+        error: 'エラー',
+        arguments: '引数',
+        argumentsTip: '起動時にサービスへ渡すコマンドライン引数です。',
+        env: '環境変数',
+        envKey: '名前',
+        envValue: '値',
+        envAdd: '変数を追加',
+        envRemove: '削除',
+        configured: '設定済み',
+        save: '保存',
+        saved: '設定を保存しました',
+        start: '起動',
+        stop: '停止',
+        restart: '再起動',
+        logs: 'ログ',
+        logsEmpty: 'ログはまだありません',
+        refresh: '更新',
+        binary: 'バイナリ',
+        binaryShipped: 'ファームウェア同梱',
+        binaryCustom: 'アップロードしたバイナリ',
+        binaryUpload: 'バイナリをアップロード',
+        binaryRevert: '同梱バイナリに戻す',
+        binaryRevertDesc:
+          'アップロードしたバイナリを削除し、ファームウェア同梱のものに戻しますか？',
+        serverWarning: '制限のないサーバーはオープンプロキシになります',
+        memoryWarning:
+          '複数のリモートアクセスサービスを同時に実行するとメモリが不足する場合があります',
+        okBtn: 'はい',
+        cancelBtn: 'いいえ'
+      },
       update: {
         title: 'アップデート',
         queryFailed: 'バージョン番号の取得に失敗しました',
