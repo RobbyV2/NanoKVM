@@ -15,6 +15,8 @@ write	configs/c.1/bmAttributes	307841300a
 write	configs/c.1/MaxPower	3230300a
 mkdir	configs/c.1/strings/0x409
 write	configs/c.1/strings/0x409/configuration	4e616e6f4b564d0a
+write	os_desc/use	300a
+unlink	os_desc/c.1
 mkdir	functions/hid.GS0
 write	functions/hid.GS0/subclass	310a
 write	functions/hid.GS0/wakeup_on_write	310a

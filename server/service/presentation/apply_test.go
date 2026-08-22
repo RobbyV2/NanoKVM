@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -68,7 +69,7 @@ func TestApplyCycleNeverRemovesAHIDFunction(t *testing.T) {
 	var order []string
 	for _, op := range ops.Trace() {
 		switch {
-		case op.Kind == OpUnlink:
+		case op.Kind == OpUnlink && strings.Contains(op.Path, string(FunctionHID)+"."):
 			t.Fatalf("apply emits unlink %s, which can renumber /dev/hidgN", op.Path)
 		case op.Kind == OpMkdir && strings.HasPrefix(op.Path, functionsDir+"/hid."):
 			order = append(order, strings.TrimPrefix(op.Path, functionsDir+"/hid."))
@@ -305,4 +306,41 @@ func TestModeResolvesInThreeTiers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestApplyClearsOSDescWhenTheNetworkFunctionGoes(t *testing.T) {
+	manager, ops := newTestManager(t, sentinelRNDIS)
+	ctx := context.Background()
+
+	profile := derivedProfile()
+	if err := manager.ApplyProfile(ctx, profile); err != nil {
+		t.Fatalf("apply with rndis: %v", err)
+	}
+	if target := ops.Links()[osDescDir+"/"+configName]; target != configPrefix {
+		t.Fatalf("os_desc link = %q, want %q", target, configPrefix)
+	}
+	if use := osDescUse(t, ops); use != "1\n" {
+		t.Fatalf("os_desc/use = %q, want it set", use)
+	}
+
+	profile.Functions = slices.DeleteFunc(profile.Functions, func(f Function) bool { return f.Kind.isNet() })
+	if err := manager.ApplyProfile(ctx, profile); err != nil {
+		t.Fatalf("apply without rndis: %v", err)
+	}
+	if target, ok := ops.Links()[osDescDir+"/"+configName]; ok {
+		t.Fatalf("os_desc link survives at %q, the gadget keeps answering the 0xEE request (H11)", target)
+	}
+	if use := osDescUse(t, ops); use != "0\n" {
+		t.Fatalf("os_desc/use = %q, want it cleared", use)
+	}
+}
+
+func osDescUse(t *testing.T, ops *RecordOps) string {
+	t.Helper()
+
+	data, err := ops.ReadFile(osDescDir + "/use")
+	if err != nil {
+		t.Fatalf("read os_desc/use: %v", err)
+	}
+	return string(data)
 }

@@ -84,9 +84,13 @@ func validateRemove(rel string) error {
 		return err
 	}
 
+	if rel == osDescDir+"/"+configName {
+		return nil
+	}
+
 	segments := strings.Split(rel, "/")
 	if len(segments) != 3 || segments[0]+"/"+segments[1] != configPrefix {
-		return fmt.Errorf("%w: remove is limited to %s symlinks, got %q", ErrInvalidPath, configPrefix, rel)
+		return fmt.Errorf("%w: remove is limited to %s and %s symlinks, got %q", ErrInvalidPath, configPrefix, osDescDir, rel)
 	}
 	return nil
 }

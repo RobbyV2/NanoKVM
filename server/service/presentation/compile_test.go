@@ -295,7 +295,7 @@ func TestLinkOrderIsTheInterfaceNumberOrder(t *testing.T) {
 func TestPlanNeverRemovesAHIDFunction(t *testing.T) {
 	for _, f := range []flags{{}, {hidOnly: true}, {}, {disk: true}} {
 		for _, op := range compileFlags(t, f).Ops {
-			if op.Kind == OpUnlink || op.Kind == OpUnbind {
+			if op.Kind == OpUnbind || (op.Kind == OpUnlink && strings.Contains(op.Path, string(FunctionHID)+".")) {
 				t.Fatalf("plan emits %s %s, which can renumber /dev/hidgN", op.Kind, op.Path)
 			}
 		}
@@ -360,5 +360,71 @@ func TestPlanRecordsEndpointUse(t *testing.T) {
 	}
 	if plan.Profile != ProfileStandard {
 		t.Fatalf("profile = %q, want %q", plan.Profile, ProfileStandard)
+	}
+}
+
+func TestOSDescFollowsTheFunctionsInThePlan(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		flags flags
+		want  []string
+	}{
+		{
+			name:  "rndis sets it",
+			flags: flags{rndis: true, disk: true},
+			want: []string{
+				"write\tos_desc/use\t" + hex.EncodeToString([]byte("1\n")),
+				"write\tos_desc/b_vendor_code\t" + hex.EncodeToString([]byte(osDescVendorCode+"\n")),
+				"write\tos_desc/qw_sign\t" + hex.EncodeToString([]byte(osDescQwSign+"\n")),
+				"symlink\tos_desc/c.1\t" + configPrefix,
+			},
+		},
+		{
+			name:  "ncm sets it",
+			flags: flags{ncm: true},
+			want: []string{
+				"write\tos_desc/use\t" + hex.EncodeToString([]byte("1\n")),
+				"write\tos_desc/b_vendor_code\t" + hex.EncodeToString([]byte(osDescVendorCode+"\n")),
+				"write\tos_desc/qw_sign\t" + hex.EncodeToString([]byte(osDescQwSign+"\n")),
+				"symlink\tos_desc/c.1\t" + configPrefix,
+			},
+		},
+		{
+			name:  "no network function clears it",
+			flags: flags{disk: true},
+			want:  []string{"write\tos_desc/use\t" + hex.EncodeToString([]byte("0\n")), "unlink\tos_desc/c.1"},
+		},
+		{
+			name:  "hid-only clears it",
+			flags: flags{hidOnly: true},
+			want:  []string{"write\tos_desc/use\t" + hex.EncodeToString([]byte("0\n")), "unlink\tos_desc/c.1"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			for _, line := range renderTrace(compileFlags(t, tc.flags)) {
+				if strings.Contains(line, osDescDir+"/") && !strings.Contains(line, functionsDir+"/") {
+					got = append(got, line)
+				}
+			}
+			if strings.Join(got, "\n") != strings.Join(tc.want, "\n") {
+				t.Fatalf("os_desc ops =\n%v\nwant\n%v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOSDescIgnoresAStaleProfileField(t *testing.T) {
+	profile := profileForFlags(flags{disk: true})
+	profile.OSDesc = MSOSDesc()
+
+	plan, err := Compile(profile, staticV0)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	for _, op := range plan.Ops {
+		if op.Kind == OpWrite && op.Path == osDescDir+"/use" && string(op.Data) != "0\n" {
+			t.Fatalf("os_desc/use = %q, want it cleared when no function needs it", op.Data)
+		}
 	}
 }

@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 )
 
@@ -49,9 +50,6 @@ const (
 	osDescDir    = "os_desc"
 )
 
-// Phase A reproduces S03usbdev/S03usbhid write for write, including the writes
-// the kernel rejects (H8) and the os_desc block the script applies from a
-// sentinel rather than from the function list (H10, H11).
 func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	p.Normalize()
 	if err := p.Validate(); err != nil {
@@ -66,16 +64,17 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	c.device(p.Device)
 	c.config(p.Config)
 
+	osDesc := p.osDesc()
 	osDescDone := false
 	for _, function := range p.Functions {
 		if !osDescDone && !function.Kind.isNet() {
-			c.osDesc(p.OSDesc)
+			c.osDesc(osDesc)
 			osDescDone = true
 		}
 		c.function(function)
 	}
 	if !osDescDone {
-		c.osDesc(p.OSDesc)
+		c.osDesc(osDesc)
 	}
 
 	c.ops = append(c.ops,
@@ -153,8 +152,24 @@ func (c *compiler) config(cfg ConfigDesc) {
 	c.write(configPrefix+"/"+stringsDir+"/configuration", cfg.Configuration)
 }
 
+// H10, H11: the script triggers the MS-OS block off a /boot sentinel rather than
+// off a function existing, and never clears os_desc/use, so a gadget that once
+// had RNDIS keeps answering the 0xEE string request. The block follows the
+// functions actually in the plan, in both directions.
+func (p Profile) osDesc() *OSDesc {
+	if !slices.ContainsFunc(p.Functions, func(f Function) bool { return f.Kind.isNet() }) {
+		return nil
+	}
+	if p.OSDesc != nil {
+		return p.OSDesc
+	}
+	return MSOSDesc()
+}
+
 func (c *compiler) osDesc(o *OSDesc) {
 	if o == nil {
+		c.write(osDescDir+"/use", "0")
+		c.ops = append(c.ops, Op{Kind: OpUnlink, Path: osDescDir + "/" + configName})
 		return
 	}
 	c.write(osDescDir+"/use", "1")

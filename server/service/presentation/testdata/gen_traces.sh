@@ -96,6 +96,22 @@ phase_b_bcddevice() {
     mv "$1.tmp" "$1"
 }
 
+# fix 2: the MS-OS block follows the functions actually in the plan, so a gadget
+# with no network function clears os_desc/use and drops the os_desc/c.1 link
+# instead of answering the 0xEE string request forever (H10, H11).
+phase_b_os_desc() {
+    awk -F'\t' -v OFS='\t' -v off="$(printf '0\n' | od -An -v -tx1 | tr -d ' \n')" '
+        $1 == "mkdir" && $2 ~ /^functions\/(ncm|rndis)\./ { net = 1 }
+        !seen && !net && $1 == "mkdir" && $2 ~ /^functions\// {
+            print "write", "os_desc/use", off
+            print "unlink", "os_desc/c.1"
+            seen = 1
+        }
+        { print }
+    ' "$1" >"$1.tmp"
+    mv "$1.tmp" "$1"
+}
+
 trace_case() {
     name=$1
     script=$2
@@ -138,6 +154,7 @@ trace_case() {
     ) >"$sb/stdout.log" 2>"$sb/stderr.log"
 
     phase_b_bcddevice "$trace"
+    phase_b_os_desc "$trace"
 
     duplicates=$(grep '^write' "$trace" | cut -f2 | sort | uniq -d)
     if [ -n "$duplicates" ]; then

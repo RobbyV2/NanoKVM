@@ -116,10 +116,7 @@ func toggle(profile *presentation.Profile, device string, on bool) {
 	switch {
 	case device == deviceNetwork && on:
 		functions = append([]presentation.Function{presentation.NetworkFunction(presentation.FunctionRNDIS)}, functions...)
-		profile.OSDesc = presentation.MSOSDesc()
-	case device == deviceNetwork:
-		profile.OSDesc = nil
-	case on:
+	case device == deviceDisk && on:
 		functions = append(functions, presentation.DiskFunction(""))
 	}
 
