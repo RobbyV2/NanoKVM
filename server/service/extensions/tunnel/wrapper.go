@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/utils"
 )
 
 var (
@@ -174,7 +175,7 @@ func extractSeed(name proto.TunnelName) error {
 	}
 	defer func() { _ = reader.Close() }()
 
-	file, err := newAtomicFile(binaryFile(name), 0o755)
+	file, err := utils.NewAtomicFile(binaryFile(name), 0o755)
 	if err != nil {
 		return err
 	}
@@ -305,7 +306,7 @@ func writeWrapper(name proto.TunnelName, cfg Config) error {
 		return err
 	}
 
-	file, err := newAtomicFile(wrapperPath(name), 0o700)
+	file, err := utils.NewAtomicFile(wrapperPath(name), 0o700)
 	if err != nil {
 		return err
 	}

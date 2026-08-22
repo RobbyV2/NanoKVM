@@ -332,7 +332,7 @@ func enableInitScript(name proto.TunnelName) error {
 	}
 	defer func() { _ = source.Close() }()
 
-	file, err := newAtomicFile(initScriptPath(name), 0o755)
+	file, err := utils.NewAtomicFile(initScriptPath(name), 0o755)
 	if err != nil {
 		return err
 	}
@@ -412,7 +412,7 @@ func saveBinary(part *multipart.Part, name proto.TunnelName, expected []byte) er
 		return err
 	}
 
-	file, err := newAtomicFile(binaryFile(name), 0o755)
+	file, err := utils.NewAtomicFile(binaryFile(name), 0o755)
 	if err != nil {
 		return err
 	}
