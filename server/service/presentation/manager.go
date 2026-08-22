@@ -94,10 +94,6 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("read active profile: %w", err)
 	}
-	lastKnownGood, err := m.store.LastKnownGood()
-	if err != nil {
-		return Snapshot{}, fmt.Errorf("read last known good profile: %w", err)
-	}
 
 	var functions []Function
 	if active != "" {
@@ -110,9 +106,17 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 
 	snapshot := readSnapshot(m.ops, functions)
 	snapshot.Active = active
-	snapshot.LastKnownGood = lastKnownGood
 	snapshot.Mode = modeOf(active)
-	snapshot.Capabilities = m.caps.Source
+
+	// A profile the capability table now rejects still describes a gadget that
+	// is running, so the accounting failing is not the snapshot failing: the
+	// budget is reported as far as it got and the caller reads the linkage.
+	endpoints, err := AccountEndpoints(functions, m.caps)
+	if err != nil {
+		log.Debugf("endpoint accounting for %s: %s", active, err)
+	}
+	snapshot.Endpoints = endpoints
+	snapshot.Headroom = endpoints.Headroom(m.caps)
 	return snapshot, nil
 }
 

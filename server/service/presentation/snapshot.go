@@ -1,9 +1,6 @@
 package presentation
 
-import (
-	"slices"
-	"strings"
-)
+import "slices"
 
 const (
 	netInstance  = "usb0"
@@ -19,14 +16,16 @@ const (
 )
 
 type Snapshot struct {
-	Active        string   `json:"active"`
-	LastKnownGood string   `json:"last_known_good"`
-	Mode          string   `json:"mode"`
-	Capabilities  string   `json:"capabilities"`
-	UDC           string   `json:"udc"`
-	Bound         bool     `json:"bound"`
-	Present       []string `json:"present"`
-	Linked        []string `json:"linked"`
+	Active string   `json:"active"`
+	Mode   string   `json:"mode"`
+	Linked []string `json:"linked"`
+
+	// What the active profile costs against the controller's endpoint budget,
+	// and what is left of it. The compiler already accounts for this to reject
+	// a profile that does not fit; reporting it is what lets a caller see how
+	// close to the ceiling the gadget is before it asks for another function.
+	Endpoints EndpointUse `json:"endpoints"`
+	Headroom  EndpointUse `json:"headroom"`
 }
 
 // Linkage is read back through the function's own attribute rather than from a
@@ -54,12 +53,13 @@ func functionName(f Function) string {
 	return string(f.Kind) + "." + f.Instance
 }
 
+// Only the linkage under configs/c.1 is probed. What exists under functions/*
+// is a different question, and an add-only transaction never removes a function
+// directory, so the answer is "everything ever built" rather than anything a
+// caller can act on: probing it cost one configfs read per known function and
+// told nobody anything.
 func readSnapshot(ops Ops, extra []Function) Snapshot {
 	var snapshot Snapshot
-	if data, err := ops.ReadFile(udcAttr); err == nil {
-		snapshot.UDC = strings.TrimSpace(string(data))
-		snapshot.Bound = snapshot.UDC != ""
-	}
 
 	seen := make(map[string]bool)
 	for _, function := range append(knownFunctions(), extra...) {
@@ -70,9 +70,6 @@ func readSnapshot(ops Ops, extra []Function) Snapshot {
 		}
 		seen[name] = true
 
-		if readable(ops, functionsDir+"/"+name+"/"+attr) {
-			snapshot.Present = append(snapshot.Present, name)
-		}
 		if readable(ops, configPrefix+"/"+name+"/"+attr) {
 			snapshot.Linked = append(snapshot.Linked, name)
 		}

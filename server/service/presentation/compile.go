@@ -35,14 +35,12 @@ type Op struct {
 }
 
 type Plan struct {
-	Ops       []Op        `json:"ops"`
-	Endpoints EndpointUse `json:"endpoints"`
-	Profile   string      `json:"profile"`
+	Ops     []Op   `json:"ops"`
+	Profile string `json:"profile"`
 }
 
 const (
 	OTGRoleDevice = "device"
-	OTGRoleHost   = "host"
 
 	functionsDir = "functions"
 	stringsDir   = "strings/0x409"
@@ -55,8 +53,7 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	if err := p.Validate(); err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
-	endpoints, err := AccountEndpoints(p.Functions, caps)
-	if err != nil {
+	if _, err := AccountEndpoints(p.Functions, caps); err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
 
@@ -90,7 +87,7 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 			return Plan{}, fmt.Errorf("compile %s: %s %s: %w", p.Name, op.Kind, op.Path, err)
 		}
 	}
-	return Plan{Ops: c.ops, Endpoints: endpoints, Profile: p.Name}, nil
+	return Plan{Ops: c.ops, Profile: p.Name}, nil
 }
 
 func (k FunctionKind) isNet() bool {

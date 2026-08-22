@@ -26,9 +26,11 @@ func (s *Service) GetVirtualDevice(c *gin.Context) {
 	}
 
 	rsp.OkRspWithData(c, &proto.GetVirtualDeviceRsp{
-		Network:  snapshot.HasNetwork(),
-		Disk:     snapshot.HasDisk(),
-		Protocol: string(snapshot.NetworkKind()),
+		Network:   snapshot.HasNetwork(),
+		Disk:      snapshot.HasDisk(),
+		Protocol:  string(snapshot.NetworkKind()),
+		Endpoints: proto.EndpointUsage{In: snapshot.Endpoints.In, Out: snapshot.Endpoints.Out},
+		Headroom:  proto.EndpointUsage{In: snapshot.Headroom.In, Out: snapshot.Headroom.Out},
 	})
 	log.Debugf("get virtual device success")
 }

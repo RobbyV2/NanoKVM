@@ -64,6 +64,14 @@ type UploadAutostartReq struct {
 	Content string `json:"content"`
 }
 
+// EndpointUsage is the dwc2 endpoint budget the linked functions consume. A
+// controller runs out of endpoints long before it runs out of anything else, so
+// this is what decides whether another function can be added at all.
+type EndpointUsage struct {
+	In  int `json:"in"`
+	Out int `json:"out"`
+}
+
 type GetVirtualDeviceRsp struct {
 	Network bool `json:"network"`
 	Media   bool `json:"media"`
@@ -72,6 +80,10 @@ type GetVirtualDeviceRsp struct {
 	// ncm or rndis, empty when no network function is linked. The gadget layer
 	// builds these two and no others, so the selector offers these two.
 	Protocol string `json:"protocol"`
+
+	// What the active profile spends of the endpoint budget, and what is left.
+	Endpoints EndpointUsage `json:"endpoints"`
+	Headroom  EndpointUsage `json:"headroom"`
 }
 
 // Protocol names which network function the gadget should present. Empty keeps

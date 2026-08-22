@@ -351,12 +351,9 @@ func TestCompileRefusesAnInvalidProfile(t *testing.T) {
 	}
 }
 
-func TestPlanRecordsEndpointUse(t *testing.T) {
+func TestPlanNamesItsProfile(t *testing.T) {
 	plan := compileFlags(t, flags{rndis: true, disk: true})
 
-	if plan.Endpoints != (EndpointUse{In: 6, Out: 5}) {
-		t.Fatalf("endpoints = %+v, want 6 IN 5 OUT", plan.Endpoints)
-	}
 	if plan.Profile != ProfileStandard {
 		t.Fatalf("profile = %q, want %q", plan.Profile, ProfileStandard)
 	}

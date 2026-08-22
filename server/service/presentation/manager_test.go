@@ -94,3 +94,33 @@ func seed(t *testing.T, ops *RecordOps, rel string) {
 		t.Fatalf("seed %s: %v", rel, err)
 	}
 }
+
+// The endpoint budget is what stops another function being added, so the
+// accounting the compiler does to reject a profile is reported rather than
+// thrown away with the plan it rejected.
+func TestSnapshotReportsTheEndpointBudget(t *testing.T) {
+	manager, _ := newTestManager(t)
+
+	// A built-in is reconstructed from code on every load, so the edited one is
+	// stored under the name an edit lands on.
+	profile := profileForFlags(flags{rndis: true, disk: true})
+	profile.Name, profile.BuiltIn = ProfileCurrent, false
+
+	if err := manager.store.SaveProfile(profile); err != nil {
+		t.Fatalf("save profile: %v", err)
+	}
+	if err := manager.store.SetActive(profile.Name); err != nil {
+		t.Fatalf("set active: %v", err)
+	}
+
+	snapshot, err := manager.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	if snapshot.Endpoints != (EndpointUse{In: 6, Out: 5}) {
+		t.Fatalf("endpoints = %+v, want 6 IN 5 OUT", snapshot.Endpoints)
+	}
+	if snapshot.Headroom != (EndpointUse{}) {
+		t.Fatalf("headroom = %+v, want none left", snapshot.Headroom)
+	}
+}
