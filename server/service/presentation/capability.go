@@ -16,7 +16,6 @@ import (
 const (
 	SourceStaticV0 = "static-v0"
 	SourceProbeV1  = "probe-v1"
-	SourceMeasured = "measured"
 )
 
 var capabilityMu sync.Mutex

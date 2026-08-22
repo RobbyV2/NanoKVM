@@ -61,8 +61,6 @@ func (m *Manager) execute(op Op, udc string) error {
 		return m.ops.Remove(op.Path)
 	case OpBind:
 		return m.ops.BindUDC(udc)
-	case OpUnbind:
-		return m.ops.UnbindUDC()
 	case OpOTGRole:
 		return m.ops.SetOTGRole(string(op.Data))
 	default:
