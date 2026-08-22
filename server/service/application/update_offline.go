@@ -3,22 +3,20 @@ package application
 import (
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/utils"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
-
-var validFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 func (s *Service) OfflineUpdate(c *gin.Context) {
 	var rsp proto.Response
@@ -41,7 +39,7 @@ func (s *Service) OfflineUpdate(c *gin.Context) {
 }
 
 func offlineUpdate(c *gin.Context) error {
-	expectedSHA256, err := parseSHA256Checksum(c.GetHeader("X-SHA256-Checksum"))
+	expectedSHA256, err := utils.ParseSHA256Checksum(c.GetHeader("X-SHA256-Checksum"))
 	if err != nil {
 		return err
 	}
@@ -119,20 +117,6 @@ func offlineUpdate(c *gin.Context) error {
 	}
 
 	return nil
-}
-
-func parseSHA256Checksum(value string) ([]byte, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return nil, nil
-	}
-
-	checksum, err := hex.DecodeString(value)
-	if err != nil || len(checksum) != sha256.Size {
-		return nil, fmt.Errorf("invalid sha256 checksum")
-	}
-
-	return checksum, nil
 }
 
 func verifySHA256Checksum(filePath string, expected []byte) error {
@@ -219,10 +203,6 @@ func processUpload(reader *multipart.Reader, contentLength int64, workspaceDir s
 
 func saveUploadedFile(part *multipart.Part, contentLength int64, workspaceDir string) (string, error) {
 	filename := part.FileName()
-	if filename == "" {
-		return "", fmt.Errorf("no filename provided")
-	}
-
 	if err := validateFilename(filename); err != nil {
 		return "", err
 	}
@@ -262,24 +242,9 @@ func saveUploadedFile(part *multipart.Part, contentLength int64, workspaceDir st
 }
 
 func validateFilename(filename string) error {
-	baseName := filepath.Base(filename)
-
-	// Check if the path contains directory components
-	if baseName != filename {
-		log.Warnf("Path detected in filename: %s", filename)
-		return fmt.Errorf("path detected in filename")
-	}
-
-	// Check for path traversal attempts
-	if strings.Contains(filename, "..") {
-		log.Warnf("Path traversal attempt: %s", filename)
-		return fmt.Errorf("invalid filename: path traversal detected")
-	}
-
-	// Validate filename characters
-	if !validFilenameRegex.MatchString(filename) {
-		log.Warnf("Invalid filename characters: %s", filename)
-		return fmt.Errorf("invalid filename: contains invalid characters")
+	if err := utils.ValidateSafeFilename(filename); err != nil {
+		log.Warnf("Rejected upload filename %s: %v", filename, err)
+		return err
 	}
 	if !packageNamePattern.MatchString(filename) {
 		return fmt.Errorf("invalid update package name")
