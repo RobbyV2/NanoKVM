@@ -29,7 +29,7 @@ And `S03usbdev stop` tears out the whole gadget, so the existing runtime toggle 
 
 | # | Decision |
 |---|---|
-| D1 | The kernel now supports it. `CONFIG_BRIDGE=m` was added to the LicheeRV-Nano-Build fork at commit `cbd9739` on branch `nanokvm-custom`, branched from upstream's `NanoKVM` at `1559c57`. It auto-selects `LLC` and `STP`. `BRIDGE_NETFILTER` is deliberately not enabled. Userspace needs nothing new, since `BR2_PACKAGE_IPROUTE2=y` already ships both `ip` and `bridge`. Program 3 therefore requires a custom base image. Detail below. |
+| D1 | The kernel now supports it. `CONFIG_BRIDGE=y` was added to the LicheeRV-Nano-Build fork at commit `f74b732` on branch `nanokvm-custom`, branched from upstream's `NanoKVM` at `1559c57`. Built in rather than a module, because nothing in the boot path establishes that a module can be loaded at all. It auto-selects `LLC` and `STP`, and neither is written into the defconfig: both are promptless tristates, a `select` from a built-in symbol promotes them to `y`, and `savedefconfig` drops the redundant lines again. `BRIDGE_NETFILTER` is deliberately not enabled. Userspace needs nothing new, since `BR2_PACKAGE_IPROUTE2=y` already ships both `ip` and `bridge`. Program 3 therefore requires a custom base image. Detail below. |
 | D2 | Ownership handoff, not coexistence. `S30eth` gains one indirection, reading the uplink interface name from `/etc/kvm/network/l2-uplink` with `eth0` as the fallback, used for its flush, its `arping`, both `dev` targets and its `udhcpc -i`. `br0` is never created behind the script's back. |
 | D3 | `br0` is created with `eth0` enslaved unconditionally, before `S30eth` runs. `usb0` is enslaved and released dynamically by the presentation manager as part of a profile apply, never by an init script. This is the dependency on Program 1. |
 | D4 | STP off, not merely fast. `ip link set br0 type bridge stp_state 0` for a two-port bridge with no loop risk. Getting this wrong makes the device unreachable, and the DHCP branch has no `RESERVE_INET` fallback. |
@@ -41,11 +41,11 @@ And `S03usbdev stop` tears out the whole gadget, so the existing runtime toggle 
 
 ## Kernel and image
 
-`CONFIG_BRIDGE=m` pulls in `bridge.ko`, and `CONFIG_BRIDGE` selects `CONFIG_LLC` and `CONFIG_STP`, so `llc.ko` and `stp.ko` are built alongside it. Nothing else in the buildroot config changes. `bridge-utils` is not added, because `BR2_PACKAGE_IPROUTE2=y` already puts `/sbin/ip` and `/sbin/bridge` on the image, and `ip link add name br0 type bridge` plus `ip link set eth0 master br0` covers everything `brctl` would have done.
+`CONFIG_BRIDGE=y` puts the bridge in the kernel image itself, and `CONFIG_BRIDGE` selects `CONFIG_LLC` and `CONFIG_STP`, so both are built in alongside it. Neither appears in the defconfig, since a `select` from a built-in symbol already promotes a promptless tristate to `y` and `savedefconfig` drops the line again. Nothing else in the buildroot config changes. `bridge-utils` is not added, because `BR2_PACKAGE_IPROUTE2=y` already puts `/sbin/ip` and `/sbin/bridge` on the image, and `ip link add name br0 type bridge` plus `ip link set eth0 master br0` covers everything `brctl` would have done.
 
 `BRIDGE_NETFILTER` stays off for two reasons. A transparent Layer-2 bridge does not want netfilter hooks in the bridge forwarding path, since the entire point of the program is that the controlled host's frames reach the router unmodified and unfiltered. And the device has roughly 90 MB of usable RAM, so a conntrack pass over every forwarded frame is a cost paid on the wrong traffic.
 
-Because `CONFIG_BRIDGE` is a module rather than built in, something has to load it. `S00kmod` runs a fixed list of `insmod soph_*.ko` from `/mnt/system/ko/` and never calls `modprobe` or `depmod`, so nothing in the current boot path establishes that `modprobe` works or that `/lib/modules/$(uname -r)/modules.dep` exists. The kernel's own autoload path, `request_module("rtnl-link-bridge")` from rtnetlink when `ip link add type bridge` runs, depends on the same `modprobe`. `S29bridge` therefore loads the module explicitly and fails loudly, trying `modprobe bridge` first and falling back to `insmod` of `llc.ko`, `stp.ko` and `bridge.ko` in dependency order from an image path. That fallback is why R3.1 needs an on-device transcript rather than a reading of the config.
+Built in rather than a module because nothing on this image can be relied on to load one. `S00kmod` insmods a fixed list of 21 vendor `soph_*.ko` files by absolute path from `/mnt/system/ko/`, with no `modprobe`, no `depmod` and no wildcard, so neither an explicit `modprobe bridge` nor rtnetlink's own `request_module("rtnl-link-bridge")` autoload has ever run here, and `/lib/modules/$(uname -r)/modules.dep` is not known to be populated. Building the bridge in removes the load step, the init-time code that would perform it, and a failure mode on a device where no non-vendor module has ever been loaded. The cost is roughly 150 KB of kernel memory resident on devices that never bridge.
 
 ## What the network stack does today
 
@@ -114,7 +114,7 @@ The interface name cannot be fixed from a file, so `system_state.cpp` gains one 
 
 `/etc/kvm/network/l2-uplink` is a single line naming the interface that carries the management address. `dns.go:24-26` already owns `/etc/kvm/network/` for `dns.mode` and `dns.servers`, so the directory exists, is created by the server, and needs no new init-time `mkdir`. The file is the only shared state between the server, the two init scripts and the C++ daemon. Absent means `eth0`, the stock state, so an image that has never had the bridge enabled and an image that has had it disabled are byte-identical in this respect.
 
-Two things create bridge state, and they never overlap. `S29bridge` runs at boot, between `S03usbdev` and `S30eth`, and when the last-known-good state says the bridge is enabled it loads the module, creates `br0` with STP off, pins the MAC, enslaves `eth0` and brings both up. `S30eth` then flushes and addresses `br0` from the start, so there is no live handoff at boot and no window in which an address moves between devices. `S29bridge` also checks for an armed `pending.json` and, finding one, removes `l2-uplink` and leaves the bridge uncreated, so a power cut inside the apply window comes back on stock `eth0`.
+Two things create bridge state, and they never overlap. `S29bridge` runs at boot, between `S03usbdev` and `S30eth`, and when the last-known-good state says the bridge is enabled it creates `br0` with STP off, pins the MAC, enslaves `eth0` and brings both up. `S30eth` then flushes and addresses `br0` from the start, so there is no live handoff at boot and no window in which an address moves between devices. `S29bridge` also checks for an armed `pending.json` and, finding one, removes `l2-uplink` and leaves the bridge uncreated, so a power cut inside the apply window comes back on stock `eth0`.
 
 The transactions in the server are the only thing that moves an address between devices, and they run only in response to an explicit API call.
 
@@ -135,26 +135,25 @@ The MAC is pinned by reading `/sys/class/net/eth0/address` before enslaving anyt
 
 ## The enable transaction
 
-Steps 1 through 13 hold the management address. Step 14 runs after the dead-man is disarmed, because releasing and enslaving `usb0` is reversible and never touches the management address.
+Steps 1 through 12 hold the management address. Step 13 runs after the dead-man is disarmed, because releasing and enslaving `usb0` is reversible and never touches the management address.
 
 1. Snapshot. `ip -j link show`, `ip -j addr show`, `ip -j route show`, the bytes of `/etc/resolv.conf`, the bytes of `/etc/kvm/gateway`, and the current `l2-uplink`. Write `snapshot.json` atomically and `fsync` it before the first mutation, so a power cut mid-apply leaves a record that boot-time code can act on.
 2. Arm the dead-man. Write `pending.json` carrying the snapshot path and an absolute deadline sixty seconds out. A `context.WithTimeout` goroutine restores the snapshot unless disarmed, and `S29bridge` restores unconditionally at boot if it finds the file.
-3. Load the module. `modprobe bridge`, falling back to `insmod` of `llc.ko`, `stp.ko` and `bridge.ko` in that order. Failure here aborts before anything has been mutated.
-4. Create `br0` with `stp_state 0` and `forward_delay 0`, set its address to `eth0`'s permanent MAC read from `/sys/class/net/eth0/address`, and bring it up.
-5. Kill any running `udhcpc` named by `/run/udhcpc.eth0.pid` and remove the pidfile, so no lease renewal re-adds an address to a device that is about to become a port.
-6. Capture `eth0`'s current IPv4 addresses and its default route from the snapshot already taken, then `ip addr flush dev eth0` and delete its default route.
-7. Enslave. `ip link set eth0 master br0`, then `ip link set eth0 up`.
-8. Write `/etc/kvm/network/l2-uplink` containing `br0`, atomically.
-9. Address `br0`. On the static path, replay the captured address and route onto `br0` in a single `ip -batch`, and add the nameserver line only if the snapshot shows it was there, rather than re-running `S30eth start`, whose `:55` append would accumulate a duplicate. On the DHCP path, run `/etc/init.d/S30eth start`, which now reads `br0` from `l2-uplink` and launches `udhcpc -i br0` with the existing timers.
-10. Write `/etc/kvm/gateway` with the resulting default gateway, so an unpatched `kvm_system` reads it verbatim instead of grepping `ip route` for `eth0`.
-11. Re-install the five `S95nanokvm` rules against `br0` and delete the five naming `eth0`.
-12. Verify. All three of the checks below must pass.
-13. Disarm. Remove `pending.json` and write `last-known-good.json` in one atomic sequence, marking the bridge enabled.
-14. Enslave `usb0`, if the profile has a gadget NIC. Ask the presentation manager to apply a profile carrying `ncm.usb0` or `rndis.usb0`, which adds one function symlink around a bind cycle and leaves HID untouched, then `ip link set usb0 master br0` and `ip link set usb0 up`. This step takes its own smaller snapshot and its own rollback, since its worst case is a host with no network rather than a device with no management plane.
+3. Create `br0` with `stp_state 0` and `forward_delay 0`, set its address to `eth0`'s permanent MAC read from `/sys/class/net/eth0/address`, and bring it up.
+4. Kill any running `udhcpc` named by `/run/udhcpc.eth0.pid` and remove the pidfile, so no lease renewal re-adds an address to a device that is about to become a port.
+5. Capture `eth0`'s current IPv4 addresses and its default route from the snapshot already taken, then `ip addr flush dev eth0` and delete its default route.
+6. Enslave. `ip link set eth0 master br0`, then `ip link set eth0 up`.
+7. Write `/etc/kvm/network/l2-uplink` containing `br0`, atomically.
+8. Address `br0`. On the static path, replay the captured address and route onto `br0` in a single `ip -batch`, and add the nameserver line only if the snapshot shows it was there, rather than re-running `S30eth start`, whose `:55` append would accumulate a duplicate. On the DHCP path, run `/etc/init.d/S30eth start`, which now reads `br0` from `l2-uplink` and launches `udhcpc -i br0` with the existing timers.
+9. Write `/etc/kvm/gateway` with the resulting default gateway, so an unpatched `kvm_system` reads it verbatim instead of grepping `ip route` for `eth0`.
+10. Re-install the five `S95nanokvm` rules against `br0` and delete the five naming `eth0`.
+11. Verify. All three of the checks below must pass.
+12. Disarm. Remove `pending.json` and write `last-known-good.json` in one atomic sequence, marking the bridge enabled.
+13. Enslave `usb0`, if the profile has a gadget NIC. Ask the presentation manager to apply a profile carrying `ncm.usb0` or `rndis.usb0`, which adds one function symlink around a bind cycle and leaves HID untouched, then `ip link set usb0 master br0` and `ip link set usb0 up`. This step takes its own smaller snapshot and its own rollback, since its worst case is a host with no network rather than a device with no management plane.
 
 ### Verification
 
-Three checks, all required, evaluated before step 13.
+Three checks, all required, evaluated before step 12.
 
 `br0` has an IPv4 address, tested with `ip -4 addr show dev br0` rather than a `grep inet` that also matches `inet6`.
 
@@ -173,7 +172,7 @@ Any failure restores the snapshot, restores `l2-uplink`, restores `/etc/kvm/gate
 5. Capture `br0`'s IPv4 addresses and default route, then flush `br0` and delete its default route.
 6. Release `eth0`, `ip link set eth0 nomaster`, then `ip link set eth0 up`.
 7. Remove `/etc/kvm/network/l2-uplink`, so the absent-file fallback returns every reader to `eth0` and the on-disk state is byte-identical to a device that never had the bridge.
-8. Address `eth0`, by the same static replay or `S30eth start` split as enable step 9.
+8. Address `eth0`, by the same static replay or `S30eth start` split as enable step 8.
 9. Rewrite `/etc/kvm/gateway` with the resulting default gateway.
 10. Re-install the five firewall rules against `eth0` and delete the five naming `br0`.
 11. Verify the same three checks against `eth0` rather than `br0`.
@@ -184,8 +183,8 @@ Any failure restores the snapshot, restores `l2-uplink`, restores `/etc/kvm/gate
 
 | Path | Action |
 |---|---|
-| LicheeRV-Nano-Build fork, branch `nanokvm-custom`, commit `cbd9739` | external, done: `CONFIG_BRIDGE=m`, `BRIDGE_NETFILTER` left unset |
-| `kvmapp/system/init.d/S29bridge` | new: module load, `pending.json` check, `br0` creation with `eth0` enslaved |
+| LicheeRV-Nano-Build fork, branch `nanokvm-custom`, commit `f74b732` | external, done: `CONFIG_BRIDGE=y`, `BRIDGE_NETFILTER` left unset |
+| `kvmapp/system/init.d/S29bridge` | new: `pending.json` check, `br0` creation with `eth0` enslaved |
 | `kvmapp/system/init.d/S30eth` | modify: the `IFACE` indirection at eleven sites, the `ip -4` fix at `:59,61` |
 | `kvmapp/system/init.d/S95nanokvm` | modify: the ten interface matches in the five rules at `:92-105` |
 | `kvmapp/jpg_stream/S95nanokvm` | unchanged, and recorded as the stale duplicate of the same block |
@@ -223,7 +222,7 @@ POST   /api/network/bridge/revert  # force-restore the snapshot
 
 ## Risks
 
-**R3.1 The built image cannot actually create a bridge at runtime, even though the config says it can.** `CONFIG_BRIDGE=m` means `bridge.ko` has to be loaded by something, and `S00kmod` insmods a fixed list of `soph_*.ko` from `/mnt/system/ko/` without ever running `modprobe` or `depmod`, so neither `modprobe bridge` nor rtnetlink's `request_module("rtnl-link-bridge")` autoload is known to work on this image. Everything else in Program 3 is blocked on this. Retires when a transcript from a device flashed with the `cbd9739` image captures all of `zcat /proc/config.gz | grep -E 'BRIDGE|STP|LLC|BRIDGE_NETFILTER'` showing `CONFIG_BRIDGE=m` with `BRIDGE_NETFILTER` unset, `modprobe bridge` succeeding, `lsmod` listing `bridge`, `stp` and `llc`, `ip link add name br0 type bridge stp_state 0` succeeding, `ip link set eth0 master br0` succeeding, and `bridge link show` listing the port in state `forwarding` within one second of carrier.
+**R3.1 Bridge creation or enslavement fails on the real device.** Nothing in the tree has ever run `ip link add name br0 type bridge` on this kernel, enslaved a live `eth0` that carries the management address, or observed what DHCP and carrier do once `eth0` is a port rather than the uplink. The config being built in settles only that the code is present in the image. Everything else in Program 3 is blocked on the transcript. Retires when a transcript from a device flashed with the `f74b732` image captures all of `zcat /proc/config.gz | grep -E 'BRIDGE|STP|LLC|BRIDGE_NETFILTER'` showing `CONFIG_BRIDGE=y`, `CONFIG_LLC=y` and `CONFIG_STP=y` with `BRIDGE_NETFILTER` unset, `ip link add name br0 type bridge stp_state 0` succeeding, `ip link set eth0 master br0` succeeding against an `eth0` that was up and addressed beforehand, `bridge link show` listing the port in state `forwarding` within one second of carrier, and `udhcpc -i br0` taking a lease under the existing `-t 10 -T 1` timers.
 
 **R3.2 Management reachability is lost and the device needs physical access.** The DHCP branch at `S30eth:68` has no fallback of any kind, `RESERVE_INET` exists only inside the `/boot/eth.nodhcp` branch, STP can delay carrier past `udhcpc -t 10 -T 1`, the five `-i eth0` rules stop applying to a bridged device, and `S30wifi:116` deletes the default route in AP mode. Retires when the dead-man rollback is proven three ways on hardware: apply with the bridge deliberately misconfigured, for instance with STP left on, and confirm automatic restore within the deadline; hard power-cut the device mid-apply and confirm the `S29bridge` `pending.json` check restores it on the next boot; and confirm that `DROP OUTPUT tcp --sport 8000` still blocks port 8000 from the wire after bridging, shown by a packet capture taken from the attached host rather than by an `iptables -L` listing.
 
