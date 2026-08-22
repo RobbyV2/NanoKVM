@@ -351,6 +351,87 @@ const hu = {
         okBtn: 'Alkalmaz',
         cancelBtn: 'Mégse'
       },
+      passthrough: {
+        title: 'USB-átjátszás',
+        loading: 'Betöltés...',
+        hidWarning:
+          'Az átjátszás indítása átadja a billentyűzetet, az egeret és a virtuális adathordozókat',
+        hidWarningDesc:
+          'A NanoKVM-nek egyetlen USB-eszközvezérlője van, és a proxynak az egész kell. Amíg fut egy munkamenet, a távoli gép ezért az átjátszott eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek maguktól visszatérnek, amint a munkamenet leáll. Ez a webes felület ettől függetlenül működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
+        isoWarning: 'Webkamerák, mikrofonok és más izokron eszközök nem játszhatók át',
+        isoWarningDesc:
+          'Ez a hardver csak vezérlő, tömeges és megszakításos átviteleket visz. A hang- és videoeszközök semmilyen módon nem fognak működni.',
+        session: 'Munkamenet',
+        activeDesc: 'Egy eszköz be van importálva, és a proxy tartja az USB-vezérlőt.',
+        inactiveDesc:
+          'Nincs futó munkamenet. A billentyűzet, az egér és a virtuális adathordozók rendesen működnek.',
+        device: 'Eszköz',
+        busId: 'Busz-azonosító',
+        speed: 'Sebesség',
+        exporter: 'Exportáló',
+        local: 'Importálva mint',
+        localValue: '{{bus}}. busz, {{address}} cím',
+        udc: 'USB-vezérlő',
+        pid: 'Proxy PID',
+        startedAt: 'Indítva',
+        isoDevice:
+          'Ez az eszköz hang- vagy videoosztályt jelez, amely izokron átvitelt igényel. Nem fog működni.',
+        exporterLabel: 'Az exportáló címe',
+        exporterHint:
+          'A gép és a port, amelyet a NanoKVM felhív. Az alábbi alagúton át ez {{exporter}}.',
+        busIdLabel: 'Busz-azonosító a saját gépén',
+        busIdHint: 'Az a busid, amelyet az usbip list -l kiír az eszközhöz, például {{example}}.',
+        start: 'Átjátszás indítása',
+        stop: 'Átjátszás leállítása',
+        startTitle: 'Elindítja az USB-átjátszást?',
+        startDevice: 'A NanoKVM importálni fogja a következőt: {{busId}} innen: {{exporter}}.',
+        startHid:
+          'Az USB-billentyűzet, az egér és a virtuális adathordozók a munkamenet teljes ideje alatt nem működnek, és maguktól újraindulnak, amint leállítja.',
+        startIso:
+          'Webkamerák, mikrofonok és más izokron eszközök ezen a hardveren nem fognak működni.',
+        startWeb:
+          'Ez a webes felület tovább működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
+        okBtn: 'Indítás',
+        cancelBtn: 'Mégse',
+        instructions: 'A saját gépén',
+        instructionsDesc:
+          'Szándékosan nincs telepítendő kliensügynök. Futtassa ezeket a szokásos usbip parancsokat azon a gépen, amelyhez az eszköz csatlakozik.',
+        copyFailed: 'A másolás nem sikerült. Másolja a parancsot kézzel.',
+        directNote:
+          'Alagút nélkül az usbipd-nek elérhetőnek kell lennie a hálózatán, és a fenti exportálócímnek rá kell mutatnia. Az usbip titkosítatlanul viszi az eszközt, ezért az alagút az ajánlott.',
+        steps: {
+          modprobe: {
+            title: 'Töltse be az exportáló oldali illesztőprogramot',
+            desc: 'Az usbip-host teszi lehetővé, hogy a kernel átadjon egy helyi eszközt. Alapból nincs betöltve.'
+          },
+          list: {
+            title: 'Keresse meg az eszközt',
+            desc: 'Kiírja az összes helyi eszközt a busid-jével és a gyártó:termék párossal. Jegyezze fel a kívánt eszköz busid-jét.'
+          },
+          bind: {
+            title: 'Kösse hozzá az usbip-hez',
+            desc: 'Elveszi az eszközt a szokásos illesztőprogramjától, így az a leválasztásig nem működik ezen a gépen.'
+          },
+          serve: {
+            title: 'Tegye elérhetővé',
+            desc: 'Az usbipd az előtérben marad, és megvárja, amíg a NanoKVM importálja az eszközt.',
+            notice:
+              'A szokásos usbipd-nek nincs figyelőcím-kapcsolója, minden felületen figyel. Tartsa a(z) {{port}} portot zárva a tűzfalán, és csak az alábbi alagutat engedje hozzá.'
+          },
+          tunnel: {
+            title: 'Irányítsa a NanoKVM-re',
+            desc: 'Fordított SSH-alagút: a NanoKVM saját visszacsatolási címén a(z) {{port}} port lesz ezen a gépen az usbipd. Hagyja futni a teljes munkamenet alatt.'
+          },
+          exporter: {
+            title: 'Ezt adja meg exportálóként',
+            desc: 'Írja be ezt a fenti exportáló mezőbe, adja meg a busz-azonosítót, majd indítsa el a munkamenetet.'
+          },
+          unbind: {
+            title: 'Adja vissza az eszközt',
+            desc: 'A munkamenet leállása után ez visszaadja az eszközt a szokásos illesztőprogramjának ezen a gépen.'
+          }
+        }
+      },
       mcp: {
         title: 'MCP-szolgáltatás',
         service: 'MCP távoli vezérlés',

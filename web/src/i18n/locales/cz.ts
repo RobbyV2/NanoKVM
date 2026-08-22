@@ -349,6 +349,85 @@ const cz = {
         okBtn: 'Použít',
         cancelBtn: 'Zrušit'
       },
+      passthrough: {
+        title: 'Průchod USB',
+        loading: 'Načítání...',
+        hidWarning: 'Spuštění průchodu odevzdá klávesnici, myš i virtuální média',
+        hidWarningDesc:
+          'NanoKVM má jediný řadič USB zařízení a proxy jej potřebuje celý. Během relace proto vzdálený hostitel vidí předané zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se samy ve chvíli, kdy relaci zastavíte. Tohoto webového rozhraní se to netýká, takže relaci můžete z této stránky kdykoli ukončit.',
+        isoWarning: 'Webkamery, mikrofony a další izochronní zařízení předat nelze',
+        isoWarningDesc:
+          'Tento hardware přenáší pouze řídicí, hromadné a přerušovací přenosy. Zvuková a obrazová zařízení fungovat nebudou, ať je připojíte jakkoli.',
+        session: 'Relace',
+        activeDesc: 'Zařízení je importováno a proxy drží řadič USB.',
+        inactiveDesc: 'Neběží žádná relace. Klávesnice, myš i virtuální média fungují normálně.',
+        device: 'Zařízení',
+        busId: 'ID sběrnice',
+        speed: 'Rychlost',
+        exporter: 'Exportér',
+        local: 'Importováno jako',
+        localValue: 'Sběrnice {{bus}}, adresa {{address}}',
+        udc: 'Řadič USB',
+        pid: 'PID proxy',
+        startedAt: 'Spuštěno',
+        isoDevice:
+          'Toto zařízení hlásí třídu zvuku nebo videa, která vyžaduje izochronní přenosy. Fungovat nebude.',
+        exporterLabel: 'Adresa exportéra',
+        exporterHint:
+          'Hostitel a port, na které se NanoKVM připojuje. Přes tunel níže je to {{exporter}}.',
+        busIdLabel: 'ID sběrnice na vašem počítači',
+        busIdHint: 'Busid, které usbip list -l pro zařízení vypíše, například {{example}}.',
+        start: 'Spustit průchod',
+        stop: 'Zastavit průchod',
+        startTitle: 'Spustit průchod USB?',
+        startDevice: 'NanoKVM importuje {{busId}} z {{exporter}}.',
+        startHid:
+          'Klávesnice USB, myš i virtuální média přestanou po dobu relace fungovat a samy se rozběhnou, jakmile ji zastavíte.',
+        startIso:
+          'Webkamery, mikrofony a další izochronní zařízení na tomto hardwaru fungovat nebudou.',
+        startWeb:
+          'Toto webové rozhraní funguje dál, relaci tedy můžete z této stránky kdykoli zastavit.',
+        okBtn: 'Spustit',
+        cancelBtn: 'Zrušit',
+        instructions: 'Na vašem počítači',
+        instructionsDesc:
+          'Záměrně se neinstaluje žádný klientský agent. Spusťte tyto běžné příkazy usbip na počítači, ke kterému je zařízení připojeno.',
+        copyFailed: 'Kopírování se nezdařilo. Zkopírujte příkaz ručně.',
+        directNote:
+          'Bez tunelu musí být usbipd dostupný ve vaší síti a adresa exportéra výše na něj musí ukazovat. usbip přenáší zařízení nešifrovaně, proto je tunel vhodnější.',
+        steps: {
+          modprobe: {
+            title: 'Načtěte ovladač na straně exportéra',
+            desc: 'usbip-host umožňuje jádru předat místní zařízení. Ve výchozím stavu se nenačítá.'
+          },
+          list: {
+            title: 'Najděte zařízení',
+            desc: 'Vypíše všechna místní zařízení s jejich busid a dvojicí výrobce:produkt. Poznamenejte si busid toho, které chcete.'
+          },
+          bind: {
+            title: 'Připojte je k usbip',
+            desc: 'Odebere zařízení jeho běžnému ovladači, takže na tomto počítači přestane fungovat, dokud je neodpojíte.'
+          },
+          serve: {
+            title: 'Nabídněte je',
+            desc: 'usbipd zůstane v popředí a čeká, až NanoKVM zařízení importuje.',
+            notice:
+              'Běžný usbipd nemá volbu naslouchací adresy a naslouchá na všech rozhraních. Nechte port {{port}} na firewallu zavřený a pusťte k němu jen tunel níže.'
+          },
+          tunnel: {
+            title: 'Nasměrujte je na NanoKVM',
+            desc: 'Zpětný tunel SSH: port {{port}} na smyčce samotného NanoKVM se stane usbipd na tomto počítači. Nechte jej běžet po celou relaci.'
+          },
+          exporter: {
+            title: 'Použijte toto jako exportéra',
+            desc: 'Vložte to výše do pole exportéra, zadejte ID sběrnice a spusťte relaci.'
+          },
+          unbind: {
+            title: 'Vraťte zařízení',
+            desc: 'Po zastavení relace tímto zařízení vrátíte jeho běžnému ovladači na tomto počítači.'
+          }
+        }
+      },
       mcp: {
         title: 'Služba MCP',
         service: 'Vzdálené ovládání MCP',

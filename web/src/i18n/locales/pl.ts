@@ -351,6 +351,87 @@ const pl = {
         okBtn: 'Zastosuj',
         cancelBtn: 'Anuluj'
       },
+      passthrough: {
+        title: 'Przekazywanie USB',
+        loading: 'Wczytywanie...',
+        hidWarning: 'Uruchomienie przekazywania oddaje klawiaturę, mysz i nośniki wirtualne',
+        hidWarningDesc:
+          'NanoKVM ma tylko jeden kontroler urządzenia USB, a proxy potrzebuje go w całości. Dlatego w trakcie sesji zdalny host widzi przekazane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają samoczynnie w chwili zatrzymania sesji. Ten interfejs webowy działa niezależnie, więc sesję zawsze można zatrzymać z tej strony.',
+        isoWarning:
+          'Kamer internetowych, mikrofonów i innych urządzeń izochronicznych nie da się przekazać',
+        isoWarningDesc:
+          'Ten sprzęt obsługuje wyłącznie transfery sterujące, masowe i przerwaniowe. Urządzenia audio i wideo nie będą działać, niezależnie od sposobu podpięcia.',
+        session: 'Sesja',
+        activeDesc: 'Urządzenie jest zaimportowane, a proxy trzyma kontroler USB.',
+        inactiveDesc:
+          'Żadna sesja nie działa. Klawiatura, mysz i nośniki wirtualne działają normalnie.',
+        device: 'Urządzenie',
+        busId: 'ID magistrali',
+        speed: 'Prędkość',
+        exporter: 'Eksporter',
+        local: 'Zaimportowane jako',
+        localValue: 'Magistrala {{bus}}, adres {{address}}',
+        udc: 'Kontroler USB',
+        pid: 'PID proxy',
+        startedAt: 'Rozpoczęto',
+        isoDevice:
+          'To urządzenie zgłasza klasę audio lub wideo, która wymaga transferów izochronicznych. Nie będzie działać.',
+        exporterLabel: 'Adres eksportera',
+        exporterHint:
+          'Host i port, z którymi łączy się NanoKVM. Przez tunel poniżej jest to {{exporter}}.',
+        busIdLabel: 'ID magistrali na Twoim komputerze',
+        busIdHint: 'Busid, który usbip list -l wypisuje dla urządzenia, na przykład {{example}}.',
+        start: 'Uruchom przekazywanie',
+        stop: 'Zatrzymaj przekazywanie',
+        startTitle: 'Uruchomić przekazywanie USB?',
+        startDevice: 'NanoKVM zaimportuje {{busId}} z {{exporter}}.',
+        startHid:
+          'Klawiatura USB, mysz i nośniki wirtualne przestają działać na czas trwania sesji i wracają samoczynnie po jej zatrzymaniu.',
+        startIso:
+          'Kamery internetowe, mikrofony i inne urządzenia izochroniczne nie będą działać na tym sprzęcie.',
+        startWeb:
+          'Ten interfejs webowy działa dalej, więc sesję można zatrzymać z tej strony w dowolnym momencie.',
+        okBtn: 'Uruchom',
+        cancelBtn: 'Anuluj',
+        instructions: 'Na Twoim komputerze',
+        instructionsDesc:
+          'Z założenia nie ma żadnego agenta do zainstalowania. Wykonaj te standardowe polecenia usbip na komputerze, do którego podłączone jest urządzenie.',
+        copyFailed: 'Kopiowanie nie powiodło się. Skopiuj polecenie ręcznie.',
+        directNote:
+          'Bez tunelu usbipd musi być osiągalny w Twojej sieci, a adres eksportera powyżej musi go wskazywać. usbip przesyła urządzenie bez szyfrowania, więc lepszy jest tunel.',
+        steps: {
+          modprobe: {
+            title: 'Załaduj sterownik po stronie eksportera',
+            desc: 'usbip-host pozwala jądru oddać lokalne urządzenie. Domyślnie nie jest ładowany.'
+          },
+          list: {
+            title: 'Znajdź urządzenie',
+            desc: 'Wypisuje wszystkie lokalne urządzenia z busid oraz parą producent:produkt. Zapisz busid tego, które Cię interesuje.'
+          },
+          bind: {
+            title: 'Podepnij je do usbip',
+            desc: 'Odbiera urządzenie zwykłemu sterownikowi, więc przestaje ono działać na tym komputerze do czasu odpięcia.'
+          },
+          serve: {
+            title: 'Udostępnij je',
+            desc: 'usbipd pozostaje na pierwszym planie i czeka, aż NanoKVM zaimportuje urządzenie.',
+            notice:
+              'Standardowy usbipd nie ma opcji adresu nasłuchu i nasłuchuje na wszystkich interfejsach. Trzymaj port {{port}} zamknięty na zaporze i pozwól dotrzeć do niego tylko tunelowi poniżej.'
+          },
+          tunnel: {
+            title: 'Skieruj go na NanoKVM',
+            desc: 'Odwrotny tunel SSH: port {{port}} na pętli zwrotnej samego NanoKVM staje się usbipd na tym komputerze. Zostaw go uruchomionego na czas całej sesji.'
+          },
+          exporter: {
+            title: 'Użyj tego jako eksportera',
+            desc: 'Wpisz to w polu eksportera powyżej, podaj ID magistrali i uruchom sesję.'
+          },
+          unbind: {
+            title: 'Oddaj urządzenie',
+            desc: 'Po zatrzymaniu sesji to polecenie zwraca urządzenie zwykłemu sterownikowi na tym komputerze.'
+          }
+        }
+      },
       mcp: {
         title: 'Usługa MCP',
         service: 'Zdalne sterowanie MCP',

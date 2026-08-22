@@ -348,6 +348,87 @@ const ca = {
         okBtn: 'Aplica',
         cancelBtn: 'Cancel·la'
       },
+      passthrough: {
+        title: 'Passthrough USB',
+        loading: 'Carregant...',
+        hidWarning: 'Iniciar el passthrough cedeix el teclat, el ratolí i els suports virtuals',
+        hidWarningDesc:
+          'El NanoKVM només té un controlador de dispositiu USB i el proxy el necessita sencer, així que mentre hi hagi una sessió l’amfitrió remot veurà el dispositiu redirigit en lloc del teclat, el ratolí i els suports virtuals del NanoKVM. Tornen sols en el moment que s’atura la sessió. Aquesta interfície web no es veu afectada, de manera que sempre pots aturar la sessió des d’aquesta pàgina.',
+        isoWarning:
+          'Les càmeres web, els micròfons i altres dispositius isòcrons no es poden redirigir',
+        isoWarningDesc:
+          'Aquest maquinari només transporta transferències de control, massives i d’interrupció. Els dispositius d’àudio i vídeo no funcionaran de cap manera.',
+        session: 'Sessió',
+        activeDesc: 'Hi ha un dispositiu importat i el proxy manté el controlador USB.',
+        inactiveDesc:
+          'No hi ha cap sessió en marxa. El teclat, el ratolí i els suports virtuals funcionen amb normalitat.',
+        device: 'Dispositiu',
+        busId: 'ID de bus',
+        speed: 'Velocitat',
+        exporter: 'Exportador',
+        local: 'Importat com a',
+        localValue: 'Bus {{bus}}, adreça {{address}}',
+        udc: 'Controlador USB',
+        pid: 'PID del proxy',
+        startedAt: 'Iniciada',
+        isoDevice:
+          'Aquest dispositiu declara una classe d’àudio o de vídeo, que necessita transferències isòcrones. No funcionarà.',
+        exporterLabel: 'Adreça de l’exportador',
+        exporterHint:
+          'L’amfitrió i el port que marca el NanoKVM. Amb el túnel de sota és {{exporter}}.',
+        busIdLabel: 'ID de bus a la teva màquina',
+        busIdHint: 'El busid que usbip list -l mostra per al dispositiu, per exemple {{example}}.',
+        start: 'Inicia el passthrough',
+        stop: 'Atura el passthrough',
+        startTitle: 'Vols iniciar el passthrough USB?',
+        startDevice: 'El NanoKVM importarà {{busId}} des de {{exporter}}.',
+        startHid:
+          'El teclat USB, el ratolí i els suports virtuals deixen de funcionar mentre duri la sessió i tornen sols quan l’aturis.',
+        startIso:
+          'Les càmeres web, els micròfons i altres dispositius isòcrons no funcionaran en aquest maquinari.',
+        startWeb:
+          'Aquesta interfície web continua funcionant, així que pots aturar la sessió des d’aquesta pàgina en qualsevol moment.',
+        okBtn: 'Inicia',
+        cancelBtn: 'Cancel·la',
+        instructions: 'A la teva màquina',
+        instructionsDesc:
+          'Per disseny no cal instal·lar cap agent client. Executa aquestes ordres estàndard d’usbip a la màquina on hi ha el dispositiu.',
+        copyFailed: 'No s’ha pogut copiar. Copia l’ordre manualment.',
+        directNote:
+          'Sense túnel, l’usbipd ha de ser accessible a la teva xarxa i l’adreça de l’exportador de dalt l’ha d’indicar. L’usbip transporta el dispositiu sense xifrar, així que és preferible el túnel.',
+        steps: {
+          modprobe: {
+            title: 'Carrega el controlador de l’exportador',
+            desc: 'usbip-host és el que permet al nucli cedir un dispositiu local. No es carrega per defecte.'
+          },
+          list: {
+            title: 'Troba el dispositiu',
+            desc: 'Mostra tots els dispositius locals amb el seu busid i la parella fabricant:producte. Anota el busid del que vulguis.'
+          },
+          bind: {
+            title: 'Vincula’l a usbip',
+            desc: 'Treu el dispositiu del seu controlador habitual, de manera que deixa de funcionar en aquesta màquina fins que el desvinculis.'
+          },
+          serve: {
+            title: 'Ofereix-lo',
+            desc: 'usbipd es queda en primer pla i espera que el NanoKVM importi el dispositiu.',
+            notice:
+              'L’usbipd estàndard no té cap opció d’adreça d’escolta i escolta a totes les interfícies. Mantén el port {{port}} tancat al tallafoc i deixa que només hi arribi el túnel de sota.'
+          },
+          tunnel: {
+            title: 'Apunta’l al NanoKVM',
+            desc: 'Un túnel invers SSH: el port {{port}} del bucle local del NanoKVM passa a ser l’usbipd d’aquesta màquina. Deixa’l en marxa tota la sessió.'
+          },
+          exporter: {
+            title: 'Fes servir això com a exportador',
+            desc: 'Posa-ho al camp de l’exportador de dalt, escriu l’ID de bus i inicia la sessió.'
+          },
+          unbind: {
+            title: 'Torna el dispositiu',
+            desc: 'Quan la sessió s’aturi, això retorna el dispositiu al seu controlador habitual en aquesta màquina.'
+          }
+        }
+      },
       mcp: {
         title: 'Servei MCP',
         service: 'Control remot MCP',

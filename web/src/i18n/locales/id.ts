@@ -350,6 +350,87 @@ const id = {
         okBtn: 'Terapkan',
         cancelBtn: 'Batal'
       },
+      passthrough: {
+        title: 'Passthrough USB',
+        loading: 'Memuat...',
+        hidWarning: 'Memulai passthrough menyerahkan keyboard, mouse, dan media virtual',
+        hidWarningDesc:
+          'NanoKVM hanya punya satu pengontrol perangkat USB dan proxy membutuhkannya sepenuhnya, sehingga selama sesi berjalan host jarak jauh melihat perangkat yang diteruskan alih-alih keyboard, mouse, dan media virtual NanoKVM. Semuanya kembali dengan sendirinya begitu sesi dihentikan. Antarmuka web ini tidak terpengaruh, jadi Anda selalu bisa menghentikan sesi dari halaman ini.',
+        isoWarning: 'Webcam, mikrofon, dan perangkat isokron lain tidak dapat diteruskan',
+        isoWarningDesc:
+          'Perangkat keras ini hanya membawa transfer control, bulk, dan interrupt. Perangkat audio dan video tidak akan bekerja dengan cara pengikatan apa pun.',
+        session: 'Sesi',
+        activeDesc: 'Sebuah perangkat telah diimpor dan proxy sedang memegang pengontrol USB.',
+        inactiveDesc:
+          'Tidak ada sesi yang berjalan. Keyboard, mouse, dan media virtual bekerja normal.',
+        device: 'Perangkat',
+        busId: 'ID bus',
+        speed: 'Kecepatan',
+        exporter: 'Pengekspor',
+        local: 'Diimpor sebagai',
+        localValue: 'Bus {{bus}}, alamat {{address}}',
+        udc: 'Pengontrol USB',
+        pid: 'PID proxy',
+        startedAt: 'Dimulai',
+        isoDevice:
+          'Perangkat ini melaporkan kelas audio atau video yang membutuhkan transfer isokron. Perangkat ini tidak akan bekerja.',
+        exporterLabel: 'Alamat pengekspor',
+        exporterHint:
+          'Host dan porta yang dihubungi NanoKVM. Melalui terowongan di bawah, itu adalah {{exporter}}.',
+        busIdLabel: 'ID bus di komputer Anda',
+        busIdHint:
+          'Busid yang ditampilkan usbip list -l untuk perangkat tersebut, misalnya {{example}}.',
+        start: 'Mulai passthrough',
+        stop: 'Hentikan passthrough',
+        startTitle: 'Mulai passthrough USB?',
+        startDevice: 'NanoKVM akan mengimpor {{busId}} dari {{exporter}}.',
+        startHid:
+          'Keyboard USB, mouse, dan media virtual berhenti bekerja selama sesi berjalan, dan kembali dengan sendirinya saat Anda menghentikannya.',
+        startIso:
+          'Webcam, mikrofon, dan perangkat isokron lain tidak akan bekerja di perangkat keras ini.',
+        startWeb:
+          'Antarmuka web ini tetap berjalan, jadi Anda dapat menghentikan sesi dari halaman ini kapan saja.',
+        okBtn: 'Mulai',
+        cancelBtn: 'Batal',
+        instructions: 'Di komputer Anda sendiri',
+        instructionsDesc:
+          'Memang tidak ada agen klien yang perlu dipasang. Jalankan perintah usbip standar berikut di komputer tempat perangkat terpasang.',
+        copyFailed: 'Gagal menyalin. Salin perintah secara manual.',
+        directNote:
+          'Tanpa terowongan, usbipd harus dapat dijangkau di jaringan Anda dan alamat pengekspor di atas harus menunjuk ke sana. usbip membawa data perangkat tanpa enkripsi, jadi terowongan lebih disarankan.',
+        steps: {
+          modprobe: {
+            title: 'Muat driver sisi pengekspor',
+            desc: 'usbip-host memungkinkan kernel menyerahkan perangkat lokal. Modul ini tidak dimuat secara bawaan.'
+          },
+          list: {
+            title: 'Temukan perangkatnya',
+            desc: 'Menampilkan setiap perangkat lokal beserta busid dan pasangan vendor:produk. Catat busid perangkat yang Anda inginkan.'
+          },
+          bind: {
+            title: 'Ikat ke usbip',
+            desc: 'Mengambil perangkat dari driver normalnya, sehingga perangkat berhenti bekerja di komputer ini sampai Anda melepas ikatannya.'
+          },
+          serve: {
+            title: 'Sajikan perangkatnya',
+            desc: 'usbipd tetap berjalan di latar depan dan menunggu NanoKVM mengimpor perangkat.',
+            notice:
+              'usbipd standar tidak punya opsi alamat dengar dan mendengarkan di semua antarmuka. Tutup porta {{port}} di firewall Anda dan biarkan hanya terowongan di bawah yang menjangkaunya.'
+          },
+          tunnel: {
+            title: 'Arahkan ke NanoKVM',
+            desc: 'Terowongan balik SSH: porta {{port}} pada loopback NanoKVM sendiri menjadi usbipd di komputer ini. Biarkan berjalan selama sesi berlangsung.'
+          },
+          exporter: {
+            title: 'Gunakan ini sebagai pengekspor',
+            desc: 'Masukkan ini ke kolom pengekspor di atas, isi ID bus, lalu mulai sesinya.'
+          },
+          unbind: {
+            title: 'Kembalikan perangkatnya',
+            desc: 'Setelah sesi dihentikan, perintah ini mengembalikan perangkat ke driver normalnya di komputer ini.'
+          }
+        }
+      },
       mcp: {
         title: 'Layanan MCP',
         service: 'Kontrol jarak jauh MCP',

@@ -348,6 +348,84 @@ const tr = {
         okBtn: 'Uygula',
         cancelBtn: 'İptal'
       },
+      passthrough: {
+        title: 'USB Geçişi',
+        loading: 'Yükleniyor...',
+        hidWarning: 'Geçişi başlatmak klavyeyi, fareyi ve sanal medyayı devreder',
+        hidWarningDesc:
+          'NanoKVM’de tek bir USB aygıt denetleyicisi var ve vekil onun tamamına ihtiyaç duyuyor. Bu yüzden bir oturum sürerken uzak makine, NanoKVM’in klavyesi, faresi ve sanal medyası yerine aktarılan aygıtı görür. Oturum durdurulduğu anda kendiliğinden geri gelirler. Bu web arayüzü etkilenmez, dolayısıyla oturumu her zaman bu sayfadan durdurabilirsiniz.',
+        isoWarning: 'Web kameraları, mikrofonlar ve diğer eşzamanlı aygıtlar aktarılamaz',
+        isoWarningDesc:
+          'Bu donanım yalnızca denetim, toplu ve kesme aktarımlarını taşır. Ses ve video aygıtları nasıl bağlanırsa bağlansın çalışmaz.',
+        session: 'Oturum',
+        activeDesc: 'Bir aygıt içe aktarıldı ve vekil USB denetleyicisini tutuyor.',
+        inactiveDesc: 'Çalışan bir oturum yok. Klavye, fare ve sanal medya normal çalışıyor.',
+        device: 'Aygıt',
+        busId: 'Veri yolu kimliği',
+        speed: 'Hız',
+        exporter: 'Dışa aktaran',
+        local: 'Şu şekilde içe aktarıldı',
+        localValue: 'Veri yolu {{bus}}, adres {{address}}',
+        udc: 'USB denetleyicisi',
+        pid: 'Vekil PID',
+        startedAt: 'Başlangıç',
+        isoDevice:
+          'Bu aygıt ses veya video sınıfı bildiriyor; eşzamanlı aktarım gerektirdiği için çalışmayacak.',
+        exporterLabel: 'Dışa aktaran adresi',
+        exporterHint:
+          'NanoKVM’in bağlandığı makine ve bağlantı noktası. Aşağıdaki tünelle bu {{exporter}} olur.',
+        busIdLabel: 'Kendi makinenizdeki veri yolu kimliği',
+        busIdHint: 'usbip list -l komutunun aygıt için yazdığı busid, örneğin {{example}}.',
+        start: 'Geçişi başlat',
+        stop: 'Geçişi durdur',
+        startTitle: 'USB geçişi başlatılsın mı?',
+        startDevice: 'NanoKVM, {{exporter}} üzerinden {{busId}} aygıtını içe aktaracak.',
+        startHid:
+          'USB klavye, fare ve sanal medya oturum sürdüğü sürece çalışmaz; oturumu durdurduğunuzda kendiliğinden geri gelir.',
+        startIso: 'Web kameraları, mikrofonlar ve diğer eşzamanlı aygıtlar bu donanımda çalışmaz.',
+        startWeb:
+          'Bu web arayüzü çalışmaya devam eder, oturumu istediğiniz an bu sayfadan durdurabilirsiniz.',
+        okBtn: 'Başlat',
+        cancelBtn: 'İptal',
+        instructions: 'Kendi makinenizde',
+        instructionsDesc:
+          'Tasarım gereği kurulacak bir istemci aracısı yok. Bu standart usbip komutlarını aygıtın takılı olduğu makinede çalıştırın.',
+        copyFailed: 'Kopyalanamadı. Komutu elle kopyalayın.',
+        directNote:
+          'Tünel olmadan usbipd ağınızdan erişilebilir olmalı ve yukarıdaki dışa aktaran adresi onu göstermelidir. usbip aygıtı şifresiz taşır, bu yüzden tünel tercih edilmelidir.',
+        steps: {
+          modprobe: {
+            title: 'Dışa aktaran tarafın sürücüsünü yükleyin',
+            desc: 'usbip-host, çekirdeğin yerel bir aygıtı devretmesini sağlar. Varsayılan olarak yüklenmez.'
+          },
+          list: {
+            title: 'Aygıtı bulun',
+            desc: 'Tüm yerel aygıtları busid ve üretici:ürün çiftiyle listeler. İstediğiniz aygıtın busid değerini not edin.'
+          },
+          bind: {
+            title: 'usbip’e bağlayın',
+            desc: 'Aygıtı normal sürücüsünden alır; bağlantıyı çözene kadar bu makinede çalışmaz.'
+          },
+          serve: {
+            title: 'Yayına alın',
+            desc: 'usbipd ön planda kalır ve NanoKVM’in aygıtı içe aktarmasını bekler.',
+            notice:
+              'Standart usbipd’de dinleme adresi seçeneği yoktur, tüm arayüzleri dinler. {{port}} bağlantı noktasını güvenlik duvarınızda kapalı tutun ve yalnızca aşağıdaki tünelin erişmesine izin verin.'
+          },
+          tunnel: {
+            title: 'NanoKVM’e yönlendirin',
+            desc: 'Ters SSH tüneli: NanoKVM’in kendi geri döngüsündeki {{port}} bağlantı noktası bu makinedeki usbipd olur. Oturum boyunca açık bırakın.'
+          },
+          exporter: {
+            title: 'Bunu dışa aktaran olarak kullanın',
+            desc: 'Bunu yukarıdaki dışa aktaran alanına yazın, veri yolu kimliğini girin ve oturumu başlatın.'
+          },
+          unbind: {
+            title: 'Aygıtı geri verin',
+            desc: 'Oturum durduktan sonra bu komut aygıtı bu makinedeki normal sürücüsüne geri verir.'
+          }
+        }
+      },
       mcp: {
         title: 'MCP Hizmeti',
         service: 'MCP uzaktan kumanda',

@@ -345,6 +345,86 @@ const vi = {
         okBtn: 'Áp dụng',
         cancelBtn: 'Hủy'
       },
+      passthrough: {
+        title: 'Chuyển tiếp USB',
+        loading: 'Đang tải...',
+        hidWarning: 'Bắt đầu chuyển tiếp sẽ nhường bàn phím, chuột và phương tiện ảo',
+        hidWarningDesc:
+          'NanoKVM chỉ có một bộ điều khiển thiết bị USB và proxy cần trọn bộ điều khiển đó, nên trong lúc phiên chạy máy chủ từ xa sẽ thấy thiết bị được chuyển tiếp thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng tự trở lại ngay khi phiên dừng. Giao diện web này không bị ảnh hưởng, vì vậy bạn luôn có thể dừng phiên từ trang này.',
+        isoWarning: 'Webcam, micrô và các thiết bị đẳng thời khác không thể chuyển tiếp',
+        isoWarningDesc:
+          'Phần cứng này chỉ truyền được các loại truyền điều khiển, khối và ngắt. Thiết bị âm thanh và hình ảnh sẽ không hoạt động dù gắn kết theo cách nào.',
+        session: 'Phiên',
+        activeDesc: 'Một thiết bị đã được nhập và proxy đang giữ bộ điều khiển USB.',
+        inactiveDesc:
+          'Không có phiên nào đang chạy. Bàn phím, chuột và phương tiện ảo hoạt động bình thường.',
+        device: 'Thiết bị',
+        busId: 'ID bus',
+        speed: 'Tốc độ',
+        exporter: 'Bên xuất',
+        local: 'Nhập vào tại',
+        localValue: 'Bus {{bus}}, địa chỉ {{address}}',
+        udc: 'Bộ điều khiển USB',
+        pid: 'PID của proxy',
+        startedAt: 'Bắt đầu lúc',
+        isoDevice:
+          'Thiết bị này khai báo lớp âm thanh hoặc hình ảnh, vốn cần truyền đẳng thời. Nó sẽ không hoạt động.',
+        exporterLabel: 'Địa chỉ bên xuất',
+        exporterHint:
+          'Máy chủ và cổng mà NanoKVM kết nối tới. Qua đường hầm bên dưới thì đó là {{exporter}}.',
+        busIdLabel: 'ID bus trên máy của bạn',
+        busIdHint: 'Busid mà usbip list -l in ra cho thiết bị, ví dụ {{example}}.',
+        start: 'Bắt đầu chuyển tiếp',
+        stop: 'Dừng chuyển tiếp',
+        startTitle: 'Bắt đầu chuyển tiếp USB?',
+        startDevice: 'NanoKVM sẽ nhập {{busId}} từ {{exporter}}.',
+        startHid:
+          'Bàn phím USB, chuột và phương tiện ảo sẽ ngừng hoạt động suốt phiên và tự hoạt động lại khi bạn dừng phiên.',
+        startIso:
+          'Webcam, micrô và các thiết bị đẳng thời khác sẽ không hoạt động trên phần cứng này.',
+        startWeb:
+          'Giao diện web này vẫn hoạt động, nên bạn có thể dừng phiên từ trang này bất cứ lúc nào.',
+        okBtn: 'Bắt đầu',
+        cancelBtn: 'Hủy',
+        instructions: 'Trên máy của bạn',
+        instructionsDesc:
+          'Theo thiết kế, không cần cài đặt tác nhân phía máy khách. Hãy chạy các lệnh usbip tiêu chuẩn sau trên máy đang cắm thiết bị.',
+        copyFailed: 'Sao chép thất bại. Hãy sao chép lệnh thủ công.',
+        directNote:
+          'Nếu không dùng đường hầm, usbipd phải truy cập được trong mạng của bạn và địa chỉ bên xuất ở trên phải trỏ tới nó. usbip truyền dữ liệu thiết bị không mã hóa, vì vậy nên ưu tiên đường hầm.',
+        steps: {
+          modprobe: {
+            title: 'Nạp trình điều khiển phía bên xuất',
+            desc: 'usbip-host cho phép nhân hệ điều hành giao một thiết bị cục bộ. Mặc định nó không được nạp.'
+          },
+          list: {
+            title: 'Tìm thiết bị',
+            desc: 'In ra mọi thiết bị cục bộ kèm busid và cặp nhà sản xuất:sản phẩm. Hãy ghi lại busid của thiết bị bạn cần.'
+          },
+          bind: {
+            title: 'Gắn kết vào usbip',
+            desc: 'Tách thiết bị khỏi trình điều khiển thông thường, nên nó ngừng hoạt động trên máy này cho tới khi bạn gỡ gắn kết.'
+          },
+          serve: {
+            title: 'Chia sẻ thiết bị',
+            desc: 'usbipd chạy ở tiền cảnh và chờ NanoKVM nhập thiết bị.',
+            notice:
+              'usbipd tiêu chuẩn không có tùy chọn địa chỉ lắng nghe và sẽ lắng nghe trên mọi giao diện. Hãy đóng cổng {{port}} trên tường lửa và chỉ cho đường hầm bên dưới đi tới.'
+          },
+          tunnel: {
+            title: 'Trỏ về NanoKVM',
+            desc: 'Một đường hầm SSH ngược: cổng {{port}} trên loopback của chính NanoKVM sẽ trở thành usbipd trên máy này. Hãy giữ nó chạy suốt phiên.'
+          },
+          exporter: {
+            title: 'Dùng giá trị này làm bên xuất',
+            desc: 'Điền giá trị này vào ô bên xuất ở trên, nhập ID bus rồi bắt đầu phiên.'
+          },
+          unbind: {
+            title: 'Trả lại thiết bị',
+            desc: 'Sau khi phiên dừng, lệnh này trả thiết bị về trình điều khiển thông thường trên máy này.'
+          }
+        }
+      },
       mcp: {
         title: 'Dịch vụ MCP',
         service: 'Điều khiển từ xa MCP',

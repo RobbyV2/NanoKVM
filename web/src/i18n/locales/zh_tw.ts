@@ -334,6 +334,80 @@ const zh_tw = {
         okBtn: '套用',
         cancelBtn: '取消'
       },
+      passthrough: {
+        title: 'USB 直通',
+        loading: '載入中...',
+        hidWarning: '啟動直通會讓出鍵盤、滑鼠與虛擬媒體',
+        hidWarningDesc:
+          'NanoKVM 只有一個 USB 裝置控制器，而代理需要獨佔它。因此工作階段執行期間，遠端主機看到的是被直通的裝置，而不是 NanoKVM 的鍵盤、滑鼠與虛擬媒體。工作階段一停止，它們就會自動恢復。此網頁介面不受影響，您隨時可以在本頁停止工作階段。',
+        isoWarning: '網路攝影機、麥克風等等時傳輸裝置無法直通',
+        isoWarningDesc:
+          '此硬體只能承載控制傳輸、大量傳輸與中斷傳輸。音訊與視訊裝置無論如何繫結都無法運作。',
+        session: '工作階段',
+        activeDesc: '已匯入一台裝置，代理正占用 USB 控制器。',
+        inactiveDesc: '目前沒有工作階段。鍵盤、滑鼠與虛擬媒體運作正常。',
+        device: '裝置',
+        busId: '匯流排 ID',
+        speed: '速度',
+        exporter: '匯出端',
+        local: '匯入為',
+        localValue: '匯流排 {{bus}}，位址 {{address}}',
+        udc: 'USB 控制器',
+        pid: '代理程序編號',
+        startedAt: '開始時間',
+        isoDevice: '此裝置宣告為音訊或視訊類別，需要等時傳輸，因此無法運作。',
+        exporterLabel: '匯出端位址',
+        exporterHint: 'NanoKVM 連線的主機與連接埠。使用下面的通道時即為 {{exporter}}。',
+        busIdLabel: '本機上的匯流排 ID',
+        busIdHint: 'usbip list -l 為該裝置列出的 busid，例如 {{example}}。',
+        start: '啟動直通',
+        stop: '停止直通',
+        startTitle: '要啟動 USB 直通嗎？',
+        startDevice: 'NanoKVM 將從 {{exporter}} 匯入 {{busId}}。',
+        startHid: '工作階段執行期間，USB 鍵盤、滑鼠與虛擬媒體會停止運作；停止後會自動恢復。',
+        startIso: '網路攝影機、麥克風等等時傳輸裝置在此硬體上無法運作。',
+        startWeb: '此網頁介面仍可使用，您隨時可以在本頁停止工作階段。',
+        okBtn: '啟動',
+        cancelBtn: '取消',
+        instructions: '在您自己的電腦上',
+        instructionsDesc:
+          '依照設計，不需要安裝任何用戶端代理。請在擁有該裝置的電腦上執行下列標準 usbip 指令。',
+        copyFailed: '複製失敗，請手動複製指令。',
+        directNote:
+          '若不使用通道，usbipd 必須在您的網路上可連線，且上面的匯出端位址要指向它。usbip 以明文傳輸裝置資料，建議優先使用通道。',
+        steps: {
+          modprobe: {
+            title: '載入匯出端驅動程式',
+            desc: 'usbip-host 讓核心可以把本機裝置交出去，預設不會載入。'
+          },
+          list: {
+            title: '找出裝置',
+            desc: '列出所有本機裝置及其 busid 與廠商:產品編號。記下要直通那台裝置的 busid。'
+          },
+          bind: {
+            title: '繫結至 usbip',
+            desc: '把裝置從原有驅動程式上取下，在解除繫結之前它在本機上將無法使用。'
+          },
+          serve: {
+            title: '提供服務',
+            desc: 'usbipd 會在前景執行，等待 NanoKVM 匯入該裝置。',
+            notice:
+              '標準 usbipd 沒有監聽位址選項，會監聽所有介面。請在防火牆上關閉連接埠 {{port}}，只允許下面的通道存取。'
+          },
+          tunnel: {
+            title: '指向 NanoKVM',
+            desc: 'SSH 反向通道：NanoKVM 本機回送位址上的 {{port}} 連接埠即為本機的 usbipd。整個工作階段期間請保持它執行。'
+          },
+          exporter: {
+            title: '用它作為匯出端',
+            desc: '把它填入上面的匯出端位址，輸入匯流排 ID，然後啟動工作階段。'
+          },
+          unbind: {
+            title: '歸還裝置',
+            desc: '工作階段停止後，用它把裝置交還給本機原有的驅動程式。'
+          }
+        }
+      },
       mcp: {
         title: 'MCP 服務',
         service: 'MCP 遠端控制',

@@ -351,6 +351,88 @@ const es = {
         okBtn: 'Aplicar',
         cancelBtn: 'Cancelar'
       },
+      passthrough: {
+        title: 'Passthrough USB',
+        loading: 'Cargando...',
+        hidWarning: 'Iniciar el passthrough cede el teclado, el ratón y los medios virtuales',
+        hidWarningDesc:
+          'NanoKVM tiene un único controlador de dispositivo USB y el proxy lo necesita entero, así que mientras haya una sesión el equipo remoto verá el dispositivo redirigido en lugar del teclado, el ratón y los medios virtuales de NanoKVM. Vuelven solos en cuanto se detiene la sesión. Esta interfaz web no se ve afectada, por lo que siempre puede detener la sesión desde esta página.',
+        isoWarning:
+          'Las cámaras web, los micrófonos y otros dispositivos isócronos no se pueden redirigir',
+        isoWarningDesc:
+          'Este hardware solo transporta transferencias de control, masivas y de interrupción. Los dispositivos de audio y vídeo no funcionarán, se enlacen como se enlacen.',
+        session: 'Sesión',
+        activeDesc: 'Hay un dispositivo importado y el proxy mantiene el controlador USB.',
+        inactiveDesc:
+          'No hay ninguna sesión en curso. El teclado, el ratón y los medios virtuales funcionan con normalidad.',
+        device: 'Dispositivo',
+        busId: 'ID de bus',
+        speed: 'Velocidad',
+        exporter: 'Exportador',
+        local: 'Importado como',
+        localValue: 'Bus {{bus}}, dirección {{address}}',
+        udc: 'Controlador USB',
+        pid: 'PID del proxy',
+        startedAt: 'Iniciada',
+        isoDevice:
+          'Este dispositivo declara una clase de audio o de vídeo, que necesita transferencias isócronas. No va a funcionar.',
+        exporterLabel: 'Dirección del exportador',
+        exporterHint:
+          'El host y el puerto a los que llama NanoKVM. Con el túnel de abajo es {{exporter}}.',
+        busIdLabel: 'ID de bus en su equipo',
+        busIdHint:
+          'El busid que usbip list -l muestra para el dispositivo, por ejemplo {{example}}.',
+        start: 'Iniciar passthrough',
+        stop: 'Detener passthrough',
+        startTitle: '¿Iniciar el passthrough USB?',
+        startDevice: 'NanoKVM importará {{busId}} desde {{exporter}}.',
+        startHid:
+          'El teclado USB, el ratón y los medios virtuales dejan de funcionar mientras dure la sesión y vuelven solos cuando la detenga.',
+        startIso:
+          'Las cámaras web, los micrófonos y otros dispositivos isócronos no funcionarán en este hardware.',
+        startWeb:
+          'Esta interfaz web sigue funcionando, así que puede detener la sesión desde esta página en cualquier momento.',
+        okBtn: 'Iniciar',
+        cancelBtn: 'Cancelar',
+        instructions: 'En su propio equipo',
+        instructionsDesc:
+          'Por diseño no hay ningún agente cliente que instalar. Ejecute estas órdenes estándar de usbip en el equipo al que está conectado el dispositivo.',
+        copyFailed: 'No se pudo copiar. Copie la orden manualmente.',
+        directNote:
+          'Sin túnel, usbipd tiene que ser accesible en su red y la dirección del exportador de arriba debe apuntar a él. usbip transporta el dispositivo sin cifrar, así que es preferible el túnel.',
+        steps: {
+          modprobe: {
+            title: 'Cargar el controlador del exportador',
+            desc: 'usbip-host es lo que permite a su núcleo ceder un dispositivo local. No se carga por defecto.'
+          },
+          list: {
+            title: 'Localizar el dispositivo',
+            desc: 'Muestra todos los dispositivos locales con su busid y su par fabricante:producto. Anote el busid del que quiera.'
+          },
+          bind: {
+            title: 'Enlazarlo a usbip',
+            desc: 'Le quita el dispositivo a su controlador habitual, de modo que deja de funcionar en este equipo hasta que lo desenlace.'
+          },
+          serve: {
+            title: 'Publicarlo',
+            desc: 'usbipd se queda en primer plano y espera a que NanoKVM importe el dispositivo.',
+            notice:
+              'El usbipd estándar no tiene opción de dirección de escucha y escucha en todas las interfaces. Mantenga el puerto {{port}} cerrado en su cortafuegos y deje que solo lo alcance el túnel de abajo.'
+          },
+          tunnel: {
+            title: 'Apuntarlo a NanoKVM',
+            desc: 'Un túnel SSH inverso: el puerto {{port}} del bucle local de NanoKVM pasa a ser el usbipd de este equipo. Déjelo en marcha durante toda la sesión.'
+          },
+          exporter: {
+            title: 'Usar esto como exportador',
+            desc: 'Ponga esto en el campo del exportador de arriba, escriba el ID de bus e inicie la sesión.'
+          },
+          unbind: {
+            title: 'Devolver el dispositivo',
+            desc: 'Cuando la sesión se detenga, esto devuelve el dispositivo a su controlador habitual en este equipo.'
+          }
+        }
+      },
       mcp: {
         title: 'Servicio MCP',
         service: 'Control remoto MCP',

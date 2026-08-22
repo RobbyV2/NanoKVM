@@ -350,6 +350,85 @@ const nb = {
         okBtn: 'Bruk',
         cancelBtn: 'Avbryt'
       },
+      passthrough: {
+        title: 'USB-gjennomgang',
+        loading: 'Laster...',
+        hidWarning: 'Å starte gjennomgang gir fra seg tastaturet, musen og virtuelle medier',
+        hidWarningDesc:
+          'NanoKVM har bare én USB-enhetskontroller, og proxyen trenger hele. Mens en økt kjører, ser derfor den eksterne verten den videresendte enheten i stedet for NanoKVMs tastatur, mus og virtuelle medier. De kommer tilbake av seg selv i det øyeblikket økten stoppes. Dette nettgrensesnittet påvirkes ikke, så du kan alltid stoppe en økt fra denne siden.',
+        isoWarning: 'Nettkameraer, mikrofoner og andre isokrone enheter kan ikke sendes videre',
+        isoWarningDesc:
+          'Denne maskinvaren bærer bare kontroll-, bulk- og avbruddsoverføringer. Lyd- og videoenheter vil ikke virke, uansett hvordan de bindes.',
+        session: 'Økt',
+        activeDesc: 'En enhet er importert, og proxyen holder USB-kontrolleren.',
+        inactiveDesc: 'Ingen økt kjører. Tastatur, mus og virtuelle medier fungerer som normalt.',
+        device: 'Enhet',
+        busId: 'Buss-ID',
+        speed: 'Hastighet',
+        exporter: 'Eksportør',
+        local: 'Importert som',
+        localValue: 'Buss {{bus}}, adresse {{address}}',
+        udc: 'USB-kontroller',
+        pid: 'Proxy-PID',
+        startedAt: 'Startet',
+        isoDevice:
+          'Denne enheten melder en lyd- eller videoklasse som krever isokrone overføringer. Den vil ikke virke.',
+        exporterLabel: 'Adressen til eksportøren',
+        exporterHint:
+          'Verten og porten NanoKVM ringer opp. Gjennom tunnelen nedenfor er det {{exporter}}.',
+        busIdLabel: 'Buss-ID på din egen maskin',
+        busIdHint: 'Busid-en som usbip list -l viser for enheten, for eksempel {{example}}.',
+        start: 'Start gjennomgang',
+        stop: 'Stopp gjennomgang',
+        startTitle: 'Vil du starte USB-gjennomgang?',
+        startDevice: 'NanoKVM vil importere {{busId}} fra {{exporter}}.',
+        startHid:
+          'USB-tastaturet, musen og virtuelle medier slutter å virke så lenge økten varer, og starter av seg selv igjen når du stopper den.',
+        startIso:
+          'Nettkameraer, mikrofoner og andre isokrone enheter vil ikke virke på denne maskinvaren.',
+        startWeb:
+          'Dette nettgrensesnittet fortsetter å virke, så du kan stoppe økten fra denne siden når som helst.',
+        okBtn: 'Start',
+        cancelBtn: 'Avbryt',
+        instructions: 'På din egen maskin',
+        instructionsDesc:
+          'Det finnes bevisst ingen klientagent å installere. Kjør disse vanlige usbip-kommandoene på maskinen enheten er koblet til.',
+        copyFailed: 'Kopiering mislyktes. Kopier kommandoen manuelt.',
+        directNote:
+          'Uten tunnel må usbipd være tilgjengelig på nettverket ditt, og eksportøradressen ovenfor må peke på den. usbip sender enheten ukryptert, så tunnelen er å foretrekke.',
+        steps: {
+          modprobe: {
+            title: 'Last inn driveren på eksportsiden',
+            desc: 'usbip-host er det som lar kjernen gi fra seg en lokal enhet. Den lastes ikke inn som standard.'
+          },
+          list: {
+            title: 'Finn enheten',
+            desc: 'Viser hver lokale enhet med busid og leverandør:produkt-paret. Noter busid-en til den du vil bruke.'
+          },
+          bind: {
+            title: 'Bind den til usbip',
+            desc: 'Tar enheten fra den vanlige driveren, så den slutter å virke på denne maskinen til du løser bindingen.'
+          },
+          serve: {
+            title: 'Gjør den tilgjengelig',
+            desc: 'usbipd blir stående i forgrunnen og venter på at NanoKVM importerer enheten.',
+            notice:
+              'Vanlig usbipd har ingen valgmulighet for lytteadresse og lytter på alle grensesnitt. Hold port {{port}} stengt i brannmuren, og la bare tunnelen nedenfor nå den.'
+          },
+          tunnel: {
+            title: 'Pek den mot NanoKVM',
+            desc: 'En omvendt SSH-tunnel: port {{port}} på NanoKVMs egen loopback blir usbipd på denne maskinen. La den kjøre gjennom hele økten.'
+          },
+          exporter: {
+            title: 'Bruk dette som eksportør',
+            desc: 'Skriv dette i eksportørfeltet ovenfor, oppgi buss-ID-en og start økten.'
+          },
+          unbind: {
+            title: 'Gi enheten tilbake',
+            desc: 'Etter at økten er stoppet, gir dette enheten tilbake til den vanlige driveren på denne maskinen.'
+          }
+        }
+      },
       mcp: {
         title: 'MCP-tjeneste',
         service: 'MCP-fjernstyring',

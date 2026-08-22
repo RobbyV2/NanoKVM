@@ -344,6 +344,83 @@ const ko = {
         okBtn: '적용',
         cancelBtn: '취소'
       },
+      passthrough: {
+        title: 'USB 패스스루',
+        loading: '불러오는 중...',
+        hidWarning: '패스스루를 시작하면 키보드, 마우스, 가상 미디어를 넘겨줍니다',
+        hidWarningDesc:
+          'NanoKVM에는 USB 장치 컨트롤러가 하나뿐이고 프록시가 그것을 모두 사용합니다. 따라서 세션이 실행되는 동안 원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 전달된 장치가 보입니다. 세션을 중지하면 곧바로 자동으로 돌아옵니다. 이 웹 화면은 영향을 받지 않으므로 언제든지 이 페이지에서 세션을 중지할 수 있습니다.',
+        isoWarning: '웹캠, 마이크 등 등시성 전송 장치는 전달할 수 없습니다',
+        isoWarningDesc:
+          '이 하드웨어는 제어, 벌크, 인터럽트 전송만 처리합니다. 오디오와 비디오 장치는 어떻게 바인딩하더라도 동작하지 않습니다.',
+        session: '세션',
+        activeDesc: '장치를 가져왔고 프록시가 USB 컨트롤러를 사용하고 있습니다.',
+        inactiveDesc: '실행 중인 세션이 없습니다. 키보드, 마우스, 가상 미디어가 정상 동작합니다.',
+        device: '장치',
+        busId: '버스 ID',
+        speed: '속도',
+        exporter: '내보내는 쪽',
+        local: '가져온 위치',
+        localValue: '버스 {{bus}}, 주소 {{address}}',
+        udc: 'USB 컨트롤러',
+        pid: '프록시 PID',
+        startedAt: '시작 시각',
+        isoDevice:
+          '이 장치는 오디오 또는 비디오 클래스로 보고되며 등시성 전송이 필요하므로 동작하지 않습니다.',
+        exporterLabel: '내보내는 쪽 주소',
+        exporterHint:
+          'NanoKVM이 접속할 호스트와 포트입니다. 아래 터널을 사용하면 {{exporter}}입니다.',
+        busIdLabel: '내 컴퓨터의 버스 ID',
+        busIdHint: 'usbip list -l이 해당 장치에 대해 출력하는 busid입니다. 예: {{example}}.',
+        start: '패스스루 시작',
+        stop: '패스스루 중지',
+        startTitle: 'USB 패스스루를 시작할까요?',
+        startDevice: 'NanoKVM이 {{exporter}}에서 {{busId}}을(를) 가져옵니다.',
+        startHid:
+          '세션이 실행되는 동안 USB 키보드, 마우스, 가상 미디어가 동작하지 않으며 중지하면 자동으로 다시 동작합니다.',
+        startIso: '웹캠, 마이크 등 등시성 전송 장치는 이 하드웨어에서 동작하지 않습니다.',
+        startWeb: '이 웹 화면은 계속 동작하므로 언제든지 이 페이지에서 세션을 중지할 수 있습니다.',
+        okBtn: '시작',
+        cancelBtn: '취소',
+        instructions: '내 컴퓨터에서 할 일',
+        instructionsDesc:
+          '설계상 설치할 클라이언트 에이전트가 없습니다. 장치가 연결된 컴퓨터에서 아래의 표준 usbip 명령을 실행하세요.',
+        copyFailed: '복사하지 못했습니다. 명령을 직접 복사하세요.',
+        directNote:
+          '터널을 쓰지 않으려면 usbipd가 네트워크에서 접근 가능해야 하고 위의 내보내는 쪽 주소가 그것을 가리켜야 합니다. usbip는 장치 데이터를 암호화하지 않으므로 터널을 권장합니다.',
+        steps: {
+          modprobe: {
+            title: '내보내는 쪽 드라이버 로드',
+            desc: 'usbip-host는 커널이 로컬 장치를 넘겨줄 수 있게 해 주며 기본으로는 로드되지 않습니다.'
+          },
+          list: {
+            title: '장치 찾기',
+            desc: '모든 로컬 장치를 busid 및 벤더:제품 번호와 함께 출력합니다. 원하는 장치의 busid를 적어 두세요.'
+          },
+          bind: {
+            title: 'usbip에 바인딩',
+            desc: '장치를 원래 드라이버에서 떼어내므로 바인딩을 해제할 때까지 이 컴퓨터에서는 쓸 수 없습니다.'
+          },
+          serve: {
+            title: '내보내기',
+            desc: 'usbipd는 포그라운드에 머물며 NanoKVM이 장치를 가져오기를 기다립니다.',
+            notice:
+              '표준 usbipd에는 수신 주소 옵션이 없어 모든 인터페이스에서 수신합니다. 방화벽에서 포트 {{port}}를 닫고 아래 터널만 접근하도록 하세요.'
+          },
+          tunnel: {
+            title: 'NanoKVM으로 연결',
+            desc: 'SSH 역방향 터널입니다. NanoKVM 자체 루프백의 {{port}} 포트가 이 컴퓨터의 usbipd가 됩니다. 세션 내내 실행 상태로 두세요.'
+          },
+          exporter: {
+            title: '이 값을 내보내는 쪽 주소로 사용',
+            desc: '위의 내보내는 쪽 주소 칸에 넣고 버스 ID를 입력한 다음 세션을 시작하세요.'
+          },
+          unbind: {
+            title: '장치 돌려주기',
+            desc: '세션을 중지한 뒤 이 명령으로 장치를 이 컴퓨터의 원래 드라이버에 돌려줍니다.'
+          }
+        }
+      },
       mcp: {
         title: 'MCP 서비스',
         service: 'MCP 원격 제어',

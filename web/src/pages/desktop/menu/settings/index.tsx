@@ -13,6 +13,7 @@ import {
   PaletteIcon,
   SettingsIcon,
   SmartphoneIcon,
+  UsbIcon,
   UserRoundIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +34,7 @@ import { Device } from './device';
 import { Display } from './display';
 import { MCP } from './mcp';
 import { Network } from './network';
+import { Passthrough } from './passthrough';
 import { Tailscale } from './tailscale';
 import { Tunnel } from './tunnel';
 import { Update } from './update';
@@ -63,6 +65,7 @@ export const Settings = () => {
             component: <Display setIsLocked={setIsLocked} />
           },
           { id: 'network', icon: <NetworkIcon size={16} />, component: <Network /> },
+          { id: 'passthrough', icon: <UsbIcon size={16} />, component: <Passthrough /> },
           { id: 'mcp', icon: <BotIcon size={16} />, component: <MCP /> },
           {
             id: 'tailscale',

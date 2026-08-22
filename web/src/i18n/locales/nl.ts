@@ -353,6 +353,86 @@ const nl = {
         okBtn: 'Toepassen',
         cancelBtn: 'Annuleren'
       },
+      passthrough: {
+        title: 'USB-passthrough',
+        loading: 'Laden...',
+        hidWarning: 'Passthrough starten geeft het toetsenbord, de muis en virtuele media op',
+        hidWarningDesc:
+          'NanoKVM heeft maar één USB-apparaatcontroller en de proxy heeft die helemaal nodig. Zolang een sessie loopt ziet de externe host daarom het doorgegeven apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen vanzelf terug zodra de sessie stopt. Deze webinterface merkt er niets van, dus u kunt een sessie altijd vanaf deze pagina stoppen.',
+        isoWarning:
+          'Webcams, microfoons en andere isochrone apparaten kunnen niet worden doorgegeven',
+        isoWarningDesc:
+          'Deze hardware draagt alleen control-, bulk- en interruptoverdrachten. Audio- en videoapparaten werken niet, hoe ze ook worden gekoppeld.',
+        session: 'Sessie',
+        activeDesc: 'Er is een apparaat geïmporteerd en de proxy houdt de USB-controller vast.',
+        inactiveDesc:
+          'Er loopt geen sessie. Het toetsenbord, de muis en virtuele media werken normaal.',
+        device: 'Apparaat',
+        busId: 'Bus-ID',
+        speed: 'Snelheid',
+        exporter: 'Exporter',
+        local: 'Geïmporteerd als',
+        localValue: 'Bus {{bus}}, adres {{address}}',
+        udc: 'USB-controller',
+        pid: 'Proxy-PID',
+        startedAt: 'Gestart',
+        isoDevice:
+          'Dit apparaat meldt een audio- of videoklasse en heeft isochrone overdrachten nodig. Het gaat niet werken.',
+        exporterLabel: 'Adres van de exporter',
+        exporterHint:
+          'De host en poort die NanoKVM belt. Via de tunnel hieronder is dat {{exporter}}.',
+        busIdLabel: 'Bus-ID op uw eigen machine',
+        busIdHint: 'De busid die usbip list -l voor het apparaat toont, bijvoorbeeld {{example}}.',
+        start: 'Passthrough starten',
+        stop: 'Passthrough stoppen',
+        startTitle: 'USB-passthrough starten?',
+        startDevice: 'NanoKVM importeert {{busId}} van {{exporter}}.',
+        startHid:
+          'Het USB-toetsenbord, de muis en virtuele media werken niet zolang de sessie loopt en werken vanzelf weer zodra u die stopt.',
+        startIso: 'Webcams, microfoons en andere isochrone apparaten werken niet op deze hardware.',
+        startWeb:
+          'Deze webinterface blijft werken, dus u kunt de sessie op elk moment vanaf deze pagina stoppen.',
+        okBtn: 'Starten',
+        cancelBtn: 'Annuleren',
+        instructions: 'Op uw eigen machine',
+        instructionsDesc:
+          'Er is bewust geen clientagent om te installeren. Voer deze gewone usbip-commando’s uit op de machine waar het apparaat aan hangt.',
+        copyFailed: 'Kopiëren mislukt. Kopieer het commando handmatig.',
+        directNote:
+          'Zonder tunnel moet usbipd bereikbaar zijn op uw netwerk en moet het exporteradres hierboven daarnaar verwijzen. usbip draagt het apparaat onversleuteld over, dus de tunnel verdient de voorkeur.',
+        steps: {
+          modprobe: {
+            title: 'Laad het stuurprogramma van de exportkant',
+            desc: 'usbip-host laat uw kernel een lokaal apparaat afstaan. Het wordt niet standaard geladen.'
+          },
+          list: {
+            title: 'Zoek het apparaat',
+            desc: 'Toont elk lokaal apparaat met zijn busid en zijn fabrikant:product-paar. Noteer de busid van het gewenste apparaat.'
+          },
+          bind: {
+            title: 'Koppel het aan usbip',
+            desc: 'Neemt het apparaat weg bij het gewone stuurprogramma, dus het werkt op deze machine niet meer tot u het ontkoppelt.'
+          },
+          serve: {
+            title: 'Bied het aan',
+            desc: 'usbipd blijft op de voorgrond draaien en wacht tot NanoKVM het apparaat importeert.',
+            notice:
+              'De gewone usbipd heeft geen optie voor een luisteradres en luistert op alle interfaces. Houd poort {{port}} dicht in uw firewall en laat alleen de tunnel hieronder erbij.'
+          },
+          tunnel: {
+            title: 'Richt het op NanoKVM',
+            desc: 'Een omgekeerde SSH-tunnel: poort {{port}} op de loopback van NanoKVM zelf wordt de usbipd op deze machine. Laat hem de hele sessie draaien.'
+          },
+          exporter: {
+            title: 'Gebruik dit als exporter',
+            desc: 'Zet dit in het exporterveld hierboven, vul de bus-ID in en start de sessie.'
+          },
+          unbind: {
+            title: 'Geef het apparaat terug',
+            desc: 'Nadat de sessie is gestopt, geeft dit het apparaat terug aan het gewone stuurprogramma op deze machine.'
+          }
+        }
+      },
       mcp: {
         title: 'MCP-service',
         service: 'MCP-afstandsbediening',

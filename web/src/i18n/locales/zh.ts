@@ -337,6 +337,80 @@ const zh = {
         okBtn: '应用',
         cancelBtn: '取消'
       },
+      passthrough: {
+        title: 'USB 透传',
+        loading: '加载中...',
+        hidWarning: '启动透传会让出键盘、鼠标和虚拟媒体',
+        hidWarningDesc:
+          'NanoKVM 只有一个 USB 设备控制器，而代理需要独占它。因此会话运行期间，远程主机看到的是被透传的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话一停止，它们会自动恢复。此网页界面不受影响，您随时可以在本页停止会话。',
+        isoWarning: '摄像头、麦克风等同步传输设备无法透传',
+        isoWarningDesc:
+          '该硬件只能承载控制传输、批量传输和中断传输。音频和视频设备无论如何绑定都无法工作。',
+        session: '会话',
+        activeDesc: '已导入一台设备，代理正占用 USB 控制器。',
+        inactiveDesc: '当前没有会话。键盘、鼠标和虚拟媒体工作正常。',
+        device: '设备',
+        busId: '总线 ID',
+        speed: '速度',
+        exporter: '导出端',
+        local: '导入为',
+        localValue: '总线 {{bus}}，地址 {{address}}',
+        udc: 'USB 控制器',
+        pid: '代理进程号',
+        startedAt: '开始时间',
+        isoDevice: '该设备声明为音频或视频类，需要同步传输，因此无法工作。',
+        exporterLabel: '导出端地址',
+        exporterHint: 'NanoKVM 连接的主机和端口。使用下面的隧道时即为 {{exporter}}。',
+        busIdLabel: '本机上的总线 ID',
+        busIdHint: 'usbip list -l 为该设备打印的 busid，例如 {{example}}。',
+        start: '启动透传',
+        stop: '停止透传',
+        startTitle: '要启动 USB 透传吗？',
+        startDevice: 'NanoKVM 将从 {{exporter}} 导入 {{busId}}。',
+        startHid: '会话运行期间，USB 键盘、鼠标和虚拟媒体将停止工作；停止会话后会自动恢复。',
+        startIso: '摄像头、麦克风等同步传输设备在该硬件上无法工作。',
+        startWeb: '此网页界面仍可使用，您随时可以在本页停止会话。',
+        okBtn: '启动',
+        cancelBtn: '取消',
+        instructions: '在您自己的电脑上',
+        instructionsDesc:
+          '按照设计，无需安装任何客户端代理。请在拥有该设备的电脑上运行以下标准 usbip 命令。',
+        copyFailed: '复制失败，请手动复制命令。',
+        directNote:
+          '不使用隧道时，usbipd 必须在您的网络上可达，并且上面的导出端地址要指向它。usbip 以明文传输设备数据，建议优先使用隧道。',
+        steps: {
+          modprobe: {
+            title: '加载导出端驱动',
+            desc: 'usbip-host 让内核可以把本地设备交出去，默认不会加载。'
+          },
+          list: {
+            title: '找到设备',
+            desc: '列出所有本地设备及其 busid 和厂商:产品编号。记下要透传的那台设备的 busid。'
+          },
+          bind: {
+            title: '绑定到 usbip',
+            desc: '把设备从原有驱动上摘下，在解除绑定之前它在本机上将不可用。'
+          },
+          serve: {
+            title: '提供服务',
+            desc: 'usbipd 会在前台运行，等待 NanoKVM 导入该设备。',
+            notice:
+              '标准 usbipd 没有监听地址选项，会监听所有网卡。请在防火墙上关闭端口 {{port}}，只允许下面的隧道访问。'
+          },
+          tunnel: {
+            title: '指向 NanoKVM',
+            desc: 'SSH 反向隧道：NanoKVM 本地回环上的 {{port}} 端口即为本机的 usbipd。整个会话期间请保持它运行。'
+          },
+          exporter: {
+            title: '用它作为导出端',
+            desc: '把它填入上面的导出端地址，输入总线 ID，然后启动会话。'
+          },
+          unbind: {
+            title: '归还设备',
+            desc: '会话停止后，用它把设备交还给本机原有的驱动。'
+          }
+        }
+      },
       mcp: {
         title: 'MCP 服务',
         service: '远程控制 MCP',
