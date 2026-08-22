@@ -16,6 +16,8 @@
 #   server/NanoKVM-Server           riscv64 server binary
 #   kvmapp/kvm_system/kvm_system    kvm_system daemon
 #   kvmapp/server/dl_lib/libkvm.so  freshly built video library (optional)
+#   kvmapp/tunnels/*.gz             gzipped tunnel seeds, staged uncompressed
+#                                   under build/tunnels/ for the arch check
 #   web/dist/                       built frontend
 #
 # Usage: scripts/package.sh <version>
@@ -77,10 +79,18 @@ require_file "$ROOT/web/dist/index.html" "run: make web"
 # tracked in server/dl_lib/ exists for cgo link time and lags far behind. If it
 # were optional here, "make package" on its own would quietly ship the stale one.
 require_file "$ROOT/kvmapp/server/dl_lib/libkvm.so" "run: make vision"
+# The tunnel seeds ship as gzip, so the arch check has to run against the
+# uncompressed binaries the "tunnels" target stages alongside them.
+require_file "$ROOT/build/tunnels/wstunnel" "run: make tunnels"
+require_file "$ROOT/build/tunnels/newt" "run: make tunnels"
+require_file "$ROOT/kvmapp/tunnels/wstunnel.gz" "run: make tunnels"
+require_file "$ROOT/kvmapp/tunnels/newt.gz" "run: make tunnels"
 
 require_riscv64 "$ROOT/server/NanoKVM-Server"
 require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
 require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
+require_riscv64 "$ROOT/build/tunnels/wstunnel"
+require_riscv64 "$ROOT/build/tunnels/newt"
 
 echo "[INFO] staging nanokvm_$VERSION"
 # Clear the whole output directory: release.yml uploads build/release/nanokvm_*

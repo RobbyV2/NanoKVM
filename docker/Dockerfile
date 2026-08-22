@@ -50,6 +50,19 @@ RUN cd /tmp/go_cache \
     && cd / \
     && rm -rf /tmp/go_cache
 
+FROM base_apt AS rust
+
+USER root
+ARG RUST_VERSION=1.97.0
+ENV RUSTUP_HOME="/usr/local/rustup"
+ENV CARGO_HOME="/usr/local/cargo"
+RUN wget -O /tmp/rustup-init.sh https://sh.rustup.rs \
+    && sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal --default-toolchain "$RUST_VERSION" \
+    && rm -f /tmp/rustup-init.sh \
+    && export PATH=$PATH:$CARGO_HOME/bin \
+    && rustup target add riscv64gc-unknown-linux-musl \
+    && echo "Installed rust" && cargo --version && rustc --version
+
 FROM base_apt AS sdk
 
 ENV HOME="/home/$DOCKER_USER"
@@ -79,13 +92,23 @@ ENV PATH="$PATH:/usr/local/go/bin"
 COPY --from=host_tools /usr/local/host-tools /usr/local/host-tools
 ENV PATH="$PATH:/usr/local/host-tools/gcc/riscv64-linux-musl-x86_64/bin"
 
+# Install rust. The toolchain itself stays read-only under /usr/local, while
+# CARGO_HOME lands in the build user's home so cargo can write its registry.
+COPY --from=rust /usr/local/rustup /usr/local/rustup
+COPY --chown=$DOCKER_UID:$DOCKER_GID --from=rust /usr/local/cargo /home/$DOCKER_USER/.cargo
+ENV RUSTUP_HOME="/usr/local/rustup"
+ENV CARGO_HOME="/home/$DOCKER_USER/.cargo"
+ENV PATH="$PATH:/home/$DOCKER_USER/.cargo/bin"
+
 # Install SDK
 COPY --chown=$DOCKER_UID:$DOCKER_GID --from=sdk /home/$DOCKER_USER/MaixCDK /home/$DOCKER_USER/MaixCDK
 COPY --chmod=+x docker/entrypoint /entrypoint
 
 RUN echo "Verify build tools" \
     && echo "Installed host-tools gcc" && riscv64-unknown-linux-musl-gcc -v \
-    && echo "Installed golang" && go version
+    && echo "Installed golang" && go version \
+    && echo "Installed rust" && cargo --version \
+    && rustup target list --installed | grep -qx riscv64gc-unknown-linux-musl
 
 USER root
 RUN chmod 0755 /entrypoint \

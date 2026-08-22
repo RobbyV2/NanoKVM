@@ -21,8 +21,10 @@ on:
       - scripts/**
       - server/**
       - support/**
+      - third_party/**
       - tools/nanokvm_update_edid/**
       - web/**
+      - .gitmodules
       - Makefile
   workflow_dispatch:
     inputs:
@@ -73,6 +75,7 @@ jobs:
           fetch-depth: 0
           # Build scripts from a pull request must not inherit checkout's token.
           persist-credentials: false
+          submodules: recursive
 
       - name: Checkout requested ref
         if: inputs.ref != ''
@@ -81,6 +84,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ inputs.ref }}
+          submodules: recursive
 
       - name: Resolve version
         id: version
@@ -202,8 +206,41 @@ jobs:
             DOCKER_TTY= \
             IMAGE_NAME="${{ steps.image.outputs.ref }}"
 
+      - name: Resolve submodule revisions
+        id: submodules
+        run: |
+          {
+            echo "newt=$(git rev-parse HEAD:third_party/newt)"
+            echo "wstunnel=$(git rev-parse HEAD:third_party/wstunnel)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Cache tunnel builds
+        uses: actions/cache@v4
+        with:
+          # CARGO_HOME is redirected into build/cargo by the "tunnels" target,
+          # so both the registry and the target dir live inside the workspace.
+          path: |
+            build/cargo/registry
+            third_party/wstunnel/target
+          key: tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-${{ steps.submodules.outputs.newt }}
+          restore-keys: |
+            tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-
+            tunnels-${{ runner.os }}-
+
+      - name: Build tunnel binaries
+        run: |
+          make tunnels \
+            DOCKER_TTY= \
+            IMAGE_NAME="${{ steps.image.outputs.ref }}"
+
       - name: Assemble package
-        run: make package VERSION="${{ steps.version.outputs.version }}"
+        # package now depends on tunnels, so it needs the pulled builder image
+        # too; without IMAGE_NAME make would fall back to building one locally.
+        run: |
+          make package \
+            VERSION="${{ steps.version.outputs.version }}" \
+            DOCKER_TTY= \
+            IMAGE_NAME="${{ steps.image.outputs.ref }}"
 
       - name: Compare against the published release
         # Informational only: highlights what changed relative to what devices

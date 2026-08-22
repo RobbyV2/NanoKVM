@@ -36,3 +36,6 @@ kvmapp/kvm_system/kvm_system
 
 # Release packages assembled by scripts/package.sh
 /build/
+
+# Tunnel seeds built by "make tunnels"
+kvmapp/tunnels/*.gz

@@ -1,0 +1,42 @@
+#!/bin/sh
+
+DAEMON="wstunnel"
+CMDFILE="/etc/kvm/$DAEMON.cmd"
+PIDFILE="/var/run/$DAEMON.pid"
+LOGFILE="/tmp/$DAEMON.log"
+
+case "$1" in
+        start)
+                if [ ! -x "$CMDFILE" ]; then
+                        echo "$DAEMON not configured: $CMDFILE"
+                        exit 1
+                fi
+
+                printf "Starting $DAEMON: "
+                start-stop-daemon -S -bmq -p "$PIDFILE" -x "$CMDFILE" >>"$LOGFILE" 2>&1
+                [ $? = 0 ] && echo "OK" || echo "FAIL"
+                ;;
+        stop)
+                printf "Stopping $DAEMON: "
+                start-stop-daemon -K -p "$PIDFILE"
+                [ $? = 0 ] && (echo "OK"; rm -f "$PIDFILE") || echo "FAIL"
+                ;;
+        restart|reload)
+                $0 stop
+                $0 start
+                ;;
+        status)
+                pid=$(cat "$PIDFILE" 2>/dev/null)
+                if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                        echo "$DAEMON running (PID: $pid)"
+                else
+                        echo "$DAEMON not running"
+                        exit 1
+                fi
+                ;;
+        *)
+                echo "Usage: $0 {start|stop|restart|status}"
+                exit 1
+esac
+
+exit 0
