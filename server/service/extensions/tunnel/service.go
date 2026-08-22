@@ -175,6 +175,16 @@ func (s *Service) Stop(c *gin.Context) {
 
 	stopErr := runInitScript(s.name, "stop")
 
+	// A stop with no script to run only has nothing to stop when nothing is
+	// running. With a live process and no script that can signal it, the
+	// service is still up, and answering OK is what used to hide that: the
+	// panel went to "stopped" while the tunnel stayed connected.
+	if errors.Is(stopErr, ErrNoInitScript) {
+		if _, running := pidOf(s.name); !running {
+			stopErr = nil
+		}
+	}
+
 	if err := os.Remove(initScriptPath(s.name)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		rsp.ErrRsp(c, -1, "stop failed")
 		log.Errorf("failed to remove %s init script: %s", s.name, err)
@@ -344,10 +354,15 @@ func enableInitScript(name proto.TunnelName) error {
 	return file.Commit()
 }
 
+// ErrNoInitScript is what an action that ran nothing returns. Neither
+// /etc/init.d/S97<name> nor the /kvmapp/system/init.d seed exists, so start,
+// stop and restart all touched nothing at all.
+var ErrNoInitScript = errors.New("init script not found")
+
 func runInitScript(name proto.TunnelName, action string) error {
 	script, ok := resolveInitScript(name)
 	if !ok {
-		return nil
+		return fmt.Errorf("%w for %s", ErrNoInitScript, name)
 	}
 
 	output, err := exec.Command(script, action).CombinedOutput()
