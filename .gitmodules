@@ -1,0 +1,8 @@
+[submodule "third_party/wstunnel"]
+	path = third_party/wstunnel
+	url = https://github.com/RobbyV2/wstunnel.git
+	branch = NanoKVM
+[submodule "third_party/newt"]
+	path = third_party/newt
+	url = https://github.com/RobbyV2/newt.git
+	branch = NanoKVM
