@@ -16,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
 import { BinarySource } from './binary.tsx';
 import { EnvTable } from './env.tsx';
+import { reportsConnection } from './types.ts';
 import type { EnvEntry, TunnelService, TunnelState, TunnelStatus } from './types.ts';
 
 type TunnelProps = {
@@ -40,13 +41,6 @@ const stateColors: Record<TunnelState, string> = {
   error: 'text-red-500'
 };
 
-const newtEnv: EnvEntry[] = [
-  { key: 'PANGOLIN_ENDPOINT', value: '', secret: false, configured: false },
-  { key: 'NEWT_ID', value: '', secret: false, configured: false },
-  { key: 'NEWT_SECRET', value: '', secret: true, configured: false },
-  { key: 'NEWT_PROVISIONING_KEY', value: '', secret: true, configured: false }
-];
-
 export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
   const { t } = useTranslation();
 
@@ -61,6 +55,11 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
 
   const state = status?.state;
   const isRunning = state === 'running' || state === 'connected';
+
+  // running is the last state a service with no health signal can reach, so its
+  // blue is the end of the road rather than a way station to a green it can
+  // never show
+  const isBlindRunning = state === 'running' && !reportsConnection[service];
   const isOpenServer =
     service === 'wstunnel' &&
     /^server(\s|$)/.test(args.trim()) &&
@@ -81,11 +80,11 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
           return;
         }
 
-        const entries: EnvEntry[] = configRsp.data?.env ?? [];
-
+        // the server seeds the keys a service expects from its own spec, so
+        // the client does not carry a second copy of that list
         setStatus(statusRsp.data);
         setArgs(configRsp.data?.args ?? '');
-        setEnv(entries.length === 0 && service === 'newt' ? newtEnv : entries);
+        setEnv(configRsp.data?.env ?? []);
         setLogs(logsRsp.data?.lines ?? []);
       })
       .catch((err) => {
@@ -237,6 +236,13 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
       </div>
 
       {status?.message && <div className="pt-2 text-xs text-red-500">{status.message}</div>}
+
+      {isBlindRunning && (
+        <div className="flex items-start space-x-1 pt-2 text-xs text-neutral-500">
+          <TriangleAlertIcon size={13} className="mt-[2px] shrink-0" />
+          <span>{t('settings.tunnel.noHealthSignal')}</span>
+        </div>
+      )}
 
       {isRunning && (
         <div className="flex items-center space-x-1 pt-2 text-xs text-neutral-500">
