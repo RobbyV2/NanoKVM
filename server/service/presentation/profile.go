@@ -15,6 +15,12 @@ const (
 	ProfileStandard = "standard"
 	ProfileHIDOnly  = "hid-only"
 
+	// D6: the normal-mode marker was the gadget core's get_default_bcdDevice(),
+	// bin2bcd(VERSION)<<8|bin2bcd(PATCHLEVEL), so a vendor kernel bump moved it
+	// and took /api/hid/mode with it. Both markers are now written deliberately.
+	BCDDeviceNormal  = "0x0510"
+	BCDDeviceHIDOnly = "0x0623"
+
 	InquiryString      = "NanoKVM USB Mass Storage0520"
 	InquiryStringCDROM = "NanoKVM USB CD/DVD-ROM  0520"
 )
@@ -92,7 +98,7 @@ type Device struct {
 	VendorID     string  `json:"vendor_id"`
 	ProductID    string  `json:"product_id"`
 	BCDUSB       *string `json:"bcd_usb,omitempty"`    // nil = DO NOT WRITE
-	BCDDevice    *string `json:"bcd_device,omitempty"` // nil = DO NOT WRITE (H14)
+	BCDDevice    *string `json:"bcd_device,omitempty"` // nil = DO NOT WRITE
 	Class        *uint8  `json:"class,omitempty"`
 	SubClass     *uint8  `json:"subclass,omitempty"`
 	Protocol     *uint8  `json:"protocol,omitempty"`
@@ -408,6 +414,7 @@ func standardProfile() Profile {
 		Device: Device{
 			VendorID:     "0x3346",
 			ProductID:    "0x1009",
+			BCDDevice:    ptr(BCDDeviceNormal),
 			Class:        ptr[uint8](0xEF),
 			SubClass:     ptr[uint8](0x02),
 			Protocol:     ptr[uint8](0x01),
@@ -429,7 +436,7 @@ func hidOnlyProfile() Profile {
 			VendorID:     "0x3346",
 			ProductID:    "0x1009",
 			BCDUSB:       ptr("0x0101"),
-			BCDDevice:    ptr("0x0623"),
+			BCDDevice:    ptr(BCDDeviceHIDOnly),
 			Manufacturer: "sipeed",
 			Product:      "NanoKVM",
 		},

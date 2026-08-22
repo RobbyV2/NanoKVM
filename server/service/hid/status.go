@@ -2,11 +2,9 @@ package hid
 
 import (
 	"context"
-	"errors"
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,18 +19,12 @@ import (
 const (
 	ModeNormal  = presentation.ModeNormal
 	ModeHidOnly = presentation.ModeHIDOnly
-	ModeFlag    = presentation.GadgetRoot + "/bcdDevice"
 
 	ModeNormalScript  = "/kvmapp/system/init.d/S03usbdev"
 	ModeHidOnlyScript = "/kvmapp/system/init.d/S03usbhid"
 
 	USBDevScript = "/etc/init.d/S03usbdev"
 )
-
-var modeMap = map[string]string{
-	"0x0510": ModeNormal,
-	"0x0623": ModeHidOnly,
-}
 
 var (
 	managerOnce sync.Once
@@ -94,7 +86,12 @@ func (s *Service) SetHidMode(c *gin.Context) {
 		return
 	}
 
-	if mode, _ := GetMode(); req.Mode == mode {
+	mode, err := GetMode()
+	if err != nil {
+		rsp.ErrRsp(c, -3, "operation failed")
+		return
+	}
+	if req.Mode == mode {
 		rsp.OkRsp(c)
 		return
 	}
@@ -117,6 +114,7 @@ func (s *Service) SetHidMode(c *gin.Context) {
 
 	rsp.OkRsp(c)
 
+	// Reboot stays: the profiles' report_desc differ, report_desc is -EBUSY once linked, and R1.1 forbids unlinking hid.*.
 	log.Println("reboot system...")
 	time.Sleep(500 * time.Millisecond)
 	_ = exec.Command("reboot").Run()
@@ -222,18 +220,10 @@ func copyModeFile(srcScript string) error {
 }
 
 func GetMode() (string, error) {
-	data, err := os.ReadFile(ModeFlag)
+	mode, err := Manager().Mode()
 	if err != nil {
-		log.Errorf("failed to read %s: %s", ModeFlag, err)
+		log.Errorf("failed to resolve hid mode: %s", err)
 		return "", err
 	}
-
-	key := strings.TrimSpace(string(data))
-	mode, ok := modeMap[key]
-	if !ok {
-		log.Errorf("invalid mode flag: %s", key)
-		return "", errors.New("invalid mode flag")
-	}
-
 	return mode, nil
 }

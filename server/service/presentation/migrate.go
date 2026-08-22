@@ -159,13 +159,16 @@ func gadgetMACs() (*string, *string) {
 }
 
 func hidOnlyGadget(ops Ops) bool {
-	marker := hidOnlyProfile().Device.BCDDevice
-	if ops == nil || marker == nil {
+	if ops == nil {
 		return false
 	}
 
-	data, err := ops.ReadFile("bcdDevice")
-	return err == nil && strings.TrimSpace(string(data)) == *marker
+	data, err := ops.ReadFile(attrBCDDevice)
+	if err != nil {
+		return false
+	}
+	mode, err := modeFromBCDDevice(strings.TrimSpace(string(data)))
+	return err == nil && mode == ModeHIDOnly
 }
 
 func readSentinels() sentinels {

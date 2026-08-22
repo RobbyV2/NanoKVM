@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -201,12 +203,27 @@ func (m *Manager) ResetPHY(ctx context.Context) error {
 	})
 }
 
+// D6: mode resolves in three tiers. The active profile is the truth; an exact
+// bcdDevice match covers a gadget configured before the marker was written
+// deliberately; any 0x05xx is the gadget core default on some 5.x kernel, which
+// is what normal mode used to be identified by.
 func (m *Manager) Mode() (string, error) {
 	active, err := m.store.Active()
 	if err != nil {
 		return "", fmt.Errorf("read active profile: %w", err)
 	}
-	return modeOf(active), nil
+	if active != "" {
+		return modeOf(active), nil
+	}
+	if err := m.ready(); err != nil {
+		return "", err
+	}
+
+	data, err := m.ops.ReadFile(attrBCDDevice)
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", attrBCDDevice, err)
+	}
+	return modeFromBCDDevice(strings.TrimSpace(string(data)))
 }
 
 // D3: mode is manager state, not the filename of the init script the OTA keeps
@@ -266,6 +283,21 @@ func (m *Manager) ready() error {
 		return ErrNoGadget
 	}
 	return nil
+}
+
+var bcdDeviceModes = map[string]string{
+	BCDDeviceNormal:  ModeNormal,
+	BCDDeviceHIDOnly: ModeHIDOnly,
+}
+
+func modeFromBCDDevice(marker string) (string, error) {
+	if mode, ok := bcdDeviceModes[marker]; ok {
+		return mode, nil
+	}
+	if value, err := strconv.ParseUint(strings.TrimPrefix(marker, "0x"), 16, 16); err == nil && value>>8 == 0x05 {
+		return ModeNormal, nil
+	}
+	return "", fmt.Errorf("%w: bcdDevice %q", ErrUnknownMode, marker)
 }
 
 func modeOf(profile string) string {

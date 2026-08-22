@@ -74,8 +74,11 @@ func TestBuiltInProfilesValidate(t *testing.T) {
 
 func TestBuiltInDeviceDescriptorFields(t *testing.T) {
 	standard := standardProfile().Device
-	if standard.BCDUSB != nil || standard.BCDDevice != nil {
-		t.Fatalf("standard writes bcdUSB/bcdDevice: %v %v", standard.BCDUSB, standard.BCDDevice)
+	if standard.BCDUSB != nil {
+		t.Fatalf("standard writes bcdUSB: %q", *standard.BCDUSB)
+	}
+	if standard.BCDDevice == nil || *standard.BCDDevice != BCDDeviceNormal {
+		t.Fatalf("standard bcdDevice = %v, want %q", standard.BCDDevice, BCDDeviceNormal)
 	}
 	if standard.Serial == nil || *standard.Serial != "0123456789ABCDEF" {
 		t.Fatalf("standard serial = %v", standard.Serial)
@@ -88,7 +91,7 @@ func TestBuiltInDeviceDescriptorFields(t *testing.T) {
 	if hidOnly.Class != nil || hidOnly.SubClass != nil || hidOnly.Protocol != nil {
 		t.Fatal("hid-only writes device class triple")
 	}
-	if hidOnly.BCDUSB == nil || *hidOnly.BCDUSB != "0x0101" || hidOnly.BCDDevice == nil || *hidOnly.BCDDevice != "0x0623" {
+	if hidOnly.BCDUSB == nil || *hidOnly.BCDUSB != "0x0101" || hidOnly.BCDDevice == nil || *hidOnly.BCDDevice != BCDDeviceHIDOnly {
 		t.Fatalf("hid-only bcd = %v %v", hidOnly.BCDUSB, hidOnly.BCDDevice)
 	}
 	if subClass := hidFunction(t, hidOnlyProfile(), "GS1").SubClass; subClass != 1 {

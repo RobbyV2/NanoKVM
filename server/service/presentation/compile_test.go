@@ -224,18 +224,30 @@ func TestGoldenTracesCoverEveryRecordedTrace(t *testing.T) {
 	}
 }
 
-func TestNormalModeNeverWritesBCD(t *testing.T) {
+func TestEveryTraceWritesItsModeMarkerExactlyOnce(t *testing.T) {
 	for name, f := range goldenCases() {
-		if f.hidOnly {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
-			for _, line := range append(readTrace(t, name), renderTrace(compileFlags(t, f))...) {
-				for _, banned := range []string{"write\tbcdDevice\t", "write\tbcdUSB\t"} {
-					if strings.HasPrefix(line, banned) {
-						t.Fatalf("normal mode writes %q, which breaks hid.GetMode (H14)", line)
+			marker, mode := BCDDeviceNormal, ModeNormal
+			if f.hidOnly {
+				marker, mode = BCDDeviceHIDOnly, ModeHIDOnly
+			}
+			want := "write\tbcdDevice\t" + hex.EncodeToString([]byte(marker+"\n"))
+
+			for source, lines := range map[string][]string{"script": readTrace(t, name), "compiled": renderTrace(compileFlags(t, f))} {
+				var found []string
+				for _, line := range lines {
+					if strings.HasPrefix(line, "write\tbcdDevice\t") {
+						found = append(found, line)
 					}
 				}
+				if len(found) != 1 || found[0] != want {
+					t.Fatalf("%s writes %v, want exactly %q", source, found, want)
+				}
+			}
+
+			got, err := modeFromBCDDevice(marker)
+			if err != nil || got != mode {
+				t.Fatalf("modeFromBCDDevice(%q) = %q %v, want %q", marker, got, err, mode)
 			}
 		})
 	}

@@ -123,7 +123,7 @@ func (c *compiler) device(d Device) {
 		c.write("bcdUSB", *d.BCDUSB)
 	}
 	if d.BCDDevice != nil {
-		c.write("bcdDevice", *d.BCDDevice)
+		c.write(attrBCDDevice, *d.BCDDevice)
 	}
 	c.write("idVendor", d.VendorID)
 	c.write("idProduct", d.ProductID)

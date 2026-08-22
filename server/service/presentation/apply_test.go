@@ -264,3 +264,45 @@ func TestLUNReadsBackTheRuntimeState(t *testing.T) {
 		t.Fatalf("lun = %+v err = %v, want the mounted cdrom", lun, err)
 	}
 }
+
+func TestModeResolvesInThreeTiers(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		active    string
+		bcdDevice string
+		want      string
+		wantErr   bool
+	}{
+		{name: "active profile beats the marker", active: ProfileStandard, bcdDevice: BCDDeviceHIDOnly, want: ModeNormal},
+		{name: "active hid-only beats the marker", active: ProfileHIDOnly, bcdDevice: BCDDeviceNormal, want: ModeHIDOnly},
+		{name: "migrated profile is normal", active: ProfileCurrent, bcdDevice: BCDDeviceHIDOnly, want: ModeNormal},
+		{name: "exact hid-only marker", bcdDevice: BCDDeviceHIDOnly, want: ModeHIDOnly},
+		{name: "exact normal marker", bcdDevice: BCDDeviceNormal, want: ModeNormal},
+		{name: "kernel 5.15 default", bcdDevice: "0x0515", want: ModeNormal},
+		{name: "kernel 5.9 default", bcdDevice: "0x0509", want: ModeNormal},
+		{name: "unknown marker", bcdDevice: "0x0601", wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manager, ops := newTestManager(t)
+			if err := ops.Seed(attrBCDDevice, []byte(tc.bcdDevice+"\n")); err != nil {
+				t.Fatal(err)
+			}
+			if tc.active != "" {
+				if err := manager.store.SetActive(tc.active); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			mode, err := manager.Mode()
+			if tc.wantErr {
+				if !errors.Is(err, ErrUnknownMode) {
+					t.Fatalf("mode = %q err = %v, want the unknown mode error", mode, err)
+				}
+				return
+			}
+			if err != nil || mode != tc.want {
+				t.Fatalf("mode = %q err = %v, want %q", mode, err, tc.want)
+			}
+		})
+	}
+}

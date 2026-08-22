@@ -16,7 +16,9 @@ import (
 const (
 	GadgetRoot = "/sys/kernel/config/usb_gadget/g0"
 
-	udcAttr      = "UDC"
+	udcAttr       = "UDC"
+	attrBCDDevice = "bcdDevice"
+
 	configPrefix = "configs/c.1"
 	dwc2Device   = "4340000.usb"
 	emptyUDCName = "\n"
@@ -52,7 +54,7 @@ var deviceAttrs = map[string]bool{
 	"idVendor":        true,
 	"idProduct":       true,
 	"bcdUSB":          true,
-	"bcdDevice":       true,
+	attrBCDDevice:     true,
 	"bDeviceClass":    true,
 	"bDeviceSubClass": true,
 	"bDeviceProtocol": true,
