@@ -45,6 +45,8 @@ did not keep across the cut.
 
 `S29bridge` is the boot half, and it exists because it has to run before `S30eth` addresses
 anything, which is before the server exists. So the script performs the restore itself.
+`new_app_init()` refreshes it into `/etc/init.d` immediately before `S30eth`; keeping only
+the seed under `/kvmapp` makes both recovery and persistent bridge setup unreachable.
 It moves `pending.json` to `recovered.json` rather than deleting it. The rename is the
 whole write: it cannot leave a partial file, and it clears the marker in the same
 operation, so a second boot cannot restore twice. Deleting instead would leave the device

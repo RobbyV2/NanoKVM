@@ -9,6 +9,11 @@ import (
 
 var ErrNotBound = errors.New("gadget did not bind")
 
+type recoveryPlan struct {
+	profile Profile
+	plan    Plan
+}
+
 // The transaction is unbind, mutate, bind, verify. It is add-only: no op ever
 // rmdirs functions/* or removes the gadget root, because f_hid allocates the
 // /dev/hidgN minor from an ida at mkdir time and hid/hid.go:29-32 hardcodes
@@ -16,6 +21,10 @@ var ErrNotBound = errors.New("gadget did not bind")
 func (m *Manager) apply(ctx context.Context, profile Profile, plan Plan) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("apply %s: %w", profile.Name, err)
+	}
+	recovery, err := m.prepareRecovery()
+	if err != nil {
+		return fmt.Errorf("apply %s: prepare rollback: %w", profile.Name, err)
 	}
 
 	udcs, err := m.ops.ListUDC()
@@ -26,27 +35,136 @@ func (m *Manager) apply(ctx context.Context, profile Profile, plan Plan) error {
 
 	before := readSnapshot(m.ops, profile.Functions)
 	if err := m.ops.UnbindUDC(); err != nil {
-		return fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
+		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
+		if bindErr := m.ensureBound(udc); bindErr != nil {
+			return errors.Join(applyErr, fmt.Errorf("restore binding: %w", bindErr))
+		}
+		return applyErr
 	}
 	if err := m.unlinkStale(before, plan); err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return m.rollbackFailure(profile, recovery, udc, err)
 	}
 
 	for i, op := range plan.Ops {
 		if err := m.execute(op, udc); err != nil {
-			return fmt.Errorf("apply %s: op %d %s %s: %w", profile.Name, i, op.Kind, op.Path, err)
+			return m.rollbackFailure(profile, recovery, udc,
+				fmt.Errorf("op %d %s %s: %w", i, op.Kind, op.Path, err))
 		}
 	}
 	if err := m.verifyBind(udc); err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return m.rollbackFailure(profile, recovery, udc, err)
+	}
+	if err := m.store.SaveProfile(profile); err != nil {
+		return m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if err := mirrorSentinels(profile); err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if err := m.store.SetActive(profile.Name); err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return m.rollbackFailure(profile, recovery, udc, err)
 	}
-	return m.store.SetLastKnownGood(profile.Name)
+	if err := m.store.SetLastKnownGood(profile.Name); err != nil {
+		return m.rollbackFailure(profile, recovery, udc, err)
+	}
+	return nil
+}
+
+func (m *Manager) prepareRecovery() (recoveryPlan, error) {
+	name, err := m.store.LastKnownGood()
+	if err != nil {
+		return recoveryPlan{}, err
+	}
+	if name == "" {
+		name, err = m.store.Active()
+		if err != nil {
+			return recoveryPlan{}, err
+		}
+	}
+
+	profile := standardProfile()
+	if name != "" {
+		profile, err = m.store.LoadProfile(name)
+		if err != nil {
+			return recoveryPlan{}, err
+		}
+		if profile.Name != name {
+			return recoveryPlan{}, fmt.Errorf("profile %q contains name %q", name, profile.Name)
+		}
+	}
+	plan, err := Compile(profile, m.caps)
+	if err != nil {
+		return recoveryPlan{}, err
+	}
+	return recoveryPlan{profile: profile, plan: plan}, nil
+}
+
+func (m *Manager) rollbackFailure(failed Profile, recovery recoveryPlan, udc string, cause error) error {
+	applyErr := fmt.Errorf("apply %s: %w", failed.Name, cause)
+	if err := m.restore(failed, recovery, udc); err != nil {
+		return errors.Join(applyErr, fmt.Errorf("rollback to %s: %w", recovery.profile.Name, err))
+	}
+	return fmt.Errorf("%w; rolled back to %s", applyErr, recovery.profile.Name)
+}
+
+func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (err error) {
+	defer func() {
+		if err == nil {
+			return
+		}
+		if bindErr := m.ensureBound(udc); bindErr != nil {
+			err = errors.Join(err, fmt.Errorf("restore binding: %w", bindErr))
+		}
+	}()
+
+	probes := append(append([]Function(nil), failed.Functions...), recovery.profile.Functions...)
+	before := readSnapshot(m.ops, probes)
+	if err := m.ops.UnbindUDC(); err != nil {
+		return fmt.Errorf("unbind: %w", err)
+	}
+	if err := m.unlinkStale(before, recovery.plan); err != nil {
+		return err
+	}
+	for i, op := range recovery.plan.Ops {
+		if err := m.execute(op, udc); err != nil {
+			return fmt.Errorf("op %d %s %s: %w", i, op.Kind, op.Path, err)
+		}
+	}
+	if err := m.verifyBind(udc); err != nil {
+		return err
+	}
+	if err := m.store.SaveProfile(recovery.profile); err != nil {
+		return err
+	}
+	if err := mirrorSentinels(recovery.profile); err != nil {
+		return err
+	}
+	if err := m.store.SetActive(recovery.profile.Name); err != nil {
+		return err
+	}
+	return m.store.SetLastKnownGood(recovery.profile.Name)
+}
+
+func (m *Manager) ensureBound(udc string) error {
+	data, readErr := m.ops.ReadFile(udcAttr)
+	bound := strings.TrimSpace(string(data))
+	if readErr == nil && bound == udc {
+		return nil
+	}
+	if readErr == nil && bound != "" {
+		if err := m.ops.UnbindUDC(); err != nil {
+			return err
+		}
+	}
+	if err := m.ops.BindUDC(udc); err != nil {
+		if readErr != nil {
+			return errors.Join(readErr, err)
+		}
+		return err
+	}
+	if err := m.ops.SetOTGRole(OTGRoleDevice); err != nil {
+		return err
+	}
+	return m.verifyBind(udc)
 }
 
 func (m *Manager) execute(op Op, udc string) error {

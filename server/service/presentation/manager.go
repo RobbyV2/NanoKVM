@@ -172,9 +172,6 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 	if err != nil {
 		return err
 	}
-	if err := m.store.SaveProfile(profile); err != nil {
-		return fmt.Errorf("save profile %s: %w", profile.Name, err)
-	}
 	return m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
 }
 

@@ -1091,3 +1091,29 @@ func TestKillUdhcpcRemovesThePidfile(t *testing.T) {
 		t.Fatal("the pidfile survived killUdhcpc")
 	}
 }
+
+func TestBridgeBootScriptIsInstalledBeforeEthernet(t *testing.T) {
+	root := filepath.Clean(filepath.Join("..", "..", ".."))
+	seed := filepath.Join(root, "kvmapp", "system", "init.d", "S29bridge")
+	info, err := os.Stat(seed)
+	if err != nil {
+		t.Fatalf("stat bridge init seed: %v", err)
+	}
+	if info.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("bridge init seed mode = %o, want executable", info.Mode().Perm())
+	}
+
+	source, err := os.ReadFile(filepath.Join(root, "support", "sg2002", "kvm_system", "main", "lib", "system_init", "system_init.cpp"))
+	if err != nil {
+		t.Fatalf("read system installer: %v", err)
+	}
+	bridgeCopy := `cp -f /kvmapp/system/init.d/S29bridge /etc/init.d/`
+	ethernetCopy := `cp -f /kvmapp/system/init.d/S30eth /etc/init.d/`
+	bridgeAt, ethernetAt := strings.Index(string(source), bridgeCopy), strings.Index(string(source), ethernetCopy)
+	if bridgeAt < 0 {
+		t.Fatal("system installer does not refresh S29bridge")
+	}
+	if ethernetAt < 0 || bridgeAt > ethernetAt {
+		t.Fatal("S29bridge is not installed before S30eth")
+	}
+}

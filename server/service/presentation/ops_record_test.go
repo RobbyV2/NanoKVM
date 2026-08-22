@@ -4,20 +4,22 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 )
 
 type RecordOps struct {
-	mu     sync.Mutex
-	trace  []Op
-	files  map[string][]byte
-	dirs   map[string]bool
-	links  map[string]string
-	udcs   []string
-	unbind error
-	bound  string
-	role   string
-	resets int
+	mu            sync.Mutex
+	trace         []Op
+	files         map[string][]byte
+	dirs          map[string]bool
+	links         map[string]string
+	udcs          []string
+	unbind        error
+	writeFailures map[string][]error
+	bound         string
+	role          string
+	resets        int
 }
 
 func NewRecordOps(udcs ...string) *RecordOps {
@@ -25,10 +27,11 @@ func NewRecordOps(udcs ...string) *RecordOps {
 		udcs = []string{dwc2Device}
 	}
 	return &RecordOps{
-		files: map[string][]byte{},
-		dirs:  map[string]bool{},
-		links: map[string]string{},
-		udcs:  udcs,
+		files:         map[string][]byte{},
+		dirs:          map[string]bool{},
+		links:         map[string]string{},
+		udcs:          udcs,
+		writeFailures: map[string][]error{},
 	}
 }
 
@@ -107,10 +110,21 @@ func (r *RecordOps) WriteFile(rel string, data []byte) error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if failures := r.writeFailures[rel]; len(failures) != 0 {
+		err := failures[0]
+		r.writeFailures[rel] = failures[1:]
+		return err
+	}
 	stored := append([]byte(nil), data...)
 	r.record(Op{Kind: OpWrite, Path: rel, Data: stored})
 	r.files[rel] = stored
 	return nil
+}
+
+func (r *RecordOps) FailWriteOnce(rel string, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.writeFailures[rel] = append(r.writeFailures[rel], err)
 }
 
 func (r *RecordOps) ReadFile(rel string) ([]byte, error) {
@@ -121,6 +135,15 @@ func (r *RecordOps) ReadFile(rel string) ([]byte, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	data, ok := r.files[rel]
+	if !ok {
+		for link, target := range r.links {
+			prefix := link + "/"
+			if strings.HasPrefix(rel, prefix) {
+				data, ok = r.files[target+"/"+strings.TrimPrefix(rel, prefix)]
+				break
+			}
+		}
+	}
 	if !ok {
 		return nil, fmt.Errorf("read %s: %w", rel, os.ErrNotExist)
 	}

@@ -147,6 +147,96 @@ func TestApplyFailsWhenTheHIDNodesDoNotComeBack(t *testing.T) {
 	}
 }
 
+func TestApplyRollsBackToLastKnownGood(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	previous := standardProfile()
+	previous.Name = "mutable"
+	previous.BuiltIn = false
+	previous.Functions = append([]Function{NetworkFunction(FunctionRNDIS)}, previous.Functions...)
+	previous.OSDesc = MSOSDesc()
+	previous.Normalize()
+	if err := manager.ApplyProfile(ctx, previous); err != nil {
+		t.Fatalf("apply previous profile: %v", err)
+	}
+	if err := manager.store.SetActive(ProfileHIDOnly); err != nil {
+		t.Fatal(err)
+	}
+
+	target := previous
+	target.Device.Product = "Failed update"
+	target.Functions = slices.DeleteFunc(target.Functions, func(function Function) bool {
+		return function.Kind.isNet()
+	})
+	transient := NetworkFunction(FunctionNCM)
+	transient.Instance = "transient"
+	target.Functions = append([]Function{transient}, target.Functions...)
+	target.OSDesc = MSOSDesc()
+	target.Normalize()
+
+	wantErr := errors.New("configfs write failed")
+	ops.FailWriteOnce(functionsDir+"/hid.GS0/report_length", wantErr)
+	err := manager.ApplyProfile(ctx, target)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("err = %v, want the configfs failure", err)
+	}
+	if !strings.Contains(err.Error(), "rolled back to "+previous.Name) {
+		t.Fatalf("err = %v, want successful rollback detail", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+
+	links := ops.Links()
+	if target := links[configPrefix+"/rndis.usb0"]; target != functionsDir+"/rndis.usb0" {
+		t.Fatalf("rollback network link = %q, want rndis", target)
+	}
+	if target, ok := links[configPrefix+"/ncm.transient"]; ok {
+		t.Fatalf("rollback kept transient network link %q", target)
+	}
+	active, err := manager.store.Active()
+	if err != nil || active != previous.Name {
+		t.Fatalf("active = %q err = %v, want %q", active, err, previous.Name)
+	}
+	lastKnownGood, err := manager.store.LastKnownGood()
+	if err != nil || lastKnownGood != previous.Name {
+		t.Fatalf("last known good = %q err = %v, want %q", lastKnownGood, err, previous.Name)
+	}
+	stored, err := manager.store.LoadProfile(previous.Name)
+	if err != nil || stored.Device.Product != previous.Device.Product {
+		t.Fatalf("stored product = %q err = %v, want %q", stored.Device.Product, err, previous.Device.Product)
+	}
+}
+
+func TestApplyFailureKeepsTheUDCBoundWhenRollbackFails(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+
+	target := standardProfile()
+	target.Name = "target"
+	target.BuiltIn = false
+	target.Normalize()
+	path := functionsDir + "/hid.GS0/report_length"
+	applyErr := errors.New("target write failed")
+	rollbackErr := errors.New("rollback write failed")
+	ops.FailWriteOnce(path, applyErr)
+	ops.FailWriteOnce(path, rollbackErr)
+
+	err := manager.ApplyProfile(ctx, target)
+	if !errors.Is(err, applyErr) || !errors.Is(err, rollbackErr) {
+		t.Fatalf("err = %v, want target and rollback failures", err)
+	}
+	if !strings.Contains(err.Error(), "rollback to "+ProfileStandard) {
+		t.Fatalf("err = %v, want rollback diagnostic", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want emergency bind to %q", bound, dwc2Device)
+	}
+}
+
 func TestRebindAndResetPHYVerifyTheBind(t *testing.T) {
 	manager, ops := newTestManager(t)
 	ctx := context.Background()

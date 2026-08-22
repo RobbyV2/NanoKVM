@@ -131,6 +131,13 @@ return `Profile` values with byte-pinned report descriptors, written to disk for
 inspectability and always reconstructed from code on load, so a corrupt `standard.json`
 cannot brick USB and an OTA can fix a built-in.
 
+The last-known-good profile is loaded and compiled before every unbind. Profile files are
+saved only after the new gadget binds and verifies, so updating the active profile in
+place cannot overwrite the rollback copy first. Any later failure restores the prior
+profile, sentinels and markers. If rollback also fails, the original and rollback errors
+are both returned and the manager makes one final bind attempt so the UDC is not left
+empty merely because recovery was incomplete.
+
 `/boot/usb.ncm`, `/boot/usb.rndis0` and `/boot/usb.disk0` are write-through mirrors, not
 inputs. Every apply rewrites them to match the active profile. They exist because
 `system_init.cpp` unconditionally copies the kvmapp `S03usbdev` back over `/etc/init.d/`
