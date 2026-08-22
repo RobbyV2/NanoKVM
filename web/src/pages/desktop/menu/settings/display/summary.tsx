@@ -2,22 +2,10 @@ import type { ReactNode } from 'react';
 import { CircleAlertIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { EdidPreflight, EdidSummary } from '@/api/edid.ts';
+import type { EdidSummary } from '@/api/edid.ts';
 
-export type CheckLevel = 'error' | 'warning' | 'info';
-
-export type Check = {
-  level: CheckLevel;
-  key?: string;
-  text?: string;
-};
-
-type Mode = {
-  width: number;
-  height: number;
-  refresh: number;
-  interlaced: boolean;
-};
+import type { Check, CheckLevel } from './utils.ts';
+import { formatMode } from './utils.ts';
 
 type SummaryProps = {
   // a shipped profile only knows the monitor identity and its preferred mode,
@@ -49,64 +37,6 @@ const groups: { level: CheckLevel; label: string; color: string; icon: ReactNode
     icon: <InfoIcon size={13} />
   }
 ];
-
-// the tool writes modes as 1920x1080p60
-const modePattern = /^(\d+)x(\d+)([pi])(\d+)$/;
-
-export function parseMode(mode?: string): Mode | undefined {
-  const matched = mode ? modePattern.exec(mode) : null;
-  if (!matched) return undefined;
-
-  return {
-    width: Number(matched[1]),
-    height: Number(matched[2]),
-    interlaced: matched[3] === 'i',
-    refresh: Number(matched[4])
-  };
-}
-
-export function formatMode(mode?: string): string {
-  const parsed = parseMode(mode);
-  if (!parsed) return mode ?? '';
-
-  return `${parsed.width} × ${parsed.height} @ ${parsed.refresh} Hz`;
-}
-
-// errors block the apply, warnings and information do not
-export function buildChecks(summary?: Partial<EdidSummary>, preflight?: EdidPreflight): Check[] {
-  const checks: Check[] = [];
-
-  if (preflight && !preflight.supported) {
-    checks.push({ level: 'error', key: 'unsupported', text: preflight.reason });
-  }
-  if (preflight && !preflight.toolAvailable) {
-    checks.push({ level: 'error', key: 'toolMissing' });
-  }
-
-  if (summary) {
-    const mode = parseMode(summary.preferredMode);
-
-    if (mode?.interlaced) {
-      checks.push({ level: 'warning', key: 'interlaced' });
-    }
-    if (mode && (mode.height > 1080 || mode.refresh > 60)) {
-      checks.push({ level: 'warning', key: 'tooLarge' });
-    }
-    if (summary.audio === false) {
-      checks.push({ level: 'warning', key: 'noAudio' });
-    }
-    if (summary.version && summary.version < '1.4') {
-      checks.push({ level: 'warning', key: 'oldVersion' });
-    }
-
-    checks.push({ level: 'info', key: 'hdmiNotice' });
-    if (preflight?.requiresPowerCycle) {
-      checks.push({ level: 'info', key: 'powerCycleNotice' });
-    }
-  }
-
-  return checks;
-}
 
 export const Summary = ({ summary }: SummaryProps) => {
   const { t } = useTranslation();

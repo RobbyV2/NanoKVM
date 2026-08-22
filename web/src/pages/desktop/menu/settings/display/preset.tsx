@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import * as api from '@/api/edid.ts';
 import type { EdidPreflight, EdidProfile, EdidResult, EdidSummary } from '@/api/edid.ts';
 
-import { buildChecks, Checks, formatMode, Summary } from './summary.tsx';
+import { Checks, Summary } from './summary.tsx';
+import { buildChecks, formatMode, hardwareName } from './utils.ts';
 
 type PresetProps = {
   active?: EdidSummary;
@@ -17,27 +18,12 @@ type PresetProps = {
   onSuccess: () => void;
 };
 
-// /etc/kvm/hw names the board, and the tool's own labels for it are these three
-const hardwareNames: Record<string, string> = {
-  CUBE_A: 'NanoKVM Cube (alpha)',
-  CUBE_B: 'NanoKVM Cube (beta)',
-  PCIE_A: 'NanoKVM PCIe'
-};
-
 // exactly one of profile and data is sent, the other stays empty
 type Selection = {
   profile: string;
   data: string;
   summary: Partial<EdidSummary>;
 };
-
-// the board and chip the preflight detected, empty when it identified neither
-function hardwareName(preflight?: EdidPreflight): string {
-  const product = preflight?.product ? hardwareNames[preflight.product] : undefined;
-  if (!product) return '';
-
-  return preflight?.chip ? `${product} · ${preflight.chip}` : product;
-}
 
 export const Preset = ({
   active,
