@@ -280,6 +280,15 @@ export const Bridge = () => {
 
       {isPending && <Revert onSuccess={getStatus} />}
 
+      {/* the dead-man was disarmed on a proof that never crossed the wire, so
+          the gate list saying "inbound" overstates what was actually shown */}
+      {lastApply?.checks?.inboundWeak && (
+        <div className="flex items-start space-x-1 text-xs text-amber-500">
+          <TriangleAlertIcon size={13} className="mt-[2px] shrink-0" />
+          <span>{t('settings.network.bridge.inboundWeak')}</span>
+        </div>
+      )}
+
       {lastApply?.state === 'rolledBack' && (
         <div className="flex flex-col space-y-1">
           <span className="text-xs text-amber-500">
