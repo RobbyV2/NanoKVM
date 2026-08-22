@@ -336,11 +336,14 @@ func (l *fakeLiveness) SelfConnect(context.Context, string) error {
 }
 
 type fakeGadget struct {
-	nic string
-	err error
+	nic      string
+	protocol string
+	err      error
 }
 
 func (g fakeGadget) NIC(context.Context) (string, error) { return g.nic, g.err }
+
+func (g fakeGadget) NetworkProtocol(context.Context) (string, error) { return g.protocol, g.err }
 
 type harness struct {
 	t     *testing.T

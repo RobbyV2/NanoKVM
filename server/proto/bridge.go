@@ -77,6 +77,12 @@ type GetBridgeRsp struct {
 	Gateway   string       `json:"gateway"`
 	Pending   *BridgeArmed `json:"pending"`
 	LastApply *BridgeApply `json:"lastApply"`
+
+	// ncm, rndis, or empty for a gadget presenting no network. Reported from
+	// the presentation snapshot, because the protocol the gadget presents is a
+	// property of the USB profile and not of the bridge. The control for it
+	// lives on the Virtual Network switch under Settings, Device.
+	Protocol string `json:"protocol"`
 }
 
 type SetBridgeReq struct {

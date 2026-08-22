@@ -68,10 +68,17 @@ type GetVirtualDeviceRsp struct {
 	Network bool `json:"network"`
 	Media   bool `json:"media"`
 	Disk    bool `json:"disk"`
+
+	// ncm or rndis, empty when no network function is linked. The gadget layer
+	// builds these two and no others, so the selector offers these two.
+	Protocol string `json:"protocol"`
 }
 
+// Protocol names which network function the gadget should present. Empty keeps
+// the toggle a toggle; set, it selects the protocol and leaves the function on.
 type UpdateVirtualDeviceReq struct {
-	Device string `validate:"required"`
+	Device   string `validate:"required"`
+	Protocol string `validate:"omitempty"`
 }
 
 type UpdateVirtualDeviceRsp struct {

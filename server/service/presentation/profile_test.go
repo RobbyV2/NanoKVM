@@ -3,6 +3,7 @@ package presentation
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"testing"
 )
 
@@ -136,4 +137,30 @@ func hidFunction(t *testing.T, p Profile, instance string) *HIDFunction {
 	}
 	t.Fatalf("profile %s has no hid.%s", p.Name, instance)
 	return nil
+}
+
+// The selector's whole contract. ECM is a real USB network class and an obvious
+// third entry, and there is no f_ecm anywhere in this tree: no FunctionKind, no
+// compile case, no branch in S03usbdev. Offering it would offer a gadget the
+// layer below cannot build, so the parser is what keeps the set honest.
+func TestParseNetworkKindOffersOnlyWhatTheGadgetLayerBuilds(t *testing.T) {
+	if got := len(NetworkKinds); got != 2 {
+		t.Fatalf("NetworkKinds holds %d entries %v, want exactly ncm and rndis", got, NetworkKinds)
+	}
+
+	for _, name := range []string{"ncm", "rndis"} {
+		kind, err := ParseNetworkKind(name)
+		if err != nil {
+			t.Fatalf("ParseNetworkKind(%q) = %v", name, err)
+		}
+		if string(kind) != name {
+			t.Fatalf("ParseNetworkKind(%q) = %q", name, kind)
+		}
+	}
+
+	for _, name := range []string{"ecm", "eem", "hid", "mass_storage", "", "NCM"} {
+		if _, err := ParseNetworkKind(name); !errors.Is(err, ErrUnknownNetworkKind) {
+			t.Fatalf("ParseNetworkKind(%q) = %v, want ErrUnknownNetworkKind", name, err)
+		}
+	}
 }

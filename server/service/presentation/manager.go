@@ -132,6 +132,18 @@ func (m *Manager) NIC(context.Context) (string, error) {
 	return GadgetNIC, nil
 }
 
+// What the gadget is presenting to the attached host, empty when it presents no
+// network at all. The bridge reports it and never sets it: the choice decides
+// what the gadget looks like whether or not a bridge exists, so it belongs to
+// the USB profile.
+func (m *Manager) NetworkProtocol(context.Context) (string, error) {
+	snapshot, err := m.Snapshot()
+	if err != nil {
+		return "", err
+	}
+	return string(snapshot.NetworkKind()), nil
+}
+
 func (m *Manager) Apply(ctx context.Context, name string) error {
 	if err := m.ready(); err != nil {
 		return err

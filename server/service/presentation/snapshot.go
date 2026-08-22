@@ -94,10 +94,18 @@ func (s Snapshot) HasDisk() bool {
 }
 
 func (s Snapshot) HasNetwork() bool {
-	for _, kind := range []FunctionKind{FunctionNCM, FunctionRNDIS} {
+	return s.NetworkKind() != ""
+}
+
+// The protocol the gadget is presenting to the attached host, empty when it is
+// presenting none. It reads the linkage rather than a /boot sentinel, so a
+// gadget the NCM branch built reports ncm rather than the rndis the sentinel
+// pair implies (S03usbdev:53, H10).
+func (s Snapshot) NetworkKind() FunctionKind {
+	for _, kind := range NetworkKinds {
 		if s.HasFunction(functionName(Function{Kind: kind, Instance: netInstance})) {
-			return true
+			return kind
 		}
 	}
-	return false
+	return ""
 }

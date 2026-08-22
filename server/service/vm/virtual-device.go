@@ -26,8 +26,9 @@ func (s *Service) GetVirtualDevice(c *gin.Context) {
 	}
 
 	rsp.OkRspWithData(c, &proto.GetVirtualDeviceRsp{
-		Network: snapshot.HasNetwork(),
-		Disk:    snapshot.HasDisk(),
+		Network:  snapshot.HasNetwork(),
+		Disk:     snapshot.HasDisk(),
+		Protocol: string(snapshot.NetworkKind()),
 	})
 	log.Debugf("get virtual device success")
 }
@@ -43,6 +44,20 @@ func (s *Service) UpdateVirtualDevice(c *gin.Context) {
 	if req.Device != deviceNetwork && req.Device != deviceDisk {
 		rsp.ErrRsp(c, -2, "invalid arguments")
 		return
+	}
+
+	// A protocol only means anything for the network function, and only the two
+	// the gadget layer can build are accepted, so a selector can never ask for
+	// one the compiler has no case for.
+	var protocol presentation.FunctionKind
+	if req.Protocol != "" {
+		kind, err := presentation.ParseNetworkKind(req.Protocol)
+		if err != nil || req.Device != deviceNetwork {
+			log.Errorf("update virtual device %s failed: protocol %q", req.Device, req.Protocol)
+			rsp.ErrRsp(c, -2, "invalid arguments")
+			return
+		}
+		protocol = kind
 	}
 
 	manager := hid.Manager()
@@ -66,7 +81,11 @@ func (s *Service) UpdateVirtualDevice(c *gin.Context) {
 		return
 	}
 
-	toggle(&profile, req.Device, !deviceOn(snapshot, req.Device))
+	if protocol != "" {
+		setNetwork(&profile, protocol)
+	} else {
+		toggle(&profile, req.Device, !deviceOn(snapshot, req.Device))
+	}
 	if err := manager.ApplyProfile(c.Request.Context(), profile); err != nil {
 		log.Errorf("update virtual device %s failed: %s", req.Device, err)
 		rsp.ErrRsp(c, -3, "operation failed")
@@ -106,21 +125,43 @@ func editableProfile(active string) (presentation.Profile, error) {
 
 // The link order {ncm|rndis}, hid.GS0-2, mass_storage.disk0 fixes
 // bInterfaceNumber assignment, so the net function goes first and the disk last.
-// D5: an off/on round trip loses NCM, because removing the entry also removes
-// the /boot/usb.ncm mirror and nothing on disk remembers the choice.
+// Turning the network back on keeps whichever protocol the profile last named,
+// so an off/on round trip no longer silently demotes an NCM gadget to RNDIS.
 func toggle(profile *presentation.Profile, device string, on bool) {
+	kind := profileNetworkKind(*profile)
+
 	functions := slices.DeleteFunc(slices.Clone(profile.Functions), func(f presentation.Function) bool {
 		return deviceOf(f.Kind) == device
 	})
 
 	switch {
 	case device == deviceNetwork && on:
-		functions = append([]presentation.Function{presentation.NetworkFunction(presentation.FunctionRNDIS)}, functions...)
+		functions = append([]presentation.Function{presentation.NetworkFunction(kind)}, functions...)
 	case device == deviceDisk && on:
 		functions = append(functions, presentation.DiskFunction(""))
 	}
 
 	profile.Functions = functions
+}
+
+// Replaces the net function rather than toggling it, so selecting a protocol on
+// a gadget that already presents one is a switch and not an unmount.
+func setNetwork(profile *presentation.Profile, kind presentation.FunctionKind) {
+	functions := slices.DeleteFunc(slices.Clone(profile.Functions), func(f presentation.Function) bool {
+		return deviceOf(f.Kind) == deviceNetwork
+	})
+	profile.Functions = append([]presentation.Function{presentation.NetworkFunction(kind)}, functions...)
+}
+
+// RNDIS is the fallback because it is what the shipping toggle has always
+// built, so a profile that never named a protocol keeps the gadget it had.
+func profileNetworkKind(profile presentation.Profile) presentation.FunctionKind {
+	for _, f := range profile.Functions {
+		if deviceOf(f.Kind) == deviceNetwork {
+			return f.Kind
+		}
+	}
+	return presentation.FunctionRNDIS
 }
 
 func deviceOn(snapshot presentation.Snapshot, device string) bool {

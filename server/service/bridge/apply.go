@@ -25,9 +25,15 @@ const (
 
 // The presentation manager's half of step 13. It may be nil: the twelve steps
 // that hold the management address must work on a device with no gadget NIC.
-// NIC returns "" when the active profile has none.
+// Both methods return "" when the active profile has no network function.
+//
+// NetworkProtocol is read-only here. Which of NCM and RNDIS the gadget presents
+// is a property of the USB profile rather than of the bridge, so the bridge
+// names the active one and offers no control that would duplicate the one under
+// Settings, Device.
 type Gadget interface {
 	NIC(ctx context.Context) (string, error)
+	NetworkProtocol(ctx context.Context) (string, error)
 }
 
 func (m *Manager) lock() error {
@@ -587,6 +593,16 @@ func (m *Manager) Status(ctx context.Context) (proto.GetBridgeRsp, error) {
 				break
 			}
 		}
+	}
+
+	// Reported, not offered. A gadget the panel cannot read is not a bridge
+	// failure, so it is logged and left empty.
+	if m.gadget != nil {
+		protocol, err := m.gadget.NetworkProtocol(ctx)
+		if err != nil {
+			log.Warnf("bridge: read gadget network protocol: %s", err)
+		}
+		rsp.Protocol = protocol
 	}
 
 	return rsp, nil

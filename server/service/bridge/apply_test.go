@@ -725,3 +725,35 @@ func TestStatusReportsTheLiveDevice(t *testing.T) {
 		t.Errorf("lastApply = %+v", status.LastApply)
 	}
 }
+
+// The panel names the protocol the gadget is presenting and offers no control
+// for it, because the choice decides what the gadget looks like whether or not
+// a bridge exists and therefore belongs to the USB profile. Reporting nothing
+// leaves an operator with no way to tell an NCM host from an RNDIS one.
+func TestStatusReportsTheActiveGadgetProtocol(t *testing.T) {
+	tests := []struct {
+		name   string
+		gadget Gadget
+		want   string
+	}{
+		{name: "ncm", gadget: fakeGadget{nic: GadgetName, protocol: "ncm"}, want: "ncm"},
+		{name: "rndis", gadget: fakeGadget{nic: GadgetName, protocol: "rndis"}, want: "rndis"},
+		{name: "no network function", gadget: fakeGadget{}, want: ""},
+		{name: "no gadget at all", gadget: nil, want: ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.mgr.gadget = test.gadget
+
+			status, err := h.mgr.Status(context.Background())
+			if err != nil {
+				t.Fatalf("Status: %v", err)
+			}
+			if status.Protocol != test.want {
+				t.Fatalf("protocol = %q, want %q", status.Protocol, test.want)
+			}
+		})
+	}
+}

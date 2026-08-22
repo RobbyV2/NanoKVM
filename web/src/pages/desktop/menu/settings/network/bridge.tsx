@@ -267,7 +267,15 @@ export const Bridge = () => {
           value={t(`settings.network.bridge.states.${state}`)}
         />
         <InfoRow label={t('settings.network.bridge.uplink')} value={status?.uplink} />
-        <InfoRow label={t('settings.network.bridge.ports')} value={ports} isLast />
+        <InfoRow label={t('settings.network.bridge.ports')} value={ports} />
+        {/* named, not offered: the control for it is the Virtual Network one
+            under Settings, Device, since the protocol decides what the gadget
+            presents whether or not a bridge exists */}
+        <InfoRow
+          label={t('settings.network.bridge.protocol')}
+          value={status?.protocol ? status.protocol.toUpperCase() : ''}
+          isLast
+        />
       </div>
 
       {isPending && <Revert onSuccess={getStatus} />}

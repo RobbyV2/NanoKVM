@@ -46,6 +46,39 @@ func TestNICReportsTheGadgetInterfaceOnlyWhenOneIsLinked(t *testing.T) {
 	}
 }
 
+// Which of the two the gadget presents is read back from the linkage, so the
+// bridge panel and the Settings, Device selector agree with the gadget rather
+// than with a /boot sentinel.
+func TestNetworkProtocolNamesTheLinkedFunction(t *testing.T) {
+	tests := []struct {
+		name   string
+		linked string
+		want   string
+	}{
+		{name: "ncm", linked: "ncm.usb0", want: string(FunctionNCM)},
+		{name: "rndis", linked: "rndis.usb0", want: string(FunctionRNDIS)},
+		{name: "none", linked: "", want: ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			manager, ops := newTestManager(t)
+			if test.linked != "" {
+				seed(t, ops, functionsDir+"/"+test.linked+"/dev_addr")
+				seed(t, ops, configPrefix+"/"+test.linked+"/dev_addr")
+			}
+
+			protocol, err := manager.NetworkProtocol(context.Background())
+			if err != nil {
+				t.Fatalf("NetworkProtocol: %v", err)
+			}
+			if protocol != test.want {
+				t.Fatalf("NetworkProtocol = %q, want %q", protocol, test.want)
+			}
+		})
+	}
+}
+
 func TestNICPropagatesAnUnreadableGadget(t *testing.T) {
 	manager, _ := newTestManager(t)
 	manager.ops = nil

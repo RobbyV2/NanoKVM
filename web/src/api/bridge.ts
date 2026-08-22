@@ -48,6 +48,11 @@ export type BridgeStatus = {
   gateway: string;
   pending?: BridgeArmed | null;
   lastApply?: BridgeApply | null;
+
+  // ncm, rndis, or empty for a gadget presenting no network. Reported only: the
+  // control for it is the Virtual Network one under Settings, Device, because
+  // the protocol is a property of the USB profile rather than of the bridge.
+  protocol: string;
 };
 
 // get the bridge state, its ports, the armed marker and the last transaction

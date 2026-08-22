@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -33,6 +34,25 @@ const (
 	FunctionRNDIS       FunctionKind = "rndis"
 	FunctionMassStorage FunctionKind = "mass_storage"
 )
+
+// The network protocols the gadget layer can actually build, in the precedence
+// S03usbdev:53,61 gives them. ECM is not among them: there is no f_ecm branch
+// in the script, no FunctionKind for it and no compile case, so offering it in
+// a selector would offer a mode nothing downstream can produce.
+var NetworkKinds = [...]FunctionKind{FunctionNCM, FunctionRNDIS}
+
+var ErrUnknownNetworkKind = errors.New("unknown network protocol")
+
+// The gate between a request-supplied string and a profile. It is the reason a
+// selector cannot name a protocol the compiler has no case for.
+func ParseNetworkKind(name string) (FunctionKind, error) {
+	for _, kind := range NetworkKinds {
+		if string(kind) == name {
+			return kind, nil
+		}
+	}
+	return "", fmt.Errorf("%w: %q", ErrUnknownNetworkKind, name)
+}
 
 var hidInstances = [...]string{"GS0", "GS1", "GS2"}
 
