@@ -33,7 +33,7 @@ And there is no read primitive. `lt6911uxc_edid_read`, `lt6911c_edid_read` and `
 | D4 | Preflight `/etc/kvm/hdmi_version` and `/etc/kvm/hw` in Go with the tool's strict `strcmp` semantics, not `config.GetHwVersion()`. Reject the `ue` chip version before spawning anything. |
 | D5 | Rollback is re-flashing an archived file, because there is no read primitive. Archive the flashed bytes only after stdout confirms verification, and treat the shipped `E21_NanoKVM.bin` as the factory restore target. A prior backup is never deleted because a newer write verified. |
 | D6 | The Go validator is strictly stricter than `check_edid`. Nothing structurally nonsensical reaches the chip. |
-| D7 | The profile library is a vendored linuxhw/EDID corpus validated at build time, with per-entry provenance, failures dropped and logged with a reason, compiled into a generated Go table. |
+| D7 | The profile library is 25 hand-picked upstream linuxhw/EDID paths fetched from a pinned commit at generation time, validated then, failures dropped and logged with a reason, compiled into a generated Go table with per-entry provenance. No corpus is vendored. Argument in the profile library section. |
 | D8 | The UI is a preset selector, a decoded summary of what is active, upload, two downloads and an apply action. The apply modal survives the general trim on Cube hardware, because recovering from a bad flash there needs someone to unplug the device. |
 
 ## What `nanokvm_update_edid` does today
@@ -282,7 +282,7 @@ The round-trip test asserts 148500 kHz over 2200 over 1125 equals 60.000 Hz, and
   .lock                  # apply lockfile, pid inside                      0600
 ```
 
-The directory is 0755 and every file is 0600, written through the `atomicFile` helper at `server/service/extensions/tunnel/config.go:85-152` verbatim, with a package-level `var edidDir` declared `var` rather than `const` so tests can swap it the way `tunnel/config_test.go:13-19` does.
+The directory is 0755 and every file is 0600, written through `utils.WriteFileAtomic` in `server/utils/atomic_file.go`, the shared helper the rest of the tree writes through since the consolidation out of `tunnel/config.go`, with a package-level `var storeDir` declared `var` rather than `const` so tests can point it at `t.TempDir()` the way `tunnel/config_test.go` points `configDir`.
 
 `last-applied.bin` is written only after stdout carried `EDID data verified successfully`, never before the spawn and never on a mismatch, because the whole point of the archive is that it names bytes the chip accepted. The previous `last-applied.bin` moves into `history/` first. Nothing is ever deleted from `history/`, because a newer write verifying says nothing about whether the user wants the older EDID back, and 256 bytes per apply is not a storage question.
 
@@ -290,7 +290,7 @@ Rollback is re-running the tool against an archived file, which is the only roll
 
 ## Profile library
 
-`third_party/linuxhw-edid` is vendored as a submodule pinned to a commit, and a build-time generator walks it. Every candidate is parsed and run through the full hard-reject validator, normalized to exactly 256 bytes, and either emitted or dropped with a reason logged. The generated Go table carries one row per survivor:
+Nothing is vendored and there is no submodule. `scripts/gen_edid_profiles.go` carries a list of 25 upstream `linuxhw/EDID` paths and the commit they are pinned to, `9c0c1bffc9c0f1cb2044115149a5ecb1652803f8`, fetches each one from `raw.githubusercontent.com` at generation time, and validates it there. Every candidate is normalized to exactly 256 bytes, has both checksums recomputed and compared, is run through the full hard-reject validator, and must additionally carry a monitor-name descriptor and a preferred timing within 1920x1080 at 60 Hz. A candidate that fails any of it is dropped with its reason logged as `drop <path>: <reason>` and does not ship. The generated Go table carries one row per survivor:
 
 ```go
 type Profile struct {
@@ -303,9 +303,11 @@ type Profile struct {
 }
 ```
 
-`Source` is per entry rather than per corpus, so any shipped blob traces back to one upstream file at one commit. No blob ships whose second-block checksum the generator did not recompute itself. Generation runs from `make edid-profiles` and the generated file is committed, so a normal build needs neither the submodule nor the corpus.
+`Source` is per entry rather than per corpus, so any shipped blob traces back to one upstream file at one commit. No blob ships whose second-block checksum the generator did not recompute itself. Generation runs from `make edid-profiles` and the generated file is committed, so a normal build needs neither the network nor a corpus.
 
-The shipped set is small and hand-picked from the survivors rather than being the whole corpus: one entry per common resolution and refresh combination the KVM use case actually wants, plus `E21_NanoKVM.bin` as the factory entry.
+A curated list beats walking a whole corpus here, and the reason is the hardware. This device's capture path tops out at 1920x1080 at 60 Hz, so an entry advertising 2560x1440 or 4K is an entry whose preferred timing the KVM cannot display: a large table would be mostly modes this device has no use for, and picking through it would be the operator's problem rather than the generator's. The 25 paths are chosen instead for monitors whose preferred timing this device can actually display: the common panel resolutions from 1024x768 up to 1920x1080, all at 60 Hz, with 18 of the 25 at 1920x1080p60 across different vendors so an operator can pick a plausible monitor identity and not only a mode, plus `E21_NanoKVM.bin` as the factory entry. Pinning the fetch to one commit keeps that reproducible without carrying the corpus, or a submodule pointing at it, in this repository. At the current pin 24 of the 25 candidates survive, `Digital/ASUS/AUS2426/5649967DE6D8` is dropped by the validator, and 25 profiles ship counting the factory entry.
+
+What does not soften is the per-entry bar. Every shipped entry passes the strict validator and round-trips parse to serialize to identical bytes, which is the part that keeps a structurally hostile blob off the chip.
 
 ## API
 
@@ -357,10 +359,8 @@ Build and vendoring:
 
 | Path | Action |
 |---|---|
-| `third_party/linuxhw-edid` | new submodule, pinned |
-| `scripts/gen_edid_profiles.go` | new: corpus walk, validate, drop with reason, emit table |
+| `scripts/gen_edid_profiles.go` | new: pinned-commit fetch of 25 upstream paths, validate, drop with reason, emit table |
 | `Makefile` | modify: `edid-profiles` target |
-| `.gitmodules` | modify |
 | `tools/nanokvm_update_edid/` | unchanged, including the prebuilt binary |
 
 Frontend:
@@ -380,7 +380,9 @@ Frontend:
 
 **R2.2 I2C contention with the capture daemon corrupts a flash program sequence.** `kvm_vision.cpp:1252-1340` and `hdmi.cpp:6` drive `/dev/i2c-4` at `0x2b` concurrently with the tool. Retires when an on-device run with `DisableHdmiCapture()` held shows zero `Failed to acquire bus access` and zero mismatch outcomes across 20 consecutive flashes, and the same test without the guard reproduces at least one failure, which is what proves the guard is doing the work rather than the timing being forgiving.
 
-**R2.3 The linuxhw/EDID corpus contains blobs that pass both checksums but are structurally hostile**, with an extension count disagreeing with block 1, zero-pixel-clock DTDs, or unknown CTA tags, and one of them ships in the profile library. Retires when the build-time validator has been run over the entire imported corpus, every rejection is logged with its reason, the shipped table is generated only from survivors, and `E21_NanoKVM.bin` plus at least 200 corpus entries round-trip parse to serialize to identical bytes.
+**R2.3 An upstream linuxhw/EDID blob passes both checksums but is structurally hostile**, with an extension count disagreeing with block 1, zero-pixel-clock DTDs, or unknown CTA tags, and it ships in the profile library. Retires when the generator has run the strict validator over every candidate it fetches from the pinned commit, every rejection is logged with its reason, the shipped table is generated only from survivors, and `E21_NanoKVM.bin` plus every shipped entry round-trip parse to serialize to identical bytes.
+
+Met at the current pin: 25 candidates fetched, `Digital/ASUS/AUS2426/5649967DE6D8` dropped by the validator, 24 survivors plus the factory entry shipped, and `library_test.go` asserts the round trip, the recomputed checksums and the per-entry provenance of all 25 on every `go test`. The threshold of 200 corpus entries this risk originally carried is dropped rather than met, because the number was a proxy for validator coverage and the curated set is a deliberate choice: see the profile library section for why 25 entries chosen for modes this device can display are worth more than a large set mostly advertising modes it cannot. The strict-validation and byte-identical round-trip conditions are the part of the original wording that matters, and they are kept in full.
 
 ## Testing
 
@@ -394,6 +396,6 @@ The reject table covers each of the seven hard rejects with a minimal blob that 
 
 `store_test.go` asserts 0600 on every written file, mirroring `mcp/config_test.go:42-49`, asserts that a failed apply writes nothing, and asserts that a successful apply moves the previous `last-applied.bin` into `history/` rather than overwriting it.
 
-Corpus validation runs from `make edid-profiles` and is the gate for R2.3: the whole vendored corpus through the validator, rejections logged with reasons, at least 200 survivors round-tripping to identical bytes.
+Candidate validation runs from `make edid-profiles` and is the gate for R2.3: every path fetched from the pinned commit through the strict validator, rejections logged with reasons, only survivors emitted. `library_test.go` then re-checks the committed table on every `go test`, asserting for all 25 shipped entries that both checksums recompute, that the sha256 covers the blob, that provenance names an upstream path and a 40-character commit or the factory blob, and that decode followed by encode reproduces the bytes exactly.
 
 No CI workflow in this repo runs `go test` or `go vet`, so these run locally and in review until that changes. `make web` does run `tsc && vite build`, so TypeScript errors do fail the build.
