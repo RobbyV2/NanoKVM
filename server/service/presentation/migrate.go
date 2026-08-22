@@ -123,7 +123,7 @@ func NetworkFunction(kind FunctionKind) Function {
 
 	net := &NetFunction{DevAddr: dev, HostAddr: host, CompatibleID: compatibleNCM}
 	if kind == FunctionRNDIS {
-		net.Class, net.SubClass, net.Protocol = ptr[uint8](0xE0), ptr[uint8](0x01), ptr[uint8](0x03)
+		net.SubClass, net.Protocol = ptr[uint8](0x01), ptr[uint8](0x03)
 		net.CompatibleID, net.SubCompatibleID = compatibleRNDIS, subCompatibleRNDIS
 	}
 	return Function{Kind: kind, Instance: netInstance, Net: net}

@@ -218,18 +218,18 @@ func (c *compiler) net(dir, name string, kind FunctionKind, n NetFunction) {
 		c.write(dir+"/host_addr", *n.HostAddr)
 	}
 
-	// H8: S03usbdev:66-68 writes e0/01/03 unprefixed, f_rndis parses them with
-	// kstrtou8(page, 0, ...) which rejects unprefixed hex, and the values equal
-	// the RNDIS IAD defaults, so the -EINVAL leaves no trace. Phase A emits the
-	// rejected bytes verbatim; prefixing them is a Phase B behaviour change.
+	// H8: kstrtou8(page, 0, ...) reads the script's "01" and "03" as octal, so
+	// those two land as 1 and 3, and rejects "e0" outright. Everything the
+	// profile asks for is written 0x-prefixed, and the script's dead class write
+	// is not in the profile at all.
 	if n.Class != nil {
-		c.write(dir+"/class", bareByte(*n.Class))
+		c.write(dir+"/class", hexByte(*n.Class))
 	}
 	if n.SubClass != nil {
-		c.write(dir+"/subclass", bareByte(*n.SubClass))
+		c.write(dir+"/subclass", hexByte(*n.SubClass))
 	}
 	if n.Protocol != nil {
-		c.write(dir+"/protocol", bareByte(*n.Protocol))
+		c.write(dir+"/protocol", hexByte(*n.Protocol))
 	}
 
 	iface := dir + "/" + osDescDir + "/interface." + string(kind)
@@ -262,10 +262,6 @@ func (c *compiler) storage(dir, name string, s StorageFunction) {
 
 func hexByte(v uint8) string {
 	return fmt.Sprintf("0x%02X", v)
-}
-
-func bareByte(v uint8) string {
-	return fmt.Sprintf("%02x", v)
 }
 
 func boolBit(v bool) string {

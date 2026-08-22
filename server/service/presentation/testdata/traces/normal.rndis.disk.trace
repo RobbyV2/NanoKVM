@@ -21,9 +21,8 @@ write	configs/c.1/strings/0x409/configuration	4e616e6f4b564d0a
 mkdir	functions/rndis.usb0
 write	functions/rndis.usb0/dev_addr	34383a64613a33353a36653a62313a30320a
 write	functions/rndis.usb0/host_addr	34383a64613a33353a36643a62313a30320a
-write	functions/rndis.usb0/class	65300a
-write	functions/rndis.usb0/subclass	30310a
-write	functions/rndis.usb0/protocol	30330a
+write	functions/rndis.usb0/subclass	307830310a
+write	functions/rndis.usb0/protocol	307830330a
 write	functions/rndis.usb0/os_desc/interface.rndis/compatible_id	524e4449530a
 write	functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id	353136323030310a
 symlink	configs/c.1/rndis.usb0	functions/rndis.usb0

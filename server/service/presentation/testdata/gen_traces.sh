@@ -112,6 +112,21 @@ phase_b_os_desc() {
     mv "$1.tmp" "$1"
 }
 
+# fix 3: the script's class=e0 is rejected by kstrtou8(page, 0, ...) and never
+# reaches the IAD, so it goes; subclass=01 and protocol=03 are read as octal 1
+# and 3 today and are written 0x-prefixed for the same values (H8).
+phase_b_rndis_class() {
+    awk -F'\t' -v OFS='\t' \
+        -v subclass="$(printf '0x01\n' | od -An -v -tx1 | tr -d ' \n')" \
+        -v protocol="$(printf '0x03\n' | od -An -v -tx1 | tr -d ' \n')" '
+        $1 == "write" && $2 ~ /^functions\/rndis\.[^\/]+\/class$/ { next }
+        $1 == "write" && $2 ~ /^functions\/rndis\.[^\/]+\/subclass$/ { print $1, $2, subclass; next }
+        $1 == "write" && $2 ~ /^functions\/rndis\.[^\/]+\/protocol$/ { print $1, $2, protocol; next }
+        { print }
+    ' "$1" >"$1.tmp"
+    mv "$1.tmp" "$1"
+}
+
 trace_case() {
     name=$1
     script=$2
@@ -155,6 +170,7 @@ trace_case() {
 
     phase_b_bcddevice "$trace"
     phase_b_os_desc "$trace"
+    phase_b_rndis_class "$trace"
 
     duplicates=$(grep '^write' "$trace" | cut -f2 | sort | uniq -d)
     if [ -n "$duplicates" ]; then

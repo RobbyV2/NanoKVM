@@ -103,7 +103,6 @@ func profileForFlags(f flags) Profile {
 		functions = append(functions, Function{Kind: FunctionRNDIS, Instance: "usb0", Net: &NetFunction{
 			DevAddr:      &dev,
 			HostAddr:     &host,
-			Class:        ptr[uint8](0xE0),
 			SubClass:     ptr[uint8](0x01),
 			Protocol:     ptr[uint8](0x03),
 			CompatibleID: "RNDIS", SubCompatibleID: "5162001",
@@ -425,6 +424,25 @@ func TestOSDescIgnoresAStaleProfileField(t *testing.T) {
 	for _, op := range plan.Ops {
 		if op.Kind == OpWrite && op.Path == osDescDir+"/use" && string(op.Data) != "0\n" {
 			t.Fatalf("os_desc/use = %q, want it cleared when no function needs it", op.Data)
+		}
+	}
+}
+
+func TestRNDISDropsTheDeadClassWriteAndPrefixesTheRest(t *testing.T) {
+	got := map[string]string{}
+	for _, op := range compileFlags(t, flags{rndis: true, disk: true}).Ops {
+		prefix := functionsDir + "/" + string(FunctionRNDIS) + "." + netInstance + "/"
+		if op.Kind == OpWrite && strings.HasPrefix(op.Path, prefix) {
+			got[strings.TrimPrefix(op.Path, prefix)] = string(op.Data)
+		}
+	}
+
+	if class, ok := got["class"]; ok {
+		t.Fatalf("plan writes class=%q, but kstrtou8(page, 0, ...) never accepted the script's e0 and the IAD keeps the kernel default (H8)", class)
+	}
+	for attr, want := range map[string]string{"subclass": "0x01\n", "protocol": "0x03\n"} {
+		if got[attr] != want {
+			t.Fatalf("%s = %q, want %q", attr, got[attr], want)
 		}
 	}
 }
