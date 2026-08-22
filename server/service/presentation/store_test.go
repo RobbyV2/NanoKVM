@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -153,5 +154,52 @@ func TestProfileNameRejectsTraversal(t *testing.T) {
 		if err := store.SetActive(name); err == nil {
 			t.Fatalf("set active accepted name %q", name)
 		}
+	}
+}
+
+// HIDFunction.DevNodeIndex is json:"-", so it comes back zero for every
+// function no matter what was saved. LoadProfile repairs that by calling
+// Normalize, and hid/hid.go depends on the repair: the index picks the
+// /dev/hidgN minor. Drop the Normalize call and the second and third functions
+// both claim node 0, which Validate also rejects.
+func TestLoadProfileNormalizesDevNodeIndex(t *testing.T) {
+	dir := useTestPresentationDir(t)
+	store := NewStore()
+
+	want := standardProfile()
+	want.Name = "user-hid"
+	want.BuiltIn = false
+	if err := store.SaveProfile(want); err != nil {
+		t.Fatalf("save profile: %v", err)
+	}
+
+	// Guard the premise: the index is not in the file, so nothing but
+	// Normalize can put it back.
+	raw, err := os.ReadFile(filepath.Join(dir, want.Name+".json"))
+	if err != nil {
+		t.Fatalf("read saved profile: %v", err)
+	}
+	if strings.Contains(string(raw), "dev_node") || strings.Contains(string(raw), "DevNodeIndex") {
+		t.Fatalf("saved profile carries a dev node index:\n%s", raw)
+	}
+
+	got, err := store.LoadProfile(want.Name)
+	if err != nil {
+		t.Fatalf("load profile: %v", err)
+	}
+
+	var indexes []int
+	for _, function := range got.Functions {
+		if function.Kind != FunctionHID || function.HID == nil {
+			t.Fatalf("function %s.%s is not a hid function", function.Kind, function.Instance)
+		}
+		indexes = append(indexes, function.HID.DevNodeIndex)
+	}
+	if !reflect.DeepEqual(indexes, []int{0, 1, 2}) {
+		t.Fatalf("dev node indexes = %v, want [0 1 2]", indexes)
+	}
+
+	if err := got.Validate(); err != nil {
+		t.Fatalf("loaded profile does not validate: %v", err)
 	}
 }
