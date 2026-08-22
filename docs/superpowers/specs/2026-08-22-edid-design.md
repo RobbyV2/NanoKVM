@@ -258,7 +258,7 @@ Base block:
 | 126 | `01` | one extension block |
 | 127 | `F5` | base checksum |
 
-Chromaticity, bytes 25 through 34 `69 25 A3 5B 50 A3 27 11 50 54`: red x 652 y 366 giving 0.6367 and 0.3574, green x 322 y 653 giving 0.3145 and 0.6377, blue x 156 y 70 giving 0.1523 and 0.0684, white x 321 y 337 giving 0.3135 and 0.3291. Approximately sRGB and Rec.709 primaries around a D65-ish white point.
+Chromaticity, bytes 25 through 34 `69 25 A3 5B 50 A3 27 11 50 54`: red x 653 y 366 giving 0.6377 and 0.3574, green x 322 y 653 giving 0.3145 and 0.6377, blue x 156 y 70 giving 0.1523 and 0.0684, white x 321 y 337 giving 0.3135 and 0.3291. Approximately sRGB and Rec.709 primaries around a D65-ish white point.
 
 Descriptor 1, bytes 54 through 71, `02 3A 80 18 71 38 2D 40 58 2C 45 00 DC 0C 11 00 00 1E`, is a DTD because bytes 0 and 1 are non-zero. Pixel clock `0x3A02` is 14850, so 148.50 MHz. H active 1920, H blank 280, H total 2200. V active 1080, V blank 45, V total 1125. H sync offset 88, H sync width 44, V sync offset 4, V sync width 5. Image size 476 by 268 mm, borders zero. Flag byte `0x1E` gives non-interlaced, no stereo, digital separate sync, positive VSync, positive HSync. That is 1920x1080p at exactly 60.000 Hz, the CEA-861 VIC 16 timing.
 
