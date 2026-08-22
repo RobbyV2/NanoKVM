@@ -2,6 +2,9 @@
 
 RESERVE_INET="192.168.90.1/22"
 
+IFACE=$(cat /etc/kvm/network/l2-uplink 2>/dev/null)
+[ -n "$IFACE" ] || IFACE=eth0
+
 clean_line() {
     echo "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/\r//g'
 }
@@ -23,7 +26,7 @@ EOF
 }
 
 start() {
-    ip addr flush dev eth0
+    ip addr flush dev "$IFACE"
     if [ -e /boot/eth.nodhcp ]; then
         while IFS= read -r line || [ -n "$line" ]; do
             line=$(clean_line "$line")
@@ -49,23 +52,23 @@ start() {
             addr=${inet%/*}
             netid=${inet#*/}
             [ -z "$gw" ] && gw=$(calc_gw "$addr" "$netid")
-            arping -Dqc2 -Ieth0 "$addr" || continue
-            ip a add "$inet" brd + dev eth0
-            ip r add default via "$gw" dev eth0
+            arping -Dqc2 -I"$IFACE" "$addr" || continue
+            ip a add "$inet" brd + dev "$IFACE"
+            ip r add default via "$gw" dev "$IFACE"
             echo -e "nameserver $gw" >> /etc/resolv.conf
             break
         done < /boot/eth.nodhcp
 
-        ip a show dev eth0 | grep inet > /dev/null || {
-            udhcpc -i eth0 -t 3 -T 1 -A 5 -b -p /run/udhcpc.eth0.pid &>/dev/null
-            ip a show dev eth0 | grep inet > /dev/null
+        ip -4 a show dev "$IFACE" | grep -q inet || {
+            udhcpc -i "$IFACE" -t 3 -T 1 -A 5 -b -p /run/udhcpc.eth0.pid &>/dev/null
+            ip -4 a show dev "$IFACE" | grep -q inet
         } || {
             inet=$RESERVE_INET
             addr=${inet%/*}
-            ip a add "$inet" brd + dev eth0
+            ip a add "$inet" brd + dev "$IFACE"
         } || exit 1
     else
-        udhcpc -i eth0 -t 10 -T 1 -A 5 -b -p /run/udhcpc.eth0.pid &
+        udhcpc -i "$IFACE" -t 10 -T 1 -A 5 -b -p /run/udhcpc.eth0.pid &
     fi
 }
 

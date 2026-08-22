@@ -1,0 +1,62 @@
+#!/bin/sh
+
+BRIDGE=br0
+PORT=eth0
+UPLINK_DIR=/etc/kvm/network
+UPLINK="$UPLINK_DIR/l2-uplink"
+STATE_DIR=/etc/kvm/presentation/network
+PENDING="$STATE_DIR/pending.json"
+LAST_GOOD="$STATE_DIR/last-known-good.json"
+
+teardown() {
+    ip link set dev "$PORT" nomaster 2>/dev/null
+    ip link set dev "$BRIDGE" down 2>/dev/null
+    ip link del "$BRIDGE" 2>/dev/null
+}
+
+# An armed marker means the apply that wrote it never reached its disarm, so the
+# device comes back on stock eth0: no uplink file, no recorded intent to bridge.
+restore_stock() {
+    rm -f "$UPLINK" "$LAST_GOOD" "$PENDING"
+    sync
+}
+
+create() {
+    mac=$(cat "/sys/class/net/$PORT/address" 2>/dev/null)
+    [ -n "$mac" ] || return 1
+    ip link add name "$BRIDGE" type bridge stp_state 0 forward_delay 0 || return 1
+    ip link set dev "$BRIDGE" address "$mac" || return 1
+    ip link set dev "$PORT" master "$BRIDGE" || return 1
+    ip link set dev "$PORT" up || return 1
+    ip link set dev "$BRIDGE" up || return 1
+    mkdir -p "$UPLINK_DIR"
+    echo "$BRIDGE" > "$UPLINK"
+}
+
+start() {
+    if [ -e "$PENDING" ]; then
+        restore_stock
+        return 0
+    fi
+
+    grep -q '"enabled"[[:space:]]*:[[:space:]]*true' "$LAST_GOOD" 2>/dev/null || return 0
+
+    create && return 0
+
+    # S30eth is next and reads the uplink file. Leaving br0 named there after a
+    # failed creation would address a device that does not exist.
+    teardown
+    rm -f "$UPLINK"
+    sync
+    return 0
+}
+
+case "$1" in
+    start) start ;;
+    stop) teardown || true ;;
+    restart|reload)
+        $0 stop
+        $0 start
+        ;;
+    *) exit 1 ;;
+esac
