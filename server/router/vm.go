@@ -5,11 +5,17 @@ import (
 
 	"NanoKVM-Server/authn"
 	"NanoKVM-Server/middleware"
+	"NanoKVM-Server/service/edid"
 	"NanoKVM-Server/service/vm"
 )
 
 func vmRouter(r *gin.Engine) {
 	service := vm.NewService()
+	// A flash and the capture daemon both drive the LT6911 at 0x2b on /dev/i2c-4.
+	edidService := edid.NewService(edid.CaptureGuard{
+		Disable: vm.DisableHdmiCapture,
+		Enable:  vm.EnableHdmiCapture,
+	})
 
 	api := r.Group("/api").Use(middleware.CheckToken())
 	admin := r.Group("/api").Use(
@@ -46,6 +52,14 @@ func vmRouter(r *gin.Engine) {
 	admin.POST("/vm/hdmi/enable", service.EnableHdmi)   // enable hdmi
 	admin.POST("/vm/hdmi/disable", service.DisableHdmi) // disable hdmi
 	admin.POST("/vm/hdmi/timeout", service.SetHdmiIdleTimeout)
+
+	admin.GET("/vm/edid", edidService.GetEdid)               // last verified flash, decoded, plus preflight
+	admin.GET("/vm/edid/profiles", edidService.GetProfiles)  // shipped profile library
+	admin.POST("/vm/edid/decode", edidService.DecodeEdid)    // decode an upload, no side effects
+	admin.POST("/vm/edid/apply", edidService.ApplyEdid)      // validate, lock, flash, archive
+	admin.POST("/vm/edid/restore", edidService.RestoreEdid)  // re-flash the factory image or a backup
+	admin.GET("/vm/edid/download", edidService.DownloadEdid) // the active bytes
+	admin.GET("/vm/edid/backup", edidService.DownloadBackup) // a named history entry
 
 	admin.GET("/vm/ssh", service.GetSSHState)         // get SSH state
 	admin.POST("/vm/ssh/enable", service.EnableSSH)   // enable SSH
