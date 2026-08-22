@@ -1,25 +1,27 @@
 package hid
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"NanoKVM-Server/proto"
 	"NanoKVM-Server/service/inputcontrol"
+	"NanoKVM-Server/service/presentation"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ModeNormal  = "normal"
-	ModeHidOnly = "hid-only"
-	ModeFlag    = "/sys/kernel/config/usb_gadget/g0/bcdDevice"
+	ModeNormal  = presentation.ModeNormal
+	ModeHidOnly = presentation.ModeHIDOnly
+	ModeFlag    = presentation.GadgetRoot + "/bcdDevice"
 
 	ModeNormalScript  = "/kvmapp/system/init.d/S03usbdev"
 	ModeHidOnlyScript = "/kvmapp/system/init.d/S03usbhid"
@@ -30,6 +32,21 @@ const (
 var modeMap = map[string]string{
 	"0x0510": ModeNormal,
 	"0x0623": ModeHidOnly,
+}
+
+var (
+	managerOnce sync.Once
+	manager     *presentation.Manager
+)
+
+// hid imports presentation and never the other way round, so the HID quiesce
+// bracket the manager wraps every gadget mutation in is injected from here.
+func Manager() *presentation.Manager {
+	managerOnce.Do(func() {
+		manager = presentation.GetManager()
+		manager.SetHID(GetHid())
+	})
+	return manager
 }
 
 func (s *Service) GetHidMode(c *gin.Context) {
@@ -82,22 +99,20 @@ func (s *Service) SetHidMode(c *gin.Context) {
 		return
 	}
 
-	h := GetHid()
-	h.Lock()
-	h.CloseNoLock()
-	defer func() {
-		h.OpenNoLock()
-		h.Unlock()
-	}()
-
 	srcScript := ModeNormalScript
 	if req.Mode == ModeHidOnly {
 		srcScript = ModeHidOnlyScript
 	}
 
+	// The init script is still the boot-time configurator and system_init.cpp
+	// restores its kvmapp copy on every update, so the mode is staged on disk
+	// first and applied live second.
 	if err := copyModeFile(srcScript); err != nil {
 		rsp.ErrRsp(c, -3, "operation failed")
 		return
+	}
+	if err := Manager().SetMode(c.Request.Context(), req.Mode); err != nil {
+		log.Errorf("failed to apply hid mode %s: %s", req.Mode, err)
 	}
 
 	rsp.OkRsp(c)
@@ -144,25 +159,10 @@ func (s *Service) RecoverUSB(c *gin.Context) {
 }
 
 func ResetUSBPHY() error {
-	h := GetHid()
-	h.Lock()
-	h.CloseNoLock()
-	defer h.Unlock()
-
-	command := fmt.Sprintf("%s restart_phy", USBDevScript)
-	if err := exec.Command("sh", "-c", command).Run(); err != nil {
-		return fmt.Errorf("restart usb phy: %w", err)
-	}
-
-	if err := h.OpenNoLockWithRetry(hidReopenTimeout, hidReopenRetryDelay); err != nil {
-		return fmt.Errorf("reopen HID devices after usb phy reset: %w", err)
-	}
-
-	return nil
+	return Manager().ResetPHY(context.Background())
 }
 
 func copyModeFile(srcScript string) error {
-	// open the source file
 	srcFile, err := os.Open(srcScript)
 	if err != nil {
 		log.Errorf("failed to open %s: %s", srcScript, err)
@@ -178,7 +178,6 @@ func copyModeFile(srcScript string) error {
 		return err
 	}
 
-	// create and copy to temporary file
 	tmpFile, err := os.CreateTemp("/etc/init.d/", ".S03usbdev-")
 	if err != nil {
 		log.Errorf("failed to create temp %s: %s", USBDevScript, err)
@@ -213,7 +212,6 @@ func copyModeFile(srcScript string) error {
 		return err
 	}
 
-	// replace the target file with the temporary file
 	if err := os.Rename(tmpPath, USBDevScript); err != nil {
 		log.Errorf("failed to rename %s: %s", tmpPath, err)
 		return err

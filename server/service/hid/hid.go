@@ -35,7 +35,6 @@ const (
 const (
 	hidWriteTimeout     = 50 * time.Millisecond
 	hidWriteRetryDelay  = time.Millisecond
-	hidReopenTimeout    = 2 * time.Second
 	hidReopenRetryDelay = 100 * time.Millisecond
 )
 
