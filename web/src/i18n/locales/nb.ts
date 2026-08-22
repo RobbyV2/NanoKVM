@@ -286,6 +286,48 @@ const nb = {
     },
     settings: {
       title: 'Innstillinger',
+      display: {
+        title: 'Skjerm',
+        loading: 'Laster...',
+        active: 'Aktiv EDID',
+        activeUnknown:
+          'NanoKVM har ikke skrevet noen EDID siden den startet, så det er ukjent hvilken skjerm verten ser.',
+        appliedAt: 'Tatt i bruk {{time}}',
+        download: 'Last ned',
+        downloadBackup: 'Last ned forrige',
+        preset: 'Skjermforhåndsvalg',
+        presetPlaceholder: 'Velg en skjerm',
+        upload: 'Last opp',
+        selected: 'Valgt EDID',
+        errors: 'Feil',
+        warnings: 'Advarsler',
+        info: 'Informasjon',
+        unknownMonitor: 'Ukjent skjerm',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Lyd',
+        audioNo: 'Ingen lyd',
+        extensionBlocks: 'Utvidelsesblokker: {{blocks}}',
+        apply: 'Bruk',
+        applyTitle: 'Vil du bruke denne EDID-en?',
+        before: 'Nåværende',
+        after: 'Ny',
+        hdmiNotice:
+          'Videoopptaket stopper mens EDID skrives, og starter av seg selv igjen etterpå.',
+        powerCycleNotice:
+          'Enheten må kobles fysisk fra strømmen og kobles til igjen før den nye EDID-en trer i kraft.',
+        applied: 'EDID tatt i bruk og verifisert.',
+        applyFailed: 'Det gikk ikke å ta i bruk EDID.',
+        busy: 'Videobrikken var opptatt. Prøv igjen.',
+        unsupported: 'Denne enheten støtter ikke endring av EDID.',
+        toolMissing: 'EDID-verktøyet mangler i denne fastvaren.',
+        noAudio: 'Denne EDID-en annonserer ingen lyd, så verten kan slutte å sende lyd.',
+        oldVersion: 'Denne EDID-en bruker en eldre versjon enn 1.4.',
+        interlaced: 'Foretrukket oppløsning er linjeflettet.',
+        tooLarge:
+          'Foretrukket oppløsning er større enn 1920x1080 ved 60 Hz, som er mer enn NanoKVM kan fange opp.',
+        okBtn: 'Bruk',
+        cancelBtn: 'Avbryt'
+      },
       mcp: {
         title: 'MCP-tjeneste',
         service: 'MCP-fjernstyring',

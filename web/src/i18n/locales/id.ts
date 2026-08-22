@@ -286,6 +286,48 @@ const id = {
     },
     settings: {
       title: 'Pengaturan',
+      display: {
+        title: 'Tampilan',
+        loading: 'Memuat...',
+        active: 'EDID aktif',
+        activeUnknown:
+          'NanoKVM belum menulis EDID sejak dinyalakan, jadi identitas monitor yang dilihat host tidak diketahui.',
+        appliedAt: 'Diterapkan {{time}}',
+        download: 'Unduh',
+        downloadBackup: 'Unduh yang sebelumnya',
+        preset: 'Preset monitor',
+        presetPlaceholder: 'Pilih monitor',
+        upload: 'Unggah',
+        selected: 'EDID terpilih',
+        errors: 'Kesalahan',
+        warnings: 'Peringatan',
+        info: 'Informasi',
+        unknownMonitor: 'Monitor tidak dikenal',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Ada audio',
+        audioNo: 'Tanpa audio',
+        extensionBlocks: 'Blok ekstensi: {{blocks}}',
+        apply: 'Terapkan',
+        applyTitle: 'Terapkan EDID ini?',
+        before: 'Saat ini',
+        after: 'Baru',
+        hdmiNotice:
+          'Pengambilan video berhenti selama EDID ditulis dan berjalan lagi dengan sendirinya setelah selesai.',
+        powerCycleNotice:
+          'Perangkat ini harus dicabut dari listrik lalu dicolokkan kembali agar EDID baru berlaku.',
+        applied: 'EDID diterapkan dan terverifikasi.',
+        applyFailed: 'Gagal menerapkan EDID.',
+        busy: 'Chip video sedang sibuk. Coba lagi.',
+        unsupported: 'Perangkat ini tidak mendukung penggantian EDID.',
+        toolMissing: 'Alat EDID tidak ada di firmware ini.',
+        noAudio: 'EDID ini tidak mengumumkan audio, jadi host mungkin berhenti mengirim suara.',
+        oldVersion: 'EDID ini memakai versi lebih lama dari 1.4.',
+        interlaced: 'Timing pilihan bersifat interlaced.',
+        tooLarge:
+          'Timing pilihan lebih besar dari 1920x1080 pada 60 Hz, melebihi kemampuan tangkap NanoKVM.',
+        okBtn: 'Terapkan',
+        cancelBtn: 'Batal'
+      },
       mcp: {
         title: 'Layanan MCP',
         service: 'Kontrol jarak jauh MCP',

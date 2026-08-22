@@ -290,6 +290,49 @@ const de = {
     },
     settings: {
       title: 'Einstellungen',
+      display: {
+        title: 'Anzeige',
+        loading: 'Lädt...',
+        active: 'Aktive EDID',
+        activeUnknown:
+          'NanoKVM hat seit dem Start keine EDID geschrieben, daher ist die Kennung, die der Host sieht, unbekannt.',
+        appliedAt: 'Angewendet am {{time}}',
+        download: 'Herunterladen',
+        downloadBackup: 'Vorherige herunterladen',
+        preset: 'Monitorvorlage',
+        presetPlaceholder: 'Monitor auswählen',
+        upload: 'Hochladen',
+        selected: 'Ausgewählte EDID',
+        errors: 'Fehler',
+        warnings: 'Warnungen',
+        info: 'Informationen',
+        unknownMonitor: 'Unbekannter Monitor',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Audio',
+        audioNo: 'Kein Audio',
+        extensionBlocks: 'Erweiterungsblöcke: {{blocks}}',
+        apply: 'Anwenden',
+        applyTitle: 'Diese EDID anwenden?',
+        before: 'Aktuell',
+        after: 'Neu',
+        hdmiNotice:
+          'Die Videoaufnahme stoppt, während die EDID geschrieben wird, und startet danach von selbst wieder.',
+        powerCycleNotice:
+          'Dieses Gerät muss physisch von der Stromversorgung getrennt und wieder angeschlossen werden, damit die neue EDID wirksam wird.',
+        applied: 'EDID angewendet und überprüft.',
+        applyFailed: 'Das Anwenden der EDID ist fehlgeschlagen.',
+        busy: 'Der Videochip war belegt. Bitte erneut versuchen.',
+        unsupported: 'Dieses Gerät unterstützt das Ändern der EDID nicht.',
+        toolMissing: 'Das EDID-Werkzeug fehlt in dieser Firmware.',
+        noAudio:
+          'Diese EDID meldet kein Audio, daher sendet der Host möglicherweise keinen Ton mehr.',
+        oldVersion: 'Diese EDID verwendet eine ältere Version als 1.4.',
+        interlaced: 'Das bevorzugte Timing ist im Zeilensprungverfahren.',
+        tooLarge:
+          'Das bevorzugte Timing ist größer als 1920x1080 bei 60 Hz und damit mehr, als NanoKVM aufnehmen kann.',
+        okBtn: 'Anwenden',
+        cancelBtn: 'Abbrechen'
+      },
       mcp: {
         title: 'MCP-Dienst',
         service: 'MCP-Fernsteuerung',

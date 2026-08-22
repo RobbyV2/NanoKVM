@@ -287,6 +287,48 @@ const en = {
     },
     settings: {
       title: 'Settings',
+      display: {
+        title: 'Display',
+        loading: 'Loading...',
+        active: 'Active EDID',
+        activeUnknown:
+          'NanoKVM has not written an EDID since it started, so the identity the host sees is unknown.',
+        appliedAt: 'Applied {{time}}',
+        download: 'Download',
+        downloadBackup: 'Download previous',
+        preset: 'Monitor preset',
+        presetPlaceholder: 'Select a monitor',
+        upload: 'Upload',
+        selected: 'Selected EDID',
+        errors: 'Errors',
+        warnings: 'Warnings',
+        info: 'Information',
+        unknownMonitor: 'Unknown monitor',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Audio',
+        audioNo: 'No audio',
+        extensionBlocks: 'Extension blocks: {{blocks}}',
+        apply: 'Apply',
+        applyTitle: 'Apply this EDID?',
+        before: 'Current',
+        after: 'New',
+        hdmiNotice:
+          'Video capture stops while the EDID is written and starts again on its own afterwards.',
+        powerCycleNotice:
+          'This device must be physically unplugged from power and plugged back in before the new EDID takes effect.',
+        applied: 'EDID applied and verified.',
+        applyFailed: 'Applying the EDID failed.',
+        busy: 'The video chip was busy. Try again.',
+        unsupported: 'This device does not support changing the EDID.',
+        toolMissing: 'The EDID tool is missing from this firmware.',
+        noAudio: 'This EDID advertises no audio, so the host may stop sending sound.',
+        oldVersion: 'This EDID uses a version older than 1.4.',
+        interlaced: 'The preferred timing is interlaced.',
+        tooLarge:
+          'The preferred timing is larger than 1920x1080 at 60 Hz, which is more than NanoKVM can capture.',
+        okBtn: 'Apply',
+        cancelBtn: 'Cancel'
+      },
       mcp: {
         title: 'MCP Service',
         service: 'Remote control MCP',

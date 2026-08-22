@@ -284,6 +284,48 @@ const ca = {
     },
     settings: {
       title: 'Configuració',
+      display: {
+        title: 'Pantalla',
+        loading: 'Carregant...',
+        active: 'EDID actiu',
+        activeUnknown:
+          "El NanoKVM no ha escrit cap EDID des que es va engegar, així que es desconeix quina identitat veu l'amfitrió.",
+        appliedAt: 'Aplicat el {{time}}',
+        download: 'Baixa',
+        downloadBackup: "Baixa l'anterior",
+        preset: 'Perfil de monitor',
+        presetPlaceholder: 'Trieu un monitor',
+        upload: 'Puja',
+        selected: 'EDID seleccionat',
+        errors: 'Errors',
+        warnings: 'Advertiments',
+        info: 'Informació',
+        unknownMonitor: 'Monitor desconegut',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Àudio',
+        audioNo: 'Sense àudio',
+        extensionBlocks: "Blocs d'extensió: {{blocks}}",
+        apply: 'Aplica',
+        applyTitle: 'Voleu aplicar aquest EDID?',
+        before: 'Actual',
+        after: 'Nou',
+        hdmiNotice:
+          "La captura de vídeo s'atura mentre s'escriu l'EDID i es reprèn tota sola en acabar.",
+        powerCycleNotice:
+          'Cal desconnectar físicament aquest dispositiu del corrent i tornar-lo a connectar perquè el nou EDID tingui efecte.',
+        applied: 'EDID aplicat i verificat.',
+        applyFailed: "No s'ha pogut aplicar l'EDID.",
+        busy: 'El xip de vídeo estava ocupat. Torneu-ho a provar.',
+        unsupported: "Aquest dispositiu no permet canviar l'EDID.",
+        toolMissing: "Falta l'eina d'EDID en aquest microprogramari.",
+        noAudio: "Aquest EDID no anuncia àudio, de manera que l'amfitrió pot deixar d'enviar so.",
+        oldVersion: 'Aquest EDID fa servir una versió anterior a la 1.4.',
+        interlaced: 'La resolució preferida és entrellaçada.',
+        tooLarge:
+          'La resolució preferida supera els 1920x1080 a 60 Hz, més del que pot capturar el NanoKVM.',
+        okBtn: 'Aplica',
+        cancelBtn: 'Cancel·la'
+      },
       mcp: {
         title: 'Servei MCP',
         service: 'Control remot MCP',

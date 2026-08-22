@@ -285,6 +285,48 @@ const tr = {
     },
     settings: {
       title: 'Ayarlar',
+      display: {
+        title: 'Ekran',
+        loading: 'Yükleniyor...',
+        active: 'Etkin EDID',
+        activeUnknown:
+          'NanoKVM açıldığından beri EDID yazmadı, bu yüzden ana makinenin gördüğü monitör kimliği bilinmiyor.',
+        appliedAt: 'Uygulandı: {{time}}',
+        download: 'İndir',
+        downloadBackup: 'Öncekini indir',
+        preset: 'Monitör ön ayarı',
+        presetPlaceholder: 'Bir monitör seçin',
+        upload: 'Yükle',
+        selected: 'Seçilen EDID',
+        errors: 'Hatalar',
+        warnings: 'Uyarılar',
+        info: 'Bilgi',
+        unknownMonitor: 'Bilinmeyen monitör',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Ses var',
+        audioNo: 'Ses yok',
+        extensionBlocks: 'Uzantı blokları: {{blocks}}',
+        apply: 'Uygula',
+        applyTitle: 'Bu EDID uygulansın mı?',
+        before: 'Mevcut',
+        after: 'Yeni',
+        hdmiNotice:
+          'EDID yazılırken video yakalama durur ve işlem bitince kendiliğinden yeniden başlar.',
+        powerCycleNotice:
+          'Yeni EDID etkili olmadan önce bu cihazın fişi fiziksel olarak çekilip yeniden takılmalıdır.',
+        applied: 'EDID uygulandı ve doğrulandı.',
+        applyFailed: 'EDID uygulanamadı.',
+        busy: 'Video yongası meşguldü. Tekrar deneyin.',
+        unsupported: 'Bu cihaz EDID değiştirmeyi desteklemiyor.',
+        toolMissing: 'Bu yazılımda EDID aracı bulunmuyor.',
+        noAudio: 'Bu EDID ses bildirmiyor, bu yüzden ana makine ses göndermeyi kesebilir.',
+        oldVersion: 'Bu EDID 1.4 sürümünden eski bir sürüm kullanıyor.',
+        interlaced: 'Tercih edilen zamanlama taramalı (interlaced).',
+        tooLarge:
+          'Tercih edilen zamanlama 1920x1080 60 Hz üzerinde; bu, NanoKVM’nin yakalayabileceğinden fazla.',
+        okBtn: 'Uygula',
+        cancelBtn: 'İptal'
+      },
       mcp: {
         title: 'MCP Hizmeti',
         service: 'MCP uzaktan kumanda',

@@ -285,6 +285,48 @@ const da = {
     },
     settings: {
       title: 'Indstillinger',
+      display: {
+        title: 'Skærm',
+        loading: 'Indlæser...',
+        active: 'Aktiv EDID',
+        activeUnknown:
+          'NanoKVM har ikke skrevet en EDID, siden den startede, så det er ukendt, hvilken skærm værten ser.',
+        appliedAt: 'Anvendt {{time}}',
+        download: 'Hent',
+        downloadBackup: 'Hent den forrige',
+        preset: 'Skærmforudindstilling',
+        presetPlaceholder: 'Vælg en skærm',
+        upload: 'Upload',
+        selected: 'Valgt EDID',
+        errors: 'Fejl',
+        warnings: 'Advarsler',
+        info: 'Information',
+        unknownMonitor: 'Ukendt skærm',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Lyd',
+        audioNo: 'Ingen lyd',
+        extensionBlocks: 'Udvidelsesblokke: {{blocks}}',
+        apply: 'Anvend',
+        applyTitle: 'Anvend denne EDID?',
+        before: 'Nuværende',
+        after: 'Ny',
+        hdmiNotice:
+          'Videooptagelsen stopper, mens EDID skrives, og starter af sig selv igen bagefter.',
+        powerCycleNotice:
+          'Enheden skal fysisk tages ud af stikkontakten og sættes i igen, før den nye EDID træder i kraft.',
+        applied: 'EDID anvendt og verificeret.',
+        applyFailed: 'Det lykkedes ikke at anvende EDID.',
+        busy: 'Videochippen var optaget. Prøv igen.',
+        unsupported: 'Denne enhed understøtter ikke ændring af EDID.',
+        toolMissing: 'EDID-værktøjet mangler i denne firmware.',
+        noAudio: 'Denne EDID annoncerer ingen lyd, så værten holder måske op med at sende lyd.',
+        oldVersion: 'Denne EDID bruger en ældre version end 1.4.',
+        interlaced: 'Den foretrukne opløsning er interlaced.',
+        tooLarge:
+          'Den foretrukne opløsning er større end 1920x1080 ved 60 Hz, hvilket er mere, end NanoKVM kan optage.',
+        okBtn: 'Anvend',
+        cancelBtn: 'Annuller'
+      },
       mcp: {
         title: 'MCP-tjeneste',
         service: 'MCP-fjernbetjening',

@@ -288,6 +288,49 @@ const it = {
     },
     settings: {
       title: 'Impostazioni',
+      display: {
+        title: 'Schermo',
+        loading: 'Caricamento...',
+        active: 'EDID attivo',
+        activeUnknown:
+          "NanoKVM non ha scritto alcun EDID dall'avvio, quindi l'identità vista dall'host è sconosciuta.",
+        appliedAt: 'Applicato il {{time}}',
+        download: 'Scarica',
+        downloadBackup: 'Scarica il precedente',
+        preset: 'Preset monitor',
+        presetPlaceholder: 'Seleziona un monitor',
+        upload: 'Carica',
+        selected: 'EDID selezionato',
+        errors: 'Errori',
+        warnings: 'Avvisi',
+        info: 'Informazioni',
+        unknownMonitor: 'Monitor sconosciuto',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Audio',
+        audioNo: 'Nessun audio',
+        extensionBlocks: 'Blocchi di estensione: {{blocks}}',
+        apply: 'Applica',
+        applyTitle: 'Applicare questo EDID?',
+        before: 'Attuale',
+        after: 'Nuovo',
+        hdmiNotice:
+          "L'acquisizione video si interrompe durante la scrittura dell'EDID e riprende da sola al termine.",
+        powerCycleNotice:
+          'Questo dispositivo deve essere scollegato fisicamente dalla corrente e ricollegato prima che il nuovo EDID abbia effetto.',
+        applied: 'EDID applicato e verificato.',
+        applyFailed: "Applicazione dell'EDID non riuscita.",
+        busy: 'Il chip video era occupato. Riprova.',
+        unsupported: "Questo dispositivo non supporta la modifica dell'EDID.",
+        toolMissing: 'Lo strumento EDID non è presente in questo firmware.',
+        noAudio:
+          "Questo EDID non dichiara audio, quindi l'host potrebbe smettere di inviare il suono.",
+        oldVersion: 'Questo EDID usa una versione precedente alla 1.4.',
+        interlaced: 'La risoluzione preferita è interlacciata.',
+        tooLarge:
+          'La risoluzione preferita supera 1920x1080 a 60 Hz, oltre quanto NanoKVM può acquisire.',
+        okBtn: 'Applica',
+        cancelBtn: 'Annulla'
+      },
       mcp: {
         title: 'Servizio MCP',
         service: 'Controllo remoto MCP',

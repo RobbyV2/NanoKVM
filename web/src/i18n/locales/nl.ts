@@ -288,6 +288,49 @@ const nl = {
     },
     settings: {
       title: 'Instellingen',
+      display: {
+        title: 'Beeldscherm',
+        loading: 'Laden...',
+        active: 'Actieve EDID',
+        activeUnknown:
+          'NanoKVM heeft sinds het opstarten geen EDID geschreven, dus de identiteit die de host ziet is onbekend.',
+        appliedAt: 'Toegepast op {{time}}',
+        download: 'Downloaden',
+        downloadBackup: 'Vorige downloaden',
+        preset: 'Monitorvoorinstelling',
+        presetPlaceholder: 'Kies een monitor',
+        upload: 'Uploaden',
+        selected: 'Geselecteerde EDID',
+        errors: 'Fouten',
+        warnings: 'Waarschuwingen',
+        info: 'Informatie',
+        unknownMonitor: 'Onbekende monitor',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Audio',
+        audioNo: 'Geen audio',
+        extensionBlocks: 'Uitbreidingsblokken: {{blocks}}',
+        apply: 'Toepassen',
+        applyTitle: 'Deze EDID toepassen?',
+        before: 'Huidig',
+        after: 'Nieuw',
+        hdmiNotice:
+          'De videoregistratie stopt tijdens het schrijven van de EDID en start daarna vanzelf weer.',
+        powerCycleNotice:
+          'Dit apparaat moet fysiek van de stroom worden losgekoppeld en opnieuw aangesloten voordat de nieuwe EDID werkt.',
+        applied: 'EDID toegepast en geverifieerd.',
+        applyFailed: 'Het toepassen van de EDID is mislukt.',
+        busy: 'De videochip was bezet. Probeer het opnieuw.',
+        unsupported: 'Dit apparaat ondersteunt het wijzigen van de EDID niet.',
+        toolMissing: 'Het EDID-hulpprogramma ontbreekt in deze firmware.',
+        noAudio:
+          'Deze EDID meldt geen audio, dus de host stopt mogelijk met het verzenden van geluid.',
+        oldVersion: 'Deze EDID gebruikt een oudere versie dan 1.4.',
+        interlaced: 'De voorkeurstiming is geïnterlinieerd.',
+        tooLarge:
+          'De voorkeurstiming is groter dan 1920x1080 bij 60 Hz, meer dan NanoKVM kan vastleggen.',
+        okBtn: 'Toepassen',
+        cancelBtn: 'Annuleren'
+      },
       mcp: {
         title: 'MCP-service',
         service: 'MCP-afstandsbediening',

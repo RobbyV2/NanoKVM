@@ -289,6 +289,48 @@ const fr = {
     },
     settings: {
       title: 'Paramètres',
+      display: {
+        title: 'Affichage',
+        loading: 'Chargement...',
+        active: 'EDID actif',
+        activeUnknown:
+          "NanoKVM n'a écrit aucun EDID depuis son démarrage, l'identité vue par l'hôte est donc inconnue.",
+        appliedAt: 'Appliqué le {{time}}',
+        download: 'Télécharger',
+        downloadBackup: 'Télécharger le précédent',
+        preset: 'Préréglage de moniteur',
+        presetPlaceholder: 'Choisir un moniteur',
+        upload: 'Téléverser',
+        selected: 'EDID sélectionné',
+        errors: 'Erreurs',
+        warnings: 'Avertissements',
+        info: 'Informations',
+        unknownMonitor: 'Moniteur inconnu',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Audio',
+        audioNo: 'Sans audio',
+        extensionBlocks: "Blocs d'extension : {{blocks}}",
+        apply: 'Appliquer',
+        applyTitle: 'Appliquer cet EDID ?',
+        before: 'Actuel',
+        after: 'Nouveau',
+        hdmiNotice:
+          "La capture vidéo s'arrête pendant l'écriture de l'EDID puis redémarre d'elle-même.",
+        powerCycleNotice:
+          "Cet appareil doit être physiquement débranché de l'alimentation puis rebranché pour que le nouvel EDID prenne effet.",
+        applied: 'EDID appliqué et vérifié.',
+        applyFailed: "L'application de l'EDID a échoué.",
+        busy: 'La puce vidéo était occupée. Réessayez.',
+        unsupported: "Cet appareil ne prend pas en charge la modification de l'EDID.",
+        toolMissing: "L'outil EDID est absent de ce firmware.",
+        noAudio: "Cet EDID n'annonce aucun audio, l'hôte peut donc cesser d'envoyer le son.",
+        oldVersion: 'Cet EDID utilise une version antérieure à 1.4.',
+        interlaced: 'La résolution préférée est entrelacée.',
+        tooLarge:
+          'La résolution préférée dépasse 1920x1080 à 60 Hz, soit plus que ce que NanoKVM peut capturer.',
+        okBtn: 'Appliquer',
+        cancelBtn: 'Annuler'
+      },
       mcp: {
         title: 'Service MCP',
         service: 'Contrôle à distance MCP',

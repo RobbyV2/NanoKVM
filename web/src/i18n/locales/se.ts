@@ -283,6 +283,48 @@ const se = {
     },
     settings: {
       title: 'Inställningar',
+      display: {
+        title: 'Skärm',
+        loading: 'Laddar...',
+        active: 'Aktiv EDID',
+        activeUnknown:
+          'NanoKVM har inte skrivit någon EDID sedan den startade, så det är okänt vilken skärm värden ser.',
+        appliedAt: 'Tillämpad {{time}}',
+        download: 'Ladda ner',
+        downloadBackup: 'Ladda ner föregående',
+        preset: 'Skärmförval',
+        presetPlaceholder: 'Välj en skärm',
+        upload: 'Ladda upp',
+        selected: 'Vald EDID',
+        errors: 'Fel',
+        warnings: 'Varningar',
+        info: 'Information',
+        unknownMonitor: 'Okänd skärm',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Ljud',
+        audioNo: 'Inget ljud',
+        extensionBlocks: 'Tilläggsblock: {{blocks}}',
+        apply: 'Tillämpa',
+        applyTitle: 'Vill du tillämpa den här EDID:n?',
+        before: 'Nuvarande',
+        after: 'Ny',
+        hdmiNotice:
+          'Videoinspelningen stannar medan EDID skrivs och startar sedan av sig själv igen.',
+        powerCycleNotice:
+          'Enheten måste kopplas bort fysiskt från strömmen och anslutas igen innan den nya EDID:n börjar gälla.',
+        applied: 'EDID tillämpad och verifierad.',
+        applyFailed: 'Det gick inte att tillämpa EDID.',
+        busy: 'Videokretsen var upptagen. Försök igen.',
+        unsupported: 'Den här enheten stöder inte att EDID ändras.',
+        toolMissing: 'EDID-verktyget saknas i den här fastvaran.',
+        noAudio: 'Den här EDID:n anger inget ljud, så värden kan sluta skicka ljud.',
+        oldVersion: 'Den här EDID:n använder en äldre version än 1.4.',
+        interlaced: 'Den föredragna upplösningen är sammanflätad.',
+        tooLarge:
+          'Den föredragna upplösningen är större än 1920x1080 vid 60 Hz, vilket är mer än NanoKVM kan fånga.',
+        okBtn: 'Tillämpa',
+        cancelBtn: 'Avbryt'
+      },
       mcp: {
         title: 'MCP-tjänst',
         service: 'MCP-fjärrstyrning',

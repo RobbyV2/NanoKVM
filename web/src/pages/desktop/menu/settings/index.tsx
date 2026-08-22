@@ -8,6 +8,7 @@ import {
   BotIcon,
   CircleArrowUpIcon,
   CoffeeIcon,
+  MonitorIcon,
   NetworkIcon,
   PaletteIcon,
   SettingsIcon,
@@ -29,6 +30,7 @@ import { About } from './about';
 import { Account } from './account';
 import { Appearance } from './appearance';
 import { Device } from './device';
+import { Display } from './display';
 import { MCP } from './mcp';
 import { Network } from './network';
 import { Tailscale } from './tailscale';
@@ -55,6 +57,11 @@ export const Settings = () => {
     ...(isAdmin
       ? [
           { id: 'device', icon: <SmartphoneIcon size={16} />, component: <Device /> },
+          {
+            id: 'display',
+            icon: <MonitorIcon size={16} />,
+            component: <Display setIsLocked={setIsLocked} />
+          },
           { id: 'network', icon: <NetworkIcon size={16} />, component: <Network /> },
           { id: 'mcp', icon: <BotIcon size={16} />, component: <MCP /> },
           {

@@ -287,6 +287,48 @@ const pl = {
     },
     settings: {
       title: 'Ustawienia',
+      display: {
+        title: 'Ekran',
+        loading: 'Ładowanie...',
+        active: 'Aktywny EDID',
+        activeUnknown:
+          'NanoKVM nie zapisał żadnego EDID od uruchomienia, więc tożsamość widziana przez hosta jest nieznana.',
+        appliedAt: 'Zastosowano {{time}}',
+        download: 'Pobierz',
+        downloadBackup: 'Pobierz poprzedni',
+        preset: 'Profil monitora',
+        presetPlaceholder: 'Wybierz monitor',
+        upload: 'Wyślij',
+        selected: 'Wybrany EDID',
+        errors: 'Błędy',
+        warnings: 'Ostrzeżenia',
+        info: 'Informacje',
+        unknownMonitor: 'Nieznany monitor',
+        edidVersion: 'EDID {{version}}',
+        audioYes: 'Dźwięk',
+        audioNo: 'Bez dźwięku',
+        extensionBlocks: 'Bloki rozszerzeń: {{blocks}}',
+        apply: 'Zastosuj',
+        applyTitle: 'Zastosować ten EDID?',
+        before: 'Obecny',
+        after: 'Nowy',
+        hdmiNotice:
+          'Podczas zapisu EDID przechwytywanie obrazu zatrzymuje się i uruchamia ponownie samo.',
+        powerCycleNotice:
+          'To urządzenie trzeba fizycznie odłączyć od zasilania i podłączyć ponownie, aby nowy EDID zaczął działać.',
+        applied: 'EDID zastosowany i zweryfikowany.',
+        applyFailed: 'Zastosowanie EDID nie powiodło się.',
+        busy: 'Układ wideo był zajęty. Spróbuj ponownie.',
+        unsupported: 'To urządzenie nie obsługuje zmiany EDID.',
+        toolMissing: 'W tym oprogramowaniu brakuje narzędzia EDID.',
+        noAudio: 'Ten EDID nie zgłasza dźwięku, więc host może przestać go wysyłać.',
+        oldVersion: 'Ten EDID używa wersji starszej niż 1.4.',
+        interlaced: 'Preferowane taktowanie jest z przeplotem.',
+        tooLarge:
+          'Preferowane taktowanie przekracza 1920x1080 przy 60 Hz, czyli więcej, niż NanoKVM może przechwycić.',
+        okBtn: 'Zastosuj',
+        cancelBtn: 'Anuluj'
+      },
       mcp: {
         title: 'Usługa MCP',
         service: 'Zdalne sterowanie MCP',
