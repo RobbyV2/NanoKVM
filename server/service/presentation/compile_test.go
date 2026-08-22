@@ -1,0 +1,352 @@
+package presentation
+
+import (
+	"crypto/sha512"
+	"encoding/hex"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+const (
+	tracesDir = "testdata/traces"
+
+	goldenBaseUID = "nanokvm-golden-base-uid"
+	goldenUDC     = "4340000.usb"
+	goldenDisk    = "/dev/mmcblk0p3"
+)
+
+type flags struct {
+	hidOnly    bool
+	ncm        bool
+	rndis      bool
+	disk       bool
+	diskRO     bool
+	bios       bool
+	noWakeup   bool
+	disableHID bool
+}
+
+func goldenCases() map[string]flags {
+	modes := []struct {
+		name    string
+		hidOnly bool
+	}{{"normal", false}, {"hidonly", true}}
+	nets := []struct {
+		name       string
+		ncm, rndis bool
+	}{{"none", false, false}, {"ncm", true, false}, {"rndis", false, true}, {"ncmrndis", true, true}}
+	disks := []struct {
+		name string
+		on   bool
+	}{{"nodisk", false}, {"disk", true}}
+
+	cases := map[string]flags{}
+	for _, mode := range modes {
+		for _, net := range nets {
+			for _, disk := range disks {
+				name := mode.name + "." + net.name + "." + disk.name
+				cases[name] = flags{hidOnly: mode.hidOnly, ncm: net.ncm, rndis: net.rndis, disk: disk.on}
+			}
+		}
+	}
+
+	base := flags{rndis: true, disk: true}
+	for name, mutate := range map[string]func(*flags){
+		"normal.rndis.disk.bios":       func(f *flags) { f.bios = true },
+		"normal.rndis.disk.notwakeup":  func(f *flags) { f.noWakeup = true },
+		"normal.rndis.disk.disablehid": func(f *flags) { f.disableHID = true },
+		"normal.rndis.disk.diskro":     func(f *flags) { f.diskRO = true },
+	} {
+		delta := base
+		mutate(&delta)
+		cases[name] = delta
+	}
+	return cases
+}
+
+func goldenMACs() (string, string) {
+	sum := sha512.Sum512([]byte(goldenBaseUID))
+	uid := hex.EncodeToString(sum[:])[:4]
+	return "48:da:35:6e:" + uid[:2] + ":" + uid[2:], "48:da:35:6d:" + uid[:2] + ":" + uid[2:]
+}
+
+func profileForFlags(f flags) Profile {
+	if f.hidOnly {
+		profile := hidOnlyProfile()
+		setWakeup(profile.Functions, !f.noWakeup)
+		return profile
+	}
+
+	profile := standardProfile()
+	hid := profile.Functions
+	if f.disableHID {
+		hid = nil
+	} else {
+		setWakeup(hid, !f.noWakeup)
+		if f.bios {
+			for _, function := range hid {
+				function.HID.SubClass = 1
+			}
+		}
+	}
+
+	dev, host := goldenMACs()
+	var functions []Function
+	switch {
+	case f.ncm:
+		functions = append(functions, Function{Kind: FunctionNCM, Instance: "usb0", Net: &NetFunction{
+			DevAddr: &dev, HostAddr: &host, CompatibleID: "WINNCM",
+		}})
+	case f.rndis:
+		functions = append(functions, Function{Kind: FunctionRNDIS, Instance: "usb0", Net: &NetFunction{
+			DevAddr:      &dev,
+			HostAddr:     &host,
+			Class:        ptr[uint8](0xE0),
+			SubClass:     ptr[uint8](0x01),
+			Protocol:     ptr[uint8](0x03),
+			CompatibleID: "RNDIS", SubCompatibleID: "5162001",
+		}})
+	}
+	if len(functions) > 0 {
+		profile.OSDesc = &OSDesc{VendorCode: "0xCD", QwSign: "MSFT100"}
+	}
+
+	functions = append(functions, hid...)
+	if f.disk {
+		functions = append(functions, Function{Kind: FunctionMassStorage, Instance: "disk0", Storage: &StorageFunction{
+			Removable: true, ReadOnly: f.diskRO, InquiryString: InquiryString, File: goldenDisk,
+		}})
+	}
+	profile.Functions = functions
+	return profile
+}
+
+func setWakeup(functions []Function, on bool) {
+	for _, function := range functions {
+		if function.HID != nil {
+			function.HID.WakeupOnWrite = on
+		}
+	}
+}
+
+// renderTrace speaks the format gen_traces.sh records. The leading mkdir is the
+// gadget directory itself, which NewConfigFSOps creates and the plan therefore
+// never contains, and the two trailing ops carry the bytes the applier writes:
+// the single UDC name from ListUDC, and the otg role with the newline
+// ConfigFSOps.SetOTGRole appends.
+func renderTrace(plan Plan) []string {
+	lines := []string{"mkdir\tg0"}
+
+	for _, op := range plan.Ops {
+		switch op.Kind {
+		case OpMkdir:
+			lines = append(lines, "mkdir\t"+op.Path)
+		case OpWrite:
+			lines = append(lines, "write\t"+op.Path+"\t"+hex.EncodeToString(op.Data))
+		case OpSymlink:
+			lines = append(lines, "symlink\t"+op.Path+"\t"+op.Target)
+		case OpBind:
+			lines = append(lines, "write\t"+op.Path+"\t"+hex.EncodeToString([]byte(goldenUDC+"\n")))
+		case OpOTGRole:
+			lines = append(lines, "otg\t"+hex.EncodeToString([]byte(string(op.Data)+"\n")))
+		default:
+			lines = append(lines, op.Kind.String()+"\t"+op.Path)
+		}
+	}
+	return lines
+}
+
+func readTrace(t *testing.T, name string) []string {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(tracesDir, name+".trace"))
+	if err != nil {
+		t.Fatalf("read golden trace: %v", err)
+	}
+
+	var lines []string
+	for _, line := range strings.Split(string(data), "\n") {
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+func compileFlags(t *testing.T, f flags) Plan {
+	t.Helper()
+
+	plan, err := Compile(profileForFlags(f), staticV0)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	return plan
+}
+
+func TestGoldenTraces(t *testing.T) {
+	for name, f := range goldenCases() {
+		t.Run(name, func(t *testing.T) {
+			want := readTrace(t, name)
+			got := renderTrace(compileFlags(t, f))
+
+			for i := 0; i < len(want) || i < len(got); i++ {
+				switch {
+				case i >= len(got):
+					t.Fatalf("op %d: missing, script has %q", i, want[i])
+				case i >= len(want):
+					t.Fatalf("op %d: compiled %q, script stops here", i, got[i])
+				case want[i] != got[i]:
+					t.Fatalf("op %d:\n script   %q\n compiled %q", i, want[i], got[i])
+				}
+			}
+		})
+	}
+}
+
+func TestGoldenTracesCoverEveryRecordedTrace(t *testing.T) {
+	entries, err := filepath.Glob(filepath.Join(tracesDir, "*.trace"))
+	if err != nil {
+		t.Fatalf("glob traces: %v", err)
+	}
+
+	cases := goldenCases()
+	if len(entries) != len(cases) {
+		t.Fatalf("%d recorded traces, %d compiled cases", len(entries), len(cases))
+	}
+	for _, entry := range entries {
+		name := strings.TrimSuffix(filepath.Base(entry), ".trace")
+		if _, ok := cases[name]; !ok {
+			t.Fatalf("recorded trace %s has no compiled case", name)
+		}
+	}
+}
+
+func TestNormalModeNeverWritesBCD(t *testing.T) {
+	for name, f := range goldenCases() {
+		if f.hidOnly {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			for _, line := range append(readTrace(t, name), renderTrace(compileFlags(t, f))...) {
+				for _, banned := range []string{"write\tbcdDevice\t", "write\tbcdUSB\t"} {
+					if strings.HasPrefix(line, banned) {
+						t.Fatalf("normal mode writes %q, which breaks hid.GetMode (H14)", line)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestHIDOnlyIgnoresTheNetworkAndDiskSentinels(t *testing.T) {
+	want := renderTrace(compileFlags(t, flags{hidOnly: true}))
+
+	for name, f := range goldenCases() {
+		if !f.hidOnly {
+			continue
+		}
+		got := renderTrace(compileFlags(t, f))
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Fatalf("%s diverges from the bare hid-only trace", name)
+		}
+	}
+}
+
+func TestNCMWinsOverRNDIS(t *testing.T) {
+	both := renderTrace(compileFlags(t, flags{ncm: true, rndis: true, disk: true}))
+	ncm := renderTrace(compileFlags(t, flags{ncm: true, disk: true}))
+
+	if strings.Join(both, "\n") != strings.Join(ncm, "\n") {
+		t.Fatal("ncm+rndis diverges from ncm alone, S03usbdev:53 gives ncm absolute priority")
+	}
+}
+
+func TestLinkOrderIsTheInterfaceNumberOrder(t *testing.T) {
+	plan := compileFlags(t, flags{rndis: true, disk: true})
+
+	var links []string
+	for _, op := range plan.Ops {
+		if op.Kind == OpSymlink && strings.HasPrefix(op.Path, configPrefix+"/") {
+			links = append(links, strings.TrimPrefix(op.Path, configPrefix+"/"))
+		}
+	}
+
+	want := []string{"rndis.usb0", "hid.GS0", "hid.GS1", "hid.GS2", "mass_storage.disk0"}
+	if strings.Join(links, ",") != strings.Join(want, ",") {
+		t.Fatalf("link order = %v, want %v", links, want)
+	}
+}
+
+func TestPlanNeverRemovesAHIDFunction(t *testing.T) {
+	for _, f := range []flags{{}, {hidOnly: true}, {}, {disk: true}} {
+		for _, op := range compileFlags(t, f).Ops {
+			if op.Kind == OpUnlink || op.Kind == OpUnbind {
+				t.Fatalf("plan emits %s %s, which can renumber /dev/hidgN", op.Kind, op.Path)
+			}
+		}
+	}
+
+	var order []string
+	for _, op := range compileFlags(t, flags{}).Ops {
+		if op.Kind == OpMkdir && strings.HasPrefix(op.Path, functionsDir+"/hid.") {
+			order = append(order, strings.TrimPrefix(op.Path, functionsDir+"/hid."))
+		}
+	}
+	if strings.Join(order, ",") != "GS0,GS1,GS2" {
+		t.Fatalf("hid mkdir order = %v, want GS0,GS1,GS2", order)
+	}
+}
+
+func TestCompiledPathsStayInsideTheGadget(t *testing.T) {
+	for name, f := range goldenCases() {
+		t.Run(name, func(t *testing.T) {
+			for _, op := range compileFlags(t, f).Ops {
+				if op.Kind == OpOTGRole {
+					continue
+				}
+				if err := validateRel(op.Path); err != nil {
+					t.Fatalf("%s %s: %v", op.Kind, op.Path, err)
+				}
+			}
+		})
+	}
+}
+
+func TestCompileRefusesAnOverBudgetProfile(t *testing.T) {
+	profile := profileForFlags(flags{ncm: true, disk: true})
+	dev, host := goldenMACs()
+	profile.Functions = append(profile.Functions, Function{Kind: FunctionRNDIS, Instance: "usb1", Net: &NetFunction{
+		DevAddr: &dev, HostAddr: &host, CompatibleID: "RNDIS",
+	}})
+
+	_, err := Compile(profile, staticV0)
+	if err == nil {
+		t.Fatal("compile accepted a profile over the static-v0 budget")
+	}
+	if !strings.Contains(err.Error(), "rejected by capability table static-v0") {
+		t.Fatalf("err = %v, want the capability source carried", err)
+	}
+}
+
+func TestCompileRefusesAnInvalidProfile(t *testing.T) {
+	profile := standardProfile()
+	profile.Functions = profile.Functions[:2]
+
+	if _, err := Compile(profile, staticV0); err == nil {
+		t.Fatal("compile accepted a profile with two hid functions")
+	}
+}
+
+func TestPlanRecordsEndpointUse(t *testing.T) {
+	plan := compileFlags(t, flags{rndis: true, disk: true})
+
+	if plan.Endpoints != (EndpointUse{In: 6, Out: 5}) {
+		t.Fatalf("endpoints = %+v, want 6 IN 5 OUT", plan.Endpoints)
+	}
+	if plan.Profile != ProfileStandard {
+		t.Fatalf("profile = %q, want %q", plan.Profile, ProfileStandard)
+	}
+}
