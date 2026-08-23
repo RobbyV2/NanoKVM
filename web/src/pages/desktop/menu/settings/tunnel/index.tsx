@@ -16,15 +16,15 @@ import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
 import { BinarySource } from './binary.tsx';
 import { EnvTable } from './env.tsx';
+import { Resources } from './resources.tsx';
+import { applyView, emptyView, switchService } from './state.ts';
 import { reportsConnection } from './types.ts';
-import type { EnvEntry, TunnelService, TunnelState, TunnelStatus } from './types.ts';
+import type { TunnelService, TunnelState } from './types.ts';
 
 type TunnelProps = {
   service: TunnelService;
   setIsLocked: (isLocked: boolean) => void;
 };
-
-type Action = '' | 'start' | 'stop' | 'restart' | 'save';
 
 const lifecycle = {
   start: api.start,
@@ -44,14 +44,8 @@ const stateColors: Record<TunnelState, string> = {
 export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
   const { t } = useTranslation();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [action, setAction] = useState<Action>('');
-  const [status, setStatus] = useState<TunnelStatus>();
-  const [args, setArgs] = useState('');
-  const [env, setEnv] = useState<EnvEntry[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [isSaved, setIsSaved] = useState(false);
-  const [errMsg, setErrMsg] = useState('');
+  const [view, setView] = useState(() => emptyView(service));
+  const { status, args, env, logs, isLoading, action, isSaved, errMsg } = view;
 
   const state = status?.state;
   const isRunning = state === 'running' || state === 'connected';
@@ -66,63 +60,74 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
     !/(^|\s)(--restrict-config|-r)(=|\s|$)/.test(args);
 
   useEffect(() => {
+    setView((current) => switchService(current, service));
     load();
   }, [service]);
 
   function load() {
-    if (isLoading) return;
-    setIsLoading(true);
+    setView((current) => applyView(current, service, { isLoading: true }));
 
     Promise.all([api.getStatus(service), api.getConfig(service), api.getLogs(service)])
       .then(([statusRsp, configRsp, logsRsp]) => {
         if (statusRsp.code !== 0) {
-          setErrMsg(statusRsp.msg);
+          setView((current) => applyView(current, service, { errMsg: statusRsp.msg }));
           return;
         }
 
         // the server seeds the keys a service expects from its own spec, so
         // the client does not carry a second copy of that list
-        setStatus(statusRsp.data);
-        setArgs(configRsp.data?.args ?? '');
-        setEnv(configRsp.data?.env ?? []);
-        setLogs(logsRsp.data?.lines ?? []);
+        setView((current) =>
+          applyView(current, service, {
+            status: statusRsp.data,
+            args: configRsp.data?.args ?? '',
+            env: configRsp.data?.env ?? [],
+            logs: logsRsp.data?.lines ?? []
+          })
+        );
       })
       .catch((err) => {
-        setErrMsg(err?.message || 'Failed to get tunnel status');
+        setView((current) =>
+          applyView(current, service, { errMsg: err?.message || 'Failed to get tunnel status' })
+        );
       })
       .finally(() => {
-        setIsLoading(false);
+        setView((current) => applyView(current, service, { isLoading: false }));
       });
   }
 
   function getStatus() {
     if (isLoading) return;
-    setIsLoading(true);
+    setView((current) => applyView(current, service, { isLoading: true }));
 
     Promise.all([api.getStatus(service), api.getLogs(service)])
       .then(([statusRsp, logsRsp]) => {
         if (statusRsp.code !== 0) {
-          setErrMsg(statusRsp.msg);
+          setView((current) => applyView(current, service, { errMsg: statusRsp.msg }));
           return;
         }
 
-        setStatus(statusRsp.data);
-        setLogs(logsRsp.data?.lines ?? []);
+        setView((current) =>
+          applyView(current, service, {
+            status: statusRsp.data,
+            logs: logsRsp.data?.lines ?? []
+          })
+        );
       })
       .catch((err) => {
-        setErrMsg(err?.message || 'Failed to get tunnel status');
+        setView((current) =>
+          applyView(current, service, { errMsg: err?.message || 'Failed to get tunnel status' })
+        );
       })
       .finally(() => {
-        setIsLoading(false);
+        setView((current) => applyView(current, service, { isLoading: false }));
       });
   }
 
   function save() {
     if (isLoading) return;
-    setIsLoading(true);
-    setAction('save');
-    setIsSaved(false);
-    setErrMsg('');
+    setView((current) =>
+      applyView(current, service, { isLoading: true, action: 'save', isSaved: false, errMsg: '' })
+    );
 
     const values: Record<string, string> = {};
     env.forEach(({ key, value }) => {
@@ -136,40 +141,42 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
       .setConfig(service, args, values)
       .then((rsp) => {
         if (rsp.code !== 0) {
-          setErrMsg(rsp.msg);
+          setView((current) => applyView(current, service, { errMsg: rsp.msg }));
           return;
         }
 
-        setIsSaved(true);
+        setView((current) => applyView(current, service, { isSaved: true }));
       })
       .catch((err) => {
-        setErrMsg(err?.message || 'Failed to save config');
+        setView((current) =>
+          applyView(current, service, { errMsg: err?.message || 'Failed to save config' })
+        );
       })
       .finally(() => {
-        setAction('');
-        setIsLoading(false);
+        setView((current) => applyView(current, service, { action: '', isLoading: false }));
         load();
       });
   }
 
   function run(next: 'start' | 'stop' | 'restart') {
     if (isLoading) return;
-    setIsLoading(true);
-    setAction(next);
-    setErrMsg('');
+    setView((current) =>
+      applyView(current, service, { isLoading: true, action: next, errMsg: '' })
+    );
 
     lifecycle[next](service)
       .then((rsp) => {
         if (rsp.code !== 0) {
-          setErrMsg(rsp.msg);
+          setView((current) => applyView(current, service, { errMsg: rsp.msg }));
         }
       })
       .catch((err) => {
-        setErrMsg(err?.message || 'Failed to update tunnel');
+        setView((current) =>
+          applyView(current, service, { errMsg: err?.message || 'Failed to update tunnel' })
+        );
       })
       .finally(() => {
-        setAction('');
-        setIsLoading(false);
+        setView((current) => applyView(current, service, { action: '', isLoading: false }));
         getStatus();
       });
   }
@@ -190,6 +197,11 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
           <span className="text-base">{t(`settings.${service}.title`)}</span>
           {state && (
             <span className={`text-xs ${stateColors[state]}`}>{t(`settings.tunnel.${state}`)}</span>
+          )}
+          {status && (
+            <span className="text-xs text-neutral-500">
+              {t(status.enabled ? 'settings.tunnel.atBoot' : 'settings.tunnel.notAtBoot')}
+            </span>
           )}
         </div>
 
@@ -264,8 +276,8 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
           rows={3}
           spellCheck={false}
           onChange={(e) => {
-            setArgs(e.target.value);
-            setIsSaved(false);
+            const next = e.target.value;
+            setView((current) => applyView(current, service, { args: next, isSaved: false }));
           }}
         />
 
@@ -285,8 +297,7 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
         <EnvTable
           entries={env}
           onChange={(entries) => {
-            setEnv(entries);
-            setIsSaved(false);
+            setView((current) => applyView(current, service, { env: entries, isSaved: false }));
           }}
         />
       </div>
@@ -299,6 +310,10 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
         {isSaved && <span className="text-xs text-green-500">{t('settings.tunnel.saved')}</span>}
         {errMsg && <span className="text-red-500">{errMsg}</span>}
       </div>
+
+      <Divider className="opacity-50" />
+
+      <Resources service={service} />
 
       <Divider className="opacity-50" />
 

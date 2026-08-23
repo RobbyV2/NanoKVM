@@ -35,6 +35,16 @@ export function getLogs(name: string) {
   return http.get(`/api/extensions/tunnel/${name}/logs`);
 }
 
+// get tunnel memory limit
+export function getMemory(name: string) {
+  return http.get(`/api/extensions/tunnel/${name}/memory`);
+}
+
+// set tunnel memory limit
+export function setMemory(name: string, enabled: boolean) {
+  return http.post(`/api/extensions/tunnel/${name}/memory`, { enabled });
+}
+
 // upload a custom tunnel binary
 export function uploadBinary(name: string, file: File) {
   const formData = new FormData();
