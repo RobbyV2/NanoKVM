@@ -232,7 +232,7 @@ func waitForKeyboardLedReaderChange(notifierFD int) error {
 	if notifierFD < 0 {
 		return fmt.Errorf("keyboard LED reader notifier is nil")
 	}
-	_, err := unix.Poll([]unix.PollFd{{Fd: int32(notifierFD), Events: unix.POLLIN}}, -1)
+	_, err := pollIgnoringEINTR([]unix.PollFd{{Fd: int32(notifierFD), Events: unix.POLLIN}}, -1)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func waitForKeyboardLedReportOrChange(file *os.File, notifierFD int) (bool, erro
 		{Fd: int32(file.Fd()), Events: unix.POLLIN},
 		{Fd: int32(notifierFD), Events: unix.POLLIN},
 	}
-	_, err := unix.Poll(fds, -1)
+	_, err := pollIgnoringEINTR(fds, -1)
 	if err != nil {
 		return false, err
 	}
@@ -263,6 +263,18 @@ func waitForKeyboardLedReportOrChange(file *os.File, notifierFD int) (bool, erro
 		return false, nil
 	}
 	return false, fmt.Errorf("keyboard LED poll returned without an event")
+}
+
+// The runtime delivers SIGURG for async preemption and poll(2) is never
+// restarted for it, so a bare unix.Poll fails with EINTR at arbitrary times.
+func pollIgnoringEINTR(fds []unix.PollFd, timeout int) (int, error) {
+	for {
+		n, err := unix.Poll(fds, timeout)
+		if errors.Is(err, syscall.EINTR) {
+			continue
+		}
+		return n, err
+	}
 }
 
 func drainKeyboardLedReaderNotifier(notifierFD int) {
