@@ -69,8 +69,31 @@ will retry.
 nobody later reads the redundancy as the load-bearing setting. `stp_state 0` is the
 load-bearing setting.
 
-There is no loop risk to trade against: this is a two-port bridge whose second port is a
-USB gadget.
+The loop risk that trade normally buys off is small and it is not zero. The second port is
+a USB gadget, so a loop needs the attached host to forward between its own NIC and the
+gadget, which a Windows box with bridged Hyper-V networking does by configuration rather
+than by accident. With STP off nothing breaks such a loop, so the compensating control is
+to say that one is there: `detectLoop` reports the default gateway's address learned on a
+port that is not `eth0`, since the gateway is on the LAN by definition and a frame from it
+arriving through the host means the host is a second way onto the same segment. It is two
+live reads and no state, so a `nil` is not proof of absence — the entry moves between the
+ports while the loop floods — and a non-`nil` is proof of the condition. `bridge` is in the
+allowed binary set for exactly this: which port an address was learned on is the one thing
+`ip` cannot show.
+
+## Step 0 refuses, the dead-man recovers
+
+The dead-man makes a doomed enable survivable rather than free: between step 5's flush and
+the rollback the device holds no address at all, for as long as verification takes. An
+uplink with no carrier is the one case where that outcome is known before anything is
+touched, so `preflight` reads the links and refuses, and it runs before `begin` so a
+refusal leaves no snapshot, no marker and no `br0` for a rollback to clean up. Nothing
+weaker belongs there: a refusal an operator cannot explain is worse than a rollback, and
+the dead-man still covers everything the check cannot see.
+
+`S29bridge` has no equivalent and must not grow one. It rebuilds the configured bridge at
+boot with nobody watching, and a link that has not finished negotiating yet would leave the
+device permanently unbridged for a cable that is in fact plugged in.
 
 ## The bridge MAC is pinned to eth0's
 
@@ -149,6 +172,16 @@ device that has never enabled the bridge.
 `S30eth`'s one DHCP client rather than an interface, and deriving it from the uplink would
 leave `stop` unable to find a client that `start` launched under the other name. A live
 enable passes through exactly that state.
+
+`/boot/eth.nodhcp` says which branch `S30eth` took, not that the branch produced the
+address: its static assignment gives up on an `arping` conflict at `:55` and falls through
+to `udhcpc` at `:63`. So the capture records `DHCPClient`, the pidfile checked against the
+process table rather than trusted, and step 8 sends a device whose address is a lease
+through the script even on the static branch. Replaying that lease as a static address
+instead, with step 4 having killed the only client that renews it, leaves the device
+holding an address the server is free to hand to somebody else. That fall-through never
+reaches the nameserver append at `:58`, so the duplicate the static replay exists to avoid
+is not reintroduced.
 
 `/etc/resolv.conf` is captured and restored because `S30eth:55` appends its nameserver line
 rather than replacing it, so re-running the script accumulates duplicates. That is why the

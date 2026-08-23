@@ -94,6 +94,14 @@ type Snapshot struct {
 	// Whether /boot/eth.nodhcp existed, captured rather than re-tested at restore
 	// time because a restore may run at boot from a different filesystem state.
 	StaticPath bool `json:"staticPath"`
+
+	// Whether a udhcpc held the uplink's address. StaticPath alone cannot say:
+	// it records which branch S30eth took, and the static branch falls through
+	// to udhcpc when its arping finds the address in use. Without this, step 8
+	// replays a lease as a static address and kills the client that renews it,
+	// so an enable and a disable each leave the device holding an address the
+	// server is free to hand to somebody else.
+	DHCPClient bool `json:"dhcpClient"`
 }
 
 // The read half of every ip invocation, split from the write half so a test can
@@ -127,6 +135,7 @@ func Capture(ctx context.Context, inspector Inspector) (*Snapshot, error) {
 		Addrs:      addrs,
 		Routes:     routes,
 		StaticPath: fileExists(noDHCPPath),
+		DHCPClient: dhcpClientRunning(),
 	}
 
 	snapshot.ResolvConf, snapshot.ResolvConfPresent = readFile(resolvPath)

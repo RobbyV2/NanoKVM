@@ -32,6 +32,10 @@ const (
 	PingBinary     = "ping"
 	IptablesBinary = "iptables"
 	S30ethScript   = "/etc/init.d/S30eth"
+
+	// Ships in the same iproute2 package as ip and reads the one thing ip
+	// cannot: which port a MAC was learned on.
+	BridgeBinary = "bridge"
 )
 
 var allowedBinaries = map[string]bool{
@@ -39,6 +43,7 @@ var allowedBinaries = map[string]bool{
 	PingBinary:     true,
 	IptablesBinary: true,
 	S30ethScript:   true,
+	BridgeBinary:   true,
 }
 
 // The last gate before an "ip -batch" line reaches a process: no shell
@@ -149,6 +154,73 @@ func (t *IPTool) AddrsV4(ctx context.Context, dev string) ([]AddrInfo, error) {
 		}
 	}
 	return out, nil
+}
+
+// One entry of "ip -4 -j neigh show". Read live and never captured: the ARP
+// cache is not state a restore puts back.
+type Neigh struct {
+	Dst    string `json:"dst"`
+	Dev    string `json:"dev,omitempty"`
+	LLAddr string `json:"lladdr,omitempty"`
+}
+
+// Neighbours is "ip -4 -j neigh show dev <dev>". The loop check needs the
+// gateway's hardware address, and the neighbour table is where the device
+// already knows it.
+func (t *IPTool) Neighbours(ctx context.Context, dev string) ([]Neigh, error) {
+	if !safeDevice(dev) {
+		return nil, fmt.Errorf("bridge: bad device %q", dev)
+	}
+
+	var neighbours []Neigh
+	err := t.decode(ctx, &neighbours, "-4", "-j", "neigh", "show", "dev", dev)
+	return neighbours, err
+}
+
+// One entry of "bridge -j fdb show". Which port an address was learned on is
+// the only evidence this device has of a second path to its own segment.
+type FDBEntry struct {
+	MAC    string   `json:"mac"`
+	Ifname string   `json:"ifname"`
+	Master string   `json:"master,omitempty"`
+	State  string   `json:"state,omitempty"`
+	Flags  []string `json:"flags,omitempty"`
+}
+
+// Learned excludes the permanent entries the kernel writes for each port's own
+// address and the self entries for the bridge device, neither of which says
+// anything about where a frame came from.
+func (e FDBEntry) Learned() bool {
+	if e.Master != BridgeName || e.State == "permanent" {
+		return false
+	}
+	for _, flag := range e.Flags {
+		if flag == "self" || flag == "permanent" {
+			return false
+		}
+	}
+	return true
+}
+
+// FDB is "bridge -j fdb show br <name>". It hangs off IPTool because the type
+// exists for the Commander choke point rather than for a binary name, and it is
+// the only caller of the second binary in the allowed set.
+func (t *IPTool) FDB(ctx context.Context, name string) ([]FDBEntry, error) {
+	if name != BridgeName {
+		return nil, fmt.Errorf("bridge: refusing to read the forwarding database of %q", name)
+	}
+
+	data, err := t.cmd.Run(ctx, []string{BridgeBinary, "-j", "fdb", "show", "br", name}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, nil
+	}
+
+	var entries []FDBEntry
+	err = json.Unmarshal(data, &entries)
+	return entries, err
 }
 
 // AddBridge creates br0 with STP off.
@@ -472,6 +544,10 @@ var newTimer = func(d time.Duration) (<-chan time.Time, func()) {
 // there being a udhcpc.
 var killProcess = func(pid int) error { return syscall.Kill(pid, syscall.SIGTERM) }
 
+// var for the same reason, and signal 0 rather than a /proc read because the
+// pidfile is the only name this package has for the process.
+var processAlive = func(pid int) bool { return syscall.Kill(pid, 0) == nil }
+
 // One armed rollback. Exactly one of the watchdog and the transaction performs
 // the restore, decided by a compare-and-swap: without it a verification failing
 // at the instant the deadline expires runs two restores over the same links.
@@ -774,4 +850,23 @@ func killUdhcpc() error {
 		return err
 	}
 	return nil
+}
+
+// Whether a udhcpc is holding the uplink's address. An address in "ip addr"
+// looks the same whether it was leased or assigned from /boot/eth.nodhcp, and
+// the pidfile S30eth writes under both branches is the only thing that
+// distinguishes them.
+//
+// A pidfile left behind by a client that died is checked against the process
+// table rather than trusted, because a static device wrongly read as leased
+// sends step 8 through S30eth, whose nameserver append is the thing the static
+// replay exists to avoid.
+func dhcpClientRunning() bool {
+	data, err := os.ReadFile(udhcpcPidPath)
+	if err != nil {
+		return false
+	}
+
+	pid, err := strconv.Atoi(trimLine(string(data)))
+	return err == nil && pid > 0 && processAlive(pid)
 }

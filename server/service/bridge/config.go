@@ -79,6 +79,7 @@ var (
 	ErrRecoveryInterface = errors.New("bridge: wlan0 is the out-of-band recovery path and is never enslaved")
 	ErrNotEnslavable     = errors.New("bridge: interface is not enslavable")
 	ErrBusy              = errors.New("bridge: another apply is in progress")
+	ErrPreflight         = errors.New("bridge: enable refused before anything was changed")
 	ErrNoSnapshot        = errors.New("bridge: snapshot not found")
 )
 

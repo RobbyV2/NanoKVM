@@ -173,6 +173,41 @@ func TestCaptureRecordsEverything(t *testing.T) {
 	}
 }
 
+// The capture records whether a DHCP client held the address, because "ip addr"
+// cannot tell a lease from a static assignment and step 8 has to. A pidfile a
+// dead client left behind is not a lease.
+func TestCaptureRecordsALiveDHCPClient(t *testing.T) {
+	tests := []struct {
+		name    string
+		pidfile string
+		alive   bool
+		want    bool
+	}{
+		{name: "no pidfile"},
+		{name: "a live client", pidfile: "1234\n", alive: true, want: true},
+		{name: "a stale pidfile", pidfile: "1234\n", alive: false},
+		{name: "junk in the pidfile", pidfile: "not-a-pid\n", alive: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t)
+			if test.pidfile != "" {
+				writeFile(t, udhcpcPidPath, test.pidfile)
+			}
+			swap(t, &processAlive, func(int) bool { return test.alive })
+
+			snapshot, err := Capture(context.Background(), h.mgr.ip)
+			if err != nil {
+				t.Fatalf("Capture: %v", err)
+			}
+			if snapshot.DHCPClient != test.want {
+				t.Fatalf("DHCPClient = %v, want %v", snapshot.DHCPClient, test.want)
+			}
+		})
+	}
+}
+
 func TestCaptureRecordsAnExistingUplink(t *testing.T) {
 	h := newHarness(t)
 	if err := WriteUplink(BridgeName); err != nil {

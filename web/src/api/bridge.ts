@@ -18,6 +18,16 @@ export type BridgePort = {
   name: string;
   state: string;
   up: boolean;
+  // the cable, as opposed to up, which is set on a port with nothing in it too
+  carrier: boolean;
+};
+
+// a second path between the uplink's segment and another port of the bridge.
+// Non-null is evidence the condition exists; null is not evidence it does not.
+export type BridgeLoop = {
+  port: string;
+  mac: string;
+  reason: string;
 };
 
 // an armed dead-man marker: an apply is in flight, or the device booted into
@@ -46,6 +56,8 @@ export type BridgeStatus = {
   ports: BridgePort[];
   address: string;
   gateway: string;
+  carrier: boolean;
+  loop?: BridgeLoop | null;
   pending?: BridgeArmed | null;
   lastApply?: BridgeApply | null;
 

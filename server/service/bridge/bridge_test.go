@@ -38,6 +38,11 @@ type fakeNet struct {
 	addrs  map[string][]AddrInfo
 	routes []Route
 
+	// neighbours and fdb drive the loop check: the gateway's hardware address
+	// and the port each address was last learned on.
+	neighbours []Neigh
+	fdb        []FDBEntry
+
 	// dhcpAddr is what S30eth start hands the uplink, so the DHCP branch has an
 	// outcome a test can assert against.
 	dhcpAddr    AddrInfo
@@ -143,6 +148,10 @@ func (f *fakeNet) Run(_ context.Context, argv []string, stdin []byte) ([]byte, e
 		return nil, nil
 	case S30ethScript:
 		return nil, f.startEth()
+	case BridgeBinary:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		return json.Marshal(f.fdb)
 	}
 	return nil, fmt.Errorf("fakeNet: unhandled %q", line)
 }
@@ -190,6 +199,8 @@ func (f *fakeNet) ip(args []string, stdin []byte) ([]byte, error) {
 		return f.encodeAddrs("", false)
 	case joined == "-j route show":
 		return json.Marshal(f.routes)
+	case strings.HasPrefix(joined, "-4 -j neigh show dev "):
+		return json.Marshal(f.neighbours)
 	case strings.HasPrefix(joined, "-4 -j addr show dev "):
 		return f.encodeAddrs(args[len(args)-1], true)
 	case strings.HasPrefix(joined, "link add name "):

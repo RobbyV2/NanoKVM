@@ -57,6 +57,32 @@ func (m *Manager) unlock() {
 	m.inflight = false
 }
 
+// Step 0. Only the conditions under which the apply is already known to fail
+// belong here: a refusal an operator cannot explain is worse than a rollback,
+// and the dead-man covers everything this cannot see. Carrier on eth0 is the
+// clear case, because the whole transaction is built on moving a working
+// address from it onto br0.
+//
+// Disable has no equivalent. It returns the device to the stock state, which is
+// where a refusal would leave it anyway.
+func (m *Manager) preflight(ctx context.Context) error {
+	links, err := m.ip.Links(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: cannot read links: %s", ErrPreflight, err)
+	}
+
+	for _, link := range links {
+		if link.Name != StockUplink {
+			continue
+		}
+		if !link.Running() {
+			return fmt.Errorf("%w: %s has no carrier", ErrPreflight, StockUplink)
+		}
+		return nil
+	}
+	return fmt.Errorf("%w: %s is not present", ErrPreflight, StockUplink)
+}
+
 // Steps 1 and 2. The snapshot is fsynced before this returns, so from step 3's
 // first change there is a complete record on disk, and the watchdog is running
 // before that change. The order is load-bearing: a marker naming a snapshot not
@@ -90,6 +116,15 @@ func (m *Manager) Enable(ctx context.Context) (proto.SetBridgeRsp, error) {
 		return proto.SetBridgeRsp{State: proto.BridgePending, Message: err.Error()}, err
 	}
 	defer m.unlock()
+
+	// Step 0. Refuse an enable that cannot work before anything is written or
+	// changed. An uplink with no carrier takes no lease and answers no gate, so
+	// the transaction would run all the way to step 11 and roll back, with the
+	// device holding no address for the minute in between. Nothing here mutates,
+	// so a refusal leaves no snapshot, no marker and no bridge.
+	if err := m.preflight(ctx); err != nil {
+		return proto.SetBridgeRsp{State: proto.BridgeDisabled, Uplink: ReadUplink(), Message: err.Error()}, err
+	}
 
 	snapshot, dm, err := m.begin(ctx, operationEnable)
 	if err != nil {
@@ -422,8 +457,17 @@ func (m *Manager) rollback(
 // accumulates a duplicate on every apply. The static path therefore replays the
 // captured address and route in one ip -batch. The DHCP path has no such
 // problem and re-runs the script, which reads the uplink file step 7 wrote.
+//
+// A running DHCP client sends a nodhcp device down the script path anyway.
+// /boot/eth.nodhcp only says which branch S30eth took, not that the branch
+// produced the address: the static assignment at S30eth:55 gives up on an
+// arping conflict and falls through to udhcpc at :63, and replaying that lease
+// as a static address kills the client that renews it, so the device holds an
+// address the server hands to somebody else once it expires. That fall-through
+// never reaches the nameserver append at :58, so nothing is duplicated by
+// running the script for it.
 func (m *Manager) address(ctx context.Context, to, from string, snapshot *Snapshot) error {
-	if snapshot.StaticPath && len(snapshot.IPv4(from)) > 0 {
+	if snapshot.StaticPath && !snapshot.DHCPClient && len(snapshot.IPv4(from)) > 0 {
 		if err := m.replay(ctx, to, snapshotMovedTo(snapshot, from, to)); err != nil {
 			return err
 		}
@@ -599,15 +643,19 @@ func (m *Manager) Status(ctx context.Context) (proto.GetBridgeRsp, error) {
 	}
 
 	for _, link := range links {
+		if link.Name == rsp.Uplink {
+			rsp.Carrier = link.Running()
+		}
 		switch {
 		case link.Name == BridgeName:
 			rsp.Exists = true
 			rsp.MAC = link.Address
 		case link.Master == BridgeName:
 			rsp.Ports = append(rsp.Ports, proto.BridgePort{
-				Name:  link.Name,
-				State: link.OperState,
-				Up:    link.Up(),
+				Name:    link.Name,
+				State:   link.OperState,
+				Up:      link.Up(),
+				Carrier: link.Running(),
 			})
 		}
 	}
@@ -627,6 +675,8 @@ func (m *Manager) Status(ctx context.Context) (proto.GetBridgeRsp, error) {
 		}
 	}
 
+	rsp.Loop = m.detectLoop(ctx, rsp)
+
 	// Reported, not offered. A gadget the panel cannot read is not a bridge
 	// failure, so it is logged and left empty.
 	if m.gadget != nil {
@@ -638,6 +688,63 @@ func (m *Manager) Status(ctx context.Context) (proto.GetBridgeRsp, error) {
 	}
 
 	return rsp, nil
+}
+
+// The compensating control for STP being off. Nothing in the kernel breaks a
+// loop here, so a second path between the LAN and the gadget port is a
+// broadcast storm that takes the management plane with it, and the design's
+// answer was to warn rather than to turn STP on and lose the DHCP lease to its
+// listening delay.
+//
+// The signature is the default gateway's address learned on a port that is not
+// eth0. The gateway is on the LAN by definition, so a frame from it arriving
+// through the attached host means the host offers a second way onto the same
+// segment. Two live reads and no state: with the loop actually flooding, the
+// entry moves between the ports and a single read can miss it, so a nil here is
+// not proof of absence. A non-nil is proof of the condition.
+func (m *Manager) detectLoop(ctx context.Context, rsp proto.GetBridgeRsp) *proto.BridgeLoop {
+	if !rsp.Exists || rsp.Gateway == "" || len(rsp.Ports) < 2 {
+		return nil
+	}
+
+	neighbours, err := m.ip.Neighbours(ctx, BridgeName)
+	if err != nil {
+		log.Warnf("bridge: read neighbours: %s", err)
+		return nil
+	}
+
+	gatewayMAC := ""
+	for _, neighbour := range neighbours {
+		if neighbour.Dst == rsp.Gateway && neighbour.LLAddr != "" {
+			gatewayMAC = neighbour.LLAddr
+			break
+		}
+	}
+	if gatewayMAC == "" {
+		return nil
+	}
+
+	entries, err := m.ip.FDB(ctx, BridgeName)
+	if err != nil {
+		log.Warnf("bridge: read the forwarding database: %s", err)
+		return nil
+	}
+
+	for _, entry := range entries {
+		if entry.Ifname == StockUplink || !entry.Learned() {
+			continue
+		}
+		if !strings.EqualFold(entry.MAC, gatewayMAC) {
+			continue
+		}
+		return &proto.BridgeLoop{
+			Port: entry.Ifname,
+			MAC:  entry.MAC,
+			Reason: fmt.Sprintf("the gateway %s is being learned on %s, so that port is a second path to the uplink segment and STP is off",
+				rsp.Gateway, entry.Ifname),
+		}
+	}
+	return nil
 }
 
 // For the case where all three gates passed and the operator still cannot reach

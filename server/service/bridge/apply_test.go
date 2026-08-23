@@ -381,6 +381,110 @@ func TestEnableStaticPathReplaysRatherThanRerunningS30eth(t *testing.T) {
 	}
 }
 
+// TestEnableRefusesAnUplinkWithNoCarrier is the preflight. The dead-man makes a
+// doomed enable survivable; it does not make it free. Between step 5's flush and
+// the rollback the device holds no address at all, and an uplink with no cable
+// is the one case where that is known in advance. The refusal has to happen
+// before the first write, so a refused enable leaves no snapshot, no marker and
+// no br0 rather than a rollback that has to put all three back.
+func TestEnableRefusesAnUplinkWithNoCarrier(t *testing.T) {
+	tests := []struct {
+		name   string
+		break_ func(h *harness)
+		reason string
+	}{
+		{
+			name:   "no carrier",
+			break_: func(h *harness) { h.net.links[StockUplink].Flags = []string{"UP"} },
+			reason: "eth0 has no carrier",
+		},
+		{
+			name:   "no eth0 at all",
+			break_: func(h *harness) { delete(h.net.links, StockUplink) },
+			reason: "eth0 is not present",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t)
+			test.break_(h)
+
+			rsp, err := h.mgr.Enable(context.Background())
+			if !errors.Is(err, ErrPreflight) {
+				t.Fatalf("Enable = %v, want ErrPreflight", err)
+			}
+			if !strings.Contains(rsp.Message, test.reason) {
+				t.Errorf("message = %q, want it to name %q", rsp.Message, test.reason)
+			}
+			if rsp.State != proto.BridgeDisabled {
+				t.Errorf("state = %q, want disabled", rsp.State)
+			}
+
+			// Nothing was written and nothing was changed: the read that
+			// refused is the only command that ran.
+			trace := h.net.trace()
+			if len(trace) != 1 || trace[0] != "ip -j link show" {
+				t.Fatalf("a refused enable ran %v", trace)
+			}
+			if fileExists(h.store.SnapshotPath()) {
+				t.Error("a refused enable wrote a snapshot")
+			}
+			pending, err := h.store.Pending()
+			if err != nil || pending != nil {
+				t.Errorf("a refused enable left a marker: %+v, %v", pending, err)
+			}
+		})
+	}
+}
+
+// TestEnableKeepsALeaseUnderTheStaticBranch is the other half of the static
+// replay. /boot/eth.nodhcp says which branch S30eth took, not that the branch
+// produced the address: its static assignment gives up on an arping conflict at
+// S30eth:55 and falls through to udhcpc at :63. Replaying that lease onto br0 as
+// a static address, with step 4 having killed the only client that renews it,
+// leaves the device holding an address the server hands to somebody else.
+func TestEnableKeepsALeaseUnderTheStaticBranch(t *testing.T) {
+	h := newHarness(t)
+	writeFile(t, noDHCPPath, "192.168.1.50/24 192.168.1.1\n")
+	writeFile(t, udhcpcPidPath, "1234\n")
+	swap(t, &processAlive, func(int) bool { return true })
+	swap(t, &killProcess, func(int) error { return nil })
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+
+	trace := h.net.trace()
+	indexOf(t, trace, "/etc/init.d/S30eth start")
+	notInTrace(t, trace, "ip -batch -")
+
+	// The fall-through never reaches the nameserver append at S30eth:58, so the
+	// duplicate the static replay exists to avoid is still not there.
+	resolv, _ := readFile(resolvPath)
+	if got := strings.Count(resolv, "nameserver 192.168.1.1"); got != 1 {
+		t.Fatalf("resolv.conf has %d nameserver lines, want 1:\n%s", got, resolv)
+	}
+}
+
+// A pidfile a dead client left behind is not a lease. Reading one as a lease
+// would send a genuinely static device through S30eth, whose nameserver append
+// is exactly what the static replay exists to avoid.
+func TestEnableStaticPathIgnoresAStalePidfile(t *testing.T) {
+	h := newHarness(t)
+	writeFile(t, noDHCPPath, "192.168.1.50/24 192.168.1.1\n")
+	writeFile(t, udhcpcPidPath, "1234\n")
+	swap(t, &processAlive, func(int) bool { return false })
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+
+	trace := h.net.trace()
+	notInTrace(t, trace, "/etc/init.d/S30eth")
+	indexOf(t, trace, "ip -batch -")
+}
+
 // ---------------------------------------------------------------------------
 // the three verification gates
 // ---------------------------------------------------------------------------
@@ -841,4 +945,157 @@ func TestStatusReportsTheActiveGadgetProtocol(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestStatusReportsLinkState is the reporting half of the preflight. A bridge
+// whose uplink lost its cable looks identical in every other field to one that
+// is working, and an operator reading "enabled, br0, 192.168.1.50" has no way
+// to tell the difference. Carrier is per port as well, because a two-port
+// bridge with a dead gadget port is a working device with a host that cannot
+// reach the network.
+func TestStatusReportsLinkState(t *testing.T) {
+	h := newHarness(t, &fakeGadget{nic: GadgetName})
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+
+	status, err := h.mgr.Status(context.Background())
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if !status.Carrier {
+		t.Error("a working bridge reports no carrier on its uplink")
+	}
+	for _, port := range status.Ports {
+		if !port.Carrier {
+			t.Errorf("port %s reports no carrier", port.Name)
+		}
+	}
+
+	// The cable comes out of both.
+	h.net.links[BridgeName].Flags = []string{"UP"}
+	h.net.links[StockUplink].Flags = []string{"UP"}
+
+	status, err = h.mgr.Status(context.Background())
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if status.Carrier {
+		t.Error("br0 reports carrier with no LOWER_UP")
+	}
+	if len(status.Ports) != 2 {
+		t.Fatalf("ports = %+v, want eth0 and usb0", status.Ports)
+	}
+	for _, port := range status.Ports {
+		if port.Carrier != (port.Name == GadgetName) {
+			t.Errorf("port %+v carrier is wrong", port)
+		}
+		if !port.Up {
+			t.Errorf("port %+v is administratively up and reported down", port)
+		}
+	}
+}
+
+// TestStatusWarnsAboutASecondPathToTheSegment is the compensating control for
+// STP being off. Nothing in the kernel breaks a loop here, so the one thing the
+// device can do is say that it sees one: the gateway is on the LAN by
+// definition, and its address being learned on the gadget port means the
+// attached host is a second way onto the same segment.
+func TestStatusWarnsAboutASecondPathToTheSegment(t *testing.T) {
+	const gatewayMAC = "aa:bb:cc:00:11:22"
+
+	tests := []struct {
+		name string
+		fdb  []FDBEntry
+		want string
+	}{
+		{
+			name: "the gateway is learned on the gadget port",
+			fdb: []FDBEntry{
+				{MAC: gatewayMAC, Ifname: GadgetName, Master: BridgeName},
+			},
+			want: GadgetName,
+		},
+		{
+			// Where it belongs. This is every correctly wired device, and a
+			// warning here would be one nobody could act on.
+			name: "the gateway is learned on the uplink port",
+			fdb: []FDBEntry{
+				{MAC: gatewayMAC, Ifname: StockUplink, Master: BridgeName},
+			},
+		},
+		{
+			// The host's own address on the gadget port, which is what a
+			// working gadget NIC looks like.
+			name: "some other address on the gadget port",
+			fdb: []FDBEntry{
+				{MAC: "48:da:35:6e:11:33", Ifname: GadgetName, Master: BridgeName},
+			},
+		},
+		{
+			// The permanent entry the kernel writes for the port's own address
+			// says nothing about where a frame came from.
+			name: "a permanent entry is not a learned one",
+			fdb: []FDBEntry{
+				{MAC: gatewayMAC, Ifname: GadgetName, Master: BridgeName, State: "permanent"},
+			},
+		},
+		{
+			name: "nothing learned at all",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t, &fakeGadget{nic: GadgetName})
+			h.net.neighbours = []Neigh{{Dst: "192.168.1.1", Dev: BridgeName, LLAddr: gatewayMAC}}
+			h.net.fdb = test.fdb
+
+			if _, err := h.mgr.Enable(context.Background()); err != nil {
+				t.Fatalf("Enable: %v", err)
+			}
+
+			status, err := h.mgr.Status(context.Background())
+			if err != nil {
+				t.Fatalf("Status: %v", err)
+			}
+
+			if test.want == "" {
+				if status.Loop != nil {
+					t.Fatalf("loop reported where there is none: %+v", status.Loop)
+				}
+				return
+			}
+			if status.Loop == nil {
+				t.Fatal("a second path to the uplink segment was not reported")
+			}
+			if status.Loop.Port != test.want || status.Loop.MAC != gatewayMAC {
+				t.Fatalf("loop = %+v, want the gateway on %s", status.Loop, test.want)
+			}
+			if !strings.Contains(status.Loop.Reason, "STP is off") {
+				t.Errorf("reason = %q, want it to name the missing spanning tree", status.Loop.Reason)
+			}
+		})
+	}
+}
+
+// A one-port bridge cannot have a second path, and reading the neighbour table
+// and the forwarding database on every poll to prove it is work for nothing.
+func TestStatusSkipsTheLoopCheckWithOnePort(t *testing.T) {
+	h := newHarness(t)
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+
+	status, err := h.mgr.Status(context.Background())
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if status.Loop != nil {
+		t.Fatalf("loop reported on a one-port bridge: %+v", status.Loop)
+	}
+	notInTrace(t, h.net.trace(), "neigh show")
+	notInTrace(t, h.net.trace(), "fdb show")
 }

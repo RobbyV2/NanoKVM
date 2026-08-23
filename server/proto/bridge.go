@@ -49,6 +49,21 @@ type BridgePort struct {
 	Name  string `json:"name"`
 	State string `json:"state"`
 	Up    bool   `json:"up"`
+
+	// Carrier is IFF_LOWER_UP: the cable, as opposed to Up's administrative
+	// state, which is set on a port with nothing plugged into it too.
+	Carrier bool `json:"carrier"`
+}
+
+// A second path between the uplink's segment and a port of the same bridge.
+// STP is off by design, because its listening delay costs the DHCP lease, so
+// nothing in the kernel breaks such a loop and this warning is the compensating
+// control. Non-nil is evidence the condition exists; nil is not evidence that
+// it does not, since the entry it is read from moves between ports.
+type BridgeLoop struct {
+	Port   string `json:"port"`
+	MAC    string `json:"mac"`
+	Reason string `json:"reason"`
 }
 
 type BridgeArmed struct {
@@ -68,13 +83,20 @@ type BridgeApply struct {
 }
 
 type GetBridgeRsp struct {
-	State     BridgeState  `json:"state"`
-	Uplink    string       `json:"uplink"`
-	Exists    bool         `json:"exists"`
-	MAC       string       `json:"mac"`
-	Ports     []BridgePort `json:"ports"`
-	Address   string       `json:"address"`
-	Gateway   string       `json:"gateway"`
+	State   BridgeState  `json:"state"`
+	Uplink  string       `json:"uplink"`
+	Exists  bool         `json:"exists"`
+	MAC     string       `json:"mac"`
+	Ports   []BridgePort `json:"ports"`
+	Address string       `json:"address"`
+	Gateway string       `json:"gateway"`
+
+	// Carrier on the device Uplink names, which is br0 once the bridge holds
+	// the address and eth0 otherwise. A false here with the bridge enabled is
+	// the state the enable preflight exists to refuse to create.
+	Carrier bool `json:"carrier"`
+
+	Loop      *BridgeLoop  `json:"loop"`
 	Pending   *BridgeArmed `json:"pending"`
 	LastApply *BridgeApply `json:"lastApply"`
 
