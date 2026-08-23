@@ -41,6 +41,8 @@ func extensionsRouter(r *gin.Engine) {
 		api.POST(group+"/stop", tn.Stop)             // stop tunnel
 		api.POST(group+"/restart", tn.Restart)       // restart tunnel
 		api.GET(group+"/logs", tn.GetLogs)           // get tunnel logs
+		api.GET(group+"/memory", tn.GetMemoryLimit)  // get tunnel memory limit
+		api.POST(group+"/memory", tn.SetMemoryLimit) // set tunnel memory limit
 		api.POST(group+"/binary", tn.UploadBinary)   // upload a custom tunnel binary
 		api.DELETE(group+"/binary", tn.DeleteBinary) // remove the custom tunnel binary
 	}

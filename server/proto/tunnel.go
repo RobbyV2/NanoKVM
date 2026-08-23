@@ -42,6 +42,16 @@ type GetTunnelLogsRsp struct {
 	Lines []string `json:"lines"`
 }
 
+type GetTunnelMemoryRsp struct {
+	Supported bool  `json:"supported"`
+	Enabled   bool  `json:"enabled"`
+	Limit     int64 `json:"limit"`
+}
+
+type SetTunnelMemoryReq struct {
+	Enabled bool `validate:"omitempty"`
+}
+
 type SetTunnelConfigReq struct {
 	Args string            `validate:"omitempty"`
 	Env  map[string]string `validate:"omitempty"`

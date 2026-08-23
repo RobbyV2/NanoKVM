@@ -26,7 +26,6 @@ var envKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 type envInject struct {
 	Key   string
 	Value string
-	File  string
 }
 
 type tunnelSpec struct {
@@ -34,6 +33,7 @@ type tunnelSpec struct {
 	Args       []string
 	SeededEnv  []string
 	HealthFile string
+	MemLimit   int64
 }
 
 var specs = map[proto.TunnelName]tunnelSpec{
@@ -41,7 +41,6 @@ var specs = map[proto.TunnelName]tunnelSpec{
 	proto.TunnelNewt: {
 		Env: []envInject{
 			{Key: "NEWT_SYSTEM_SUBSTRATE", Value: "CONTAINER"},
-			{Key: "GOMEMLIMIT", File: "/etc/kvm/GOMEMLIMIT"},
 			{Key: "GOGC", Value: "50"},
 		},
 		Args: []string{
@@ -50,6 +49,7 @@ var specs = map[proto.TunnelName]tunnelSpec{
 		},
 		SeededEnv:  []string{"PANGOLIN_ENDPOINT", "NEWT_ID", "NEWT_SECRET", "NEWT_PROVISIONING_KEY"},
 		HealthFile: "/tmp/newt.health",
+		MemLimit:   75,
 	},
 }
 
@@ -232,27 +232,6 @@ func setCustom(name proto.TunnelName, custom bool) error {
 	return nil
 }
 
-func injectedEnv(spec tunnelSpec) []envInject {
-	var resolved []envInject
-	for _, entry := range spec.Env {
-		if entry.File == "" {
-			resolved = append(resolved, entry)
-			continue
-		}
-
-		data, err := os.ReadFile(entry.File)
-		if err != nil {
-			continue
-		}
-		value := strings.TrimSpace(string(data))
-		if value == "" {
-			continue
-		}
-		resolved = append(resolved, envInject{Key: entry.Key, Value: value})
-	}
-	return resolved
-}
-
 func renderWrapper(name proto.TunnelName, cfg Config, binary string) (string, error) {
 	spec, ok := specOf(name)
 	if !ok {
@@ -278,8 +257,11 @@ func renderWrapper(name proto.TunnelName, cfg Config, binary string) (string, er
 	for _, key := range keys {
 		builder.WriteString(fmt.Sprintf("export %s=%s\n", key, shellQuote(cfg.Env[key])))
 	}
-	for _, entry := range injectedEnv(spec) {
+	for _, entry := range spec.Env {
 		builder.WriteString(fmt.Sprintf("export %s=%s\n", entry.Key, shellQuote(entry.Value)))
+	}
+	if limit, ok := memLimit(name); ok {
+		builder.WriteString(fmt.Sprintf("export GOMEMLIMIT=%s\n", shellQuote(fmt.Sprintf("%dMiB", limit))))
 	}
 
 	command := []string{shellQuote(binary)}
