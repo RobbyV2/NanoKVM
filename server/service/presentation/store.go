@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -79,6 +80,73 @@ func (s *Store) SaveProfile(profile Profile) error {
 	return utils.WriteFileAtomic(path, data, 0o600)
 }
 
+func (s *Store) Profiles() ([]Profile, error) {
+	configMu.Lock()
+	defer configMu.Unlock()
+
+	entries, err := os.ReadDir(s.dir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("read profiles: %w", err)
+	}
+
+	profiles := builtinProfiles()
+	for _, entry := range entries {
+		name := strings.TrimSuffix(entry.Name(), ".json")
+		if entry.Name() == "capability.json" || name == entry.Name() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		if _, ok := builtinByName(name); ok {
+			continue
+		}
+
+		data, err := os.ReadFile(filepath.Join(s.dir, entry.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("read profile %s: %w", name, err)
+		}
+		var profile Profile
+		if err := json.Unmarshal(data, &profile); err != nil {
+			return nil, fmt.Errorf("decode profile %s: %w", name, err)
+		}
+		profile.Normalize()
+		if profile.Name != name {
+			return nil, fmt.Errorf("profile file %s contains name %q", name, profile.Name)
+		}
+		if err := profile.Validate(); err != nil {
+			return nil, fmt.Errorf("validate profile %s: %w", name, err)
+		}
+		profiles = append(profiles, profile)
+	}
+
+	sort.Slice(profiles, func(i, j int) bool {
+		if profiles[i].BuiltIn != profiles[j].BuiltIn {
+			return profiles[i].BuiltIn
+		}
+		return profiles[i].Name < profiles[j].Name
+	})
+	return profiles, nil
+}
+
+func (s *Store) DeleteProfile(name string) error {
+	if _, ok := builtinByName(name); ok {
+		return fmt.Errorf("built-in profile %q cannot be deleted", name)
+	}
+	path, err := s.profilePath(name)
+	if err != nil {
+		return err
+	}
+
+	configMu.Lock()
+	defer configMu.Unlock()
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("delete profile %s: %w", name, err)
+	}
+	return nil
+}
+
 func (s *Store) WriteBuiltins() error {
 	for _, profile := range builtinProfiles() {
 		if err := s.SaveProfile(profile); err != nil {
@@ -105,7 +173,7 @@ func (s *Store) SetLastKnownGood(name string) error {
 }
 
 func (s *Store) profilePath(name string) (string, error) {
-	if name == "" || name != filepath.Base(name) || strings.HasPrefix(name, ".") {
+	if !profileNamePattern.MatchString(name) {
 		return "", fmt.Errorf("invalid profile name %q", name)
 	}
 	return filepath.Join(s.dir, name+".json"), nil
