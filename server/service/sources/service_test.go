@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -10,10 +11,19 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type recordingIngress struct{ frames chan MediaFrame }
+
+func (r *recordingIngress) Ingest(_ context.Context, frame MediaFrame) error {
+	r.frames <- frame
+	return nil
+}
+
+func (*recordingIngress) Detach(string) {}
+
 func TestSourceWebSocketClaimsAndNamesHolder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	registry := mustRegistry(t, testSlots, RegistryOptions{})
-	service := NewServiceWith(registry, NewStore(t.TempDir()+"/sources.json"))
+	service := NewServiceWith(registry)
 	router := gin.New()
 	router.GET("/events", service.serveEvents)
 	router.GET("/alice", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice"}) })
@@ -75,7 +85,7 @@ func TestSourceWebSocketClaimsAndNamesHolder(t *testing.T) {
 func TestSourceWebSocketRejectsUnknownAndOversizedHello(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	registry := mustRegistry(t, testSlots, RegistryOptions{})
-	service := NewServiceWith(registry, NewStore(t.TempDir()+"/sources.json"))
+	service := NewServiceWith(registry)
 	router := gin.New()
 	router.GET("/source", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice"}) })
 	server := httptest.NewServer(router)
@@ -107,12 +117,52 @@ func TestSourceWebSocketRejectsUnknownAndOversizedHello(t *testing.T) {
 	}
 }
 
+func TestSourceWebSocketAcceptsBoundMediaAndAcknowledgesIt(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	service := NewServiceWith(registry)
+	ingress := &recordingIngress{frames: make(chan MediaFrame, 1)}
+	service.SetIngress(ingress)
+	router := gin.New()
+	router.GET("/source", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice"}) })
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	connection, ready := connectSource(t, server.URL, "/source", "Phone", []Stream{{ID: "front", Kind: KindCamera, Label: "Front"}})
+	defer connection.Close()
+	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: "uvc.cam0", StreamID: "front"}); err != nil {
+		t.Fatal(err)
+	}
+	var claimed controlResponse
+	readJSON(t, connection, &claimed)
+	if claimed.Type != "claimed" {
+		t.Fatalf("claim = %+v", claimed)
+	}
+	payload := []byte{0xff, 0xd8, 0xff, 0xd9}
+	if err := connection.WriteMessage(websocket.BinaryMessage, encodedMediaFrame(MediaKindMJPEG, "uvc.cam0", "front", payload)); err != nil {
+		t.Fatal(err)
+	}
+	var ack controlResponse
+	readJSON(t, connection, &ack)
+	if ack.Type != "frame_ack" || ack.SinkID != "uvc.cam0" || ack.StreamID != "front" || ack.Sequence != 17 {
+		t.Fatalf("ack = %+v", ack)
+	}
+	select {
+	case frame := <-ingress.frames:
+		if frame.SourceID != ready.Source.ID || frame.Sequence != 17 || string(frame.Payload) != string(payload) {
+			t.Fatalf("frame = %+v", frame)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("media frame was not delivered")
+	}
+}
+
 func TestEventWebSocketGetsFreshSnapshot(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	registry := mustRegistry(t, testSlots, RegistryOptions{})
 	actor := Actor{Username: "alice"}
 	mustSource(t, registry, actor, "Phone", KindCamera)
-	service := NewServiceWith(registry, NewStore(t.TempDir()+"/sources.json"))
+	service := NewServiceWith(registry)
 	router := gin.New()
 	router.GET("/events", service.serveEvents)
 	server := httptest.NewServer(router)

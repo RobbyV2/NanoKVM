@@ -2,9 +2,11 @@ package sources
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -26,12 +28,12 @@ const (
 	pingInterval       = 20 * time.Second
 	messageWindow      = 10 * time.Second
 	messageLimit       = 64
+	mediaMessageLimit  = MaxSlots * 60 * 10
 )
 
 type Service struct {
 	registry *Registry
-	store    *Store
-	initErr  error
+	ingress  FrameIngress
 	mu       sync.Mutex
 }
 
@@ -55,11 +57,17 @@ type controlResponse struct {
 	Owner       string       `json:"owner,omitempty"`
 	SourceLabel string       `json:"source_label,omitempty"`
 	Since       time.Time    `json:"since,omitempty"`
+	StreamID    string       `json:"stream_id,omitempty"`
+	Sequence    uint32       `json:"sequence,omitempty"`
 }
 
-type slotsRequest struct {
-	Slots []Slot `json:"slots"`
+type frameFailure struct {
+	frame MediaFrame
+	err   error
 }
+
+func (e *frameFailure) Error() string { return e.err.Error() }
+func (e *frameFailure) Unwrap() error { return e.err }
 
 var sourceUpgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
@@ -68,52 +76,24 @@ var sourceUpgrader = websocket.Upgrader{
 }
 
 func NewService() *Service {
-	store := NewStore("")
-	slots, loadErr := store.Load()
-	registry, registryErr := NewRegistry(slots, RegistryOptions{})
-	if registryErr != nil {
-		registry, _ = NewRegistry(nil, RegistryOptions{})
-	}
-	return &Service{registry: registry, store: store, initErr: errors.Join(loadErr, registryErr)}
+	registry, _ := NewRegistry(nil, RegistryOptions{})
+	return &Service{registry: registry}
 }
 
-func NewServiceWith(registry *Registry, store *Store) *Service {
-	return &Service{registry: registry, store: store}
+func NewServiceWith(registry *Registry) *Service {
+	return &Service{registry: registry}
 }
+
+func (s *Service) SetIngress(ingress FrameIngress) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ingress = ingress
+}
+
+func (s *Service) Registry() *Registry { return s.registry }
 
 func (s *Service) Get(c *gin.Context) {
 	var response proto.Response
-	if err := s.ready(); err != nil {
-		response.ErrRsp(c, -1, err.Error())
-		return
-	}
-	snapshot := s.registry.Snapshot()
-	response.OkRspWithData(c, &snapshot)
-}
-
-func (s *Service) SetSinks(c *gin.Context) {
-	var response proto.Response
-	actor, ok := actorFrom(c)
-	if !ok || !actor.Admin {
-		response.ErrRsp(c, -1, ErrForbidden.Error())
-		return
-	}
-	var request slotsRequest
-	if err := decodeHTTPRequest(c, &request); err != nil {
-		response.ErrRsp(c, -1, "invalid arguments")
-		return
-	}
-	if err := s.store.Save(request.Slots); err != nil {
-		response.ErrRsp(c, -2, err.Error())
-		return
-	}
-	if err := s.registry.ReplaceSlots(actor, request.Slots); err != nil {
-		response.ErrRsp(c, -2, err.Error())
-		return
-	}
-	s.mu.Lock()
-	s.initErr = nil
-	s.mu.Unlock()
 	snapshot := s.registry.Snapshot()
 	response.OkRspWithData(c, &snapshot)
 }
@@ -129,6 +109,7 @@ func (s *Service) Release(c *gin.Context) {
 		response.ErrRsp(c, -2, err.Error())
 		return
 	}
+	s.detach(c.Param("sink"))
 	response.OkRsp(c)
 }
 
@@ -139,16 +120,20 @@ func (s *Service) DisconnectAll(c *gin.Context) {
 		response.ErrRsp(c, -1, ErrForbidden.Error())
 		return
 	}
+	snapshot := s.registry.Snapshot()
 	if err := s.registry.DisconnectAll(actor); err != nil {
 		response.ErrRsp(c, -2, err.Error())
 		return
+	}
+	for _, binding := range snapshot.Bindings {
+		s.detach(binding.SinkID)
 	}
 	response.OkRsp(c)
 }
 
 func (s *Service) SourceSocket(c *gin.Context) {
 	actor, ok := actorFrom(c)
-	if !ok || s.ready() != nil {
+	if !ok {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -156,7 +141,7 @@ func (s *Service) SourceSocket(c *gin.Context) {
 }
 
 func (s *Service) Events(c *gin.Context) {
-	if _, ok := actorFrom(c); !ok || s.ready() != nil {
+	if _, ok := actorFrom(c); !ok {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -188,25 +173,69 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
 		return
 	}
-	defer s.registry.DisconnectSource(source.ID)
+	defer func() {
+		snapshot := s.registry.Snapshot()
+		s.registry.DisconnectSource(source.ID)
+		for _, binding := range snapshot.Bindings {
+			if binding.SourceID == source.ID {
+				s.detach(binding.SinkID)
+			}
+		}
+	}()
 	snapshot := s.registry.Snapshot()
 	if err := writeControl(connection, controlResponse{Type: "source_ready", Source: &source, Snapshot: &snapshot}); err != nil {
 		return
 	}
 	_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
+	connection.SetReadLimit(maxMediaMessage)
 
 	done := make(chan struct{})
 	defer close(done)
 	go ping(connection, done)
-	windowStart, count := time.Now(), 0
+	windowStart, count, mediaCount := time.Now(), 0, 0
 	for {
-		message, err = readControl(connection)
+		messageType, data, readErr := connection.ReadMessage()
+		err = readErr
 		if err != nil {
+			return
+		}
+		if messageType == websocket.BinaryMessage {
+			now := time.Now()
+			if now.Sub(windowStart) >= messageWindow {
+				windowStart, count, mediaCount = now, 0, 0
+			}
+			mediaCount++
+			if mediaCount > mediaMessageLimit {
+				writeControl(connection, controlResponse{Type: "error", Message: "media frame rate exceeded"})
+				return
+			}
+			if err := s.handleMedia(c.Request.Context(), connection, source.ID, data); err != nil {
+				response := controlResponse{Type: "frame_error", Message: err.Error()}
+				var failure *frameFailure
+				if errors.As(err, &failure) {
+					response.SinkID = failure.frame.SinkID
+					response.StreamID = failure.frame.StreamID
+					response.Sequence = failure.frame.Sequence
+				}
+				if writeControl(connection, response) != nil {
+					return
+				}
+			}
+			_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
+			continue
+		}
+		if len(data) > maxControlMessage {
+			writeControl(connection, controlResponse{Type: "error", Message: "control message is too large"})
+			return
+		}
+		message, err = decodeControl(messageType, data)
+		if err != nil {
+			writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
 			return
 		}
 		now := time.Now()
 		if now.Sub(windowStart) >= messageWindow {
-			windowStart, count = now, 0
+			windowStart, count, mediaCount = now, 0, 0
 		}
 		count++
 		if count > messageLimit {
@@ -218,6 +247,33 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		}
 		_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
 	}
+}
+
+func (s *Service) handleMedia(ctx context.Context, connection *websocket.Conn, sourceID string, data []byte) error {
+	frame, err := parseMediaFrame(data)
+	if err != nil {
+		return err
+	}
+	frame.SourceID = sourceID
+	kind := KindCamera
+	if frame.Kind == MediaKindPCMS16LE {
+		kind = KindMicrophone
+	}
+	if err := s.registry.AuthorizeFrame(sourceID, frame.StreamID, frame.SinkID, kind); err != nil {
+		return &frameFailure{frame: frame, err: err}
+	}
+	s.mu.Lock()
+	ingress := s.ingress
+	s.mu.Unlock()
+	if ingress == nil {
+		return &frameFailure{frame: frame, err: errors.New("media output is unavailable")}
+	}
+	if err := ingress.Ingest(ctx, frame); err != nil {
+		return &frameFailure{frame: frame, err: err}
+	}
+	return writeControl(connection, controlResponse{
+		Type: "frame_ack", SinkID: frame.SinkID, StreamID: frame.StreamID, Sequence: frame.Sequence,
+	})
 }
 
 func (s *Service) handleControl(connection *websocket.Conn, actor Actor, sourceID string, message controlMessage) error {
@@ -243,6 +299,7 @@ func (s *Service) handleControl(connection *websocket.Conn, actor Actor, sourceI
 		if err := s.registry.Release(actor, message.SinkID, ReasonReleased); err != nil {
 			return writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
 		}
+		s.detach(message.SinkID)
 		return writeControl(connection, controlResponse{Type: "released", SinkID: message.SinkID})
 	case "resume":
 		binding, err := s.registry.Resume(actor, sourceID, message.StreamID, message.SinkID, message.Token)
@@ -252,6 +309,15 @@ func (s *Service) handleControl(connection *websocket.Conn, actor Actor, sourceI
 		return writeControl(connection, controlResponse{Type: "resumed", Binding: &binding})
 	default:
 		return writeControl(connection, controlResponse{Type: "error", Message: "unknown message type"})
+	}
+}
+
+func (s *Service) detach(sinkID string) {
+	s.mu.Lock()
+	ingress := s.ingress
+	s.mu.Unlock()
+	if ingress != nil {
+		ingress.Detach(sinkID)
 	}
 }
 
@@ -302,12 +368,6 @@ func (s *Service) serveEvents(c *gin.Context) {
 	}
 }
 
-func (s *Service) ready() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.initErr
-}
-
 func actorFrom(c *gin.Context) (Actor, bool) {
 	principal, ok := middleware.CurrentPrincipal(c)
 	if !ok {
@@ -316,14 +376,15 @@ func actorFrom(c *gin.Context) (Actor, bool) {
 	return Actor{Username: principal.Username, Admin: principal.Role == authn.RoleAdmin}, true
 }
 
-func decodeHTTPRequest(c *gin.Context, destination any) error {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxControlMessage)
-	decoder := json.NewDecoder(c.Request.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(destination); err != nil {
+func requireJSONEnd(decoder *json.Decoder) error {
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("multiple JSON values")
+		}
 		return err
 	}
-	return requireJSONEnd(decoder)
+	return nil
 }
 
 func readControl(connection *websocket.Conn) (controlMessage, error) {
@@ -331,6 +392,10 @@ func readControl(connection *websocket.Conn) (controlMessage, error) {
 	if err != nil {
 		return controlMessage{}, err
 	}
+	return decodeControl(messageType, data)
+}
+
+func decodeControl(messageType int, data []byte) (controlMessage, error) {
 	if messageType != websocket.TextMessage {
 		return controlMessage{}, errors.New("control messages must be JSON text")
 	}

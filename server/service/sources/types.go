@@ -274,16 +274,20 @@ func (f Format) validate(kind Kind) error {
 		return errors.New("invalid codec")
 	}
 	if kind == KindCamera {
-		if f.Width < 1 || f.Width > 7680 || f.Height < 1 || f.Height > 4320 || f.FPS < 1 || f.FPS > 240 {
-			return errors.New("invalid video bounds")
+		if f.Codec != "mjpeg" {
+			return fmt.Errorf("unsupported camera codec %q", f.Codec)
+		}
+		allowed := map[[2]int]bool{{1280, 720}: true, {640, 480}: true, {320, 240}: true, {160, 120}: true}
+		if !allowed[[2]int{f.Width, f.Height}] || (f.FPS != 15 && f.FPS != 30) {
+			return errors.New("unsupported MJPEG size or rate")
 		}
 		if f.SampleRate != 0 || f.Channels != 0 {
 			return errors.New("audio fields on camera")
 		}
 		return nil
 	}
-	if f.SampleRate < 8000 || f.SampleRate > 192000 || f.Channels < 1 || f.Channels > 8 {
-		return errors.New("invalid audio bounds")
+	if f.Codec != "pcm_s16le" || f.SampleRate != 48000 || f.Channels != 1 {
+		return errors.New("microphone requires mono pcm_s16le at 48000 Hz")
 	}
 	if f.Width != 0 || f.Height != 0 || f.FPS != 0 {
 		return errors.New("video fields on microphone")
