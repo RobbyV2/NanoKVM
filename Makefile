@@ -73,7 +73,8 @@ USB_PROXY_BUILD_CMD := cd /home/build/NanoKVM/third_party/usb-proxy && make clea
 PASSTHROUGH_BUILD_CMD := rm -rf $(PASSTHROUGH_DEPS) $(PASSTHROUGH_DIR)/libusb-$(LIBUSB_VERSION) $(PASSTHROUGH_DIR)/jsoncpp-$(JSONCPP_VERSION) && mkdir -p $(PASSTHROUGH_DEPS)/include $(PASSTHROUGH_DEPS)/lib && $(LIBUSB_BUILD_CMD) && $(JSONCPP_BUILD_CMD) && $(USB_PROXY_BUILD_CMD)
 
 .PHONY: help check-root builder-image rebuild-image check-image shell app support vision \
-        web tunnels passthrough edid-profiles release-build package release all clean
+        web tunnels passthrough edid-profiles release-build package release all clean \
+        kernelint kernelint-tier1 kernelint-tier2
 
 # Default target
 all: app support
@@ -95,6 +96,8 @@ help:
 	@echo "  tunnels       - Build wstunnel + newt seeds into kvmapp/tunnels"
 	@echo "  passthrough   - Build the usb-proxy seed into kvmapp/passthrough"
 	@echo "  edid-profiles - Regenerate the shipped EDID profile table"
+	@echo "  kernelint-tier1 - Kernel tests needing netns and vhci_hcd"
+	@echo "  kernelint-tier2 - Kernel tests needing a UDC, in a QEMU VM"
 	@echo "  all           - Build both app and support (default)"
 	@echo "  release-build - Build every riscv64 release artifact in one pass"
 	@echo "  package       - Assemble nanokvm_<VERSION>.tar.gz + latest.json"
@@ -166,6 +169,16 @@ release-build: check-root builder-image
 edid-profiles: check-root builder-image
 	@echo "Generating EDID profiles..."
 	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(EDID_PROFILES_CMD)'
+
+# The //go:build kernelint tests. Tier 1 needs a network namespace and
+# vhci_hcd; tier 2 needs dummy_hcd and boots a VM for it. See scripts/kernelint.sh.
+kernelint-tier1:
+	@scripts/kernelint.sh tier1
+
+kernelint-tier2:
+	@scripts/kernelint.sh tier2
+
+kernelint: kernelint-tier1 kernelint-tier2
 
 # Build the frontend (runs on the host; the builder image has no Node)
 web:
