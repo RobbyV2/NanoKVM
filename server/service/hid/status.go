@@ -114,7 +114,11 @@ func (s *Service) SetHidMode(c *gin.Context) {
 
 	rsp.OkRsp(c)
 
-	// Reboot stays: the profiles' report_desc differ, report_desc is -EBUSY once linked, and R1.1 forbids unlinking hid.*.
+	// The report_desc -EBUSY that used to justify this is gone: Reconcile unlinks
+	// and relinks, and TestKernelTier2UnlinkKeepsHIDMinors shows the minors hold.
+	// The reboot stays for the descriptor the live apply cannot undo: hid-only
+	// writes bcdUSB and the standard profile leaves it alone, so a round trip
+	// back to normal keeps announcing USB 1.1 until S03usbdev rebuilds the gadget.
 	log.Println("reboot system...")
 	time.Sleep(500 * time.Millisecond)
 	_ = exec.Command("reboot").Run()
