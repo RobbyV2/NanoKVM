@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ConfigurationFile = "/etc/kvm/server.yaml"
+var ConfigurationFile = "/etc/kvm/server.yaml"
 
 func Read() (*Config, error) {
 	data, err := os.ReadFile(ConfigurationFile)
@@ -22,6 +22,8 @@ func Read() (*Config, error) {
 		log.Fatalf("failed to unmarshal config: %v", err)
 		return nil, err
 	}
+
+	conf.applyVNCDefaults()
 
 	log.Debugf("read %s successfully", ConfigurationFile)
 	return &conf, nil

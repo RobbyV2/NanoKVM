@@ -171,3 +171,12 @@ type GetWebTitleRsp struct {
 type SetTlsReq struct {
 	Enabled bool `validate:"omitempty"`
 }
+
+type GetVNCRsp struct {
+	Enabled bool `json:"enabled"`
+	Port    int  `json:"port"`
+}
+
+type SetVNCReq struct {
+	Enabled bool `validate:"omitempty"`
+}

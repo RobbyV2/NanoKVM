@@ -12,6 +12,7 @@ import {
   NetworkIcon,
   PaletteIcon,
   PanelsTopLeftIcon,
+  ScreenShareIcon,
   SettingsIcon,
   SmartphoneIcon,
   UsbIcon,
@@ -40,6 +41,7 @@ import { Presentation } from './presentation';
 import { Tailscale } from './tailscale';
 import { Tunnel } from './tunnel';
 import { Update } from './update';
+import { Vnc } from './vnc';
 
 export const Settings = () => {
   const { t } = useTranslation();
@@ -72,6 +74,7 @@ export const Settings = () => {
             component: <Presentation setIsLocked={setIsLocked} />
           },
           { id: 'network', icon: <NetworkIcon size={16} />, component: <Network /> },
+          { id: 'vnc', icon: <ScreenShareIcon size={16} />, component: <Vnc /> },
           { id: 'passthrough', icon: <UsbIcon size={16} />, component: <Passthrough /> },
           { id: 'mcp', icon: <BotIcon size={16} />, component: <MCP /> },
           {

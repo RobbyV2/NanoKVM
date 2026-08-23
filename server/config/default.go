@@ -37,6 +37,12 @@ var defaultConfig = &Config{
 	},
 }
 
+func (c *Config) applyVNCDefaults() {
+	if c.VNC.Port == 0 {
+		c.VNC.Port = defaultConfig.VNC.Port
+	}
+}
+
 func checkDefaultValue() {
 	if instance.JWT.SecretKey == "" {
 		instance.JWT.SecretKey = generateRandomSecretKey()
@@ -55,9 +61,7 @@ func checkDefaultValue() {
 		instance.Authentication = "enable"
 	}
 
-	if instance.VNC.Port == 0 {
-		instance.VNC.Port = 5900
-	}
+	instance.applyVNCDefaults()
 
 	instance.Hardware = getHardware()
 }

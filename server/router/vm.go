@@ -73,6 +73,9 @@ func vmRouter(r *gin.Engine) {
 	admin.POST("/vm/ssh/enable", service.EnableSSH)   // enable SSH
 	admin.POST("/vm/ssh/disable", service.DisableSSH) // disable SSH
 
+	admin.GET("/vm/vnc", service.GetVNC)  // get VNC state
+	admin.POST("/vm/vnc", service.SetVNC) // enable/disable VNC
+
 	admin.GET("/vm/swap", service.GetSwap)  // get swap file size
 	admin.POST("/vm/swap", service.SetSwap) // set swap file size
 

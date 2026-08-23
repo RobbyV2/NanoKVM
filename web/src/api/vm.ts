@@ -165,6 +165,16 @@ export function setTLS(enabled: boolean) {
   return http.post('/api/vm/tls', { enabled });
 }
 
+// get VNC state
+export function getVNC() {
+  return http.get('/api/vm/vnc');
+}
+
+// enable / disable VNC
+export function setVNC(enabled: boolean) {
+  return http.post('/api/vm/vnc', { enabled });
+}
+
 // reboot
 export function reboot() {
   return http.post('/api/vm/system/reboot');

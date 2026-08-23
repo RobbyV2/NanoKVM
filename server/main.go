@@ -138,32 +138,32 @@ func run() {
 }
 
 func startVNC(conf *config.Config) {
+	vnc.GetManager().Configure(func() *vnc.Server {
+		return &vnc.Server{
+			Addr:      utils.ListenAddr(conf.Host, strconv.Itoa(conf.VNC.Port)),
+			AllowNone: conf.Authentication == "disable",
+			Screen: func() (uint16, uint16, uint16, int) {
+				screen := common.GetScreen()
+				common.CheckScreen()
+				return screen.Width, screen.Height, screen.Quality, screen.FPS
+			},
+			ReadJPEG: common.GetKvmVision().ReadMjpeg,
+			AllowInput: func(mode controlmode.Mode) bool {
+				return mode != controlmode.ModePicoclaw || !picoclaw.GetSessionLock().BlocksManualInput()
+			},
+			ViewerCount: func(count int, version uint64) {
+				vm.UpdateHdmiViewerSnapshot("vnc", count, version)
+			},
+		}
+	})
+
 	if !conf.VNC.Enabled {
 		return
 	}
 
-	server := &vnc.Server{
-		Addr:      utils.ListenAddr(conf.Host, strconv.Itoa(conf.VNC.Port)),
-		AllowNone: conf.Authentication == "disable",
-		Screen: func() (uint16, uint16, uint16, int) {
-			screen := common.GetScreen()
-			common.CheckScreen()
-			return screen.Width, screen.Height, screen.Quality, screen.FPS
-		},
-		ReadJPEG: common.GetKvmVision().ReadMjpeg,
-		AllowInput: func(mode controlmode.Mode) bool {
-			return mode != controlmode.ModePicoclaw || !picoclaw.GetSessionLock().BlocksManualInput()
-		},
-		ViewerCount: func(count int, version uint64) {
-			vm.UpdateHdmiViewerSnapshot("vnc", count, version)
-		},
+	if err := vnc.GetManager().Start(); err != nil {
+		log.Printf("start vnc server failed: %v", err)
 	}
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Printf("vnc server stopped: %v", err)
-		}
-	}()
 }
 
 func dispose() {
