@@ -14,9 +14,12 @@ import (
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/router"
 	"NanoKVM-Server/service/bridge"
+	"NanoKVM-Server/service/controlmode"
 	"NanoKVM-Server/service/passthrough"
+	"NanoKVM-Server/service/picoclaw"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
+	"NanoKVM-Server/service/vnc"
 	"NanoKVM-Server/utils"
 
 	"github.com/gin-gonic/gin"
@@ -79,6 +82,7 @@ func run() {
 	}
 
 	router.Init(r)
+	startVNC(conf)
 
 	httpAddr := utils.ListenAddr(conf.Host, strconv.Itoa(conf.Port.Http))
 	loopbackHTTPAddr := utils.ListenAddr("127.0.0.1", strconv.Itoa(conf.Port.Http))
@@ -128,6 +132,35 @@ func run() {
 			panic("start http server failed")
 		}
 	}
+}
+
+func startVNC(conf *config.Config) {
+	if !conf.VNC.Enabled {
+		return
+	}
+
+	server := &vnc.Server{
+		Addr:      utils.ListenAddr(conf.Host, strconv.Itoa(conf.VNC.Port)),
+		AllowNone: conf.Authentication == "disable",
+		Screen: func() (uint16, uint16, uint16, int) {
+			screen := common.GetScreen()
+			common.CheckScreen()
+			return screen.Width, screen.Height, screen.Quality, screen.FPS
+		},
+		ReadJPEG: common.GetKvmVision().ReadMjpeg,
+		AllowInput: func(mode controlmode.Mode) bool {
+			return mode != controlmode.ModePicoclaw || !picoclaw.GetSessionLock().BlocksManualInput()
+		},
+		ViewerCount: func(count int, version uint64) {
+			vm.UpdateHdmiViewerSnapshot("vnc", count, version)
+		},
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Printf("vnc server stopped: %v", err)
+		}
+	}()
 }
 
 func dispose() {

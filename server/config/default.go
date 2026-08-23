@@ -31,6 +31,10 @@ var defaultConfig = &Config{
 		LoginLockoutDuration: 0,
 		LoginMaxFailures:     5,
 	},
+	VNC: VNC{
+		Enabled: false,
+		Port:    5900,
+	},
 }
 
 func checkDefaultValue() {
@@ -49,6 +53,10 @@ func checkDefaultValue() {
 
 	if instance.Authentication == "" {
 		instance.Authentication = "enable"
+	}
+
+	if instance.VNC.Port == 0 {
+		instance.VNC.Port = 5900
 	}
 
 	instance.Hardware = getHardware()

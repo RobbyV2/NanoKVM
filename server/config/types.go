@@ -11,6 +11,7 @@ type Config struct {
 	Stun           string   `yaml:"stun"`
 	Turn           Turn     `yaml:"turn"`
 	Security       Security `yaml:"security"`
+	VNC            VNC      `yaml:"vnc"`
 
 	Hardware Hardware `yaml:"-"`
 }
@@ -40,6 +41,11 @@ type Turn struct {
 	TurnAddr string `yaml:"turnAddr"`
 	TurnUser string `yaml:"turnUser"`
 	TurnCred string `yaml:"turnCred"`
+}
+
+type VNC struct {
+	Enabled bool `yaml:"enabled"`
+	Port    int  `yaml:"port"`
 }
 
 type Security struct {
