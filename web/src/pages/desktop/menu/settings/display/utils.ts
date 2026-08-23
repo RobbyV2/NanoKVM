@@ -1,4 +1,4 @@
-import type { EdidPreflight, EdidSummary } from '@/api/edid.ts';
+import type { EdidPreflight, EdidResult, EdidSummary } from '@/api/edid.ts';
 
 export type CheckLevel = 'error' | 'warning' | 'info';
 
@@ -100,4 +100,13 @@ export function buildChecks(summary?: Partial<EdidSummary>, preflight?: EdidPref
   }
 
   return checks;
+}
+
+// the flash region was touched on every outcome the server sets this on, not
+// only on the ones that verified, and a half written region is where the trip
+// to the device stops being optional
+export function powerCycleNotice(result?: EdidResult): string {
+  if (!result?.requiresPowerCycle) return '';
+
+  return result.verified ? 'powerCycleNotice' : 'powerCycleUnverified';
 }

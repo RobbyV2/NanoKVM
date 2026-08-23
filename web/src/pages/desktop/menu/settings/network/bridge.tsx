@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Modal, Switch } from 'antd';
-import { LoaderCircleIcon, RotateCcwIcon, TriangleAlertIcon } from 'lucide-react';
+import { LoaderCircleIcon, RotateCcwIcon, TriangleAlertIcon, UnplugIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/bridge.ts';
@@ -246,11 +246,14 @@ export const Bridge = () => {
   const lastApply = status?.lastApply;
   const failed = failedGates(lastApply?.checks);
 
+  const loop = status?.loop;
+
+  // carrier is the cable; up alone is set on a port with nothing in it too
   const ports = (status?.ports ?? [])
-    .map(
-      (port: BridgePort) =>
-        `${port.name} · ${port.up ? t('settings.network.bridge.up') : t('settings.network.bridge.down')}`
-    )
+    .map((port: BridgePort) => {
+      if (!port.up) return `${port.name} · ${t('settings.network.bridge.down')}`;
+      return `${port.name} · ${t(`settings.network.bridge.${port.carrier ? 'up' : 'noLink'}`)}`;
+    })
     .join(', ');
 
   return (
@@ -279,6 +282,24 @@ export const Bridge = () => {
       </div>
 
       {isPending && <Revert onSuccess={getStatus} />}
+
+      {/* an enabled bridge whose uplink has no cable is the state the enable
+          preflight exists to refuse to create */}
+      {status?.state === 'enabled' && !status.carrier && (
+        <div className="flex items-start space-x-1 text-xs text-amber-500">
+          <UnplugIcon size={13} className="mt-[2px] shrink-0" />
+          <span>{t('settings.network.bridge.noCarrier', { port: status.uplink })}</span>
+        </div>
+      )}
+
+      {/* stp is off by design, so nothing in the kernel breaks a second path to
+          the uplink segment and this notice is the compensating control */}
+      {loop && (
+        <div className="flex items-start space-x-1 text-xs text-amber-500">
+          <TriangleAlertIcon size={13} className="mt-[2px] shrink-0" />
+          <span>{t('settings.network.bridge.loop', { port: loop.port })}</span>
+        </div>
+      )}
 
       {/* the dead-man was disarmed on a proof that never crossed the wire, so
           the gate list saying "inbound" overstates what was actually shown */}

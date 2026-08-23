@@ -8,7 +8,7 @@ import type { EdidPreflight, EdidProfile, EdidResult, EdidSummary } from '@/api/
 
 import { Mismatch } from './mismatch.tsx';
 import { Checks, Summary } from './summary.tsx';
-import { buildChecks, formatMode, hardwareName } from './utils.ts';
+import { buildChecks, formatMode, hardwareName, powerCycleNotice } from './utils.ts';
 
 type PresetProps = {
   active?: EdidSummary;
@@ -47,6 +47,7 @@ export const Preset = ({
 
   const checks = buildChecks(selection?.summary, preflight);
   const hasError = checks.some((check) => check.level === 'error');
+  const powerCycle = powerCycleNotice(result);
 
   // on cube the power cycle after a bad flash is a trip to the device, so the
   // confirmation is typed there; on pcie the tool resets hdmi over gpio itself
@@ -241,10 +242,6 @@ export const Preset = ({
           {errMsg && <span className="text-red-500">{errMsg}</span>}
         </div>
 
-        {result?.verified && result.requiresPowerCycle && (
-          <span className="text-xs text-amber-500">{t('settings.display.powerCycleNotice')}</span>
-        )}
-
         {result && !result.verified && (
           <div className="flex flex-col space-y-2">
             <span className="text-red-500">{t('settings.display.applyFailed')}</span>
@@ -254,6 +251,10 @@ export const Preset = ({
             {result.message && <span className="text-xs text-neutral-500">{result.message}</span>}
             <Mismatch result={result} />
           </div>
+        )}
+
+        {powerCycle && (
+          <span className="text-xs text-amber-500">{t(`settings.display.${powerCycle}`)}</span>
         )}
       </div>
 

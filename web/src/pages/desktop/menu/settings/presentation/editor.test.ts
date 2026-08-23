@@ -2,7 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { PresentationProfile } from '../../../../../api/presentation.ts';
-import { descriptorCount, editIdentity, identityFields, isProfileName } from './editor.ts';
+import {
+  descriptorCount,
+  editIdentity,
+  formatFIFOs,
+  identityChanged,
+  identityFields,
+  isProfileName,
+  recoveryKey
+} from './editor.ts';
 
 const profile: PresentationProfile = {
   schema_version: 1,
@@ -62,4 +70,23 @@ test('profile names match the persisted filename contract', () => {
   assert.equal(isProfileName('desk-kvm.1'), true);
   assert.equal(isProfileName('../desk'), false);
   assert.equal(isProfileName('Desk'), false);
+});
+
+test('pending edits are the trimmed difference from the saved profile', () => {
+  const fields = identityFields(profile);
+  assert.equal(identityChanged(profile, fields), false);
+  assert.equal(identityChanged(profile, { ...fields, product: ' NanoKVM ' }), false);
+  assert.equal(identityChanged(profile, { ...fields, product: 'Desk KVM' }), true);
+  assert.equal(identityChanged(profile, { ...fields, serial: '' }), true);
+});
+
+test('fifo assignment reads as one line per function', () => {
+  assert.equal(formatFIFOs({ 'ncm.usb0': [1, 2], 'hid.GS0': [0] }), 'hid.GS0 0; ncm.usb0 1,2');
+  assert.equal(formatFIFOs(undefined), '');
+});
+
+test('every recovery action names its own sentence', () => {
+  const keys = ['power-cycle', 'host-reboot', 'hdmi-reset', 'usb-reconnect'].map(recoveryKey);
+  assert.equal(new Set(keys).size, 4);
+  assert.equal(recoveryKey('power-cycle'), 'settings.presentation.recoveryPowerCycle');
 });

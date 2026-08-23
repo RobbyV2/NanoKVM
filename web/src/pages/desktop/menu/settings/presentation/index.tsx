@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Divider, Input, Modal, Select } from 'antd';
+import { Alert, Button, Divider, Input, Modal, Popconfirm, Select } from 'antd';
+import { useAtomValue } from 'jotai';
 import {
   CopyIcon,
   DownloadIcon,
   LoaderCircleIcon,
   SaveIcon,
   Trash2Icon,
+  Undo2Icon,
   UploadIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,12 +19,23 @@ import type {
   PresentationStatus,
   ProfileSummary
 } from '@/api/presentation.ts';
+import { client } from '@/lib/websocket.ts';
+import { videoModeAtom } from '@/jotai/screen.ts';
+import {
+  CAPTURE_STATUS_EVENT,
+  getCaptureStatusMessageKey,
+  parseCaptureStatusMessage,
+  type CaptureStatus
+} from '@/pages/desktop/capture-status/model.ts';
 
 import {
   descriptorCount,
   editIdentity,
+  formatFIFOs,
+  identityChanged,
   identityFields,
   isProfileName,
+  recoveryKey,
   type IdentityFields
 } from './editor.ts';
 
@@ -32,6 +45,7 @@ type PresentationProps = {
 
 export const Presentation = ({ setIsLocked }: PresentationProps) => {
   const { t } = useTranslation();
+  const videoMode = useAtomValue(videoModeAtom);
   const fileInput = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<PresentationStatus>();
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
@@ -41,6 +55,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   const [preview, setPreview] = useState<PresentationPreview>();
   const [cloneName, setCloneName] = useState('');
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [capture, setCapture] = useState<CaptureStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
@@ -85,6 +100,13 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    return client.on(CAPTURE_STATUS_EVENT, (message) => {
+      const status = parseCaptureStatusMessage(message);
+      if (status && status.mode === videoMode) setCapture(status);
+    });
+  }, [videoMode]);
+
   function candidate() {
     return profile && fields ? editIdentity(profile, fields) : undefined;
   }
@@ -128,8 +150,34 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
       content: (
         <div className="space-y-2 text-sm text-neutral-300">
           <div>{t('settings.presentation.applyDesc', { profile: next.name })}</div>
-          <div>{t('settings.presentation.reconnect')}</div>
-          <div className="break-words text-neutral-500">{result.functions.join(', ')}</div>
+          <div className="break-words text-neutral-500">
+            {result.device.vendor_id}:{result.device.product_id} · {result.device.manufacturer}{' '}
+            {result.device.product}
+            {result.device.serial ? ` · ${result.device.serial}` : ''}
+          </div>
+          <div className="break-words text-neutral-500">
+            {t('settings.presentation.applyLinks', {
+              functions: (result.apply?.linked || result.functions).join(', ')
+            })}
+          </div>
+          {result.apply && result.apply.removes.length > 0 && (
+            <div className="break-words text-neutral-500">
+              {t('settings.presentation.applyRemoves', {
+                functions: result.apply.removes.join(', ')
+              })}
+            </div>
+          )}
+          {result.apply && !result.apply.hid && <div>{t('settings.presentation.applyNoHid')}</div>}
+          <div>
+            {result.apply
+              ? t(recoveryKey(result.apply.recovery))
+              : t('settings.presentation.reconnect')}
+          </div>
+          {result.rollback && (
+            <div className="text-neutral-500">
+              {t('settings.presentation.applyRollback', { profile: result.rollback.profile })}
+            </div>
+          )}
         </div>
       ),
       okText: t('settings.presentation.apply'),
@@ -144,6 +192,14 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
           if (applyRsp.code !== 0) throw new Error(applyRsp.msg);
           await refresh(next.name);
         })
+    });
+  }
+
+  async function rollback() {
+    await act(async () => {
+      const rsp = await api.rollbackProfile();
+      if (rsp.code !== 0) throw new Error(rsp.msg);
+      await refresh((rsp.data as { profile: string }).profile);
     });
   }
 
@@ -202,6 +258,25 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
 
   const readOnly = profile?.built_in !== false;
   const assets = profile ? descriptorCount(profile) : 0;
+  const snapshot = status?.snapshot;
+  const udc = snapshot?.udc;
+  const failure = snapshot?.last_error;
+  const pending =
+    profile && fields && identityChanged(profile, fields)
+      ? t('settings.presentation.pendingEdits')
+      : selected && selected !== snapshot?.active
+        ? t('settings.presentation.pendingProfile', { profile: selected })
+        : t('settings.presentation.pendingNone');
+  const host = !udc
+    ? undefined
+    : udc.bound
+      ? [udc.state, udc.speed, udc.name].filter(Boolean).join(' · ')
+      : t('settings.presentation.hostUnbound');
+  const hdmi = !capture
+    ? t('settings.presentation.hdmiUnreported')
+    : capture.ok
+      ? t('settings.presentation.hdmiSignal')
+      : t(getCaptureStatusMessageKey(capture.result));
 
   return (
     <>
@@ -218,14 +293,86 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
           <div className="space-y-1">
             <div className="text-sm text-neutral-400">{t('settings.presentation.current')}</div>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span>
+              <span>{snapshot?.active || t('settings.presentation.noProfile')}</span>
+              <span className="text-xs text-neutral-500">
                 {status?.profile?.manufacturer} {status?.profile?.product}
               </span>
-              <span className="text-xs text-neutral-500">{status?.snapshot.mode}</span>
+              <span className="text-xs text-neutral-500">{snapshot?.mode}</span>
             </div>
-            <div className="break-words text-xs text-neutral-500">
-              {status?.snapshot.linked?.join(', ') || t('settings.presentation.noFunctions')}
+            <div className="space-y-1 pt-2">
+              <Readout
+                label={t('settings.presentation.linked')}
+                value={
+                  snapshot &&
+                  (snapshot.linked?.join(', ') || t('settings.presentation.noFunctions'))
+                }
+              />
+              <Readout label={t('settings.presentation.hostState')} value={host} />
+              <Readout label={t('settings.presentation.hdmiState')} value={hdmi} />
+              <Readout
+                label={t('settings.presentation.endpoints')}
+                value={
+                  snapshot &&
+                  t('settings.presentation.endpointUse', {
+                    inUse: snapshot.endpoints.in,
+                    inFree: snapshot.headroom.in,
+                    outUse: snapshot.endpoints.out,
+                    outFree: snapshot.headroom.out
+                  })
+                }
+              />
+              <Readout
+                label={t('settings.presentation.fifos')}
+                value={formatFIFOs(snapshot?.fifos)}
+              />
+              <Readout label={t('settings.presentation.pending')} value={pending} />
+              <Readout
+                label={t('settings.presentation.lastApply')}
+                value={
+                  failure
+                    ? t('settings.presentation.applyFailed', {
+                        profile: failure.profile,
+                        time: new Date(failure.at).toLocaleString()
+                      })
+                    : t('settings.presentation.applyClean')
+                }
+              />
+              {failure && (
+                <div className="break-words text-xs text-neutral-500">{failure.message}</div>
+              )}
+              <Readout
+                label={t('settings.presentation.lastKnownGood')}
+                value={status?.last_known_good}
+              />
+              <Readout
+                label={t('settings.presentation.rollbackTarget')}
+                value={status?.rollback_target || t('settings.presentation.rollbackNone')}
+              />
             </div>
+            {snapshot?.pending_power_cycle && (
+              <Alert
+                type="warning"
+                showIcon
+                message={t('settings.presentation.powerCyclePending')}
+              />
+            )}
+            {status?.rollback_target && (
+              <div className="flex justify-end pt-1">
+                <Popconfirm
+                  title={t('settings.presentation.rollbackTitle', {
+                    profile: status.rollback_target
+                  })}
+                  description={t('settings.presentation.rollbackDesc')}
+                  okText={t('settings.presentation.rollback')}
+                  cancelText={t('settings.presentation.cancel')}
+                  onConfirm={rollback}
+                >
+                  <Button size="small" icon={<Undo2Icon size={14} />} disabled={working}>
+                    {t('settings.presentation.rollback')}
+                  </Button>
+                </Popconfirm>
+              </div>
+            )}
           </div>
 
           <Divider className="my-0 opacity-50" />
@@ -237,7 +384,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
               value={selected || undefined}
               options={profiles.map((item) => ({
                 value: item.name,
-                label: `${item.name} · ${item.manufacturer} ${item.product}${item.built_in ? ` (${t('settings.presentation.builtIn')})` : ''}`
+                label: `${item.name} · ${item.manufacturer} ${item.product}${item.built_in ? ` (${t('settings.presentation.builtIn')})` : ''}${item.provenance.descriptors ? ` · ${t('settings.presentation.descriptors')}` : ''}`
               }))}
               onChange={(name) => loadProfile(name).catch((err) => setError(err.message))}
             />
@@ -356,13 +503,20 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                 <Alert key={message} type="warning" showIcon message={message} />
               ))}
               {preview?.valid && (
-                <div className="text-xs text-neutral-500">
-                  {t('settings.presentation.endpointUse', {
-                    inUse: preview.endpoints.in,
-                    inFree: preview.headroom.in,
-                    outUse: preview.endpoints.out,
-                    outFree: preview.headroom.out
-                  })}
+                <div className="space-y-1 text-xs text-neutral-500">
+                  <div>
+                    {t('settings.presentation.endpointUse', {
+                      inUse: preview.endpoints.in,
+                      inFree: preview.headroom.in,
+                      outUse: preview.endpoints.out,
+                      outFree: preview.headroom.out
+                    })}
+                  </div>
+                  {formatFIFOs(preview.fifos) && (
+                    <div>
+                      {t('settings.presentation.fifos')}: {formatFIFOs(preview.fifos)}
+                    </div>
+                  )}
                 </div>
               )}
               {error && <Alert type="error" showIcon message={error} />}
@@ -410,6 +564,13 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
     </>
   );
 };
+
+const Readout = ({ label, value }: { label: string; value?: string }) => (
+  <div className="flex items-baseline justify-between gap-3 text-xs">
+    <span className="shrink-0 text-neutral-400">{label}</span>
+    <span className="break-words text-right text-neutral-300">{value || '-'}</span>
+  </div>
+);
 
 type FieldProps = {
   label: string;

@@ -1,4 +1,4 @@
-import type { PresentationProfile } from '@/api/presentation.ts';
+import type { FIFOAssignment, PresentationProfile } from '@/api/presentation.ts';
 
 export type IdentityFields = {
   vendorId: string;
@@ -60,4 +60,31 @@ export function descriptorCount(profile: PresentationProfile) {
     Object.keys(set.strings || {}).length +
     Object.keys(set.hid_reports || {}).length
   );
+}
+
+export function identityChanged(profile: PresentationProfile, fields: IdentityFields) {
+  const saved = identityFields(profile);
+  return (Object.keys(saved) as (keyof IdentityFields)[]).some(
+    (key) => saved[key] !== fields[key].trim()
+  );
+}
+
+export function formatFIFOs(fifos?: FIFOAssignment) {
+  return Object.entries(fifos || {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, slots]) => `${name} ${slots.join(',')}`)
+    .join('; ');
+}
+
+export function recoveryKey(action: string) {
+  switch (action) {
+    case 'power-cycle':
+      return 'settings.presentation.recoveryPowerCycle';
+    case 'host-reboot':
+      return 'settings.presentation.recoveryReboot';
+    case 'hdmi-reset':
+      return 'settings.presentation.recoveryHdmiReset';
+    default:
+      return 'settings.presentation.recoveryReconnect';
+  }
 }

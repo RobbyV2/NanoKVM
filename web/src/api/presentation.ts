@@ -93,7 +93,7 @@ export type ProfileSummary = {
   manufacturer: string;
   product: string;
   functions: string[];
-  has_descriptors: boolean;
+  provenance: { origin: string; source?: string; descriptors: boolean };
 };
 
 export type PresentationPreview = {

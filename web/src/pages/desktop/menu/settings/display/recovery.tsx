@@ -7,6 +7,7 @@ import * as api from '@/api/edid.ts';
 import type { EdidBackup, EdidPreflight, EdidResult } from '@/api/edid.ts';
 
 import { Mismatch } from './mismatch.tsx';
+import { powerCycleNotice } from './utils.ts';
 
 // the restore endpoint takes the factory image or one history entry
 type Target = 'factory' | 'history';
@@ -34,6 +35,8 @@ export const Recovery = ({
   const [target, setTarget] = useState<Target>();
   const [result, setResult] = useState<EdidResult>();
   const [errMsg, setErrMsg] = useState('');
+
+  const powerCycle = powerCycleNotice(result);
 
   function openModal(next: Target) {
     if (isRestoring) return;
@@ -123,16 +126,16 @@ export const Recovery = ({
           {errMsg && <span className="text-red-500">{errMsg}</span>}
         </div>
 
-        {result?.verified && result.requiresPowerCycle && (
-          <span className="text-xs text-amber-500">{t('settings.display.powerCycleNotice')}</span>
-        )}
-
         {result && !result.verified && (
           <div className="flex flex-col space-y-2">
             <span className="text-red-500">{t('settings.display.restoreFailed')}</span>
             {result.message && <span className="text-xs text-neutral-500">{result.message}</span>}
             <Mismatch result={result} />
           </div>
+        )}
+
+        {powerCycle && (
+          <span className="text-xs text-amber-500">{t(`settings.display.${powerCycle}`)}</span>
         )}
       </div>
 
