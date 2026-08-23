@@ -3,6 +3,8 @@ package presentation
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -388,5 +390,121 @@ func TestARefusedSurrenderLeavesTheObserverRunning(t *testing.T) {
 	}
 	if observer.suspend != 0 {
 		t.Fatalf("a refused surrender suspended the observer %d times and never resumed it", observer.suspend)
+	}
+}
+
+func useTestUDCDir(t *testing.T, state, speed string) string {
+	t.Helper()
+
+	dir := filepath.Join(t.TempDir(), dwc2Device)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create udc dir: %v", err)
+	}
+	writeUDCAttr(t, dir, "state", state)
+	writeUDCAttr(t, dir, "current_speed", speed)
+
+	previous := udcDir
+	udcDir = filepath.Dir(dir)
+	t.Cleanup(func() { udcDir = previous })
+	return dir
+}
+
+func writeUDCAttr(t *testing.T, dir, attr, value string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, attr), []byte(value+"\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", attr, err)
+	}
+}
+
+// Every mutator reads the UDC attribute to prove its bind took and drops the
+// answer. A caller asking for status gets the linkage but no way to tell a
+// gadget nothing has plugged into from one a host has configured.
+func TestSnapshotReportsTheControllerAndWhatTheHostDidWithIt(t *testing.T) {
+	manager, ops := newTestManager(t)
+	useTestUDCDir(t, udcConfigured, "high-speed")
+
+	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+	snapshot, err := manager.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	want := UDCStatus{Name: dwc2Device, Bound: true, State: udcConfigured, Speed: "high-speed"}
+	if snapshot.UDC != want {
+		t.Fatalf("udc = %+v, want %+v", snapshot.UDC, want)
+	}
+
+	if err := ops.UnbindUDC(); err != nil {
+		t.Fatalf("unbind: %v", err)
+	}
+	snapshot, err = manager.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	if snapshot.UDC.Bound || snapshot.UDC.Name != dwc2Device {
+		t.Fatalf("udc = %+v, want the controller named and unbound", snapshot.UDC)
+	}
+}
+
+// The rollback puts the previous linkage back, so once the HTTP response is
+// gone nothing on the device says an apply was ever attempted, let alone which
+// one failed and why.
+func TestAFailedApplyIsStillReadableAfterTheResponse(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+
+	target := standardProfile()
+	target.Name, target.BuiltIn = "desk", false
+	wantErr := errors.New("configfs write failed")
+	ops.FailWriteOnce(functionsDir+"/hid.GS1/report_length", wantErr)
+	if err := manager.ApplyProfile(ctx, target); !errors.Is(err, wantErr) {
+		t.Fatalf("err = %v, want the configfs failure", err)
+	}
+
+	snapshot, err := manager.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	if snapshot.LastError == nil {
+		t.Fatal("a failed apply left no trace in the status")
+	}
+	if snapshot.LastError.Profile != "desk" || !strings.Contains(snapshot.LastError.Message, wantErr.Error()) {
+		t.Fatalf("last error = %+v, want the desk failure", snapshot.LastError)
+	}
+
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("reapply standard: %v", err)
+	}
+	if snapshot, err = manager.Snapshot(); err != nil || snapshot.LastError != nil {
+		t.Fatalf("last error = %+v err = %v, want a successful apply to clear it", snapshot.LastError, err)
+	}
+}
+
+// The dwc2 unbind takes the controller away from a host that has already
+// enumerated it, and no rebind on this side puts that back. Nothing here can
+// perform the power cycle, so the flag stands until a host has enumerated the
+// gadget again.
+func TestResetPHYLeavesAPendingPowerCycleUntilAHostReturns(t *testing.T) {
+	manager, _ := newTestManager(t)
+	dir := useTestUDCDir(t, "not attached", "UNKNOWN")
+
+	if err := manager.ResetPHY(context.Background()); err != nil {
+		t.Fatalf("reset phy: %v", err)
+	}
+	snapshot, err := manager.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	if !snapshot.PendingPowerCycle {
+		t.Fatal("a phy reset left no pending power cycle")
+	}
+
+	writeUDCAttr(t, dir, "state", udcConfigured)
+	if snapshot, err = manager.Snapshot(); err != nil || snapshot.PendingPowerCycle {
+		t.Fatalf("pending = %v err = %v, want a configured controller to clear it", snapshot.PendingPowerCycle, err)
 	}
 }

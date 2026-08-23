@@ -41,6 +41,116 @@ type Plan struct {
 	Profile   string         `json:"profile"`
 	Endpoints EndpointUse    `json:"endpoints"`
 	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
+	Device    DeviceIdentity `json:"device"`
+}
+
+// What the host will key its driver binding off once the plan is applied. The
+// profile carries the same fields as optional pointers; these are the values
+// the gadget ends up presenting.
+type DeviceIdentity struct {
+	VendorID     string `json:"vendor_id"`
+	ProductID    string `json:"product_id"`
+	BCDDevice    string `json:"bcd_device,omitempty"`
+	Serial       string `json:"serial,omitempty"`
+	Manufacturer string `json:"manufacturer"`
+	Product      string `json:"product"`
+}
+
+// The recovery action an apply leaves the operator with, worst first. Every
+// plan ends in an unbind and a bind, so the host always sees the gadget leave
+// and come back; the three above the baseline are the cases where it cannot
+// pick the device back up on its own.
+const (
+	RecoveryPowerCycle = "power-cycle"
+	RecoveryReboot     = "host-reboot"
+	RecoveryHDMIReset  = "hdmi-reset"
+	RecoveryReconnect  = "usb-reconnect"
+)
+
+// What applying the plan over the current linkage will actually do. unlinkStale
+// removes exactly Removes at apply time, so the preview and the transaction
+// read the same list rather than two copies of the rule.
+type Outcome struct {
+	Profile  string   `json:"profile"`
+	Linked   []string `json:"linked"`
+	Removes  []string `json:"removes"`
+	HID      bool     `json:"hid"`
+	Recovery string   `json:"recovery"`
+}
+
+func (p Plan) Outcome(before Snapshot) Outcome {
+	links := map[string]bool{}
+	transient := false
+	outcome := Outcome{Profile: p.Profile, Linked: []string{}, Removes: []string{}}
+
+	for _, op := range p.Ops {
+		if op.Kind != OpSymlink || !strings.HasPrefix(op.Path, configPrefix+"/") {
+			continue
+		}
+		name := strings.TrimPrefix(op.Path, configPrefix+"/")
+		links[name] = true
+		transient = transient || name == "ffs.hybrid"
+		outcome.Linked = append(outcome.Linked, name)
+	}
+
+	media := false
+	for _, name := range before.Linked {
+		if isMedia(name) {
+			media = true
+		}
+		if (links[name] && !isMedia(name)) || (!transient && isHID(name)) {
+			if !links[name] {
+				outcome.Linked = append(outcome.Linked, name)
+			}
+			continue
+		}
+		outcome.Removes = append(outcome.Removes, name)
+	}
+
+	outcome.HID = slices.ContainsFunc(outcome.Linked, isHID)
+	outcome.Recovery = recoveryAction(outcome, media || slices.ContainsFunc(outcome.Linked, isMedia))
+	return outcome
+}
+
+// Losing HID takes away the only thing left to drive a wedged host, an
+// interface disappearing from a composite device strands the driver the host
+// bound to it, and a video function is rebuilt with the capture pipeline behind
+// it. Anything else is the rebind every apply performs.
+func recoveryAction(outcome Outcome, media bool) string {
+	switch {
+	case !outcome.HID:
+		return RecoveryPowerCycle
+	case slices.ContainsFunc(outcome.Removes, func(name string) bool { return !isMedia(name) }):
+		return RecoveryReboot
+	case media:
+		return RecoveryHDMIReset
+	default:
+		return RecoveryReconnect
+	}
+}
+
+func isMedia(name string) bool {
+	return strings.HasPrefix(name, string(FunctionUVC)+".") || strings.HasPrefix(name, string(FunctionUAC2)+".")
+}
+
+func isHID(name string) bool {
+	return strings.HasPrefix(name, string(FunctionHID)+".")
+}
+
+func (d Device) identity() DeviceIdentity {
+	identity := DeviceIdentity{
+		VendorID:     d.VendorID,
+		ProductID:    d.ProductID,
+		Manufacturer: d.Manufacturer,
+		Product:      d.Product,
+	}
+	if d.BCDDevice != nil {
+		identity.BCDDevice = *d.BCDDevice
+	}
+	if d.Serial != nil {
+		identity.Serial = *d.Serial
+	}
+	return identity
 }
 
 const (
@@ -105,7 +215,7 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 			return Plan{}, fmt.Errorf("compile %s: %s %s: %w", p.Name, op.Kind, op.Path, err)
 		}
 	}
-	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos}, nil
+	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos, Device: p.Device.identity()}, nil
 }
 
 func (k FunctionKind) isNet() bool {

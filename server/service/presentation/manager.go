@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +20,8 @@ const (
 
 	hidQuiesceTimeout    = 2 * time.Second
 	hidQuiesceRetryDelay = 100 * time.Millisecond
+
+	udcConfigured = "configured"
 )
 
 var (
@@ -29,12 +33,17 @@ var (
 )
 
 // HIDQuiescer is *hid.Hid. The dependency points from hid into this package,
-// so the bracket is injected rather than imported.
+// so the bracket is injected rather than imported. The report writers are the
+// same three the hid package releases every key through; they take the mutexes
+// Lock takes, so they are only ever called outside the bracket.
 type HIDQuiescer interface {
 	Lock()
 	Unlock()
 	CloseNoLock()
 	OpenNoLockWithRetry(timeout, delay time.Duration) error
+	WriteKeyboardReport([]byte) error
+	WriteRelativeMouseReport([]byte) error
+	WriteAbsoluteMouseReport([]byte) error
 }
 
 type GadgetObserver interface {
@@ -58,6 +67,10 @@ type Manager struct {
 	transient *Transient
 	loan      string
 	nextToken uint64
+
+	statusMu   sync.Mutex
+	lastError  *ApplyFailure
+	powerCycle bool
 }
 
 type Transient struct {
@@ -156,7 +169,65 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 	if fifos, err := SeatFIFOs(functions, m.caps); err == nil {
 		snapshot.FIFOs = fifos
 	}
+	snapshot.UDC = m.udcStatus()
+	snapshot.LastError, snapshot.PendingPowerCycle = m.pendingStatus(snapshot.UDC)
 	return snapshot, nil
+}
+
+// The gadget's UDC attribute names the controller it is bound to and says
+// nothing more. state and speed sit next to that controller in sysfs, are world
+// readable and need none of the privilege Ops exists to gate, so they are read
+// here rather than widened into the interface.
+func (m *Manager) udcStatus() UDCStatus {
+	data, err := m.ops.ReadFile(udcAttr)
+	status := UDCStatus{Name: strings.TrimSpace(string(data))}
+	status.Bound = err == nil && status.Name != ""
+	if status.Name == "" {
+		udcs, listErr := m.ops.ListUDC()
+		if listErr != nil {
+			return status
+		}
+		status.Name = udcs[0]
+	}
+	status.State = readUDCAttr(status.Name, "state")
+	status.Speed = readUDCAttr(status.Name, "current_speed")
+	return status
+}
+
+func readUDCAttr(udc, attr string) string {
+	data, err := os.ReadFile(filepath.Join(udcDir, udc, attr))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// Nothing on this side can perform the power cycle, so the flag is cleared by
+// the one thing that proves it happened: a controller reporting configured has
+// been enumerated by a host since the reset that set it.
+func (m *Manager) pendingStatus(udc UDCStatus) (*ApplyFailure, bool) {
+	m.statusMu.Lock()
+	defer m.statusMu.Unlock()
+	if udc.State == udcConfigured {
+		m.powerCycle = false
+	}
+	return m.lastError, m.powerCycle
+}
+
+func (m *Manager) recordApply(profile string, err error) {
+	m.statusMu.Lock()
+	defer m.statusMu.Unlock()
+	if err == nil {
+		m.lastError = nil
+		return
+	}
+	m.lastError = &ApplyFailure{Profile: profile, Message: err.Error(), At: time.Now()}
+}
+
+func (m *Manager) requirePowerCycle() {
+	m.statusMu.Lock()
+	defer m.statusMu.Unlock()
+	m.powerCycle = true
 }
 
 // The bridge's step 13 asks for the gadget NIC by name. It is reported only
@@ -221,12 +292,35 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 		observer.Suspend()
 	}
 	err = m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
+	m.recordApply(profile.Name, err)
 	if err != nil {
 		m.refreshObserver(context.Background())
 		return err
 	}
 	m.notifyObserver(context.Background(), profile, plan)
 	return nil
+}
+
+// What the plan would do to the linkage that is up now, and what the rollback a
+// failed apply runs would then do. The target is resolved through the same
+// prepareRecovery the transaction uses, so the preview names the profile the
+// operator actually lands on rather than a second guess at it.
+func (m *Manager) outcomes(plan Plan) (*Outcome, *Outcome) {
+	if m.ready() != nil {
+		return nil, nil
+	}
+	before, err := m.Snapshot()
+	if err != nil {
+		return nil, nil
+	}
+	applied := plan.Outcome(before)
+
+	recovery, err := m.prepareRecovery()
+	if err != nil {
+		return &applied, nil
+	}
+	rollback := recovery.plan.Outcome(Snapshot{Linked: applied.Linked})
+	return &applied, &rollback
 }
 
 func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []string) error {
@@ -416,6 +510,7 @@ func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
 		if err := m.ops.Remove(configPrefix + "/ffs.hybrid"); err != nil {
 			return err
 		}
+		m.requirePowerCycle()
 		name, err := m.store.Active()
 		if err != nil {
 			return err
@@ -608,6 +703,7 @@ func (m *Manager) ResetPHY(ctx context.Context) error {
 		if err := m.ops.ResetPHY(ctx); err != nil {
 			return fmt.Errorf("reset usb phy: %w", err)
 		}
+		m.requirePowerCycle()
 		return m.bind()
 	})
 	if err != nil {
@@ -701,11 +797,32 @@ func (m *Manager) withHIDQuiesced(fn func() error) (err error) {
 	defer func() {
 		reopen := h.OpenNoLockWithRetry(hidQuiesceTimeout, hidQuiesceRetryDelay)
 		h.Unlock()
-		if reopen != nil && err == nil {
-			err = fmt.Errorf("reopen hid devices: %w", reopen)
+		if reopen != nil {
+			if err == nil {
+				err = fmt.Errorf("reopen hid devices: %w", reopen)
+			}
+			return
 		}
+		releaseHID(h)
 	}()
 	return fn()
+}
+
+// All-keys-up in the three report shapes service/hid writes, sent once the
+// devices are back and the mutexes are handed over. A rebind can leave a
+// modifier held down on the host, and a release report is safe at any moment,
+// so the bracket ends with one for every device it reopened. The write is best
+// effort: a host that has not enumerated the gadget refuses it, and that is a
+// statement about the host rather than about the gadget.
+func releaseHID(h HIDQuiescer) {
+	err := errors.Join(
+		h.WriteKeyboardReport(make([]byte, 8)),
+		h.WriteRelativeMouseReport(make([]byte, 4)),
+		h.WriteAbsoluteMouseReport(make([]byte, 6)),
+	)
+	if err != nil {
+		log.Warnf("release hid state after rebind: %s", err)
+	}
 }
 
 func reopenHID(h HIDQuiescer) error {

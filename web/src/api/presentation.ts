@@ -2,6 +2,40 @@ import { http } from '@/lib/http.ts';
 
 export type EndpointUse = { in: number; out: number };
 
+export type FIFOAssignment = Record<string, number[]>;
+
+export type DeviceIdentity = {
+  vendor_id: string;
+  product_id: string;
+  bcd_device?: string;
+  serial?: string;
+  manufacturer: string;
+  product: string;
+};
+
+export type RecoveryAction = 'power-cycle' | 'host-reboot' | 'hdmi-reset' | 'usb-reconnect';
+
+export type PresentationOutcome = {
+  profile: string;
+  linked: string[];
+  removes: string[];
+  hid: boolean;
+  recovery: RecoveryAction;
+};
+
+export type UDCStatus = {
+  name: string;
+  bound: boolean;
+  state?: string;
+  speed?: string;
+};
+
+export type ApplyFailure = {
+  profile: string;
+  message: string;
+  at: string;
+};
+
 export type USBDevice = {
   vendor_id: string;
   product_id: string;
@@ -70,7 +104,11 @@ export type PresentationPreview = {
   functions: string[];
   endpoints: EndpointUse;
   headroom: EndpointUse;
+  fifos?: FIFOAssignment;
   operations: number;
+  device: DeviceIdentity;
+  apply?: PresentationOutcome;
+  rollback?: PresentationOutcome;
 };
 
 export type PresentationStatus = {
@@ -78,11 +116,16 @@ export type PresentationStatus = {
     active: string;
     mode: string;
     linked: string[];
+    udc: UDCStatus;
+    pending_power_cycle: boolean;
+    last_error?: ApplyFailure;
     endpoints: EndpointUse;
     headroom: EndpointUse;
+    fifos?: FIFOAssignment;
   };
   profile?: ProfileSummary;
   last_known_good: string;
+  rollback_target: string;
 };
 
 export function getStatus() {
@@ -129,6 +172,10 @@ export function previewProfile(profile: PresentationProfile) {
 
 export function applyProfile(name: string) {
   return http.request({ method: 'put', url: '/api/presentation/config/apply', data: { name } });
+}
+
+export function rollbackProfile() {
+  return http.post('/api/presentation/rollback');
 }
 
 export function importProfile(file: File) {

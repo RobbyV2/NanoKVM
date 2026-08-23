@@ -18,6 +18,7 @@ const (
 
 	activeFile        = "active"
 	lastKnownGoodFile = ".last-known-good"
+	previousFile      = ".previous"
 )
 
 var (
@@ -168,8 +169,30 @@ func (s *Store) LastKnownGood() (string, error) {
 	return s.readMarker(lastKnownGoodFile)
 }
 
+// A profile that binds and verifies becomes the last-known-good one, so the
+// marker never names anything but the gadget that is running. What a manual
+// rollback needs is the name that marker displaced.
 func (s *Store) SetLastKnownGood(name string) error {
+	current, err := s.readMarker(lastKnownGoodFile)
+	if err != nil {
+		return err
+	}
+	previous, err := s.readMarker(previousFile)
+	if err != nil {
+		return err
+	}
+	// A rollback landing on the profile it was aimed at does not make the
+	// gadget the operator just walked away from the next target.
+	if current != "" && current != name && previous != name {
+		if err := s.writeMarker(previousFile, current); err != nil {
+			return err
+		}
+	}
 	return s.writeMarker(lastKnownGoodFile, name)
+}
+
+func (s *Store) Previous() (string, error) {
+	return s.readMarker(previousFile)
 }
 
 func (s *Store) profilePath(name string) (string, error) {

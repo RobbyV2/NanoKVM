@@ -57,7 +57,7 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 				fmt.Errorf("op %d %s %s: %w", i, op.Kind, op.Path, err))
 		}
 	}
-	if err := m.verifyBind(udc); err != nil {
+	if err := m.verify(udc, profile); err != nil {
 		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if !persist {
@@ -122,10 +122,41 @@ func (m *Manager) prepareRecovery() (recoveryPlan, error) {
 
 func (m *Manager) rollbackFailure(failed Profile, recovery recoveryPlan, udc string, cause error) error {
 	applyErr := fmt.Errorf("apply %s: %w", failed.Name, cause)
-	if err := m.restore(failed, recovery, udc); err != nil {
-		return errors.Join(applyErr, fmt.Errorf("rollback to %s: %w", recovery.profile.Name, err))
+	err := m.restore(failed, recovery, udc)
+	if err == nil {
+		return fmt.Errorf("%w; rolled back to %s", applyErr, recovery.profile.Name)
 	}
-	return fmt.Errorf("%w; rolled back to %s", applyErr, recovery.profile.Name)
+
+	rollbackErr := fmt.Errorf("rollback to %s: %w", recovery.profile.Name, err)
+	// The last rung. The target failed and so did the rollback, so the controller
+	// carries whatever the half-finished transaction left on it. hid-only is built
+	// from code rather than from the store and links nothing but the three HID
+	// functions that already exist, so it is the smallest gadget this package can
+	// put back and the operator keeps a keyboard instead of a dead port. It cannot
+	// wedge what it did not find wedged: restore never calls back into here, so
+	// there is no second attempt, and a failure still lands on the bind restore
+	// already defers.
+	fallback, compileErr := hidOnlyRecovery(m.caps)
+	if recovery.profile.Name == ProfileHIDOnly || compileErr != nil {
+		return errors.Join(applyErr, rollbackErr, compileErr)
+	}
+	// The rollback that just failed may have linked its own functions before it
+	// did, so the stale set this rung has to unlink is both profiles.
+	stale := failed
+	stale.Functions = append(append([]Function(nil), failed.Functions...), recovery.profile.Functions...)
+	if err := m.restore(stale, fallback, udc); err != nil {
+		return errors.Join(applyErr, rollbackErr, fmt.Errorf("fall back to %s: %w", ProfileHIDOnly, err))
+	}
+	return errors.Join(applyErr, rollbackErr, fmt.Errorf("fell back to %s", ProfileHIDOnly))
+}
+
+func hidOnlyRecovery(caps CapabilityTable) (recoveryPlan, error) {
+	profile := hidOnlyProfile()
+	plan, err := Compile(profile, caps)
+	if err != nil {
+		return recoveryPlan{}, fmt.Errorf("compile %s: %w", profile.Name, err)
+	}
+	return recoveryPlan{profile: profile, plan: plan}, nil
 }
 
 func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (err error) {
@@ -159,7 +190,7 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 			return fmt.Errorf("op %d %s %s: %w", i, op.Kind, op.Path, err)
 		}
 	}
-	if err := m.verifyBind(udc); err != nil {
+	if err := m.verify(udc, recovery.profile); err != nil {
 		return err
 	}
 	if err := m.store.SaveProfile(recovery.profile); err != nil {
@@ -221,27 +252,49 @@ func (m *Manager) execute(op Op, udc string) error {
 // Hybrid unlinks GS2 but retains its function directory, which keeps its minor
 // reserved for rollback. Persistent profile changes keep the original rule.
 func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
-	linked := make(map[string]bool, len(plan.Ops))
-	transient := false
-	for _, op := range plan.Ops {
-		if op.Kind == OpSymlink && strings.HasPrefix(op.Path, configPrefix+"/") {
-			name := strings.TrimPrefix(op.Path, configPrefix+"/")
-			linked[name] = true
-			transient = transient || name == "ffs.hybrid"
-		}
-	}
-
-	for _, name := range before.Linked {
-		media := strings.HasPrefix(name, string(FunctionUVC)+".") || strings.HasPrefix(name, string(FunctionUAC2)+".")
-		hid := strings.HasPrefix(name, string(FunctionHID)+".")
-		if (linked[name] && !media) || (!transient && hid) {
-			continue
-		}
+	for _, name := range plan.Outcome(before).Removes {
 		if err := m.ops.Remove(configPrefix + "/" + name); err != nil {
 			return fmt.Errorf("unlink %s: %w", name, err)
 		}
 	}
 	return nil
+}
+
+// H4 proves the controller took the gadget and says nothing about /dev/hidgN,
+// which f_hid creates when its function binds and destroys when it unbinds. A
+// bind that leaves no HID nodes behind is indistinguishable from a healthy one
+// through the UDC attribute alone, so the transaction opens them before it
+// commits and hands the failure to the rollback ladder rather than to an
+// operator with no keyboard. They are closed again because the rest of the
+// transaction still runs quiesced; withHIDQuiesced reopens them for good on the
+// way out and releases every key there.
+func (m *Manager) verify(udc string, profile Profile) error {
+	if err := m.verifyBind(udc); err != nil {
+		return err
+	}
+
+	h := m.quiescer()
+	if h == nil || !linksEveryHID(profile) {
+		return nil
+	}
+	if err := h.OpenNoLockWithRetry(hidQuiesceTimeout, hidQuiesceRetryDelay); err != nil {
+		return fmt.Errorf("hid devices did not come back: %w", err)
+	}
+	h.CloseNoLock()
+	return nil
+}
+
+// The devices open as a set, so the probe means something only for a profile
+// that links all three. The hybrid profile drops GS2 on purpose, and demanding
+// a node its own plan removed would turn every transient start into a rollback.
+func linksEveryHID(profile Profile) bool {
+	linked := 0
+	for _, function := range profile.Functions {
+		if function.Kind == FunctionHID {
+			linked++
+		}
+	}
+	return linked == len(hidInstances)
 }
 
 // H4: an empty UDC write is an unbind, so a gadget that silently never bound

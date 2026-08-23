@@ -18,6 +18,7 @@ func presentationRouter(r *gin.Engine) {
 	admin.GET("/status", service.GetStatus)
 	admin.PUT("/config/preview", service.PreviewProfile)
 	admin.PUT("/config/apply", service.ApplyProfile)
+	admin.POST("/rollback", service.RollbackProfile)
 
 	admin.GET("/profiles", service.GetProfiles)
 	admin.POST("/profiles", service.CreateProfile)

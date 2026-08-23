@@ -36,20 +36,29 @@ type ProfileSummary struct {
 }
 
 type Preview struct {
-	Valid      bool        `json:"valid"`
-	Errors     []string    `json:"errors"`
-	Warnings   []string    `json:"warnings"`
-	Profile    string      `json:"profile"`
-	Functions  []string    `json:"functions"`
-	Endpoints  EndpointUse `json:"endpoints"`
-	Headroom   EndpointUse `json:"headroom"`
-	Operations int         `json:"operations"`
+	Valid      bool           `json:"valid"`
+	Errors     []string       `json:"errors"`
+	Warnings   []string       `json:"warnings"`
+	Profile    string         `json:"profile"`
+	Functions  []string       `json:"functions"`
+	Endpoints  EndpointUse    `json:"endpoints"`
+	Headroom   EndpointUse    `json:"headroom"`
+	FIFOs      FIFOAssignment `json:"fifos,omitempty"`
+	Operations int            `json:"operations"`
+	Device     DeviceIdentity `json:"device"`
+
+	// What the apply would do to the linkage that is up now, and where a failed
+	// one would land. Both are absent when there is no gadget to compare
+	// against; the compile above still stands on its own.
+	Apply    *Outcome `json:"apply,omitempty"`
+	Rollback *Outcome `json:"rollback,omitempty"`
 }
 
 type Status struct {
-	Snapshot      Snapshot        `json:"snapshot"`
-	Profile       *ProfileSummary `json:"profile,omitempty"`
-	LastKnownGood string          `json:"last_known_good"`
+	Snapshot       Snapshot        `json:"snapshot"`
+	Profile        *ProfileSummary `json:"profile,omitempty"`
+	LastKnownGood  string          `json:"last_known_good"`
+	RollbackTarget string          `json:"rollback_target"`
 }
 
 type nameRequest struct {
@@ -76,6 +85,11 @@ func (s *Service) GetStatus(c *gin.Context) {
 	result.LastKnownGood, err = s.store.LastKnownGood()
 	if err != nil {
 		s.fail(c, -1, "read last-known-good profile", err)
+		return
+	}
+	result.RollbackTarget, err = s.store.Previous()
+	if err != nil {
+		s.fail(c, -1, "read rollback target", err)
 		return
 	}
 	if snapshot.Active != "" {
@@ -254,6 +268,43 @@ func (s *Service) ApplyProfile(c *gin.Context) {
 	rsp.OkRsp(c)
 }
 
+// The last-known-good marker advances onto every profile that binds and
+// verifies, so the profile it displaced is the one an operator who dislikes the
+// gadget they just applied wants back. The apply path runs the transaction, so
+// this refuses a loaned UDC and recovers from a rollback that itself fails.
+func (s *Service) RollbackProfile(c *gin.Context) {
+	name, err := s.store.Previous()
+	if err != nil {
+		s.fail(c, -1, "read rollback target", err)
+		return
+	}
+	if name == "" {
+		s.error(c, -2, "no earlier profile to roll back to")
+		return
+	}
+	active, err := s.store.Active()
+	if err != nil {
+		s.fail(c, -1, "read active profile", err)
+		return
+	}
+	// A second click lands here: the gadget is already the one the first asked
+	// for, so it is answered without unbinding anything.
+	if active != name {
+		profile, ok := s.load(c, name)
+		if !ok {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), 30*time.Second)
+		defer cancel()
+		if err := s.manager.ApplyProfile(ctx, profile); err != nil {
+			s.fail(c, -3, "roll back to "+name, err)
+			return
+		}
+	}
+	var rsp proto.Response
+	rsp.OkRspWithData(c, &gin.H{"profile": name})
+}
+
 func (s *Service) ImportProfile(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, packageArchiveLimit+1<<20)
 	file, err := c.FormFile("package")
@@ -318,12 +369,12 @@ func (s *Service) create(profile Profile) error {
 }
 
 func (s *Service) preview(c *gin.Context, profile Profile) {
-	result := preview(profile, s.manager.caps)
+	result := preview(profile, s.manager)
 	var rsp proto.Response
 	rsp.OkRspWithData(c, &result)
 }
 
-func preview(profile Profile, caps CapabilityTable) Preview {
+func preview(profile Profile, manager *Manager) Preview {
 	profile.Normalize()
 	result := Preview{
 		Valid:     true,
@@ -332,21 +383,19 @@ func preview(profile Profile, caps CapabilityTable) Preview {
 		Profile:   profile.Name,
 		Functions: functionNames(profile.Functions),
 	}
-	plan, err := Compile(profile, caps)
+	plan, err := Compile(profile, manager.caps)
 	if err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, err.Error())
 		return result
 	}
 	result.Operations = len(plan.Ops)
-	result.Endpoints, err = AccountEndpoints(profile.Functions, caps)
-	if err != nil {
-		result.Valid = false
-		result.Errors = append(result.Errors, err.Error())
-		return result
-	}
-	result.Headroom = result.Endpoints.Headroom(caps)
+	result.Endpoints = plan.Endpoints
+	result.Headroom = plan.Endpoints.Headroom(manager.caps)
+	result.FIFOs = plan.FIFOs
+	result.Device = plan.Device
 	result.Warnings = descriptorWarnings(profile)
+	result.Apply, result.Rollback = manager.outcomes(plan)
 	return result
 }
 

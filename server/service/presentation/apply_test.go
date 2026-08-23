@@ -23,9 +23,11 @@ func newTestManager(t *testing.T, flags ...string) (*Manager, *RecordOps) {
 }
 
 type fakeHID struct {
-	mu      sync.Mutex
-	events  []string
-	openErr error
+	mu       sync.Mutex
+	events   []string
+	openErr  error
+	openErrs []error
+	writeErr error
 }
 
 func (f *fakeHID) Lock()        { f.append("lock") }
@@ -34,7 +36,35 @@ func (f *fakeHID) CloseNoLock() { f.append("close") }
 
 func (f *fakeHID) OpenNoLockWithRetry(timeout, delay time.Duration) error {
 	f.append(fmt.Sprintf("open %s %s", timeout, delay))
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.openErrs) != 0 {
+		err := f.openErrs[0]
+		f.openErrs = f.openErrs[1:]
+		return err
+	}
 	return f.openErr
+}
+
+func (f *fakeHID) WriteKeyboardReport(data []byte) error      { return f.write("keyboard", data) }
+func (f *fakeHID) WriteRelativeMouseReport(data []byte) error { return f.write("relative", data) }
+func (f *fakeHID) WriteAbsoluteMouseReport(data []byte) error { return f.write("absolute", data) }
+
+func (f *fakeHID) write(device string, data []byte) error {
+	f.append(fmt.Sprintf("%s %x", device, data))
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.writeErr
+}
+
+func (f *fakeHID) failOpens(count int, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := 0; i < count; i++ {
+		f.openErrs = append(f.openErrs, err)
+	}
 }
 
 func (f *fakeHID) append(event string) {
@@ -130,9 +160,208 @@ func TestApplyQuiescesHIDAroundTheTransaction(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 
-	want := []string{"lock", "close", "open 2s 100ms", "unlock"}
+	want := []string{
+		"lock", "close",
+		"open 2s 100ms", "close",
+		"open 2s 100ms", "unlock",
+		"keyboard 0000000000000000", "relative 00000000", "absolute 000000000000",
+	}
 	if strings.Join(h.Events(), ",") != strings.Join(want, ",") {
 		t.Fatalf("hid bracket = %v, want %v", h.Events(), want)
+	}
+}
+
+// A host that has not enumerated the gadget refuses every report, which says
+// nothing about the gadget. Failing the apply on it would refuse every profile
+// change made while the attached machine is powered off.
+func TestApplySurvivesAReleaseReportTheHostRefuses(t *testing.T) {
+	manager, _ := newTestManager(t)
+	manager.SetHID(&fakeHID{writeErr: errors.New("cannot send after transport endpoint shutdown")})
+
+	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+}
+
+// The UDC attribute reads the same whether or not the kernel rebuilt
+// /dev/hidgN, so the node check has to sit inside the transaction, where the
+// rollback ladder is still available to it: the rung below the target is the
+// profile that was running, and the rung below that is a keyboard.
+func TestApplyLaddersDownWhenTheHIDNodesDoNotComeBack(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		lost   int
+		want   string
+		active string
+	}{
+		{name: "the rollback gets them back", lost: 1, want: "rolled back to mutable", active: "mutable"},
+		{name: "the rollback loses them too", lost: 2, want: "fell back to " + ProfileHIDOnly, active: ProfileHIDOnly},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manager, ops := newTestManager(t)
+			ctx := context.Background()
+			h := &fakeHID{}
+			manager.SetHID(h)
+			previous := standardProfile()
+			previous.Name = "mutable"
+			previous.BuiltIn = false
+			previous.Normalize()
+			if err := manager.ApplyProfile(ctx, previous); err != nil {
+				t.Fatalf("apply previous profile: %v", err)
+			}
+
+			target := previous
+			target.Name = "target"
+			target.Device.Product = "Failed update"
+			target.Normalize()
+
+			missing := errors.New("no such device")
+			h.failOpens(tc.lost, missing)
+			err := manager.ApplyProfile(ctx, target)
+			if !errors.Is(err, missing) {
+				t.Fatalf("err = %v, want the missing hid nodes", err)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want %q", err, tc.want)
+			}
+			if bound := ops.Bound(); bound != dwc2Device {
+				t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+			}
+			active, err := manager.store.Active()
+			if err != nil || active != tc.active {
+				t.Fatalf("active = %q err = %v, want %q", active, err, tc.active)
+			}
+		})
+	}
+}
+
+// The hybrid profile drops GS2 on purpose, so the node behind it is gone by
+// design. The devices open as a set, so probing them here would read a bind
+// that did exactly what it was asked as a failed one.
+func TestTransientStartDoesNotProbeTheHIDNodeItRemoved(t *testing.T) {
+	manager, _ := newTestManager(t)
+	ctx := context.Background()
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+	h := &fakeHID{}
+	manager.SetHID(h)
+
+	if _, err := manager.StartFunctionFS(ctx, testFunctionFS()); err != nil {
+		t.Fatalf("start functionfs: %v", err)
+	}
+	want := []string{
+		"lock", "close", "open 2s 100ms", "unlock",
+		"keyboard 0000000000000000", "relative 00000000", "absolute 000000000000",
+	}
+	if strings.Join(h.Events(), ",") != strings.Join(want, ",") {
+		t.Fatalf("hid bracket = %v, want %v", h.Events(), want)
+	}
+}
+
+// The rung below the rollback. Both the target and the profile it rolls back to
+// failed, so the choice is a half-built gadget or the smallest one that still
+// carries a keyboard.
+func TestRollbackFailureFallsBackToHIDOnly(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	previous := standardProfile()
+	previous.Name = "mutable"
+	previous.BuiltIn = false
+	previous.Functions = append([]Function{NetworkFunction(FunctionRNDIS)}, previous.Functions...)
+	previous.OSDesc = MSOSDesc()
+	previous.Normalize()
+	if err := manager.ApplyProfile(ctx, previous); err != nil {
+		t.Fatalf("apply previous profile: %v", err)
+	}
+
+	target := previous
+	target.Name = "target"
+	target.Device.Product = "Failed update"
+	target.Normalize()
+	path := functionsDir + "/hid.GS0/report_length"
+	applyErr := errors.New("target write failed")
+	rollbackErr := errors.New("rollback write failed")
+	ops.FailWriteOnce(path, applyErr)
+	ops.FailWriteOnce(path, rollbackErr)
+
+	err := manager.ApplyProfile(ctx, target)
+	if !errors.Is(err, applyErr) || !errors.Is(err, rollbackErr) {
+		t.Fatalf("err = %v, want the target and rollback failures", err)
+	}
+	if !strings.Contains(err.Error(), "fell back to "+ProfileHIDOnly) {
+		t.Fatalf("err = %v, want the hid-only fallback detail", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+
+	links := ops.Links()
+	for _, instance := range hidInstances {
+		if _, ok := links[configPrefix+"/hid."+instance]; !ok {
+			t.Fatalf("fallback dropped hid.%s, the operator has no keyboard", instance)
+		}
+	}
+	if target, ok := links[configPrefix+"/rndis.usb0"]; ok {
+		t.Fatalf("fallback kept the network link %q", target)
+	}
+	active, err := manager.store.Active()
+	if err != nil || active != ProfileHIDOnly {
+		t.Fatalf("active = %q err = %v, want %q", active, err, ProfileHIDOnly)
+	}
+}
+
+// hid-only is the rung below the rollback, so a rollback that was already
+// hid-only has none left under it. Running the same restore a second time is
+// another unbind and bind of a gadget that just refused one.
+func TestHIDOnlyRollbackFailureDoesNotRepeatItself(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	if err := manager.Apply(ctx, ProfileHIDOnly); err != nil {
+		t.Fatalf("apply hid-only: %v", err)
+	}
+
+	target := standardProfile()
+	target.Name = "target"
+	target.BuiltIn = false
+	target.Normalize()
+	path := functionsDir + "/hid.GS0/report_length"
+	ops.FailWriteOnce(path, errors.New("target write failed"))
+	ops.FailWriteOnce(path, errors.New("rollback write failed"))
+
+	err := manager.ApplyProfile(ctx, target)
+	if strings.Contains(err.Error(), "fell back") || strings.Contains(err.Error(), "fall back") {
+		t.Fatalf("err = %v, want no fallback below the rollback it already is", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+}
+
+// The fallback is the last rung, so a failure in it has to leave the controller
+// bound rather than become the thing that took the gadget away.
+func TestHIDOnlyFallbackFailureStillLeavesTheUDCBound(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+
+	target := standardProfile()
+	target.Name = "target"
+	target.BuiltIn = false
+	target.Normalize()
+	path := functionsDir + "/hid.GS0/report_length"
+	for _, err := range []error{errors.New("target write failed"), errors.New("rollback write failed"), errors.New("fallback write failed")} {
+		ops.FailWriteOnce(path, err)
+	}
+
+	err := manager.ApplyProfile(ctx, target)
+	if !strings.Contains(err.Error(), "fall back to "+ProfileHIDOnly) {
+		t.Fatalf("err = %v, want the failed fallback named", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want emergency bind to %q", bound, dwc2Device)
 	}
 }
 

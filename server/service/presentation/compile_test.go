@@ -443,3 +443,83 @@ func TestRNDISDropsTheDeadClassWriteAndPrefixesTheRest(t *testing.T) {
 		}
 	}
 }
+
+// The plan is compiled before the apply and unlinkStale runs at apply time, so
+// the operator can only be told what an apply takes away if the plan can answer
+// it against the linkage that is up. Removes is that answer and the transaction
+// unlinks exactly it.
+func TestPlanOutcomeNamesWhatTheApplyWillRemove(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    flags
+		before   []string
+		removes  []string
+		hid      bool
+		recovery string
+	}{
+		{
+			name:     "a function leaving the composite strands the host driver",
+			before:   []string{"rndis.usb0", "hid.GS0", "uvc.cam0", "mass_storage.disk0"},
+			removes:  []string{"rndis.usb0", "uvc.cam0", "mass_storage.disk0"},
+			hid:      true,
+			recovery: RecoveryReboot,
+		},
+		{
+			name:     "a camera is unlinked and rebuilt with the pipeline behind it",
+			before:   []string{"hid.GS0", "uac2.mic0"},
+			removes:  []string{"uac2.mic0"},
+			hid:      true,
+			recovery: RecoveryHDMIReset,
+		},
+		{
+			name:     "the same linkage still costs a rebind",
+			before:   []string{"hid.GS0", "hid.GS1", "hid.GS2"},
+			removes:  []string{},
+			hid:      true,
+			recovery: RecoveryReconnect,
+		},
+		{
+			name:     "nothing is left to drive the host with",
+			flags:    flags{rndis: true, disk: true, disableHID: true},
+			before:   []string{},
+			removes:  []string{},
+			hid:      false,
+			recovery: RecoveryPowerCycle,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			outcome := compileFlags(t, test.flags).Outcome(Snapshot{Linked: test.before})
+
+			if strings.Join(outcome.Removes, ",") != strings.Join(test.removes, ",") {
+				t.Fatalf("removes = %v, want %v", outcome.Removes, test.removes)
+			}
+			if outcome.HID != test.hid {
+				t.Fatalf("hid = %v, want %v", outcome.HID, test.hid)
+			}
+			if outcome.Recovery != test.recovery {
+				t.Fatalf("recovery = %q, want %q", outcome.Recovery, test.recovery)
+			}
+		})
+	}
+}
+
+// The four fields a host keys its driver binding off are spread across three
+// optional pointers in the profile. The plan resolves them, so a preview can
+// say which device the target will see rather than which one was typed in.
+func TestPlanCarriesTheResolvedDeviceIdentity(t *testing.T) {
+	want := DeviceIdentity{
+		VendorID:     "0x3346",
+		ProductID:    "0x1009",
+		BCDDevice:    BCDDeviceHIDOnly,
+		Manufacturer: "sipeed",
+		Product:      "NanoKVM",
+	}
+	if got := compileFlags(t, flags{hidOnly: true}).Device; got != want {
+		t.Fatalf("identity = %+v, want %+v", got, want)
+	}
+	if got := compileFlags(t, flags{}).Device; got.Serial != "0123456789ABCDEF" || got.BCDDevice != BCDDeviceNormal {
+		t.Fatalf("standard identity = %+v, want the normal marker and its serial", got)
+	}
+}

@@ -59,6 +59,36 @@ func TestProfileRoundTrip(t *testing.T) {
 	}
 }
 
+// Every successful apply moves the last-known-good marker onto the profile it
+// just verified, so that marker alone can never name a profile to go back to.
+func TestLastKnownGoodKeepsTheProfileItDisplaced(t *testing.T) {
+	useTestPresentationDir(t)
+	store := NewStore()
+
+	if previous, err := store.Previous(); err != nil || previous != "" {
+		t.Fatalf("previous on a fresh device = %q err = %v", previous, err)
+	}
+	for _, name := range []string{"first", "second", "third"} {
+		if err := store.SetLastKnownGood(name); err != nil {
+			t.Fatalf("set last known good %s: %v", name, err)
+		}
+	}
+	previous, err := store.Previous()
+	if err != nil || previous != "second" {
+		t.Fatalf("previous = %q err = %v, want second", previous, err)
+	}
+
+	// Landing back on the target does not turn the profile just abandoned into
+	// the next one, so a second rollback cannot undo the first.
+	if err := store.SetLastKnownGood("second"); err != nil {
+		t.Fatalf("set last known good: %v", err)
+	}
+	previous, err = store.Previous()
+	if err != nil || previous != "second" {
+		t.Fatalf("previous after a rollback = %q err = %v, want second", previous, err)
+	}
+}
+
 func TestSaveProfilePermissions(t *testing.T) {
 	dir := useTestPresentationDir(t)
 	store := NewStore()

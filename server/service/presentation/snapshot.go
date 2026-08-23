@@ -1,6 +1,9 @@
 package presentation
 
-import "slices"
+import (
+	"slices"
+	"time"
+)
 
 const (
 	netInstance  = "usb0"
@@ -20,6 +23,20 @@ type Snapshot struct {
 	Mode   string   `json:"mode"`
 	Linked []string `json:"linked"`
 
+	// Which controller the gadget holds and what the host on the other end has
+	// made of it. Every mutator already reads the UDC attribute to prove its
+	// bind took; state and speed are what say whether a host is there at all.
+	UDC UDCStatus `json:"udc"`
+
+	// ResetPHY and the ffs recovery path take the controller away from a host
+	// that has already enumerated it, which no rebind on this side puts back.
+	PendingPowerCycle bool `json:"pending_power_cycle"`
+
+	// A failed apply rolls back, so the linkage above is the one that was
+	// already there and carries no trace of the attempt. Without this the only
+	// record of it is an HTTP response the operator has already dismissed.
+	LastError *ApplyFailure `json:"last_error,omitempty"`
+
 	// What the active profile costs against the controller's endpoint budget,
 	// and what is left of it. The compiler already accounts for this to reject
 	// a profile that does not fit; reporting it is what lets a caller see how
@@ -27,6 +44,19 @@ type Snapshot struct {
 	Endpoints EndpointUse    `json:"endpoints"`
 	Headroom  EndpointUse    `json:"headroom"`
 	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
+}
+
+type UDCStatus struct {
+	Name  string `json:"name"`
+	Bound bool   `json:"bound"`
+	State string `json:"state,omitempty"`
+	Speed string `json:"speed,omitempty"`
+}
+
+type ApplyFailure struct {
+	Profile string    `json:"profile"`
+	Message string    `json:"message"`
+	At      time.Time `json:"at"`
 }
 
 // Linkage is read back through the function's own attribute rather than from a

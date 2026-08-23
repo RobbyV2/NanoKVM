@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,7 @@ func profileRouter(service *Service) *gin.Engine {
 	router.POST("/profiles/:id/validate", service.ValidateProfile)
 	router.PUT("/preview", service.PreviewProfile)
 	router.PUT("/apply", service.ApplyProfile)
+	router.POST("/rollback", service.RollbackProfile)
 	return router
 }
 
@@ -203,4 +205,140 @@ func decodeData[T any](t *testing.T, envelope responseEnvelope) T {
 		t.Fatal(err)
 	}
 	return value
+}
+
+// The apply dialog had one fixed sentence to describe every change. The preview
+// carries what the apply takes away, what it leaves the operator holding and
+// where a failure lands, all of it before anything is written.
+func TestPreviewSaysWhatTheApplyWillDo(t *testing.T) {
+	service, _ := testPresentationService(t)
+	router := profileRouter(service)
+
+	rich := profileForFlags(flags{rndis: true, disk: true})
+	rich.Name, rich.BuiltIn = "rich", false
+	if created := requestJSON(t, router, http.MethodPost, "/profiles", rich); created.Code != 0 {
+		t.Fatalf("create = %+v", created)
+	}
+	if applied := requestJSON(t, router, http.MethodPut, "/apply", nameRequest{Name: rich.Name}); applied.Code != 0 {
+		t.Fatalf("apply = %+v", applied)
+	}
+
+	preview := decodeData[Preview](t, requestJSON(t, router, http.MethodPut, "/preview", standardProfile()))
+	if !preview.Valid {
+		t.Fatalf("preview = %+v", preview)
+	}
+	if preview.Apply == nil || preview.Rollback == nil {
+		t.Fatalf("preview says nothing about the apply: %+v", preview)
+	}
+
+	want := []string{"rndis.usb0", "mass_storage.disk0"}
+	if strings.Join(preview.Apply.Removes, ",") != strings.Join(want, ",") {
+		t.Fatalf("removes = %v, want %v", preview.Apply.Removes, want)
+	}
+	if !preview.Apply.HID || preview.Apply.Recovery != RecoveryReboot {
+		t.Fatalf("apply = %+v, want hid kept and a host reboot", preview.Apply)
+	}
+	if preview.Rollback.Profile != rich.Name || len(preview.Rollback.Removes) != 0 {
+		t.Fatalf("rollback = %+v, want %s restored with nothing removed", preview.Rollback, rich.Name)
+	}
+	if preview.Device.ProductID != standardProfile().Device.ProductID || preview.Device.Serial == "" {
+		t.Fatalf("device = %+v, want the resolved identity", preview.Device)
+	}
+	if len(preview.FIFOs) == 0 {
+		t.Fatalf("fifos = %v, want the seating the compiler already did", preview.FIFOs)
+	}
+}
+
+// An apply that binds and verifies is still an apply the attached host can hate,
+// and until now the only rollback was the one a failed apply ran for itself.
+func TestRollbackReturnsToTheProfileBeforeTheActiveOne(t *testing.T) {
+	service, ops := testPresentationService(t)
+	router := profileRouter(service)
+
+	desk := profileForFlags(flags{rndis: true, disk: true})
+	desk.Name, desk.BuiltIn = "desk", false
+	if created := requestJSON(t, router, http.MethodPost, "/profiles", desk); created.Code != 0 {
+		t.Fatalf("create = %+v", created)
+	}
+	if applied := requestJSON(t, router, http.MethodPut, "/apply", nameRequest{Name: ProfileHIDOnly}); applied.Code != 0 {
+		t.Fatalf("apply hid-only = %+v", applied)
+	}
+	if applied := requestJSON(t, router, http.MethodPut, "/apply", nameRequest{Name: desk.Name}); applied.Code != 0 {
+		t.Fatalf("apply desk = %+v", applied)
+	}
+
+	status := decodeData[Status](t, requestJSON(t, router, http.MethodGet, "/status", nil))
+	if status.LastKnownGood != desk.Name || status.RollbackTarget != ProfileHIDOnly {
+		t.Fatalf("status = %+v, want %s good with %s behind it", status, desk.Name, ProfileHIDOnly)
+	}
+
+	rolled := decodeData[struct {
+		Profile string `json:"profile"`
+	}](t, requestJSON(t, router, http.MethodPost, "/rollback", nil))
+	if rolled.Profile != ProfileHIDOnly {
+		t.Fatalf("rollback = %+v, want %s", rolled, ProfileHIDOnly)
+	}
+	if links := ops.Links(); links[configPrefix+"/rndis.usb0"] != "" {
+		t.Fatalf("rollback left the network function linked: %v", links)
+	}
+	status = decodeData[Status](t, requestJSON(t, router, http.MethodGet, "/status", nil))
+	if status.Snapshot.Active != ProfileHIDOnly {
+		t.Fatalf("active = %q, want %s", status.Snapshot.Active, ProfileHIDOnly)
+	}
+
+	// The second click of a double click reports the same landing and does not
+	// unbind the gadget a second time.
+	before := len(ops.Trace())
+	again := decodeData[struct {
+		Profile string `json:"profile"`
+	}](t, requestJSON(t, router, http.MethodPost, "/rollback", nil))
+	if again.Profile != ProfileHIDOnly {
+		t.Fatalf("second rollback = %+v, want %s", again, ProfileHIDOnly)
+	}
+	if after := len(ops.Trace()); after != before {
+		t.Fatalf("second rollback emitted %d ops", after-before)
+	}
+}
+
+func TestRollbackRefusesWithNothingToRollBackTo(t *testing.T) {
+	service, ops := testPresentationService(t)
+	router := profileRouter(service)
+	if applied := requestJSON(t, router, http.MethodPut, "/apply", nameRequest{Name: ProfileStandard}); applied.Code != 0 {
+		t.Fatalf("apply = %+v", applied)
+	}
+
+	before := len(ops.Trace())
+	refused := requestJSON(t, router, http.MethodPost, "/rollback", nil)
+	if refused.Code == 0 {
+		t.Fatalf("rollback = %+v, want a refusal", refused)
+	}
+	if !strings.Contains(refused.Msg, "no earlier profile") {
+		t.Fatalf("refusal = %q", refused.Msg)
+	}
+	if after := len(ops.Trace()); after != before {
+		t.Fatalf("refused rollback emitted %d ops", after-before)
+	}
+}
+
+// usb-proxy holds the same udc->driver pointer, so a rollback is a gadget
+// mutation like any other and the loan refuses it.
+func TestRollbackIsRefusedWhileTheUDCIsOnLoan(t *testing.T) {
+	service, ops := testPresentationService(t)
+	router := profileRouter(service)
+	for _, name := range []string{ProfileHIDOnly, ProfileStandard} {
+		if applied := requestJSON(t, router, http.MethodPut, "/apply", nameRequest{Name: name}); applied.Code != 0 {
+			t.Fatalf("apply %s = %+v", name, applied)
+		}
+	}
+	if _, err := service.manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+
+	refused := requestJSON(t, router, http.MethodPost, "/rollback", nil)
+	if refused.Code == 0 || !strings.Contains(refused.Msg, "usb-proxy") {
+		t.Fatalf("rollback during a passthrough session = %+v", refused)
+	}
+	if bound := ops.Bound(); bound != "" {
+		t.Fatalf("rollback bound the udc to %q while usb-proxy had it", bound)
+	}
 }
