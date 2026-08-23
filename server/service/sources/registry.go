@@ -279,10 +279,7 @@ func (r *Registry) DisconnectAll(actor Actor) error {
 	return nil
 }
 
-func (r *Registry) ReplaceSlots(actor Actor, slots []Slot) error {
-	if !actor.Admin {
-		return ErrForbidden
-	}
+func (r *Registry) SyncSlots(slots []Slot) error {
 	validated, err := validateSlots(slots)
 	if err != nil {
 		return err
@@ -311,6 +308,41 @@ func (r *Registry) ReplaceSlots(actor Actor, slots []Slot) error {
 	}
 	sinks := r.snapshotLocked().Sinks
 	r.emitLocked(Event{Type: "sinks_changed", Sinks: sinks})
+	return nil
+}
+
+func (r *Registry) AuthorizeFrame(sourceID, streamID, sinkID string, kind Kind) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	source, exists := r.sources[sourceID]
+	if !exists {
+		return fmt.Errorf("%w: source %s", ErrNotFound, sourceID)
+	}
+	streamFound := false
+	for _, stream := range source.Streams {
+		if stream.ID == streamID {
+			if stream.Kind != kind {
+				return fmt.Errorf("%w: stream kind %q", ErrInvalidMessage, stream.Kind)
+			}
+			streamFound = true
+			break
+		}
+	}
+	if !streamFound {
+		return fmt.Errorf("%w: stream %s", ErrNotFound, streamID)
+	}
+	sink, exists := r.sinks[sinkID]
+	if !exists {
+		return fmt.Errorf("%w: sink %s", ErrNotFound, sinkID)
+	}
+	if sink.Kind != kind {
+		return fmt.Errorf("%w: sink kind %q", ErrInvalidMessage, sink.Kind)
+	}
+	current := r.bindings[sinkID]
+	if current == nil || current.SourceID != sourceID || current.StreamID != streamID || current.State == StateOrphaned {
+		return ErrForbidden
+	}
 	return nil
 }
 

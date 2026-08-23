@@ -1,12 +1,16 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"NanoKVM-Server/service/controlmode"
+	"NanoKVM-Server/service/media"
 	"NanoKVM-Server/service/picoclaw"
+	"NanoKVM-Server/service/presentation"
+	"NanoKVM-Server/service/sources"
 
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
@@ -34,6 +38,14 @@ func web(r *gin.Engine) {
 func server(r *gin.Engine) {
 	control := controlmode.GetManager()
 	picoclawService := picoclaw.NewService(control)
+	sourceService := sources.NewService()
+	mediaManager := media.NewManager(sourceService.Registry())
+	sourceService.SetIngress(mediaManager)
+	presentationManager := presentation.GetManager()
+	presentationManager.SetObserver(mediaManager)
+	if err := presentationManager.RefreshObserver(context.Background()); err != nil {
+		log.Debugf("media gadget unavailable: %s", err)
+	}
 
 	authRouter(r)
 	applicationRouter(r)
@@ -47,7 +59,7 @@ func server(r *gin.Engine) {
 	mcpRouter(r, control, picoclawService)
 	picoclawRouter(r, picoclawService)
 	wsRouter(r)
-	sourcesRouter(r)
+	sourcesRouter(r, sourceService)
 	downloadRouter(r)
 	extensionsRouter(r)
 }

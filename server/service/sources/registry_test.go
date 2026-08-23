@@ -196,7 +196,7 @@ func TestFallbackOutputTracksDemandAndBinding(t *testing.T) {
 	}
 }
 
-func TestReplaceSlotsTerminatesChangedBindings(t *testing.T) {
+func TestSyncSlotsTerminatesChangedBindings(t *testing.T) {
 	registry := mustRegistry(t, testSlots, RegistryOptions{})
 	actor := Actor{Username: "alice"}
 	camera := mustSource(t, registry, actor, "Camera", KindCamera)
@@ -211,7 +211,7 @@ func TestReplaceSlotsTerminatesChangedBindings(t *testing.T) {
 	defer cancel()
 	<-events
 
-	if err := registry.ReplaceSlots(Actor{Username: "admin", Admin: true}, []Slot{
+	if err := registry.SyncSlots([]Slot{
 		{ID: "uac2.mic0", Kind: KindMicrophone, Label: "Changed microphone"},
 	}); err != nil {
 		t.Fatal(err)
