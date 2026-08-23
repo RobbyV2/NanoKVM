@@ -275,6 +275,24 @@ func defaultMicrophone(index int, label string) Function {
 	}}
 }
 
+// mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";
+// mount -t functionfs hybrid returns ENODEV until it exists. The caller mounts
+// and writes ep0 between this and StartFunctionFS, which links and binds.
+func (m *Manager) CreateFunctionFS(ctx context.Context) error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient != nil {
+		return ErrTransient
+	}
+	return m.ops.Mkdir(functionsDir + "/ffs.hybrid")
+}
+
 func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Transient, error) {
 	if err := m.ready(); err != nil {
 		return nil, err

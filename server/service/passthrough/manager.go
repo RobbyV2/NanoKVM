@@ -54,6 +54,7 @@ type Gadget interface {
 }
 
 type FunctionFSGadget interface {
+	CreateFunctionFS(context.Context) error
 	StartFunctionFS(context.Context, presentation.FunctionFS) (*presentation.Transient, error)
 	StopFunctionFS(context.Context, uint64) error
 	RecoverFunctionFS(context.Context) error
@@ -264,6 +265,10 @@ func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string
 	}
 	local, err := m.vhci.Locate(ctx, attachment)
 	if err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+	// The ffs instance has to exist in configfs before Prepare mounts it.
+	if err := gadget.CreateFunctionFS(ctx); err != nil {
 		return nil, errors.Join(err, m.detach(state))
 	}
 	relay, function, err := m.hybrid.Prepare(local)

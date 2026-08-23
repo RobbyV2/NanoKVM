@@ -29,18 +29,56 @@ type fakeGadget struct {
 	beforeReclaim func()
 }
 
+// The lifecycle steps the kernel orders, in the place each one really happens:
+// the mkdir registers the ffs instance (presentation.Manager.CreateFunctionFS),
+// the mount and the ep0 writes name it (functionfs.openFunctionFS), and the
+// link and the bind come last, in the plan StartFunctionFS applies, whose own
+// mkdir is the idempotent repeat of the first.
+type lifecycleTrace struct {
+	mu     sync.Mutex
+	events []string
+}
+
+func (t *lifecycleTrace) record(event string) {
+	if t == nil {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.events = append(t.events, event)
+}
+
+func (t *lifecycleTrace) taken() []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return slices.Clone(t.events)
+}
+
 type fakeHybridGadget struct {
 	*fakeGadget
 	muHybrid  sync.Mutex
+	trace     *lifecycleTrace
+	created   int
 	started   int
 	stopped   int
 	recovered int
+}
+
+func (g *fakeHybridGadget) CreateFunctionFS(context.Context) error {
+	g.muHybrid.Lock()
+	defer g.muHybrid.Unlock()
+	g.created++
+	g.trace.record("configfs mkdir functions/ffs.hybrid")
+	return nil
 }
 
 func (g *fakeHybridGadget) StartFunctionFS(_ context.Context, _ presentation.FunctionFS) (*presentation.Transient, error) {
 	g.muHybrid.Lock()
 	defer g.muHybrid.Unlock()
 	g.started++
+	g.trace.record("configfs mkdir functions/ffs.hybrid")
+	g.trace.record("configfs link configs/c.1/ffs.hybrid")
+	g.trace.record("configfs bind udc")
 	return &presentation.Transient{Token: 7}, nil
 }
 
@@ -78,12 +116,15 @@ func (r *fakeHybridRelay) Close() error {
 
 type fakeHybridFactory struct {
 	relay    *fakeHybridRelay
+	trace    *lifecycleTrace
 	prepared int
 	cleaned  int
 }
 
 func (f *fakeHybridFactory) Prepare(Local) (HybridRelay, presentation.FunctionFS, error) {
 	f.prepared++
+	f.trace.record("functionfs mount hybrid")
+	f.trace.record("functionfs write ep0 descriptors")
 	return f.relay, presentation.FunctionFS{Interfaces: 1, Endpoints: []presentation.FunctionFSEndpoint{
 		{SourceAddress: 0x81, Address: 0x81, Transfer: presentation.EndpointInterrupt, MaxPacket: 8, Interval: 10},
 	}}, nil
@@ -539,6 +580,71 @@ func TestHybridKeepsBootHIDAndRestoresTheGadget(t *testing.T) {
 		t.Fatalf("detached = %v", detached)
 	}
 }
+
+// 9.1: mount -t functionfs hybrid returns ENODEV until configfs holds
+// functions/ffs.hybrid, and the UDC cannot bind before ep0 carries the
+// descriptors, so this sequence is the whole of Hybrid working on a real kernel.
+func TestHybridRegistersTheFFSInstanceBeforeMounting(t *testing.T) {
+	manager, base, _, _ := newTestManager(t)
+	trace := &lifecycleTrace{}
+	gadget := &fakeHybridGadget{fakeGadget: base, trace: trace}
+	factory := &fakeHybridFactory{relay: newFakeHybridRelay(), trace: trace}
+	manager.gadget = gadget
+	manager.hybrid = factory
+
+	if _, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = manager.Stop() }()
+
+	want := []string{
+		"configfs mkdir functions/ffs.hybrid",
+		"functionfs mount hybrid",
+		"functionfs write ep0 descriptors",
+		"configfs mkdir functions/ffs.hybrid",
+		"configfs link configs/c.1/ffs.hybrid",
+		"configfs bind udc",
+	}
+	events := trace.taken()
+	if !slices.Equal(events, want) {
+		t.Fatalf("lifecycle = %v, want %v", events, want)
+	}
+}
+
+// What the fake gadget above stands in for: the real CreateFunctionFS is the
+// configfs mkdir and nothing else.
+func TestCreateFunctionFSMakesTheConfigFSInstance(t *testing.T) {
+	ops := &recordMkdirOps{}
+	gadget := presentation.NewManager(presentation.NewStore(), ops, presentation.LoadCapabilities())
+	var _ FunctionFSGadget = gadget
+
+	if err := gadget.CreateFunctionFS(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(ops.mkdirs, []string{"functions/ffs.hybrid"}) {
+		t.Fatalf("mkdirs = %v, want [functions/ffs.hybrid]", ops.mkdirs)
+	}
+}
+
+type recordMkdirOps struct {
+	mkdirs []string
+}
+
+func (o *recordMkdirOps) Mkdir(rel string) error {
+	o.mkdirs = append(o.mkdirs, rel)
+	return nil
+}
+
+func (o *recordMkdirOps) WriteFile(string, []byte) error  { return nil }
+func (o *recordMkdirOps) ReadFile(string) ([]byte, error) { return nil, nil }
+func (o *recordMkdirOps) Symlink(string, string) error    { return nil }
+func (o *recordMkdirOps) Remove(string) error             { return nil }
+func (o *recordMkdirOps) RemoveDir(string) error          { return nil }
+func (o *recordMkdirOps) ListUDC() ([]string, error)      { return []string{testUDC}, nil }
+func (o *recordMkdirOps) BindUDC(string) error            { return nil }
+func (o *recordMkdirOps) UnbindUDC() error                { return nil }
+func (o *recordMkdirOps) SetOTGRole(string) error         { return nil }
+func (o *recordMkdirOps) ResetPHY(context.Context) error  { return nil }
 
 func TestHybridRecoveryIsPersistentAndOrdered(t *testing.T) {
 	manager, base, vhci, _ := newTestManager(t)
