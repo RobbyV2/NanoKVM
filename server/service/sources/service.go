@@ -67,18 +67,20 @@ type controlMessage struct {
 }
 
 type controlResponse struct {
-	Type        string       `json:"type"`
-	Message     string       `json:"message,omitempty"`
-	Source      *Source      `json:"source,omitempty"`
-	Snapshot    *Snapshot    `json:"snapshot,omitempty"`
-	Binding     *BindingView `json:"binding,omitempty"`
-	Token       string       `json:"token,omitempty"`
-	SinkID      string       `json:"sink_id,omitempty"`
-	Owner       string       `json:"owner,omitempty"`
-	SourceLabel string       `json:"source_label,omitempty"`
-	Since       time.Time    `json:"since,omitempty"`
-	StreamID    string       `json:"stream_id,omitempty"`
-	Sequence    uint32       `json:"sequence,omitempty"`
+	Type        string            `json:"type"`
+	Message     string            `json:"message,omitempty"`
+	Source      *Source           `json:"source,omitempty"`
+	Snapshot    *Snapshot         `json:"snapshot,omitempty"`
+	Binding     *BindingView      `json:"binding,omitempty"`
+	Token       string            `json:"token,omitempty"`
+	SinkID      string            `json:"sink_id,omitempty"`
+	Owner       string            `json:"owner,omitempty"`
+	SourceLabel string            `json:"source_label,omitempty"`
+	Since       time.Time         `json:"since,omitempty"`
+	StreamID    string            `json:"stream_id,omitempty"`
+	Sequence    uint32            `json:"sequence,omitempty"`
+	Takeover    string            `json:"takeover,omitempty"`
+	Reason      TerminationReason `json:"reason,omitempty"`
 }
 
 type frameFailure struct {
@@ -88,6 +90,21 @@ type frameFailure struct {
 
 type slotsRequest struct {
 	Slots []Slot `json:"slots"`
+}
+
+type bindingRequest struct {
+	SourceID string `json:"source_id"`
+	StreamID string `json:"stream_id"`
+	SinkID   string `json:"sink_id,omitempty"`
+	Token    string `json:"token,omitempty"`
+}
+
+type claimRefusal struct {
+	SinkID      string    `json:"sink_id"`
+	Owner       string    `json:"owner"`
+	SourceLabel string    `json:"source_label"`
+	Since       time.Time `json:"since"`
+	Takeover    string    `json:"takeover"`
 }
 
 func (e *frameFailure) Error() string { return e.err.Error() }
@@ -198,6 +215,115 @@ func (s *Service) Release(c *gin.Context) {
 	response.OkRsp(c)
 }
 
+func (s *Service) Claim(c *gin.Context) {
+	var response proto.Response
+	actor, request, ok := bindingArguments(c)
+	if !ok {
+		return
+	}
+	if err := s.requireMediaStream(request); err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	result, err := s.registry.Claim(actor, request.SourceID, request.StreamID, request.SinkID)
+	if err != nil {
+		writeClaimError(c, actor, err)
+		return
+	}
+	response.OkRspWithData(c, &result)
+}
+
+func (s *Service) Resume(c *gin.Context) {
+	var response proto.Response
+	actor, request, ok := bindingArguments(c)
+	if !ok {
+		return
+	}
+	if err := s.requireMediaStream(request); err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	binding, err := s.registry.Resume(actor, request.SourceID, request.StreamID, request.SinkID, request.Token)
+	if err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	response.OkRspWithData(c, &binding)
+}
+
+func (s *Service) Takeover(c *gin.Context) {
+	var response proto.Response
+	actor, request, ok := bindingArguments(c)
+	if !ok {
+		return
+	}
+	if err := s.requireMediaStream(request); err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	result, err := s.registry.Takeover(actor, request.SourceID, request.StreamID, request.SinkID)
+	if err != nil {
+		writeClaimError(c, actor, err)
+		return
+	}
+	s.detach(request.SinkID)
+	response.OkRspWithData(c, &result)
+}
+
+func (s *Service) requireMediaStream(request bindingRequest) error {
+	stream, err := s.registry.Stream(request.SourceID, request.StreamID)
+	if err != nil {
+		return fmt.Errorf("%w: stream %s", ErrNotFound, request.StreamID)
+	}
+	if stream.Kind == KindUSBDevice {
+		return fmt.Errorf("%w: USB devices bind over the source socket", ErrForbidden)
+	}
+	return nil
+}
+
+func bindingArguments(c *gin.Context) (Actor, bindingRequest, bool) {
+	var response proto.Response
+	actor, ok := actorFrom(c)
+	if !ok {
+		response.ErrRsp(c, -1, ErrForbidden.Error())
+		return Actor{}, bindingRequest{}, false
+	}
+	var request bindingRequest
+	if err := decodeHTTPRequest(c, &request); err != nil {
+		response.ErrRsp(c, -1, "invalid arguments")
+		return Actor{}, bindingRequest{}, false
+	}
+	if sink := c.Param("sink"); sink != "" {
+		request.SinkID = sink
+	}
+	return actor, request, true
+}
+
+func writeClaimError(c *gin.Context, actor Actor, err error) {
+	var response proto.Response
+	var occupied *OccupiedError
+	if !errors.As(err, &occupied) {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	response.Err(-3, "slot_occupied")
+	response.Data = claimRefusal{
+		SinkID:      occupied.SinkID,
+		Owner:       occupied.Owner,
+		SourceLabel: occupied.SourceLabel,
+		Since:       occupied.Since,
+		Takeover:    takeoverHint(actor),
+	}
+	c.JSON(http.StatusOK, &response)
+}
+
+func takeoverHint(actor Actor) string {
+	if actor.Admin {
+		return "immediate"
+	}
+	return "refused"
+}
+
 func (s *Service) DisconnectAll(c *gin.Context) {
 	var response proto.Response
 	actor, ok := actorFrom(c)
@@ -214,7 +340,8 @@ func (s *Service) DisconnectAll(c *gin.Context) {
 		s.detach(binding.SinkID)
 	}
 	s.stopAllUSB()
-	response.OkRsp(c)
+	current := s.registry.Snapshot()
+	response.OkRspWithData(c, &current)
 }
 
 func (s *Service) SourceSocket(c *gin.Context) {
@@ -276,6 +403,8 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 	_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
 	connection.SetReadLimit(maxMediaMessage)
 
+	events, unsubscribe := s.registry.Subscribe()
+	defer unsubscribe()
 	done := make(chan struct{})
 	defer close(done)
 	ctx, cancel := context.WithCancel(c.Request.Context())
@@ -287,6 +416,7 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		}
 	}()
 	go pingWriter(writer, done)
+	go watchTerminations(writer, source.ID, events, done)
 	windowStart, count, mediaCount := time.Now(), 0, 0
 	for {
 		messageType, data, readErr := connection.ReadMessage()
@@ -393,6 +523,7 @@ func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor
 					Owner:       occupied.Owner,
 					SourceLabel: occupied.SourceLabel,
 					Since:       occupied.Since,
+					Takeover:    takeoverHint(actor),
 				})
 			}
 			return writer.JSON(controlResponse{Type: "error", Message: err.Error()})
@@ -683,6 +814,26 @@ func writeControl(connection *websocket.Conn, response controlResponse) error {
 func writeEvent(connection *websocket.Conn, event Event) error {
 	_ = connection.SetWriteDeadline(time.Now().Add(websocketWriteWait))
 	return connection.WriteJSON(event)
+}
+
+func watchTerminations(writer *sourceWriter, sourceID string, events <-chan Event, done <-chan struct{}) {
+	for {
+		select {
+		case event, open := <-events:
+			if !open {
+				_ = writer.Close()
+				return
+			}
+			if event.Type != "binding_removed" || event.Binding == nil || event.Binding.SourceID != sourceID {
+				continue
+			}
+			if writer.JSON(controlResponse{Type: "released", SinkID: event.Binding.SinkID, Reason: event.Reason}) != nil {
+				return
+			}
+		case <-done:
+			return
+		}
+	}
 }
 
 func pingWriter(writer *sourceWriter, done <-chan struct{}) {

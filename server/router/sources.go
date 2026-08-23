@@ -15,6 +15,9 @@ func sourcesRouter(r *gin.Engine, service *sources.Service) {
 	api.GET("/sources", service.Get)
 	api.GET("/sources/events", service.Events)
 	api.GET("/sources/ws", service.SourceSocket)
+	api.POST("/sources/bindings", service.Claim)
+	api.POST("/sources/bindings/:sink/resume", service.Resume)
+	api.POST("/sources/bindings/:sink/takeover", service.Takeover)
 	api.DELETE("/sources/bindings/:sink", service.Release)
 
 	admin := r.Group("/api").Use(middleware.CheckToken(), middleware.RequireRole(authn.RoleAdmin))

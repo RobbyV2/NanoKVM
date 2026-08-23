@@ -13,6 +13,16 @@ messages are JSON text capped at 64 KiB; media frames use the bounded binary for
 below. Sustained message floods close the socket. Event subscribers have bounded queues;
 overflow closes the subscription so the client reconnects and receives a fresh snapshot.
 
+Claims, resumes and takeovers are also reachable over REST for agents that stream on
+their own channel, and they run through the same registry calls the socket uses. A claim
+on a taken slot is refused with the holder named and nothing disturbed; only an
+administrator turns that refusal into a takeover, which terminates the incumbent and
+binds the requester in one critical section. USB devices bind over the source socket
+only, since the relay needs it.
+
+Every termination reaches the source that owned the binding on its own socket, so the
+browser stops capture instead of holding the camera open behind a cleared table.
+
 Lease tokens are returned once on claim, stay out of snapshots and events, and are
 compared in constant time. A socket close orphans a binding for the refresh grace rather
 than releasing its slot. Resume requires the same username, token, sink kind and a live

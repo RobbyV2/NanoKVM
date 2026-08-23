@@ -54,6 +54,7 @@ const (
 	ReasonAdminDisconnect TerminationReason = "admin_disconnect"
 	ReasonSlotRemoved     TerminationReason = "slot_removed"
 	ReasonSlotChanged     TerminationReason = "slot_changed"
+	ReasonTakenOver       TerminationReason = "taken_over"
 )
 
 type Format struct {

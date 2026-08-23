@@ -446,3 +446,165 @@ func TestWebUSBBinaryIsNotChargedToTheMediaBudget(t *testing.T) {
 		t.Fatalf("relayed %d USB frames", len(session.received))
 	}
 }
+
+func TestAdminDisconnectStopsTheSourceCapture(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	service := NewServiceWith(registry)
+	router := gin.New()
+	router.GET("/alice", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice"}) })
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	connection, _ := connectSource(t, server.URL, "/alice", "Pixel", []Stream{{ID: "stream", Kind: KindCamera, Label: "Back camera"}})
+	defer connection.Close()
+	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: "uvc.cam0", StreamID: "stream"}); err != nil {
+		t.Fatal(err)
+	}
+	var claimed controlResponse
+	readJSON(t, connection, &claimed)
+	if claimed.Type != "claimed" {
+		t.Fatalf("claim = %+v", claimed)
+	}
+
+	admin := gin.New()
+	admin.Use(func(c *gin.Context) {
+		c.Set("principal", middleware.Principal{Username: "root", Role: authn.RoleAdmin})
+		c.Next()
+	})
+	admin.DELETE("/bindings", service.DisconnectAll)
+	recorder := httptest.NewRecorder()
+	admin.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/bindings", nil))
+
+	var disconnected struct {
+		Code int      `json:"code"`
+		Data Snapshot `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &disconnected); err != nil {
+		t.Fatal(err)
+	}
+	if disconnected.Code != 0 || len(disconnected.Data.Bindings) != 0 || len(disconnected.Data.Sinks) == 0 {
+		t.Fatalf("disconnect response = %s", recorder.Body.String())
+	}
+
+	var revoked controlResponse
+	readJSON(t, connection, &revoked)
+	if revoked.Type != "released" || revoked.SinkID != "uvc.cam0" || revoked.Reason != ReasonAdminDisconnect {
+		t.Fatalf("revocation = %+v", revoked)
+	}
+}
+
+func TestRESTClaimRefusesAndAdminTakesOver(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	service := NewServiceWith(registry)
+	alice := mustSource(t, registry, Actor{Username: "alice"}, "Pixel", KindCamera)
+	bob := mustSource(t, registry, Actor{Username: "bob"}, "Laptop", KindCamera)
+	aliceBody := fmt.Sprintf(`{"source_id":%q,"stream_id":"stream","sink_id":"uvc.cam0"}`, alice.ID)
+	bobBody := fmt.Sprintf(`{"source_id":%q,"stream_id":"stream","sink_id":"uvc.cam0"}`, bob.ID)
+	bobTakeover := fmt.Sprintf(`{"source_id":%q,"stream_id":"stream"}`, bob.ID)
+
+	granted := postBinding(t, service, middleware.Principal{Username: "alice", Role: authn.RoleUser}, "/bindings", aliceBody)
+	var claim struct {
+		Code int         `json:"code"`
+		Data ClaimResult `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(granted), &claim); err != nil {
+		t.Fatal(err)
+	}
+	if claim.Code != 0 || claim.Data.Token == "" || claim.Data.Binding.Owner != "alice" {
+		t.Fatalf("claim = %s", granted)
+	}
+
+	for _, path := range []struct{ url, body string }{
+		{url: "/bindings", body: bobBody},
+		{url: "/bindings/uvc.cam0/takeover", body: bobTakeover},
+	} {
+		payload := postBinding(t, service, middleware.Principal{Username: "bob", Role: authn.RoleUser}, path.url, path.body)
+		var refusal struct {
+			Msg  string       `json:"msg"`
+			Data claimRefusal `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(payload), &refusal); err != nil {
+			t.Fatal(err)
+		}
+		if refusal.Msg != "slot_occupied" || refusal.Data.Owner != "alice" || refusal.Data.SourceLabel != "Pixel" || refusal.Data.Takeover != "refused" {
+			t.Fatalf("%s refusal = %s", path.url, payload)
+		}
+	}
+	if binding := sinkByID(t, registry.Snapshot(), "uvc.cam0").Binding; binding == nil || binding.Owner != "alice" {
+		t.Fatalf("refused takeover disturbed the incumbent: %+v", binding)
+	}
+
+	events, cancel := registry.Subscribe()
+	defer cancel()
+	<-events
+	taken := postBinding(t, service, middleware.Principal{Username: "bob", Role: authn.RoleAdmin}, "/bindings/uvc.cam0/takeover", bobTakeover)
+	if !strings.Contains(taken, `"code":0`) {
+		t.Fatalf("takeover = %s", taken)
+	}
+	binding := sinkByID(t, registry.Snapshot(), "uvc.cam0").Binding
+	if binding == nil || binding.Owner != "bob" || binding.SourceID != bob.ID {
+		t.Fatalf("binding after takeover = %+v", binding)
+	}
+	removed := <-events
+	if removed.Type != "binding_removed" || removed.Reason != ReasonTakenOver || removed.Binding.Owner != "alice" {
+		t.Fatalf("termination event = %+v", removed)
+	}
+	if added := <-events; added.Type != "binding_added" || added.Binding.Owner != "bob" {
+		t.Fatalf("takeover event = %+v", added)
+	}
+}
+
+func TestRESTResumeRestoresAnOrphanedLease(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	service := NewServiceWith(registry)
+	alice := Actor{Username: "alice"}
+	first := mustSource(t, registry, alice, "Pixel", KindCamera)
+	claim, err := registry.Claim(alice, first.ID, "stream", "uvc.cam0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry.DisconnectSource(first.ID)
+	second := mustSource(t, registry, alice, "Pixel reloaded", KindCamera)
+
+	principal := middleware.Principal{Username: "alice", Role: authn.RoleUser}
+	rejected := postBinding(t, service, principal, "/bindings/uvc.cam0/resume",
+		fmt.Sprintf(`{"source_id":%q,"stream_id":"stream","token":"wrong"}`, second.ID))
+	if !strings.Contains(rejected, ErrInvalidToken.Error()) {
+		t.Fatalf("bad token resume = %s", rejected)
+	}
+	resumed := postBinding(t, service, principal, "/bindings/uvc.cam0/resume",
+		fmt.Sprintf(`{"source_id":%q,"stream_id":"stream","token":%q}`, second.ID, claim.Token))
+	var response struct {
+		Code int         `json:"code"`
+		Data BindingView `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(resumed), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != 0 || response.Data.State != StateClaimed || response.Data.SourceID != second.ID {
+		t.Fatalf("resume = %s", resumed)
+	}
+}
+
+func postBinding(t *testing.T, service *Service, principal middleware.Principal, path, body string) string {
+	t.Helper()
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("principal", principal)
+		c.Next()
+	})
+	router.POST("/bindings", service.Claim)
+	router.POST("/bindings/:sink/resume", service.Resume)
+	router.POST("/bindings/:sink/takeover", service.Takeover)
+	request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("%s = %d %s", path, recorder.Code, recorder.Body.String())
+	}
+	return recorder.Body.String()
+}

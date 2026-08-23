@@ -55,6 +55,19 @@ export type Binding = {
   expires_at?: string;
 };
 
+export type ClaimGrant = {
+  binding: Binding;
+  token: string;
+};
+
+export type ClaimRefusal = {
+  sink_id: string;
+  owner: string;
+  source_label: string;
+  since: string;
+  takeover: 'immediate' | 'refused';
+};
+
 export type SourceSink = {
   id: string;
   kind: SourceKind;

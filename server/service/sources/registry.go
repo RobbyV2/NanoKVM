@@ -173,24 +173,36 @@ func (r *Registry) DisconnectSource(sourceID string) {
 func (r *Registry) Claim(actor Actor, sourceID, streamID, sinkID string) (ClaimResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.claimLocked(actor, sourceID, streamID, sinkID, false)
+}
 
+func (r *Registry) Takeover(actor Actor, sourceID, streamID, sinkID string) (ClaimResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.claimLocked(actor, sourceID, streamID, sinkID, actor.Admin)
+}
+
+func (r *Registry) claimLocked(actor Actor, sourceID, streamID, sinkID string, takeover bool) (ClaimResult, error) {
 	source, stream, sink, err := r.claimInputsLocked(actor, sourceID, streamID, sinkID)
 	if err != nil {
 		return ClaimResult{}, err
-	}
-	if current := r.bindings[sinkID]; current != nil {
-		return ClaimResult{}, &OccupiedError{
-			SinkID:      sinkID,
-			Owner:       current.Owner,
-			SourceLabel: current.SourceLabel,
-			Since:       current.StartedAt,
-		}
 	}
 	if stream.Kind != sink.Kind {
 		return ClaimResult{}, fmt.Errorf("%w: stream kind %q cannot fill %q", ErrInvalidMessage, stream.Kind, sink.Kind)
 	}
 	if sink.Kind == KindUSBDevice && !actor.Admin {
 		return ClaimResult{}, ErrForbidden
+	}
+	if current := r.bindings[sinkID]; current != nil {
+		if !takeover {
+			return ClaimResult{}, &OccupiedError{
+				SinkID:      sinkID,
+				Owner:       current.Owner,
+				SourceLabel: current.SourceLabel,
+				Since:       current.StartedAt,
+			}
+		}
+		r.removeBindingLocked(sinkID, ReasonTakenOver)
 	}
 
 	current := &binding{BindingView: BindingView{
