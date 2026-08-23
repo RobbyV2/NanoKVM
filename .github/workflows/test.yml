@@ -138,6 +138,14 @@ jobs:
           go-version-file: server/go.mod
           cache-dependency-path: server/go.sum
 
+      - name: Load vhci_hcd
+        # The runner's -azure kernel keeps vhci-hcd in linux-modules-extra, which
+        # the image does not install, so the modprobe in kernelint.sh finds nothing.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y "linux-modules-extra-$(uname -r)"
+          sudo modprobe vhci-hcd
+
       - name: Kernel tier 1
         # Root, because the tests load vhci_hcd and add links. Everything they
         # touch is inside a network namespace the script creates and deletes.
