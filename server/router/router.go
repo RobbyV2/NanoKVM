@@ -46,6 +46,7 @@ func server(r *gin.Engine) {
 	mcpRouter(r, control, picoclawService)
 	picoclawRouter(r, picoclawService)
 	wsRouter(r)
+	sourcesRouter(r)
 	downloadRouter(r)
 	extensionsRouter(r)
 }
