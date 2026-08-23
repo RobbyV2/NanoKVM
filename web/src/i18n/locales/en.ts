@@ -393,6 +393,14 @@ const en = {
       passthrough: {
         title: 'USB Passthrough',
         loading: 'Loading...',
+        mode: 'Mode',
+        hybrid: 'Hybrid',
+        exact: 'Exact',
+        hybridDesc: 'Keeps the boot keyboard and relative mouse, for compatible devices.',
+        exactDesc: 'Replaces every NanoKVM USB function with the imported device.',
+        hybridWarning: 'Hybrid keeps the keyboard and relative mouse available',
+        hybridWarningDesc:
+          'Storage, USB networking and the absolute pointer disconnect while the imported function is active.',
         hidWarning: 'Starting passthrough gives up the keyboard, the mouse and virtual media',
         hidWarningDesc:
           'NanoKVM has one USB device controller and the proxy needs all of it, so while a session runs the remote host sees the passed-through device instead of NanoKVM’s keyboard, mouse and virtual media. They come back on their own the moment the session stops. This web interface is unaffected, so you can always stop a session from this page.',

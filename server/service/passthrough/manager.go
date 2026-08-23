@@ -15,13 +15,16 @@ import (
 	"time"
 
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/functionfs"
 	"NanoKVM-Server/service/presentation"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	proxyLog = "/tmp/usb-proxy.log"
+	proxyLog   = "/tmp/usb-proxy.log"
+	ModeHybrid = "hybrid"
+	ModeExact  = "exact"
 
 	portsPerHub    = 8
 	locateTimeout  = 5 * time.Second
@@ -50,6 +53,22 @@ type Gadget interface {
 	UDCBound() (bool, error)
 }
 
+type FunctionFSGadget interface {
+	StartFunctionFS(context.Context, presentation.FunctionFS) (*presentation.Transient, error)
+	StopFunctionFS(context.Context, uint64) error
+	RecoverFunctionFS(context.Context) error
+}
+
+type HybridRelay interface {
+	Run(context.Context) error
+	Close() error
+}
+
+type HybridFactory interface {
+	Prepare(Local) (HybridRelay, presentation.FunctionFS, error)
+	Cleanup() error
+}
+
 type VHCI interface {
 	Attach(ctx context.Context, exporter string, busID string) (Attachment, error)
 	Detach(port uint32) error
@@ -76,6 +95,7 @@ type Local struct {
 }
 
 type Session struct {
+	Mode      string
 	Exporter  string
 	BusID     string
 	UDC       string
@@ -86,9 +106,12 @@ type Session struct {
 	Pid       int
 	StartedAt time.Time
 
-	proc Process
-	done chan struct{}
-	err  error
+	proc   Process
+	relay  HybridRelay
+	token  uint64
+	finish sync.Once
+	done   chan struct{}
+	err    error
 }
 
 type Manager struct {
@@ -97,6 +120,7 @@ type Manager struct {
 	proxy   Spawner
 	modules ModuleLoader
 	orphans func() error
+	hybrid  HybridFactory
 
 	mu      sync.Mutex
 	session *Session
@@ -121,13 +145,29 @@ func NewManager(gadget Gadget, vhci VHCI, proxy Spawner, modules ModuleLoader) *
 		proxy:   proxy,
 		modules: modules,
 		orphans: stopProxyOrphans,
+		hybrid:  functionFSFactory{},
 	}
 }
 
-// Passthrough is a mode, like the normal and hid-only split: raw-gadget and the
-// configfs gadget cannot share a UDC, so starting one surrenders the keyboard,
-// the mouse and the virtual media for its duration.
+// Start preserves the Exact behavior of the original API.
 func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Session, error) {
+	return m.StartMode(ctx, exporter, busID, ModeExact)
+}
+
+func (m *Manager) StartMode(ctx context.Context, exporter string, busID string, mode string) (*Session, error) {
+	if mode == "" {
+		mode = ModeHybrid
+	}
+	if mode == ModeHybrid {
+		return m.startHybrid(ctx, exporter, busID)
+	}
+	if mode != ModeExact {
+		return nil, fmt.Errorf("%w: mode %q", ErrDescriptors, mode)
+	}
+	return m.startExact(ctx, exporter, busID)
+}
+
+func (m *Manager) startExact(ctx context.Context, exporter string, busID string) (*Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -146,7 +186,7 @@ func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Se
 	if err != nil {
 		return nil, err
 	}
-	state := recoveryState{Port: attachment.Port}
+	state := recoveryState{Port: attachment.Port, Mode: ModeExact}
 	if err := saveRecoveryState(state); err != nil {
 		return nil, errors.Join(err, m.vhci.Detach(attachment.Port))
 	}
@@ -180,6 +220,7 @@ func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Se
 	}
 
 	session := &Session{
+		Mode:      ModeExact,
 		Exporter:  exporter,
 		BusID:     busID,
 		UDC:       udc,
@@ -199,6 +240,51 @@ func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Se
 	return session, nil
 }
 
+func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string) (*Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session != nil {
+		return nil, ErrSessionActive
+	}
+	gadget, ok := m.gadget.(FunctionFSGadget)
+	if !ok {
+		return nil, fmt.Errorf("%w: FunctionFS presentation is unavailable", ErrDescriptors)
+	}
+	if err := m.modules.Load(ModuleUSBIPCore, ModuleVHCI); err != nil {
+		return nil, err
+	}
+	attachment, err := m.vhci.Attach(ctx, exporter, busID)
+	if err != nil {
+		return nil, err
+	}
+	state := recoveryState{Port: attachment.Port, Mode: ModeHybrid}
+	if err := saveRecoveryState(state); err != nil {
+		return nil, errors.Join(err, m.vhci.Detach(attachment.Port))
+	}
+	local, err := m.vhci.Locate(ctx, attachment)
+	if err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+	relay, function, err := m.hybrid.Prepare(local)
+	if err != nil {
+		return nil, errors.Join(err, m.detach(state))
+	}
+	transient, err := gadget.StartFunctionFS(ctx, function)
+	if err != nil {
+		return nil, errors.Join(err, relay.Close(), m.hybrid.Cleanup(), m.detach(state))
+	}
+	session := &Session{
+		Mode: ModeHybrid, Exporter: exporter, BusID: busID, Port: attachment.Port,
+		Hub: attachment.Hub, Device: attachment.Device, Local: local, StartedAt: time.Now(),
+		relay: relay, token: transient.Token, done: make(chan struct{}),
+	}
+	m.session = session
+	go m.superviseHybrid(session)
+	log.Debugf("passthrough: Hybrid %s from %s on port %d", busID, exporter, session.Port)
+	return session, nil
+}
+
 func (m *Manager) Stop() error {
 	m.mu.Lock()
 	session := m.session
@@ -206,6 +292,11 @@ func (m *Manager) Stop() error {
 
 	if session == nil {
 		return ErrNoSession
+	}
+	if session.Mode == ModeHybrid {
+		m.finishHybrid(session, nil)
+		<-session.done
+		return session.err
 	}
 	if err := session.proc.Terminate(); err != nil {
 		return err
@@ -242,7 +333,53 @@ func (m *Manager) Recover() error {
 	if err := m.orphans(); err != nil {
 		return err
 	}
+	if state.Mode == ModeHybrid {
+		gadget, ok := m.gadget.(FunctionFSGadget)
+		if !ok {
+			return fmt.Errorf("%w: FunctionFS presentation is unavailable", ErrDescriptors)
+		}
+		restoreErr := gadget.RecoverFunctionFS(context.Background())
+		cleanupErr := m.hybrid.Cleanup()
+		detachErr := m.vhci.Detach(state.Port)
+		err := errors.Join(restoreErr, cleanupErr, detachErr)
+		if err == nil {
+			err = clearRecoveryState()
+		}
+		return err
+	}
 	return m.restore(state)
+}
+
+func (m *Manager) superviseHybrid(session *Session) {
+	err := session.relay.Run(context.Background())
+	if !errors.Is(err, functionfs.ErrClosed) && !errors.Is(err, context.Canceled) {
+		log.Warnf("passthrough: Hybrid relay exited: %s", err)
+	}
+	m.finishHybrid(session, err)
+}
+
+func (m *Manager) finishHybrid(session *Session, relayErr error) {
+	session.finish.Do(func() {
+		if errors.Is(relayErr, functionfs.ErrClosed) || errors.Is(relayErr, context.Canceled) {
+			relayErr = nil
+		}
+		gadget := m.gadget.(FunctionFSGadget)
+		restoreErr := gadget.StopFunctionFS(context.Background(), session.token)
+		closeErr := session.relay.Close()
+		cleanupErr := m.hybrid.Cleanup()
+		detachErr := m.vhci.Detach(session.Port)
+		cleanupResult := errors.Join(restoreErr, closeErr, cleanupErr, detachErr)
+		if cleanupResult == nil {
+			cleanupResult = clearRecoveryState()
+		}
+		session.err = errors.Join(relayErr, cleanupResult)
+		m.mu.Lock()
+		if m.session == session {
+			m.session = nil
+		}
+		m.mu.Unlock()
+		close(session.done)
+	})
 }
 
 // The watchdog. A crashed proxy takes the keyboard and the mouse with it, so
@@ -301,6 +438,7 @@ func (m *Manager) Status() proto.GetPassthroughRsp {
 	}
 	return proto.GetPassthroughRsp{
 		Active:         true,
+		Mode:           session.Mode,
 		Exporter:       session.Exporter,
 		UDC:            session.UDC,
 		Port:           session.Port,
@@ -308,7 +446,7 @@ func (m *Manager) Status() proto.GetPassthroughRsp {
 		Bus:            session.Local.Bus,
 		Address:        session.Local.Address,
 		Pid:            session.Pid,
-		HIDSurrendered: true,
+		HIDSurrendered: session.Mode == ModeExact,
 		StartedAt:      session.StartedAt,
 		Device: &proto.PassthroughDevice{
 			BusID:     session.BusID,
@@ -319,6 +457,18 @@ func (m *Manager) Status() proto.GetPassthroughRsp {
 		},
 	}
 }
+
+type functionFSFactory struct{}
+
+func (functionFSFactory) Prepare(local Local) (HybridRelay, presentation.FunctionFS, error) {
+	prepared, err := functionfs.Prepare(local.Path, local.Bus, local.Address, presentation.LoadCapabilities())
+	if err != nil {
+		return nil, presentation.FunctionFS{}, err
+	}
+	return prepared.Relay, prepared.Image.Function, nil
+}
+
+func (functionFSFactory) Cleanup() error { return functionfs.Cleanup() }
 
 // usb-proxy matches on vendor and product id, which would just as happily bind
 // a local device carrying the same pair, so the imported device is named by the

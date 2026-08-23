@@ -12,6 +12,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"NanoKVM-Server/service/functionfs"
+	"NanoKVM-Server/service/presentation"
 )
 
 const testUDC = "4340000.usb"
@@ -24,6 +27,71 @@ type fakeGadget struct {
 	fail          error
 	reclaimed     chan struct{}
 	beforeReclaim func()
+}
+
+type fakeHybridGadget struct {
+	*fakeGadget
+	muHybrid  sync.Mutex
+	started   int
+	stopped   int
+	recovered int
+}
+
+func (g *fakeHybridGadget) StartFunctionFS(_ context.Context, _ presentation.FunctionFS) (*presentation.Transient, error) {
+	g.muHybrid.Lock()
+	defer g.muHybrid.Unlock()
+	g.started++
+	return &presentation.Transient{Token: 7}, nil
+}
+
+func (g *fakeHybridGadget) StopFunctionFS(_ context.Context, token uint64) error {
+	if token != 7 {
+		return errors.New("wrong transient token")
+	}
+	g.muHybrid.Lock()
+	defer g.muHybrid.Unlock()
+	g.stopped++
+	return nil
+}
+
+func (g *fakeHybridGadget) RecoverFunctionFS(context.Context) error {
+	g.muHybrid.Lock()
+	defer g.muHybrid.Unlock()
+	g.recovered++
+	return nil
+}
+
+type fakeHybridRelay struct {
+	closed chan struct{}
+	once   sync.Once
+}
+
+func newFakeHybridRelay() *fakeHybridRelay { return &fakeHybridRelay{closed: make(chan struct{})} }
+func (r *fakeHybridRelay) Run(context.Context) error {
+	<-r.closed
+	return functionfs.ErrClosed
+}
+func (r *fakeHybridRelay) Close() error {
+	r.once.Do(func() { close(r.closed) })
+	return nil
+}
+
+type fakeHybridFactory struct {
+	relay    *fakeHybridRelay
+	prepared int
+	cleaned  int
+}
+
+func (f *fakeHybridFactory) Prepare(Local) (HybridRelay, presentation.FunctionFS, error) {
+	f.prepared++
+	return f.relay, presentation.FunctionFS{Interfaces: 1, Endpoints: []presentation.FunctionFSEndpoint{
+		{SourceAddress: 0x81, Address: 0x81, Transfer: presentation.EndpointInterrupt, MaxPacket: 8, Interval: 10},
+	}}, nil
+}
+
+func (f *fakeHybridFactory) Cleanup() error {
+	f.cleaned++
+	return nil
 }
 
 func newFakeGadget() *fakeGadget {
@@ -431,6 +499,71 @@ func TestStartTakesTheGadgetAndStopRestoresIt(t *testing.T) {
 	}
 	if manager.Status().Active {
 		t.Fatal("a stopped session still reports active")
+	}
+}
+
+func TestHybridKeepsBootHIDAndRestoresTheGadget(t *testing.T) {
+	manager, base, vhci, spawner := newTestManager(t)
+	gadget := &fakeHybridGadget{fakeGadget: base}
+	factory := &fakeHybridFactory{relay: newFakeHybridRelay()}
+	manager.gadget = gadget
+	manager.hybrid = factory
+
+	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.Mode != ModeHybrid || manager.Status().HIDSurrendered {
+		t.Fatalf("Hybrid status = %+v", manager.Status())
+	}
+	if len(spawner.last()) != 0 {
+		t.Fatal("Hybrid spawned the Exact proxy")
+	}
+	modules := manager.modules.(*fakeModules)
+	modules.mu.Lock()
+	loaded := slices.Clone(modules.loaded)
+	modules.mu.Unlock()
+	if !slices.Equal(loaded, []Module{ModuleUSBIPCore, ModuleVHCI}) {
+		t.Fatalf("Hybrid modules = %v", loaded)
+	}
+	if err := manager.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	gadget.muHybrid.Lock()
+	started, stopped := gadget.started, gadget.stopped
+	gadget.muHybrid.Unlock()
+	if started != 1 || stopped != 1 || factory.prepared != 1 || factory.cleaned != 1 {
+		t.Fatalf("start/stop/prepare/cleanup = %d/%d/%d/%d", started, stopped, factory.prepared, factory.cleaned)
+	}
+	if _, detached := vhci.calls(); !slices.Equal(detached, []uint32{5}) {
+		t.Fatalf("detached = %v", detached)
+	}
+}
+
+func TestHybridRecoveryIsPersistentAndOrdered(t *testing.T) {
+	manager, base, vhci, _ := newTestManager(t)
+	gadget := &fakeHybridGadget{fakeGadget: base}
+	factory := &fakeHybridFactory{relay: newFakeHybridRelay()}
+	manager.gadget = gadget
+	manager.hybrid = factory
+	manager.orphans = func() error { return nil }
+	if err := saveRecoveryState(recoveryState{Port: 5, Mode: ModeHybrid}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Recover(); err != nil {
+		t.Fatal(err)
+	}
+	gadget.muHybrid.Lock()
+	recovered := gadget.recovered
+	gadget.muHybrid.Unlock()
+	if recovered != 1 || factory.cleaned != 1 {
+		t.Fatalf("recovered/cleaned = %d/%d", recovered, factory.cleaned)
+	}
+	if _, detached := vhci.calls(); !slices.Equal(detached, []uint32{5}) {
+		t.Fatalf("detached = %v", detached)
+	}
+	if _, err := os.Stat(recoveryStatePath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("recovery marker survives: %v", err)
 	}
 }
 

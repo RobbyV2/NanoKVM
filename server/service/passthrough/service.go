@@ -108,7 +108,7 @@ func (s *Service) StartPassthrough(c *gin.Context) {
 		return
 	}
 
-	if _, err := s.manager.Start(c.Request.Context(), req.Exporter, req.BusID); err != nil {
+	if _, err := s.manager.StartMode(c.Request.Context(), req.Exporter, req.BusID, req.Mode); err != nil {
 		log.Errorf("passthrough: start failed: %s", err)
 		rsp.ErrRsp(c, -2, err.Error())
 		return
