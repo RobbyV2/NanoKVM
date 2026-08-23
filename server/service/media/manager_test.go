@@ -518,3 +518,25 @@ func TestIngestMeasuresFrameLatency(t *testing.T) {
 		t.Fatalf("latency of a detached source survived: %+v", manager.Latency())
 	}
 }
+
+func TestManagerRejectsEmptyPayloads(t *testing.T) {
+	camera := SlotSpec{ID: "uvc.cam0", Kind: sources.KindCamera, Video: cameraFunction("cam0").Video}
+	if _, _, err := validateFrame(camera, sources.MediaFrame{Kind: sources.MediaKindMJPEG}); !errors.Is(err, ErrUnsupportedFrame) {
+		t.Fatalf("empty MJPEG err = %v, want ErrUnsupportedFrame", err)
+	}
+	microphone := SlotSpec{ID: "uac2.mic0", Kind: sources.KindMicrophone, Audio: microphoneFunction("mic0").Audio}
+	if _, _, err := validateFrame(microphone, sources.MediaFrame{Kind: sources.MediaKindPCMS16LE}); !errors.Is(err, ErrUnsupportedFrame) {
+		t.Fatalf("empty PCM err = %v, want ErrUnsupportedFrame", err)
+	}
+}
+
+func TestPacketSpanNeverIndexesAnEmptyPayload(t *testing.T) {
+	base, size := packetSpan(Packet{Generation: 1, Reset: true})
+	if base == nil || size != 0 {
+		t.Fatalf("reset span = (%v, %d), want a usable pointer and 0", base, size)
+	}
+	data := []byte{0xff, 0xd8, 0xff, 0xd9}
+	if base, size = packetSpan(Packet{Data: data}); base != &data[0] || size != len(data) {
+		t.Fatalf("payload span = (%v, %d), want (%v, %d)", base, size, &data[0], len(data))
+	}
+}

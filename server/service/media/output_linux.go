@@ -450,7 +450,7 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 			return nil
 		case frame := <-frames:
 			changed := frame.Generation != generation
-			if frame.Reset {
+			if frame.Reset || len(frame.Data) == 0 {
 				current, err = fallback(int(width), int(height))
 				if err != nil {
 					return err
@@ -474,7 +474,8 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 					o.mu.Unlock()
 					return nil
 				}
-				rc := C.nk_uvc_restart(o.handle, unsafe.Pointer(&current.Data[0]), C.size_t(len(current.Data)))
+				base, size := packetSpan(current)
+				rc := C.nk_uvc_restart(o.handle, unsafe.Pointer(base), C.size_t(size))
 				o.mu.Unlock()
 				if rc < 0 {
 					return fmt.Errorf("reset UVC: %s", syscallError(rc))
@@ -500,7 +501,8 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 			o.mu.Unlock()
 			return nil
 		}
-		rc := C.nk_uvc_step(o.handle, unsafe.Pointer(&current.Data[0]), C.size_t(len(current.Data)), C.int(timeout), send, &width, &height, &fps)
+		base, size := packetSpan(current)
+		rc := C.nk_uvc_step(o.handle, unsafe.Pointer(base), C.size_t(size), C.int(timeout), send, &width, &height, &fps)
 		o.mu.Unlock()
 		if rc < 0 {
 			return fmt.Errorf("write UVC: %s", syscallError(rc))
@@ -519,7 +521,8 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 				o.mu.Unlock()
 				return nil
 			}
-			rc = C.nk_uvc_start(o.handle, unsafe.Pointer(&current.Data[0]), C.size_t(len(current.Data)))
+			base, size = packetSpan(current)
+			rc = C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size))
 			o.mu.Unlock()
 			if rc < 0 {
 				return fmt.Errorf("start UVC: %s", syscallError(rc))
@@ -581,7 +584,7 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 			select {
 			case frame := <-frames:
 				changed := frame.Generation != generation
-				if frame.Reset {
+				if frame.Reset || len(frame.Data) == 0 {
 					current, err = fallback(0, 0)
 					if err != nil {
 						return err
@@ -613,7 +616,8 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 				o.mu.Unlock()
 				return nil
 			}
-			rc := C.nk_pcm_write(o.handle, unsafe.Pointer(&current.Data[0]), C.uint(len(current.Data)))
+			base, size := packetSpan(current)
+			rc := C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))
 			o.mu.Unlock()
 			if rc == 0 {
 				failures = 0

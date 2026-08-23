@@ -434,6 +434,15 @@ func validateFrame(spec SlotSpec, frame sources.MediaFrame) (int, int, error) {
 	return 0, 0, nil
 }
 
+var emptyPacket [1]byte
+
+func packetSpan(p Packet) (*byte, int) {
+	if len(p.Data) == 0 {
+		return &emptyPacket[0], 0
+	}
+	return &p.Data[0], len(p.Data)
+}
+
 func fallbackFor(spec SlotSpec) Fallback {
 	cache := make(map[[2]int][]byte, 1)
 	return func(width, height int) (Packet, error) {
