@@ -1,6 +1,7 @@
 package passthrough
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -22,17 +23,23 @@ import (
 )
 
 const (
-	proxyLog   = "/tmp/usb-proxy.log"
 	ModeHybrid = "hybrid"
 	ModeExact  = "exact"
 
-	portsPerHub    = 8
-	locateTimeout  = 5 * time.Second
-	locateInterval = 100 * time.Millisecond
-	stopTimeout    = 5 * time.Second
+	portsPerHub      = 8
+	locateTimeout    = 5 * time.Second
+	locateInterval   = 100 * time.Millisecond
+	stopTimeout      = 5 * time.Second
+	livenessStrikes  = 5
+	proxyReasonBytes = 4 << 10
+	proxyReasonLimit = 200
 )
 
-var udcClassDir = "/sys/class/udc"
+var (
+	udcClassDir      = "/sys/class/udc"
+	proxyLog         = "/tmp/usb-proxy.log"
+	livenessInterval = 2 * time.Second
+)
 
 var (
 	ErrSessionActive = errors.New("passthrough: a session is already running")
@@ -107,13 +114,17 @@ type Session struct {
 	Pid       int
 	StartedAt time.Time
 
-	proc   Process
-	relay  HybridRelay
-	token  uint64
-	finish sync.Once
-	done   chan struct{}
-	err    error
-	remote bool
+	proc      Process
+	relay     HybridRelay
+	token     uint64
+	logOffset int64
+	stopping  atomic.Bool
+	finish    sync.Once
+	done      chan struct{}
+	exited    chan struct{}
+	watched   chan struct{}
+	err       error
+	remote    bool
 }
 
 func (s *Session) Done() <-chan struct{} { return s.done }
@@ -121,15 +132,17 @@ func (s *Session) Done() <-chan struct{} { return s.done }
 func (s *Session) Err() error { return s.err }
 
 type Manager struct {
-	gadget  Gadget
-	vhci    VHCI
-	proxy   Spawner
-	modules ModuleLoader
-	orphans func() error
-	hybrid  HybridFactory
+	gadget   Gadget
+	vhci     VHCI
+	proxy    Spawner
+	modules  ModuleLoader
+	orphans  func() error
+	hybrid   HybridFactory
+	progress func(int) (proxyProgress, error)
 
 	mu      sync.Mutex
 	session *Session
+	reason  string
 }
 
 var (
@@ -146,12 +159,13 @@ func GetManager() *Manager {
 
 func NewManager(gadget Gadget, vhci VHCI, proxy Spawner, modules ModuleLoader) *Manager {
 	return &Manager{
-		gadget:  gadget,
-		vhci:    vhci,
-		proxy:   proxy,
-		modules: modules,
-		orphans: stopProxyOrphans,
-		hybrid:  functionFSFactory{},
+		gadget:   gadget,
+		vhci:     vhci,
+		proxy:    proxy,
+		modules:  modules,
+		orphans:  stopProxyOrphans,
+		hybrid:   functionFSFactory{},
+		progress: readProxyProgress,
 	}
 }
 
@@ -160,7 +174,25 @@ func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Se
 	return m.StartMode(ctx, exporter, busID, ModeExact)
 }
 
+// A refusal is the operator's only account of what went wrong, so it is kept
+// where the status can report it instead of only being returned once. A start
+// refused because a session is already running says nothing about that session
+// and must not overwrite what it reported.
 func (m *Manager) StartMode(ctx context.Context, exporter string, busID string, mode string) (*Session, error) {
+	session, err := m.startMode(ctx, exporter, busID, mode)
+	if err != nil && !errors.Is(err, ErrSessionActive) {
+		m.setReason(err.Error())
+	}
+	return session, err
+}
+
+func (m *Manager) setReason(reason string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.reason = reason
+}
+
+func (m *Manager) startMode(ctx context.Context, exporter string, busID string, mode string) (*Session, error) {
 	if mode == "" {
 		mode = ModeHybrid
 	}
@@ -180,6 +212,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 	if m.session != nil {
 		return nil, ErrSessionActive
 	}
+	m.reason = ""
 	binary, err := installProxy()
 	if err != nil {
 		return nil, err
@@ -220,6 +253,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 		return nil, errors.Join(err, m.restore(state))
 	}
 
+	offset := proxyLogSize()
 	proc, err := m.proxy.Start(proxyArgv(binary, udc, driver, local))
 	if err != nil {
 		return nil, errors.Join(err, m.restore(state))
@@ -237,11 +271,15 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 		Pid:       proc.Pid(),
 		StartedAt: time.Now(),
 		proc:      proc,
+		logOffset: offset,
 		done:      make(chan struct{}),
+		exited:    make(chan struct{}),
+		watched:   make(chan struct{}),
 	}
 	m.session = session
 
 	go m.supervise(session)
+	go m.watchProxy(session, livenessInterval)
 	log.Debugf("passthrough: %s from %s on port %d, pid %d", busID, exporter, session.Port, session.Pid)
 	return session, nil
 }
@@ -253,6 +291,7 @@ func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string
 	if m.session != nil {
 		return nil, ErrSessionActive
 	}
+	m.reason = ""
 	gadget, ok := m.gadget.(FunctionFSGadget)
 	if !ok {
 		return nil, fmt.Errorf("%w: FunctionFS presentation is unavailable", ErrDescriptors)
@@ -335,6 +374,7 @@ func (m *Manager) Stop() error {
 		<-session.done
 		return session.err
 	}
+	session.stopping.Store(true)
 	if err := session.proc.Terminate(); err != nil {
 		return err
 	}
@@ -432,6 +472,9 @@ func (m *Manager) finishHybrid(session *Session, relayErr error) {
 		}
 		session.err = errors.Join(relayErr, cleanupResult)
 		m.mu.Lock()
+		if relayErr != nil {
+			m.reason = relayErr.Error()
+		}
 		if m.session == session {
 			m.session = nil
 		}
@@ -445,10 +488,15 @@ func (m *Manager) finishHybrid(session *Session, relayErr error) {
 // and a crash with one path.
 func (m *Manager) supervise(session *Session) {
 	waitErr := session.proc.Wait()
+	close(session.exited)
+	<-session.watched
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if !session.stopping.Load() && m.reason == "" {
+		m.reason = proxyReason(session.logOffset)
+	}
 	session.err = m.restore(recoveryState{Port: session.Port, Reclaim: true})
 	if m.session == session {
 		m.session = nil
@@ -486,15 +534,23 @@ func (m *Manager) detach(state recoveryState) error {
 	return err
 }
 
-func (m *Manager) Status() proto.GetPassthroughRsp {
+// Status carries the passthrough response plus why the running session is in
+// trouble, or why the last one was refused or died. usb-proxy writes that only
+// to its log, which nothing else reads.
+type Status struct {
+	proto.GetPassthroughRsp
+	Reason string `json:"reason,omitempty"`
+}
+
+func (m *Manager) Status() Status {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	session := m.session
 	if session == nil {
-		return proto.GetPassthroughRsp{}
+		return Status{Reason: m.reason}
 	}
-	return proto.GetPassthroughRsp{
+	return Status{Reason: m.reason, GetPassthroughRsp: proto.GetPassthroughRsp{
 		Active:         true,
 		Mode:           session.Mode,
 		Exporter:       session.Exporter,
@@ -513,7 +569,148 @@ func (m *Manager) Status() proto.GetPassthroughRsp {
 			Speed:     session.Device.Speed.String(),
 			Class:     session.Device.DeviceClass,
 		},
+	}}
+}
+
+// proc.Wait only ever hears about a proxy that exits. One that keeps running
+// without relaying anything still holds the UDC, and the operator loses the
+// keyboard until the board is rebooted. usb-proxy cannot be asked how it is
+// doing, but the kernel says how its threads wait: every wait raw-gadget and
+// libusb make on its behalf is interruptible, so a thread parked in
+// uninterruptible sleep is stuck inside the kernel rather than idle between
+// packets. Only when that holds for every thread, with no CPU time accruing
+// across several probes, is the proxy terminated: a proxy that is merely
+// waiting on a quiet host looks exactly like a busy one from out here, and
+// killing it would cost the operator the session it is for.
+func (m *Manager) watchProxy(session *Session, interval time.Duration) {
+	defer close(session.watched)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	last, err := m.progress(session.Pid)
+	if err != nil {
+		return
 	}
+	strikes := 0
+	for {
+		select {
+		case <-session.exited:
+			return
+		case <-ticker.C:
+		}
+		current, err := m.progress(session.Pid)
+		if err != nil {
+			return
+		}
+		if current.blocked && current.cpu == last.cpu {
+			strikes++
+		} else {
+			strikes = 0
+		}
+		last = current
+		if strikes < livenessStrikes {
+			continue
+		}
+		reason := fmt.Sprintf("usb-proxy %d made no progress for %s and every thread is blocked in the kernel", session.Pid, interval*livenessStrikes)
+		log.Warnf("passthrough: %s", reason)
+		m.setReason(reason)
+		_ = session.proc.Terminate()
+		return
+	}
+}
+
+type proxyProgress struct {
+	cpu     uint64
+	blocked bool
+}
+
+func readProxyProgress(pid int) (proxyProgress, error) {
+	root := filepath.Join(procRoot, strconv.Itoa(pid), "task")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return proxyProgress{}, err
+	}
+	if len(entries) == 0 {
+		return proxyProgress{}, fmt.Errorf("usb-proxy %d has no threads", pid)
+	}
+	progress := proxyProgress{blocked: true}
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(root, entry.Name(), "stat"))
+		if err != nil {
+			continue
+		}
+		state, cpu, err := parseThreadStat(data)
+		if err != nil {
+			return proxyProgress{}, err
+		}
+		progress.cpu += cpu
+		if state != 'D' {
+			progress.blocked = false
+		}
+	}
+	return progress, nil
+}
+
+// The comm field is parenthesised and may hold spaces and parentheses of its
+// own, so the fields are counted from the last one it closes: state, then the
+// ten fields before utime and stime.
+func parseThreadStat(data []byte) (byte, uint64, error) {
+	comm := bytes.LastIndexByte(data, ')')
+	if comm < 0 {
+		return 0, 0, errors.New("thread stat has no comm field")
+	}
+	fields := strings.Fields(string(data[comm+1:]))
+	if len(fields) < 13 || len(fields[0]) != 1 {
+		return 0, 0, fmt.Errorf("thread stat has %d fields", len(fields))
+	}
+	user, userErr := strconv.ParseUint(fields[11], 10, 64)
+	system, systemErr := strconv.ParseUint(fields[12], 10, 64)
+	if err := errors.Join(userErr, systemErr); err != nil {
+		return 0, 0, err
+	}
+	return fields[0][0], user + system, nil
+}
+
+func proxyLogSize() int64 {
+	info, err := os.Stat(proxyLog)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
+}
+
+// usb-proxy prints why it will not relay a device and exits, and the message
+// goes nowhere but its log. Only what this session appended is read, so an
+// older session's failure is never reported as this one's.
+func proxyReason(offset int64) string {
+	file, err := os.Open(proxyLog)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = file.Close() }()
+
+	info, err := file.Stat()
+	if err != nil || info.Size() <= offset {
+		return ""
+	}
+	if info.Size()-offset > proxyReasonBytes {
+		offset = info.Size() - proxyReasonBytes
+	}
+	data := make([]byte, info.Size()-offset)
+	n, _ := file.ReadAt(data, offset)
+	lines := strings.Split(string(data[:n]), "\n")
+	for index := len(lines) - 1; index >= 0; index-- {
+		line := strings.TrimSpace(lines[index])
+		if line == "" {
+			continue
+		}
+		if len(line) > proxyReasonLimit {
+			line = line[:proxyReasonLimit]
+		}
+		return line
+	}
+	return ""
 }
 
 type functionFSFactory struct{}

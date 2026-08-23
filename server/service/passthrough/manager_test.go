@@ -4,12 +4,15 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -101,11 +104,15 @@ func (g *fakeHybridGadget) RecoverFunctionFS(context.Context) error {
 
 type fakeHybridRelay struct {
 	closed chan struct{}
+	fail   error
 	once   sync.Once
 }
 
 func newFakeHybridRelay() *fakeHybridRelay { return &fakeHybridRelay{closed: make(chan struct{})} }
 func (r *fakeHybridRelay) Run(context.Context) error {
+	if r.fail != nil {
+		return r.fail
+	}
 	<-r.closed
 	return functionfs.ErrClosed
 }
@@ -893,6 +900,9 @@ func TestIsochronousDescriptorsAreRejectedBeforeTheGadgetIsTouched(t *testing.T)
 	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); !errors.Is(err, ErrIsochronous) {
 		t.Fatalf("start = %v, want %v", err, ErrIsochronous)
 	}
+	if reason := manager.Status().Reason; !strings.Contains(reason, "isochronous") {
+		t.Fatalf("status reason = %q, want the refusal", reason)
+	}
 	if bound, surrendered, reclaimed := gadget.state(); !bound || surrendered != 0 || reclaimed != 0 {
 		t.Fatalf("bound = %t, surrenders = %d, reclaims = %d, want true, 0, 0", bound, surrendered, reclaimed)
 	}
@@ -1059,5 +1069,171 @@ func TestTheSpawnerRefusesAnyBinaryButTheProxy(t *testing.T) {
 		if _, err := (execSpawner{}).Start(argv); !errors.Is(err, ErrRefusedBinary) {
 			t.Fatalf("start %v: err = %v, want %v", argv, err, ErrRefusedBinary)
 		}
+	}
+}
+
+// The three things the log has to say: why this proxy refused the device, that
+// the next session does not inherit it, and that a stop the operator asked for
+// is not a failure at all.
+func TestARefusedProxyReportsWhyFromItsLog(t *testing.T) {
+	manager, _, _, spawner := newTestManager(t)
+	previous := proxyLog
+	proxyLog = filepath.Join(t.TempDir(), "usb-proxy.log")
+	t.Cleanup(func() { proxyLog = previous })
+
+	appendLog := func(line string) {
+		t.Helper()
+		file, err := os.OpenFile(proxyLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := file.WriteString(line); err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); err != nil {
+		t.Fatalf("start: %s", err)
+	}
+	appendLog("Failed to remap endpoint 0x81 (interface 0, alt 0)\n")
+	spawner.process.kill()
+	waitIdle(t, manager)
+	if reason := manager.Status().Reason; reason != "Failed to remap endpoint 0x81 (interface 0, alt 0)" {
+		t.Fatalf("refusal reason = %q", reason)
+	}
+
+	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); err != nil {
+		t.Fatalf("second start: %s", err)
+	}
+	spawner.process.kill()
+	waitIdle(t, manager)
+	if reason := manager.Status().Reason; reason != "" {
+		t.Fatalf("a silent proxy inherited %q", reason)
+	}
+
+	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); err != nil {
+		t.Fatalf("third start: %s", err)
+	}
+	appendLog("Received SIGTERM, stopping...\n")
+	if err := manager.Stop(); err != nil {
+		t.Fatalf("stop: %s", err)
+	}
+	if reason := manager.Status().Reason; reason != "" {
+		t.Fatalf("a stop the operator asked for reported %q", reason)
+	}
+}
+
+func TestAProxyThatStopsMakingProgressIsTerminated(t *testing.T) {
+	manager, gadget, _, spawner := newTestManager(t)
+	previous := livenessInterval
+	livenessInterval = time.Millisecond
+	t.Cleanup(func() { livenessInterval = previous })
+	manager.progress = func(int) (proxyProgress, error) {
+		return proxyProgress{cpu: 1234, blocked: true}, nil
+	}
+
+	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); err != nil {
+		t.Fatalf("start: %s", err)
+	}
+	select {
+	case <-spawner.process.terminate:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the watchdog left a stuck proxy holding the UDC")
+	}
+	waitIdle(t, manager)
+
+	if bound, _, reclaimed := gadget.state(); !bound || reclaimed != 1 {
+		t.Fatalf("after the watchdog fired: bound = %t, reclaims = %d, want true, 1", bound, reclaimed)
+	}
+	if reason := manager.Status().Reason; !strings.Contains(reason, "made no progress") {
+		t.Fatalf("status reason = %q", reason)
+	}
+}
+
+// A proxy waiting on a quiet host looks blocked too, and killing it would cost
+// the operator the session, so only a proxy that also burns no CPU is stopped.
+func TestAProxyThatKeepsWorkingIsLeftAlone(t *testing.T) {
+	manager, _, _, spawner := newTestManager(t)
+	previous := livenessInterval
+	livenessInterval = time.Millisecond
+	t.Cleanup(func() { livenessInterval = previous })
+	var cpu atomic.Uint64
+	manager.progress = func(int) (proxyProgress, error) {
+		return proxyProgress{cpu: cpu.Add(1), blocked: true}, nil
+	}
+
+	if _, err := manager.Start(context.Background(), "10.0.0.5", "1-1"); err != nil {
+		t.Fatalf("start: %s", err)
+	}
+	select {
+	case <-spawner.process.terminate:
+		t.Fatal("the watchdog killed a proxy that was still working")
+	case <-time.After(200 * time.Millisecond):
+	}
+	if !manager.Status().Active {
+		t.Fatal("the session ended on its own")
+	}
+	if err := manager.Stop(); err != nil {
+		t.Fatalf("stop: %s", err)
+	}
+}
+
+func TestProxyProgressReadsEveryThread(t *testing.T) {
+	root := t.TempDir()
+	previous := procRoot
+	procRoot = root
+	t.Cleanup(func() { procRoot = previous })
+
+	writeThreadStat := func(tid int, state string, user int, system int) {
+		t.Helper()
+		dir := filepath.Join(root, "4242", "task", strconv.Itoa(tid))
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		// The comm field holds a space and a parenthesis of its own.
+		stat := fmt.Sprintf("%d (usb-proxy (hs)) %s%s %d %d 0 0\n", tid, state, strings.Repeat(" 0", 10), user, system)
+		if err := os.WriteFile(filepath.Join(dir, "stat"), []byte(stat), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeThreadStat(4242, "D", 7, 9)
+	writeThreadStat(4243, "D", 3, 4)
+	progress, err := readProxyProgress(4242)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !progress.blocked || progress.cpu != 23 {
+		t.Fatalf("progress = %+v, want blocked with 23 jiffies", progress)
+	}
+
+	writeThreadStat(4243, "S", 3, 4)
+	progress, err = readProxyProgress(4242)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.blocked {
+		t.Fatalf("one interruptible thread still reads as blocked: %+v", progress)
+	}
+}
+
+func TestAHybridRelayFailureReachesTheStatus(t *testing.T) {
+	manager, base, _, _ := newTestManager(t)
+	gadget := &fakeHybridGadget{fakeGadget: base}
+	relay := newFakeHybridRelay()
+	relay.fail = fmt.Errorf("source endpoint 0x83: %w", functionfs.ErrTransferTime)
+	manager.gadget = gadget
+	manager.hybrid = &fakeHybridFactory{relay: relay}
+
+	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid)
+	if err != nil {
+		t.Fatalf("start: %s", err)
+	}
+	<-session.Done()
+	if reason := manager.Status().Reason; !strings.Contains(reason, "transfer timed out") {
+		t.Fatalf("status reason = %q", reason)
 	}
 }
