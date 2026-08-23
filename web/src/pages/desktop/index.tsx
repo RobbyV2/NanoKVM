@@ -13,6 +13,7 @@ import { Head } from '@/components/head.tsx';
 import { CaptureStatusOverlay, useCaptureStatus } from './capture-status';
 import { Keyboard } from './keyboard';
 import { Menu } from './menu';
+import { SourcesProvider } from './menu/devices/provider.tsx';
 import { Mouse } from './mouse';
 import { H264ModeNotification, Notification } from './notification.tsx';
 import { Sidebar as PicoclawSidebar } from './picoclaw';
@@ -74,7 +75,9 @@ export const Desktop = () => {
 
       {videoMode && resolution && (
         <div className="relative flex h-full min-h-0 w-full min-w-0">
-          <Menu />
+          <SourcesProvider>
+            <Menu />
+          </SourcesProvider>
           <div className="h-full min-h-0 w-full min-w-0">
             <Splitter
               className="h-full w-full"
