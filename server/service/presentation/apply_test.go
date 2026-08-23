@@ -279,7 +279,10 @@ func TestRollbackFailureFallsBackToHIDOnly(t *testing.T) {
 	target.Name = "target"
 	target.Device.Product = "Failed update"
 	target.Normalize()
-	path := functionsDir + "/hid.GS0/report_length"
+	// The product string is what the two profiles disagree on, and a write is
+	// reissued only where the attribute does not already hold what the plan
+	// wants: hid.GS0 is linked throughout and carries identical values in both.
+	path := stringsDir + "/product"
 	applyErr := errors.New("target write failed")
 	rollbackErr := errors.New("rollback write failed")
 	ops.FailWriteOnce(path, applyErr)
@@ -325,7 +328,7 @@ func TestHIDOnlyRollbackFailureDoesNotRepeatItself(t *testing.T) {
 	target.Name = "target"
 	target.BuiltIn = false
 	target.Normalize()
-	path := functionsDir + "/hid.GS0/report_length"
+	path := functionsDir + "/hid.GS0/report_desc"
 	ops.FailWriteOnce(path, errors.New("target write failed"))
 	ops.FailWriteOnce(path, errors.New("rollback write failed"))
 
@@ -351,7 +354,7 @@ func TestHIDOnlyFallbackFailureStillLeavesTheUDCBound(t *testing.T) {
 	target.Name = "target"
 	target.BuiltIn = false
 	target.Normalize()
-	path := functionsDir + "/hid.GS0/report_length"
+	path := stringsDir + "/product"
 	for _, err := range []error{errors.New("target write failed"), errors.New("rollback write failed"), errors.New("fallback write failed")} {
 		ops.FailWriteOnce(path, err)
 	}
@@ -404,7 +407,7 @@ func TestApplyRollsBackToLastKnownGood(t *testing.T) {
 	target.Normalize()
 
 	wantErr := errors.New("configfs write failed")
-	ops.FailWriteOnce(functionsDir+"/hid.GS0/report_length", wantErr)
+	ops.FailWriteOnce(stringsDir+"/product", wantErr)
 	err := manager.ApplyProfile(ctx, target)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("err = %v, want the configfs failure", err)
@@ -448,7 +451,7 @@ func TestApplyFailureKeepsTheUDCBoundWhenRollbackFails(t *testing.T) {
 	target.Name = "target"
 	target.BuiltIn = false
 	target.Normalize()
-	path := functionsDir + "/hid.GS0/report_length"
+	path := stringsDir + "/product"
 	applyErr := errors.New("target write failed")
 	rollbackErr := errors.New("rollback write failed")
 	ops.FailWriteOnce(path, applyErr)
@@ -560,6 +563,43 @@ func TestSetLUNReleasesTheBackingFileBeforeTheFlags(t *testing.T) {
 				t.Fatalf("bound = %q, want %q", bound, dwc2Device)
 			}
 		})
+	}
+}
+
+func TestSetLUNKeepsTheProfilesOwnInquiryString(t *testing.T) {
+	const chosen = "ACME    VIRTUAL DISK    1.00"
+
+	manager, ops := newTestManager(t)
+	profile := standardProfile()
+	profile.Name, profile.BuiltIn = "branded", false
+	disk := DiskFunction("/data/disk.img")
+	disk.Storage.InquiryString = chosen
+	profile.Functions = append(profile.Functions, disk)
+	profile.Normalize()
+	if err := manager.store.SaveProfile(profile); err != nil {
+		t.Fatalf("save profile: %v", err)
+	}
+	if err := manager.store.SetActive(profile.Name); err != nil {
+		t.Fatalf("set active: %v", err)
+	}
+
+	writes := 0
+	for _, lun := range []LUN{{File: "/data/boot.iso", CDROM: true}, {File: "/data/disk.img"}, {}} {
+		if err := manager.SetLUN(context.Background(), lun); err != nil {
+			t.Fatalf("set lun %+v: %v", lun, err)
+		}
+	}
+	for _, op := range ops.Trace() {
+		if op.Kind != OpWrite || op.Path != lunAttr("inquiry_string") {
+			continue
+		}
+		writes++
+		if string(op.Data) != chosen {
+			t.Fatalf("a mount rewrote inquiry_string to %q, want %q", op.Data, chosen)
+		}
+	}
+	if writes != 3 {
+		t.Fatalf("inquiry_string written %d times, want once per mount", writes)
 	}
 }
 

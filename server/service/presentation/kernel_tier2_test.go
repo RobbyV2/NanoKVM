@@ -7,6 +7,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,4 +122,106 @@ func TestKernelTier2StandardPlanBindsTheUDC(t *testing.T) {
 		entries, err := os.ReadDir("/sys/bus/hid/devices")
 		return err == nil && len(entries) >= len(profile.Functions)
 	})
+}
+
+// The state S03usbdev:99,114,129 leaves every device in before the server
+// starts: the three HID functions built, written and linked into c.1, then the
+// UDC bound last. f_hid takes opts->refcnt at link time, so this is what
+// decides whether the first ApplyProfile after boot can write them at all.
+func bootLinkedHID(t *testing.T) {
+	t.Helper()
+
+	udc := filepath.Join(GadgetRoot, udcAttr)
+	if bound, err := os.ReadFile(udc); err == nil && strings.TrimSpace(string(bound)) != "" {
+		if err := os.WriteFile(udc, []byte(emptyUDCName), 0o644); err != nil {
+			t.Fatalf("unbind: %v", err)
+		}
+	}
+
+	for _, function := range standardProfile().Functions {
+		name := functionName(function)
+		dir := filepath.Join(GadgetRoot, functionsDir, name)
+		link := filepath.Join(GadgetRoot, configPrefix, name)
+		attrs := map[string][]byte{
+			"protocol":      []byte(strconv.Itoa(int(function.HID.Protocol)) + "\n"),
+			"report_length": []byte(strconv.Itoa(int(function.HID.ReportLength)) + "\n"),
+			"report_desc":   function.HID.ReportDesc,
+		}
+
+		if _, err := os.Lstat(link); err != nil {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatalf("mkdir %s: %v", name, err)
+			}
+			for attr, value := range attrs {
+				if err := os.WriteFile(filepath.Join(dir, attr), value, 0o644); err != nil {
+					t.Fatalf("write %s/%s: %v", name, attr, err)
+				}
+			}
+			if err := os.Symlink(dir, link); err != nil {
+				t.Fatalf("link %s: %v", name, err)
+			}
+		}
+
+		// f_hid guards its option stores with opts->refcnt and its shows with
+		// nothing, so the values are still readable through the link. That is
+		// what lets the transaction tell a redundant write from a real one.
+		for attr, value := range attrs {
+			stored, err := os.ReadFile(filepath.Join(link, attr))
+			if err != nil {
+				t.Fatalf("read %s/%s while linked: %v", name, attr, err)
+			}
+			if !bytes.Equal(stored, value) {
+				t.Fatalf("%s/%s holds %q, want %q", name, attr, stored, value)
+			}
+		}
+	}
+
+	if err := os.WriteFile(udc, []byte(kernelint.DummyUDC+"\n"), 0o644); err != nil {
+		t.Fatalf("bind %s: %v", kernelint.DummyUDC, err)
+	}
+}
+
+// Every HID attribute the standard plan carries is one S03usbdev already wrote,
+// and unlinkStale keeps a link the incoming plan also carries, so the refcnt is
+// never released and the write has to be recognised as redundant rather than
+// reissued.
+func TestKernelTier2ApplyOverBootLinkedHID(t *testing.T) {
+	kernelint.RequireTier2(t)
+	manager := kernelManager(t)
+	bootLinkedHID(t)
+
+	profile := kernelProfile(standardProfile())
+	plan, err := Compile(profile, manager.caps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+		t.Fatalf("apply over the boot linkage: %v", err)
+	}
+
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+}
+
+// Writing an empty UDC is ENODEV unless the gadget is bound right now, so the
+// unbind applyPlan opens with cannot be unconditional. On a device S03usbdev
+// has always bound it first, which is the only reason this has never fired
+// there; the rollback ladder reaches it with the controller already released.
+func TestKernelTier2ApplyBindsAnUnboundGadget(t *testing.T) {
+	kernelint.RequireTier2(t)
+	manager := kernelManager(t)
+	bootLinkedHID(t)
+	if err := manager.ops.UnbindUDC(); err != nil {
+		t.Fatalf("unbind: %v", err)
+	}
+
+	profile := kernelProfile(standardProfile())
+	plan, err := Compile(profile, manager.caps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+		t.Fatalf("apply to an unbound gadget: %v", err)
+	}
+
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
 }

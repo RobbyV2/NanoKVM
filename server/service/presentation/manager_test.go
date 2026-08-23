@@ -460,7 +460,7 @@ func TestAFailedApplyIsStillReadableAfterTheResponse(t *testing.T) {
 	target := standardProfile()
 	target.Name, target.BuiltIn = "desk", false
 	wantErr := errors.New("configfs write failed")
-	ops.FailWriteOnce(functionsDir+"/hid.GS1/report_length", wantErr)
+	ops.FailWriteOnce(stringsDir+"/product", wantErr)
 	if err := manager.ApplyProfile(ctx, target); !errors.Is(err, wantErr) {
 		t.Fatalf("err = %v, want the configfs failure", err)
 	}

@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -40,7 +41,8 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 
 	probes := append(append([]Function(nil), profile.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
-	if err := m.ops.UnbindUDC(); err != nil {
+	plan = m.dropRedundantWrites(before, plan)
+	if err := m.unbindIfBound(); err != nil {
 		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
 		if bindErr := m.ensureBound(udc); bindErr != nil {
 			return recoveryPlan{}, udc, errors.Join(applyErr, fmt.Errorf("restore binding: %w", bindErr))
@@ -171,7 +173,8 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 
 	probes := append(append([]Function(nil), failed.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
-	if err := m.ops.UnbindUDC(); err != nil {
+	recovery.plan = m.dropRedundantWrites(before, recovery.plan)
+	if err := m.unbindIfBound(); err != nil {
 		return fmt.Errorf("unbind: %w", err)
 	}
 	for _, function := range failed.Functions {
@@ -203,6 +206,58 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 		return err
 	}
 	return m.store.SetLastKnownGood(recovery.profile.Name)
+}
+
+// An empty UDC write is unregister_gadget, which is ENODEV unless the gadget is
+// bound right now, so it is an unbind and never a no-op. Every rollback rung
+// reaches this with the transaction's own unbind already done, and a device
+// only escapes it because S03usbdev binds before the server starts.
+func (m *Manager) unbindIfBound() error {
+	data, err := m.ops.ReadFile(udcAttr)
+	if err == nil && strings.TrimSpace(string(data)) == "" {
+		return nil
+	}
+	return m.ops.UnbindUDC()
+}
+
+// f_hid, f_ncm, f_rndis, f_uvc and f_uac2 all take opts->refcnt when the
+// function is linked into a config and return -EBUSY from every option store
+// while they hold it, and R1.1 forbids unlinking hid.* to release it.
+// S03usbdev builds and links hid.GS0-GS2 at boot from the same values the
+// built-in profiles carry, and unlinkStale keeps a link the incoming plan also
+// carries, so the first apply after boot reissues writes the attribute already
+// holds. The stores are guarded but the shows are not, so a write whose
+// attribute reads back as the bytes the plan wants is dropped. One that differs
+// is left in the plan for the kernel to answer.
+func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
+	linked := make(map[string]bool, len(before.Linked))
+	for _, name := range before.Linked {
+		linked[name] = true
+	}
+
+	ops := make([]Op, 0, len(plan.Ops))
+	for _, op := range plan.Ops {
+		if op.Kind == OpWrite && linked[writtenFunction(op.Path)] {
+			if current, err := m.ops.ReadFile(op.Path); err == nil && bytes.Equal(current, op.Data) {
+				continue
+			}
+		}
+		ops = append(ops, op)
+	}
+	plan.Ops = ops
+	return plan
+}
+
+func writtenFunction(path string) string {
+	rest, ok := strings.CutPrefix(path, functionsDir+"/")
+	if !ok {
+		return ""
+	}
+	name, _, ok := strings.Cut(rest, "/")
+	if !ok {
+		return ""
+	}
+	return name
 }
 
 func (m *Manager) ensureBound(udc string) error {
@@ -344,7 +399,9 @@ func lunAttr(attr string) string {
 // Ordering constraint 3: the LUN attributes carry no refcnt check, but ro and
 // cdrom return -EBUSY while lun.0/file is open, so the file is released first.
 // S03usbdev:136,142 rewrite removable and inquiry_string on every start, so this
-// runtime state is deliberately not part of the profile (H7).
+// runtime state is deliberately not part of the profile (H7). The exception is
+// an inquiry_string the active profile set for itself, which a mount would
+// otherwise throw away every time the disk changed.
 func (m *Manager) setLUN(ctx context.Context, lun LUN) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("set lun: %w", err)
@@ -361,7 +418,11 @@ func (m *Manager) setLUN(ctx context.Context, lun LUN) error {
 			}
 		}
 	}
-	if err := m.ops.WriteFile(lunAttr("inquiry_string"), []byte(lun.inquiry())); err != nil {
+	inquiry := lun.inquiry()
+	if chosen := m.store.ActiveInquiry(); chosen != "" {
+		inquiry = chosen
+	}
+	if err := m.ops.WriteFile(lunAttr("inquiry_string"), []byte(inquiry)); err != nil {
 		return fmt.Errorf("set %s: %w", lunAttr("inquiry_string"), err)
 	}
 

@@ -242,17 +242,35 @@ that is where the two halves live.
 ### Two things the kernel said that no fake had
 
 `f_hid` takes its `opts->refcnt` at **link** time, not at bind time, and every
-`F_HID_OPT` store returns `-EBUSY` while that refcnt is held. `unlinkStale` keeps a link
-the incoming plan also carries, so a second apply reaches
-`write functions/hid.GS0/protocol` with `hid.GS0` still linked and gets
-`device or resource busy` — with the UDC already unbound, which is why the joined
-rollback then reports `unbind: write UDC: no such device` as well. `S03usbdev:99,114,129`
-links all three at boot, so this is the state every device is in when the server starts.
-The fakes in `apply_test.go` accept the write, and the golden traces record a script that
-only ever runs against a fresh gadget, so neither can see it. `kernelint.BootstrapGadget`
-links a net function rather than HID for exactly this reason; linking HID reproduces the
-failure instead of the boot state.
+`F_HID_OPT` store returns `-EBUSY` while that refcnt is held. `f_ncm`, `f_rndis`, `f_uvc`
+and `f_uac2` guard their option stores the same way; the `mass_storage` LUN attributes
+are the exception two sections up. `unlinkStale` keeps a link the incoming plan also
+carries, so the refcnt is never released, and `S03usbdev:99,114,129` links all three HID
+functions at boot, so this is the state every device is in when the server starts. The
+*shows* are not guarded, and the script writes exactly the values the built-in profiles
+carry, so `dropRedundantWrites` reads each write's attribute back through the gadget and
+drops the op when it already holds those bytes. That is what makes the first apply after
+boot possible at all, and it is why a second apply of the same profile emits no function
+writes.
 
-`applyPlan` also opens with an unconditional unbind, and writing an empty `UDC` on a
-gadget that was never bound is `ENODEV`, not a no-op. On a device `S03usbdev` has always
-bound it first, so the assumption holds there and only there.
+A write that genuinely differs is left in the plan for the kernel to refuse. `report_desc`
+and `subclass` differ between `standard` and `hid-only`, R1.1 forbids unlinking `hid.*` to
+release the refcnt, and that is why `SetHidMode` stages the mode on disk and reboots
+rather than trusting the live apply it also runs.
+
+`applyPlan` and `restore` unbind through `unbindIfBound`, because an empty `UDC` write is
+`unregister_gadget` and returns `ENODEV` unless the gadget is bound at that moment. Every
+rollback rung reaches its unbind with the transaction's own unbind already done, which is
+why a failed apply used to report `rollback to standard: unbind: write UDC: no such
+device` on top of the failure that started it. On a device `S03usbdev` binds before the
+server starts, so nothing but a rollback ever reached it.
+
+The fakes in `apply_test.go` accept a write the kernel refuses, and the golden traces
+record a script that only ever runs against a fresh gadget, so neither tier of the old
+suite could see either defect. `TestKernelTier2ApplyOverBootLinkedHID` and
+`TestKernelTier2ApplyBindsAnUnboundGadget` are what hold them now: `bootLinkedHID` builds
+the linkage `S03usbdev` leaves and asserts the attributes read back through it, and both
+tests reproduce the kernel's own error text when either fix is reverted.
+`kernelint.BootstrapGadget` still links a net function rather than HID, not because HID
+would fail any more but because the harness is shared with `functionfs` and `passthrough`
+and a `hid.*` there costs a `/dev/hidgN` minor no test in those packages asserts on.
