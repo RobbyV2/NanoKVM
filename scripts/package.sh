@@ -74,6 +74,37 @@ require_riscv64() {
     fi
 }
 
+# musl finds libkvm.so only through the binary's own runpath: the library ships
+# in server/dl_lib and is nowhere on the default search path. A build without it
+# dies in the dynamic loader before main, which on the device looks like a
+# healthy boot with no listener on any port.
+elf_u() {
+    od -An "-tu$2" -j "$3" "-N$2" "$1" | tr -d ' \n'
+}
+
+require_runpath() {
+    local path="$1" phoff phentsize phnum i base offset size cursor tag found=0
+    phoff=$(elf_u "$path" 8 32)
+    phentsize=$(elf_u "$path" 2 54)
+    phnum=$(elf_u "$path" 2 56)
+    for ((i = 0; i < phnum; i++)); do
+        base=$((phoff + i * phentsize))
+        [ "$(elf_u "$path" 4 "$base")" = 2 ] || continue
+        offset=$(elf_u "$path" 8 $((base + 8)))
+        size=$(elf_u "$path" 8 $((base + 32)))
+        for ((cursor = 0; cursor < size; cursor += 16)); do
+            tag=$(elf_u "$path" 8 $((offset + cursor)))
+            if [ "$tag" = 0 ]; then break; fi
+            if [ "$tag" = 15 ] || [ "$tag" = 29 ]; then found=1; fi
+        done
+    done
+    if [ "$found" -ne 1 ] || ! grep -qa '\$ORIGIN/dl_lib' "$path"; then
+        echo "[ERROR] ${path#"$ROOT"/} has no \$ORIGIN/dl_lib runpath" >&2
+        echo "        it cannot resolve libkvm.so on the device; rebuild with: make app" >&2
+        exit 1
+    fi
+}
+
 require_file "$ROOT/server/NanoKVM-Server" "run: make app"
 require_file "$ROOT/kvmapp/kvm_system/kvm_system" "run: make support"
 require_file "$ROOT/web/dist/index.html" "run: make web"
@@ -93,6 +124,7 @@ require_file "$ROOT/build/passthrough/usb-proxy" "run: make passthrough"
 require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
 
 require_riscv64 "$ROOT/server/NanoKVM-Server"
+require_runpath "$ROOT/server/NanoKVM-Server"
 require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
 require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
 require_riscv64 "$ROOT/server/dl_lib/libtinyalsa.so"

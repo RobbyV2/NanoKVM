@@ -34,7 +34,7 @@ done
 # Check the toolchain up front. builder-image reuses any existing image, so an
 # image built before a tooling change silently lacks it - and without this the
 # SDK build would run for minutes before server/build.sh failed at the end.
-for tool in go riscv64-unknown-linux-musl-gcc patchelf readelf; do
+for tool in go riscv64-unknown-linux-musl-gcc readelf; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "[ERROR] '$tool' is missing from the builder image" >&2
         echo "        the image is out of date; rebuild it with: make rebuild-image" >&2
@@ -77,6 +77,13 @@ echo "::group::server: cross-compile NanoKVM-Server"
 cd "$NANOKVM_PATH/server"
 ./build.sh
 echo "::endgroup::"
+
+# musl resolves libkvm.so only through this runpath; without it the server dies
+# in the loader before main and the device serves nothing on any port.
+if ! readelf -d "$NANOKVM_PATH/server/NanoKVM-Server" | grep -qE 'R(UN)?PATH.*\$ORIGIN/dl_lib'; then
+    echo "[ERROR] server/NanoKVM-Server has no \$ORIGIN/dl_lib runpath" >&2
+    exit 1
+fi
 
 # support/sg2002/build reports "Build Error!" without a non-zero exit status for
 # some failure paths, so assert on the artifacts rather than trusting $?.

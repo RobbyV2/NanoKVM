@@ -1,8 +1,11 @@
 package common
 
+// The runpath is what lets musl find libkvm.so, which ships only in the
+// binary's own dl_lib. Without it exec fails before main and nothing listens.
+
 /*
 	#cgo CFLAGS: -I../include
-	#cgo LDFLAGS: -L../dl_lib -lkvm
+	#cgo LDFLAGS: -L../dl_lib -lkvm -Wl,-rpath,$ORIGIN/dl_lib
 	#include "kvm_vision.h"
 */
 import "C"

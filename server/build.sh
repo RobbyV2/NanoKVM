@@ -28,7 +28,6 @@ check_dependency() {
 echo -e "${YELLOW}[INFO] Checking build environment...${NC}"
 
 check_dependency "go"
-check_dependency "patchelf"
 check_dependency "$CC_COMPILER"
 
 echo -e "${GREEN}[OK] All dependencies found.${NC}"
@@ -53,12 +52,5 @@ else
     echo -e "${RED}[ERROR] Build failed. Binary not found.${NC}"
     exit 1
 fi
-
-# ------------------------------------------------------------------------------
-# Step 3: Patch RPATH
-# ------------------------------------------------------------------------------
-echo -e "${YELLOW}[INFO] Patching RPATH with patchelf...${NC}"
-
-patchelf --add-rpath '$ORIGIN/dl_lib' "$BINARY_NAME"
 
 echo -e "${GREEN}[DONE] Build script completed successfully!${NC}"
