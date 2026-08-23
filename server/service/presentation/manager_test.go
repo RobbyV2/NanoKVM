@@ -232,3 +232,161 @@ func TestUDCBoundTracksSurrenderAndReclaim(t *testing.T) {
 		t.Fatalf("bound after surrender = %t, %v, want false", bound, err)
 	}
 }
+
+// An Exact passthrough session hands udc->driver to usb-proxy, and until the
+// loan was recorded nothing here knew. Every mutator below unbinds and binds
+// the UDC, so each one pulls the controller out from under the running proxy:
+// POST /api/storage/image/mount alone is enough to do it mid-session.
+func TestGadgetMutatorsAreRefusedWhileTheUDCIsOnLoan(t *testing.T) {
+	ctx := context.Background()
+	mutators := []struct {
+		name string
+		run  func(*Manager) error
+	}{
+		{name: "apply", run: func(m *Manager) error { return m.Apply(ctx, ProfileStandard) }},
+		{name: "set mode", run: func(m *Manager) error { return m.SetMode(ctx, ModeNormal) }},
+		{name: "set lun", run: func(m *Manager) error { return m.SetLUN(ctx, LUN{File: "/data/disk.img"}) }},
+		{name: "rebind", run: func(m *Manager) error { return m.Rebind(ctx) }},
+		{name: "reset phy", run: func(m *Manager) error { return m.ResetPHY(ctx) }},
+		{name: "set media slots", run: func(m *Manager) error { return m.SetMediaSlots(ctx, []string{"cam"}, nil) }},
+		{name: "create functionfs", run: func(m *Manager) error { return m.CreateFunctionFS(ctx) }},
+		{name: "start functionfs", run: func(m *Manager) error {
+			_, err := m.StartFunctionFS(ctx, testFunctionFS())
+			return err
+		}},
+		{name: "recover functionfs", run: func(m *Manager) error { return m.RecoverFunctionFS(ctx) }},
+		{name: "second surrender", run: func(m *Manager) error {
+			_, err := m.SurrenderUDC()
+			return err
+		}},
+	}
+
+	for _, mutator := range mutators {
+		t.Run(mutator.name, func(t *testing.T) {
+			manager, ops := newTestManager(t)
+			if err := manager.ReclaimUDC(); err != nil {
+				t.Fatalf("bind: %v", err)
+			}
+			if _, err := manager.SurrenderUDC(); err != nil {
+				t.Fatalf("surrender: %v", err)
+			}
+
+			err := mutator.run(manager)
+			if !errors.Is(err, ErrUDCLoaned) {
+				t.Fatalf("%s during a passthrough session: err = %v, want %v", mutator.name, err, ErrUDCLoaned)
+			}
+			if !strings.Contains(err.Error(), "usb-proxy") {
+				t.Fatalf("refusal %q does not name what holds the udc", err)
+			}
+			if bound := ops.Bound(); bound != "" {
+				t.Fatalf("%s bound the udc to %q while usb-proxy had it", mutator.name, bound)
+			}
+		})
+	}
+}
+
+func TestReclaimingTheUDCEndsTheLoan(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("bind: %v", err)
+	}
+	if _, err := manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("reclaim: %v", err)
+	}
+
+	if err := manager.SetLUN(ctx, LUN{File: "/data/disk.img"}); err != nil {
+		t.Fatalf("set lun after the session ended: %v", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+}
+
+// The watchdog reclaims the UDC when usb-proxy dies, and that bind can itself
+// fail: the controller is gone, or the phy is still resetting. The loan is over
+// either way. Holding it would refuse every gadget change until the next reboot,
+// which is a worse failure than the rebind the loan prevents.
+func TestAFailedReclaimDoesNotWedgeTheGadget(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("bind: %v", err)
+	}
+	if _, err := manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+
+	ops.SetUDC()
+	if err := manager.ReclaimUDC(); err == nil {
+		t.Fatal("reclaim with no udc returned no error")
+	}
+	ops.SetUDC(dwc2Device)
+
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply after a reclaim that failed: %v", err)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q, want %q", bound, dwc2Device)
+	}
+}
+
+// The loan is a claim about another process, so it is checked against the
+// kernel rather than believed: the borrower holds the controller only while
+// this gadget's UDC attribute is empty. Nothing writes the loan to disk either,
+// so a restart cannot inherit one. What reconciles a reboot against reality is
+// passthrough.Recover, which kills orphan usb-proxy processes and rebinds
+// before the router is up.
+func TestALoanIsDroppedOnceTheGadgetIsBoundAgain(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ctx := context.Background()
+
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("bind: %v", err)
+	}
+	if _, err := manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+	if err := ops.BindUDC(dwc2Device); err != nil {
+		t.Fatalf("bind behind the manager: %v", err)
+	}
+
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply against a gadget that is bound again: %v", err)
+	}
+
+	restarted := NewManager(NewStore(), ops, staticV1)
+	if err := restarted.SetLUN(ctx, LUN{File: "/data/disk.img"}); err != nil {
+		t.Fatalf("set lun after a restart: %v", err)
+	}
+}
+
+// Suspend has no matching resume of its own: the observer only comes back when
+// Applied runs. Every other refusal inside SurrenderUDC reaches that through
+// refreshObserver, so a refusal that suspends before it checks and then returns
+// early strands the media pipeline with no path back until the next apply.
+func TestARefusedSurrenderLeavesTheObserverRunning(t *testing.T) {
+	manager, _ := newTestManager(t)
+	if err := manager.ReclaimUDC(); err != nil {
+		t.Fatalf("bind: %v", err)
+	}
+	if _, err := manager.SurrenderUDC(); err != nil {
+		t.Fatalf("surrender: %v", err)
+	}
+
+	// Attached after the loan is taken, so the count below is the refusal's.
+	observer := &fakeGadgetObserver{}
+	manager.SetObserver(observer)
+
+	if _, err := manager.SurrenderUDC(); !errors.Is(err, ErrUDCLoaned) {
+		t.Fatalf("second surrender: err = %v, want %v", err, ErrUDCLoaned)
+	}
+	if observer.suspend != 0 {
+		t.Fatalf("a refused surrender suspended the observer %d times and never resumed it", observer.suspend)
+	}
+}

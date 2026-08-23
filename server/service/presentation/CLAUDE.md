@@ -88,6 +88,32 @@ The link order in `configs/c.1` fixes `bInterfaceNumber` assignment and therefor
 host-side driver binding, so `Profile.Functions` order is the link order and is
 reproduced exactly: net function, then hid.GS0, GS1, GS2, then mass_storage.disk0.
 
+## The UDC is one pointer, and two things want it
+
+`udc->driver` is a single pointer, so this gadget and a `usb-proxy` passthrough session
+cannot both hold the controller. `SurrenderUDC` unbinds and records a **loan**; every
+mutator refuses with `ErrUDCLoaned` while one stands. The check sits in `withGadgetLock`,
+which covers `Apply`, `ApplyProfile`, `SetMode`, `SetMediaSlots`, `SetLUN`, `Rebind` and
+`ResetPHY`, and is repeated at the four entry points that test `m.transient` directly:
+`CreateFunctionFS`, `StartFunctionFS`, `RecoverFunctionFS` and `SurrenderUDC` itself. A
+transient and a loan cannot coexist, since each refuses the other, which is why
+`StopFunctionFS` does not check.
+
+Three properties are load-bearing. The loan is **memory only** — nothing is written to
+disk, so no stale file can outlive a reboot and wedge the gadget. It is reconciled
+against the kernel rather than against the record: `loanHeld` reads the gadget's `UDC`
+attribute and drops the loan when it is non-empty, because the borrower holds the
+controller only while this gadget is unbound, so a loan standing against a bound gadget
+is stale by construction. And `ReclaimUDC` clears it **before** the bind and
+unconditionally — a failed bind still leaves the controller free, so re-taking the loan
+there would refuse every mutator until the next reboot, which is worse than the rebind it
+was guarding.
+
+Refuse before you suspend. `observer.Suspend()` is undone only by the observer's
+`Applied`, which the refusal paths never reach, so a check placed after the suspend
+strands the media pipeline on a surrender that never happened. `StartFunctionFS`,
+`RecoverFunctionFS` and `SurrenderUDC` all take `m.mu`, refuse, and only then suspend.
+
 ## Every rebind destroys the gadget NIC
 
 Mutating the gadget unbinds the UDC and binds it again, and the kernel destroys and

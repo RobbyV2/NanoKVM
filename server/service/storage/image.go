@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,6 +71,12 @@ func (s *Service) MountImage(c *gin.Context) {
 
 	if err := manager.SetLUN(c.Request.Context(), presentation.LUN{File: req.File, CDROM: req.Cdrom}); err != nil {
 		log.Errorf("mount image %s failed: %s", req.File, err)
+		// Mounting an image rebinds the UDC, so a passthrough session refuses
+		// it. "mount image failed" hides the one thing that would fix it.
+		if errors.Is(err, presentation.ErrUDCLoaned) {
+			rsp.ErrRsp(c, -2, err.Error())
+			return
+		}
 		rsp.ErrRsp(c, -2, "mount image failed")
 		return
 	}

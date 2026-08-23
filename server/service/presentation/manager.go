@@ -25,6 +25,7 @@ var (
 	ErrUnknownProfile = errors.New("unknown profile")
 	ErrUnknownMode    = errors.New("unknown hid mode")
 	ErrTransient      = errors.New("usb presentation has an active transient mode")
+	ErrUDCLoaned      = errors.New("usb gadget: the udc is on loan")
 )
 
 // HIDQuiescer is *hid.Hid. The dependency points from hid into this package,
@@ -55,6 +56,7 @@ type Manager struct {
 	mu sync.Mutex
 
 	transient *Transient
+	loan      string
 	nextToken uint64
 }
 
@@ -301,6 +303,9 @@ func (m *Manager) CreateFunctionFS(ctx context.Context) error {
 	if m.transient != nil {
 		return ErrTransient
 	}
+	if err := m.loanHeld(); err != nil {
+		return err
+	}
 	return m.ops.Mkdir(functionsDir + "/ffs.hybrid")
 }
 
@@ -321,6 +326,10 @@ func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Tr
 	if m.transient != nil {
 		m.mu.Unlock()
 		return nil, ErrTransient
+	}
+	if err := m.loanHeld(); err != nil {
+		m.mu.Unlock()
+		return nil, err
 	}
 	observer := m.observer()
 	if observer != nil {
@@ -380,6 +389,10 @@ func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
 	if m.transient != nil {
 		m.mu.Unlock()
 		return ErrTransient
+	}
+	if err := m.loanHeld(); err != nil {
+		m.mu.Unlock()
+		return err
 	}
 	if observer := m.observer(); observer != nil {
 		observer.Suspend()
@@ -494,14 +507,20 @@ func (m *Manager) SurrenderUDC() (string, error) {
 		return "", err
 	}
 
-	observer := m.observer()
-	if observer != nil {
-		observer.Suspend()
-	}
+	// Refuse before suspending, the way StartFunctionFS and RecoverFunctionFS
+	// do. Suspend is undone only by the observer's Applied, which the refusals
+	// below never reach, so suspending first strands the media pipeline on a
+	// surrender that never happened.
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.transient != nil {
 		return "", ErrTransient
+	}
+	if err := m.loanHeld(); err != nil {
+		return "", err
+	}
+	if observer := m.observer(); observer != nil {
+		observer.Suspend()
 	}
 
 	udcs, err := m.ops.ListUDC()
@@ -524,13 +543,21 @@ func (m *Manager) SurrenderUDC() (string, error) {
 		m.refreshObserver(context.Background())
 		return "", errors.Join(fmt.Errorf("surrender udc: %w", err), reopen)
 	}
+	m.loan = fmt.Sprintf("a usb passthrough session (usb-proxy on udc %s)", udcs[0])
 	return udcs[0], nil
 }
 
+// The loan ends when the borrower gives the controller back, whether or not the
+// bind that follows succeeds. A failed bind leaves the UDC free, so keeping the
+// loan would refuse every mutator for the rest of the boot, which is worse than
+// the rebind it was there to prevent.
 func (m *Manager) ReclaimUDC() error {
 	if err := m.ready(); err != nil {
 		return err
 	}
+	m.mu.Lock()
+	m.loan = ""
+	m.mu.Unlock()
 	if err := m.withGadgetLock(m.bind); err != nil {
 		return err
 	}
@@ -639,7 +666,28 @@ func (m *Manager) withGadgetLock(fn func() error) error {
 	if m.transient != nil {
 		return ErrTransient
 	}
+	if err := m.loanHeld(); err != nil {
+		return err
+	}
 	return m.withHIDQuiesced(fn)
+}
+
+// udc->driver is one pointer and usb-proxy drives it from another process, so
+// every mutator here would rebind the controller out from under a running
+// passthrough session. The kernel is the record of who holds it: the borrower
+// has it only while this gadget's UDC attribute is empty, so a loan standing
+// against a bound gadget is stale and is dropped rather than believed.
+// Callers hold m.mu.
+func (m *Manager) loanHeld() error {
+	if m.loan == "" {
+		return nil
+	}
+	data, err := m.ops.ReadFile(udcAttr)
+	if err == nil && strings.TrimSpace(string(data)) != "" {
+		m.loan = ""
+		return nil
+	}
+	return fmt.Errorf("%w to %s; stop the session before changing the usb gadget", ErrUDCLoaned, m.loan)
 }
 
 func (m *Manager) withHIDQuiesced(fn func() error) (err error) {
