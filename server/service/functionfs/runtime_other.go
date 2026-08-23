@@ -17,6 +17,10 @@ func Prepare(string, uint32, uint32, presentation.CapabilityTable) (*Prepared, e
 	return nil, ErrUnsupported
 }
 
+func PrepareRemote([]byte, Fetcher, USBDevice, presentation.CapabilityTable) (*Prepared, error) {
+	return nil, ErrUnsupported
+}
+
 func Cleanup() error {
 	return errors.New("functionfs: cleanup is only available on Linux")
 }

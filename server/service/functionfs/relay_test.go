@@ -99,7 +99,7 @@ func (f *fakeDevice) Control(_ context.Context, setup Setup, _ []byte) ([]byte, 
 	}
 	return append([]byte(nil), f.report...), nil
 }
-func (f *fakeDevice) Transfer(ctx context.Context, _ presentationEndpoint, _ []byte) ([]byte, error) {
+func (f *fakeDevice) Transfer(ctx context.Context, _ Endpoint, _ []byte) ([]byte, error) {
 	f.mu.Lock()
 	f.transfers++
 	f.mu.Unlock()

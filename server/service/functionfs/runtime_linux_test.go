@@ -3,6 +3,7 @@
 package functionfs
 
 import (
+	"encoding/binary"
 	"errors"
 	"os"
 	"path/filepath"
@@ -36,5 +37,22 @@ func TestDescriptorFileIsBounded(t *testing.T) {
 	}
 	if _, err := readDescriptors(path); !errors.Is(err, ErrMalformed) {
 		t.Fatalf("oversize descriptor file returned %v", err)
+	}
+}
+
+func TestFunctionFSEndpointFilesAreNamedByAddress(t *testing.T) {
+	image, err := Import(vendorFixture(bulkEndpoint(0x02, 512), bulkEndpoint(0x81, 512)), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// bit 4 is FUNCTIONFS_VIRTUAL_ADDR; without it the kernel names endpoint files by index.
+	if binary.LittleEndian.Uint32(image.Descriptors[8:12])&16 == 0 {
+		t.Fatal("descriptor flags cleared FUNCTIONFS_VIRTUAL_ADDR")
+	}
+	want := []string{"ep01", "ep81"}
+	for index, endpoint := range image.Function.Endpoints {
+		if got := functionFSEndpointName(endpoint.Address); got != want[index] {
+			t.Fatalf("endpoint %d (0x%02x) = %q, want %q", index, endpoint.Address, got, want[index])
+		}
 	}
 }

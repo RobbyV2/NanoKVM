@@ -61,6 +61,7 @@ var protectedClasses = map[uint8]string{
 	0x0b: "smart card",
 	0x0d: "content security",
 	0x0e: "video",
+	0x10: "audio/video",
 	0xe0: "wireless controller",
 }
 

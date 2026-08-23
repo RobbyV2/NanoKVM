@@ -64,13 +64,13 @@ type DataEndpoint interface {
 
 type USBDevice interface {
 	Control(context.Context, Setup, []byte) ([]byte, error)
-	Transfer(context.Context, presentationEndpoint, []byte) ([]byte, error)
+	Transfer(context.Context, Endpoint, []byte) ([]byte, error)
 	ClearHalt(uint8) error
 	Reset() error
 	Close() error
 }
 
-type presentationEndpoint struct {
+type Endpoint struct {
 	SourceAddress uint8
 	Address       uint8
 	Transfer      string
@@ -195,7 +195,7 @@ func (r *Relay) transferLoop(ctx context.Context, endpoint presentation.Function
 		size = int(endpoint.MaxPacket)
 	}
 	buffer := make([]byte, size)
-	source := presentationEndpoint{
+	source := Endpoint{
 		SourceAddress: endpoint.SourceAddress,
 		Address:       endpoint.Address,
 		Transfer:      string(endpoint.Transfer),

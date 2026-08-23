@@ -90,6 +90,30 @@ func Prepare(devicePath string, bus uint32, address uint32, caps presentation.Ca
 	return &Prepared{Image: image, Relay: relay}, nil
 }
 
+func PrepareRemote(raw []byte, fetcher Fetcher, device USBDevice, caps presentation.CapabilityTable) (_ *Prepared, err error) {
+	image, err := Import(raw, fetcher, caps)
+	if err != nil {
+		return nil, err
+	}
+	control, endpoints, err := openFunctionFS(image)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			for _, endpoint := range endpoints {
+				_ = endpoint.Close()
+			}
+			_ = control.Close()
+		}
+	}()
+	relay, err := NewRelay(image, control, endpoints, device)
+	if err != nil {
+		return nil, err
+	}
+	return &Prepared{Image: image, Relay: relay}, nil
+}
+
 func readDescriptors(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -173,7 +197,7 @@ func openFunctionFS(image Image) (*linuxControl, map[uint8]DataEndpoint, error) 
 
 	endpoints := make(map[uint8]DataEndpoint, len(image.Function.Endpoints))
 	for _, endpoint := range image.Function.Endpoints {
-		file, err := os.OpenFile(filepath.Join(functionFSMount, fmt.Sprintf("ep%02x", endpoint.Address)), os.O_RDWR, 0)
+		file, err := os.OpenFile(filepath.Join(functionFSMount, functionFSEndpointName(endpoint.Address)), os.O_RDWR, 0)
 		if err != nil {
 			for _, opened := range endpoints {
 				_ = opened.Close()
@@ -184,6 +208,10 @@ func openFunctionFS(image Image) (*linuxControl, map[uint8]DataEndpoint, error) 
 		endpoints[endpoint.Address] = &linuxEndpoint{file: file, address: endpoint.Address}
 	}
 	return control, endpoints, nil
+}
+
+func functionFSEndpointName(address uint8) string {
+	return fmt.Sprintf("ep%02x", address)
 }
 
 func (c *linuxControl) NextEvent() (Event, error) {
@@ -364,7 +392,7 @@ func (d *linuxDevice) Control(ctx context.Context, setup Setup, data []byte) ([]
 	return nil, nil
 }
 
-func (d *linuxDevice) Transfer(ctx context.Context, endpoint presentationEndpoint, data []byte) ([]byte, error) {
+func (d *linuxDevice) Transfer(ctx context.Context, endpoint Endpoint, data []byte) ([]byte, error) {
 	if len(data) == 0 || len(data) > MaxTransferBytes {
 		return nil, ErrEndpointSize
 	}
