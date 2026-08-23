@@ -7,21 +7,47 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"NanoKVM-Server/service/kernelint"
 )
 
-// A usbip exporter that answers one OP_REQ_IMPORT and then holds the socket
-// open, which is what attach_store needs to take a port. usbip-host is compiled
-// out of every GitHub runner kernel, so the export side cannot be the real one;
-// the import side under test is.
+const (
+	exporterHost = "10.9.10.7"
+	exporterCIDR = exporterHost + "/32"
+)
+
+func ip(t *testing.T, args ...string) {
+	t.Helper()
+	if out, err := exec.Command("ip", args...).CombinedOutput(); err != nil {
+		t.Fatalf("ip %s: %v: %s", strings.Join(args, " "), err, out)
+	}
+}
+
+// A usbip exporter that answers a devlist and then an OP_REQ_IMPORT, holding
+// the import socket open because that is what attach_store needs to take a
+// port. usbip-host is compiled out of every GitHub runner kernel, so the export
+// side cannot be the real one; the import side under test is.
+//
+// It takes a private address of its own rather than 127.0.0.1 because
+// allowedExporter refuses loopback and every port but 3240, and it accepts more
+// than once because Attach dials twice: guardRemote reads the devlist before
+// the import. An empty devlist is the honest answer from a stub that exports
+// nothing, and leaves guardRemote with no matching busID to refuse.
 func kernelExporter(t *testing.T, device Device) string {
 	t.Helper()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	ip(t, "link", "set", "lo", "up")
+	ip(t, "addr", "add", exporterCIDR, "dev", "lo")
+	t.Cleanup(func() { _ = exec.Command("ip", "addr", "del", exporterCIDR, "dev", "lo").Run() })
+
+	addr := net.JoinHostPort(exporterHost, strconv.Itoa(ExporterTCP))
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,21 +57,38 @@ func kernelExporter(t *testing.T, device Device) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reply := append(OpCommon{Version: ProtocolVersion, Code: CodeRepImport, Status: StatusOK}.Encode(), body...)
+	imported := append(OpCommon{Version: ProtocolVersion, Code: CodeRepImport, Status: StatusOK}.Encode(), body...)
+	listed := append(OpCommon{Version: ProtocolVersion, Code: CodeRepDevlist, Status: StatusOK}.Encode(), make([]byte, CountSize)...)
 
 	go func() {
-		conn, err := listener.Accept()
-		if err != nil {
-			return
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				header := make([]byte, HeaderSize)
+				if _, err := io.ReadFull(conn, header); err != nil {
+					return
+				}
+				request, err := DecodeOpCommon(header)
+				if err != nil {
+					return
+				}
+				if request.Code == CodeReqDevlist {
+					_, _ = conn.Write(listed)
+					return
+				}
+				if _, err := io.ReadFull(conn, make([]byte, ImportRequestSize-HeaderSize)); err != nil {
+					return
+				}
+				_, _ = conn.Write(imported)
+				_, _ = io.Copy(io.Discard, conn)
+			}()
 		}
-		t.Cleanup(func() { _ = conn.Close() })
-		if _, err := io.ReadFull(conn, make([]byte, ImportRequestSize)); err != nil {
-			return
-		}
-		_, _ = conn.Write(reply)
-		_, _ = io.Copy(io.Discard, conn)
 	}()
-	return listener.Addr().String()
+	return addr
 }
 
 func kernelStatus(t *testing.T) []PortEntry {
