@@ -162,14 +162,16 @@ func Reconcile(names []proto.TunnelName) {
 			continue
 		}
 
-		if *cfg.Enabled == enabled {
-			continue
-		}
-
+		// Copied rather than only restored when missing: an update ships a new
+		// script in /kvmapp that nothing else here would ever install.
 		if *cfg.Enabled {
 			if err := enableInitScript(name); err != nil {
 				log.Errorf("failed to restore %s init script: %s", name, err)
 			}
+			continue
+		}
+
+		if !enabled {
 			continue
 		}
 

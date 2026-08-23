@@ -185,6 +185,29 @@ func TestReconcileAdoptsAnAlreadyEnabledService(t *testing.T) {
 	}
 }
 
+// An update ships a new S97<name> in /kvmapp and nothing else installs it, so
+// an enabled service would keep running the copy it was enabled with.
+func TestReconcileRefreshesTheInitScriptFromTheSeed(t *testing.T) {
+	marker := useBootTestDirs(t, proto.TunnelNewt)
+
+	callLifecycle(t, proto.TunnelNewt, "start")
+	seedInitScript(t, proto.TunnelNewt, marker+".updated")
+
+	Reconcile([]proto.TunnelName{proto.TunnelNewt})
+
+	installed, err := os.ReadFile(initScriptPath(proto.TunnelNewt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seeded, err := os.ReadFile(initSeedPath(proto.TunnelNewt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(installed) != string(seeded) {
+		t.Fatalf("installed script = %q, want the updated seed %q", installed, seeded)
+	}
+}
+
 func TestReconcileRestoresAClobberedInitScript(t *testing.T) {
 	useBootTestDirs(t, proto.TunnelNewt)
 
