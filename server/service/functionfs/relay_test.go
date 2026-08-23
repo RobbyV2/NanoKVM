@@ -60,13 +60,20 @@ func (f *fakeControl) Close() error {
 
 type fakeEndpoint struct {
 	closed chan struct{}
+	reads  chan []byte
 	once   sync.Once
 }
 
-func newFakeEndpoint() *fakeEndpoint { return &fakeEndpoint{closed: make(chan struct{})} }
-func (f *fakeEndpoint) Read([]byte) (int, error) {
-	<-f.closed
-	return 0, ErrClosed
+func newFakeEndpoint() *fakeEndpoint {
+	return &fakeEndpoint{closed: make(chan struct{}), reads: make(chan []byte, 1)}
+}
+func (f *fakeEndpoint) Read(data []byte) (int, error) {
+	select {
+	case payload := <-f.reads:
+		return copy(data, payload), nil
+	case <-f.closed:
+		return 0, ErrClosed
+	}
 }
 func (f *fakeEndpoint) Write(data []byte) (int, error) { return len(data), nil }
 func (f *fakeEndpoint) Stall() error                   { return nil }
@@ -324,5 +331,67 @@ func TestDecodeEventBounds(t *testing.T) {
 	event[8] = 7
 	if _, err := DecodeEvent(event); !errors.Is(err, ErrMalformed) {
 		t.Fatalf("unknown event returned %v", err)
+	}
+}
+
+func TestRelayRearmsAnInputTransferThatTimesOut(t *testing.T) {
+	previous := transferTimeout
+	transferTimeout = 20 * time.Millisecond
+	defer func() { transferTimeout = previous }()
+
+	control := newFakeControl()
+	device := &fakeDevice{}
+	relay, err := NewRelay(relayImage(), control, map[uint8]DataEndpoint{0x81: newFakeEndpoint()}, device)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- relay.Run(context.Background()) }()
+	control.events <- Event{Type: EventEnable}
+	waitTransfers(t, device, 3)
+
+	select {
+	case err := <-done:
+		t.Fatalf("an idle input endpoint ended the relay: %v", err)
+	default:
+	}
+	_ = relay.Close()
+	if err := <-done; !errors.Is(err, ErrClosed) {
+		t.Fatalf("Run returned %v", err)
+	}
+}
+
+func TestRelayFailsAnOutputTransferThatTimesOut(t *testing.T) {
+	previous := transferTimeout
+	transferTimeout = 20 * time.Millisecond
+	defer func() { transferTimeout = previous }()
+
+	control := newFakeControl()
+	endpoint := newFakeEndpoint()
+	relay, err := NewRelay(outputRelayImage(), control, map[uint8]DataEndpoint{0x01: endpoint}, &fakeDevice{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- relay.Run(context.Background()) }()
+	control.events <- Event{Type: EventEnable}
+	endpoint.reads <- []byte{1, 2, 3, 4}
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("Run returned %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("a timed out output transfer did not end the relay")
+	}
+}
+
+func outputRelayImage() Image {
+	return Image{
+		Interfaces: map[uint8]uint8{4: 0}, Endpoints: map[uint8]uint8{0x03: 0x01},
+		Function: presentation.FunctionFS{Interfaces: 1, Endpoints: []presentation.FunctionFSEndpoint{
+			{SourceAddress: 0x03, Address: 0x01, Transfer: presentation.EndpointBulk, MaxPacket: 512},
+		}},
 	}
 }

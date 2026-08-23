@@ -40,6 +40,11 @@ const (
 	usbdevfsDisconnectClaim = uint(iocRead<<30 | 264<<16 | 'U'<<8 | 27)
 )
 
+// How long a cancelled transfer is waited for before the request is abandoned.
+// The URB and its buffer stay pinned and pending: only a reap or the closing of
+// the device file may release them.
+var transferCancelGrace = time.Second
+
 type Prepared struct {
 	Image Image
 	Relay *Relay
@@ -420,6 +425,18 @@ func (d *linuxDevice) Transfer(ctx context.Context, endpoint Endpoint, data []by
 	select {
 	case result := <-request.done:
 		return result.data, normalizeUSBError(result.err)
+	case <-ctx.Done():
+	case <-d.close:
+		return nil, ErrClosed
+	}
+
+	grace := time.NewTimer(transferCancelGrace)
+	defer grace.Stop()
+	select {
+	case result := <-request.done:
+		return result.data, normalizeUSBError(result.err)
+	case <-grace.C:
+		return nil, fmt.Errorf("%w: endpoint 0x%02x did not answer cancellation", ErrTransfer, endpoint.SourceAddress)
 	case <-d.close:
 		return nil, ErrClosed
 	}
@@ -493,12 +510,15 @@ func (d *linuxDevice) reap(pending map[*usbURB]*usbRequest) error {
 			continue
 		}
 		delete(pending, urb)
-		if request.ctx.Err() != nil {
-			d.complete(request, nil, request.ctx.Err())
-			continue
-		}
+		// A transfer that completed is delivered even when its deadline passed
+		// while it was in flight; only a transfer that failed reports why it
+		// was cancelled.
 		if urb.Status != 0 {
-			d.complete(request, nil, syscall.Errno(-urb.Status))
+			err := error(syscall.Errno(-urb.Status))
+			if ctxErr := request.ctx.Err(); ctxErr != nil {
+				err = ctxErr
+			}
+			d.complete(request, nil, err)
 			continue
 		}
 		if urb.ActualLength < 0 || int(urb.ActualLength) > len(request.buffer) {

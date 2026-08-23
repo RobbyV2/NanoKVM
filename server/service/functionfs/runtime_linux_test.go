@@ -3,11 +3,13 @@
 package functionfs
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 	"unsafe"
 )
 
@@ -55,4 +57,35 @@ func TestFunctionFSEndpointFilesAreNamedByAddress(t *testing.T) {
 			t.Fatalf("endpoint %d (0x%02x) = %q, want %q", index, endpoint.Address, got, want[index])
 		}
 	}
+}
+
+// A reactor that takes a request and never answers stands in for an endpoint
+// the controller has wedged: the transfer has to give up on it, and the URB it
+// left behind stays pinned until the device file is closed.
+func TestTransferAbandonsARequestThatOutlivesItsCancellation(t *testing.T) {
+	previous := transferCancelGrace
+	transferCancelGrace = 20 * time.Millisecond
+	defer func() { transferCancelGrace = previous }()
+
+	device := &linuxDevice{requests: make(chan *usbRequest), close: make(chan struct{}), done: make(chan struct{})}
+	wedged := make(chan *usbRequest, 1)
+	go func() { wedged <- <-device.requests }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() {
+		_, err := device.Transfer(ctx, Endpoint{SourceAddress: 0x81, Transfer: "bulk", MaxPacket: 512}, make([]byte, 8))
+		result <- err
+	}()
+
+	select {
+	case err := <-result:
+		if !errors.Is(err, ErrTransfer) {
+			t.Fatalf("wedged transfer returned %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("a wedged transfer never returned")
+	}
+	(<-wedged).pinner.Unpin()
 }

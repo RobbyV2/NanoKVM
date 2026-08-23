@@ -15,6 +15,11 @@ import (
 
 const stallRetryDelay = 10 * time.Millisecond
 
+// Every data transfer is bounded so a source that answers neither the transfer
+// nor its cancellation cannot hold a relay loop forever. A var so the tests can
+// shorten it.
+var transferTimeout = 5 * time.Second
+
 var (
 	ErrClosed       = errors.New("functionfs: relay closed")
 	ErrTransfer     = errors.New("functionfs: transfer failed")
@@ -206,8 +211,11 @@ func (r *Relay) transferLoop(ctx context.Context, endpoint presentation.Function
 			return err
 		}
 		if endpoint.Address&0x80 != 0 {
-			data, err := r.device.Transfer(ctx, source, buffer)
-			if errors.Is(err, ErrTransferTime) {
+			data, err := r.transfer(ctx, source, buffer)
+			// An input endpoint with nothing to report times out by design, and
+			// the source holds its data until the next poll, so re-arming the
+			// transfer loses nothing.
+			if errors.Is(err, ErrTransferTime) || errors.Is(err, context.DeadlineExceeded) {
 				continue
 			}
 			if errors.Is(err, ErrStall) {
@@ -244,7 +252,7 @@ func (r *Relay) transferLoop(ctx context.Context, endpoint presentation.Function
 		if n == 0 {
 			continue
 		}
-		if _, err := r.device.Transfer(ctx, source, buffer[:n]); errors.Is(err, ErrStall) {
+		if _, err := r.transfer(ctx, source, buffer[:n]); errors.Is(err, ErrStall) {
 			if err := file.Stall(); err != nil {
 				return err
 			}
@@ -255,6 +263,12 @@ func (r *Relay) transferLoop(ctx context.Context, endpoint presentation.Function
 			return fmt.Errorf("source endpoint 0x%02x: %w", endpoint.SourceAddress, err)
 		}
 	}
+}
+
+func (r *Relay) transfer(ctx context.Context, source Endpoint, data []byte) ([]byte, error) {
+	bounded, cancel := context.WithTimeout(ctx, transferTimeout)
+	defer cancel()
+	return r.device.Transfer(bounded, source, data)
 }
 
 func (r *Relay) handleSetup(ctx context.Context, setup Setup) error {
