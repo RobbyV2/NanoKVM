@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
 import { Alert, Button, Divider, Select } from 'antd';
 import clsx from 'clsx';
-import { CameraIcon, MicIcon, RadioTowerIcon } from 'lucide-react';
+import { CameraIcon, MicIcon, RadioTowerIcon, UsbIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { SourceSink } from '@/api/sources.ts';
@@ -120,7 +120,13 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
     <div className="rounded-md border border-neutral-700/70 bg-neutral-800/60 p-3">
       <div className="flex items-start gap-3">
         <div className="pt-0.5 text-neutral-400">
-          {sink.kind === 'camera' ? <CameraIcon size={17} /> : <MicIcon size={17} />}
+          {sink.kind === 'camera' ? (
+            <CameraIcon size={17} />
+          ) : sink.kind === 'microphone' ? (
+            <MicIcon size={17} />
+          ) : (
+            <UsbIcon size={17} />
+          )}
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-start justify-between gap-3">
@@ -157,14 +163,16 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
                       ? t('devices.resuming')
                       : ''}
             </span>
-            {!sink.binding ? (
+            {!sink.binding && (sink.kind !== 'usb_device' || isAdmin) ? (
               <Button
                 size="small"
                 type={demand ? 'primary' : 'default'}
                 loading={busy}
                 onClick={() => state.share(sink, selectedID)}
               >
-                {t(`devices.share.${sink.kind}`)}
+                {sink.kind === 'usb_device'
+                  ? t('devices.share.usbDevice', { defaultValue: 'Share USB' })
+                  : t(`devices.share.${sink.kind}`)}
               </Button>
             ) : canRelease ? (
               <Button danger size="small" loading={busy} onClick={() => state.release(sink.id)}>

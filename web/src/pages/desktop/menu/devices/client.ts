@@ -41,7 +41,7 @@ type ControlResponse =
     }
   | FrameAck
   | FrameError
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string; sink_id?: string };
 
 type PendingRequest = {
   resolve: (binding?: Binding) => void;
@@ -55,6 +55,7 @@ type ClientCallbacks = {
   onOwned: (sinks: Set<string>) => void;
   onError: (sinkID: string, message: string) => void;
   onSnapshot: (snapshot: SourcesSnapshot) => void;
+  onBinary?: (data: ArrayBuffer) => Promise<ArrayBuffer | undefined>;
 };
 
 const maxBufferedBytes = (2 << 20) + 256;
@@ -198,7 +199,13 @@ export class BrowserSourceClient {
         JSON.stringify({
           type: 'hello',
           label: 'Browser',
-          streams: this.offers.map(({ id, kind, label, formats }) => ({ id, kind, label, formats }))
+          streams: this.offers.map(({ id, kind, label, formats, usb }) => ({
+            id,
+            kind,
+            label,
+            formats,
+            usb
+          }))
         })
       );
     };
@@ -208,6 +215,18 @@ export class BrowserSourceClient {
   }
 
   private async onMessage(event: MessageEvent) {
+    if (event.data instanceof ArrayBuffer) {
+      try {
+        const response = await this.callbacks.onBinary?.(event.data);
+        if (response && this.socket?.readyState === WebSocket.OPEN) this.socket.send(response);
+      } catch (error) {
+        this.callbacks.onError(
+          'ffs.hybrid',
+          error instanceof Error ? error.message : 'USB transfer failed'
+        );
+      }
+      return;
+    }
     if (typeof event.data !== 'string') return;
     let response: ControlResponse;
     try {
@@ -271,8 +290,10 @@ export class BrowserSourceClient {
       return;
     }
     if (response.type === 'error') {
-      const sinkID = this.requests.keys().next().value as string | undefined;
+      const sinkID = response.sink_id || (this.requests.keys().next().value as string | undefined);
       if (sinkID) this.finishRequest(sinkID, new Error(response.message));
+      if (sinkID === 'ffs.hybrid') this.removeLease(sinkID);
+      if (sinkID) this.callbacks.onError(sinkID, response.message);
     }
   }
 
@@ -426,7 +447,7 @@ function readLeases(key: string): StoredLease[] {
         typeof lease.streamID === 'string' &&
         typeof lease.token === 'string' &&
         typeof lease.deviceID === 'string' &&
-        (lease.kind === 'camera' || lease.kind === 'microphone')
+        (lease.kind === 'camera' || lease.kind === 'microphone' || lease.kind === 'usb_device')
     );
   } catch {
     return [];
@@ -435,7 +456,10 @@ function readLeases(key: string): StoredLease[] {
 
 function offerKey(offers: DeviceOffer[]) {
   return offers
-    .map((offer) => `${offer.id}:${offer.kind}`)
+    .map(
+      (offer) =>
+        `${offer.id}:${offer.kind}:${offer.usb?.profile || ''}:${offer.usb?.configuration || ''}:${offer.usb?.interfaces.join(',') || ''}`
+    )
     .sort()
     .join('|');
 }

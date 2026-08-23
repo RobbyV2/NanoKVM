@@ -1,7 +1,7 @@
 import { http } from '@/lib/http.ts';
 import { getBaseUrl } from '@/lib/service.ts';
 
-export type SourceKind = 'camera' | 'microphone';
+export type SourceKind = 'camera' | 'microphone' | 'usb_device';
 export type BindingState = 'claimed' | 'streaming' | 'orphaned' | 'suspended';
 export type OutputState = 'idle' | 'source' | 'black' | 'silence';
 
@@ -19,6 +19,11 @@ export type SourceStream = {
   kind: SourceKind;
   label: string;
   formats?: SourceFormat[];
+  usb?: {
+    profile: string;
+    configuration: number;
+    interfaces: number[];
+  };
 };
 
 export type MediaSource = {
