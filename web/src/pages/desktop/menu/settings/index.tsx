@@ -11,6 +11,7 @@ import {
   MonitorIcon,
   NetworkIcon,
   PaletteIcon,
+  PanelsTopLeftIcon,
   SettingsIcon,
   SmartphoneIcon,
   UsbIcon,
@@ -35,6 +36,7 @@ import { Display } from './display';
 import { MCP } from './mcp';
 import { Network } from './network';
 import { Passthrough } from './passthrough';
+import { Presentation } from './presentation';
 import { Tailscale } from './tailscale';
 import { Tunnel } from './tunnel';
 import { Update } from './update';
@@ -63,6 +65,11 @@ export const Settings = () => {
             id: 'display',
             icon: <MonitorIcon size={16} />,
             component: <Display setIsLocked={setIsLocked} />
+          },
+          {
+            id: 'presentation',
+            icon: <PanelsTopLeftIcon size={16} />,
+            component: <Presentation setIsLocked={setIsLocked} />
           },
           { id: 'network', icon: <NetworkIcon size={16} />, component: <Network /> },
           { id: 'passthrough', icon: <UsbIcon size={16} />, component: <Passthrough /> },
