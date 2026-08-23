@@ -44,6 +44,13 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 			return used, fmt.Errorf("%w: %s rejected by capability table %s", ErrFunctionUnavailable, name, table.Source)
 		}
 
+		if function.Kind == FunctionUVC && function.Video != nil && !function.Video.interruptEndpoint() {
+			if !caps.Attributes[UVCAttrInterruptEP] {
+				return used, fmt.Errorf("%w: %s declines the control interrupt endpoint, which needs %s on the uvc function, rejected by capability table %s",
+					ErrFunctionUnavailable, name, UVCAttrInterruptEP, table.Source)
+			}
+			caps.InEPs--
+		}
 		if function.Kind == FunctionFFS {
 			caps.InEPs, caps.OutEPs = 0, 0
 			for _, endpoint := range function.FFS.Endpoints {
@@ -107,6 +114,9 @@ func inPackets(function Function, caps FunctionCaps) []int {
 		}
 	case FunctionUVC:
 		if function.Video != nil {
+			if !function.Video.interruptEndpoint() {
+				return []int{int(function.Video.StreamingMaxPacket)}
+			}
 			return []int{16, int(function.Video.StreamingMaxPacket)}
 		}
 	case FunctionUAC2:

@@ -49,7 +49,7 @@ var staticV1 = CapabilityTable{
 		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
 		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1, INPackets: []int{512}},
 		FunctionFFS:         {Available: true},
-		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}},
+		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}, Attributes: map[string]bool{UVCAttrInterruptEP: false}},
 		FunctionUAC2:        {Available: true, InEPs: 1, OutEPs: 0, INPackets: []int{96}},
 	},
 }
@@ -57,6 +57,15 @@ var staticV1 = CapabilityTable{
 var probeBudget = 10 * time.Second
 
 var probe = probeAvailability
+
+// Attributes a function group carries only on a kernel that has the option.
+// f_uvc autoconfigures a control interrupt IN endpoint nothing ever queues a
+// request to; enable_interrupt_ep is what lets a profile decline it and get
+// the endpoint back. Absent on a stock 5.10, so the table has to be probed
+// rather than assumed before a profile is allowed to count on it.
+const UVCAttrInterruptEP = "enable_interrupt_ep"
+
+var probeAttributes = map[FunctionKind][]string{FunctionUVC: {UVCAttrInterruptEP}}
 
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
 var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS, FunctionUVC, FunctionUAC2}
@@ -76,21 +85,21 @@ func LoadCapabilities() CapabilityTable {
 		log.Warnf("ignoring capability table %s: %s", path, err)
 	}
 
-	available, err := probeWithin(probeBudget)
+	probed, err := probeWithin(probeBudget)
 	if err != nil {
 		log.Debugf("capability probe unavailable, using %s: %s", staticV1.Source, err)
 		return staticV1.clone()
 	}
-	return staticV1.withAvailability(available)
+	return staticV1.withAvailability(probed)
 }
 
 // Each probed kind is a configfs mkdir that instantiates a real kernel object -
 // an ALSA card for uac2, a FunctionFS instance for ffs - on a device whose
 // gadget is already bound. One of them stalling must not hold the HTTP listener
 // down, so the probe is abandoned to the static table when it overruns.
-func probeWithin(budget time.Duration) (map[FunctionKind]bool, error) {
+func probeWithin(budget time.Duration) (map[FunctionKind]FunctionProbe, error) {
 	type result struct {
-		available map[FunctionKind]bool
+		available map[FunctionKind]FunctionProbe
 		err       error
 	}
 
@@ -155,7 +164,12 @@ func (t CapabilityTable) Validate() error {
 	return nil
 }
 
-func (t CapabilityTable) withAvailability(available map[FunctionKind]bool) CapabilityTable {
+type FunctionProbe struct {
+	Available  bool
+	Attributes map[string]bool
+}
+
+func (t CapabilityTable) withAvailability(available map[FunctionKind]FunctionProbe) CapabilityTable {
 	merged := t.clone()
 	merged.Source = SourceProbeV1
 	merged.GeneratedAt = time.Now()
@@ -165,7 +179,13 @@ func (t CapabilityTable) withAvailability(available map[FunctionKind]bool) Capab
 		if !ok {
 			continue
 		}
-		caps.Available = got
+		caps.Available = got.Available
+		for name, present := range got.Attributes {
+			if caps.Attributes == nil {
+				caps.Attributes = make(map[string]bool, len(got.Attributes))
+			}
+			caps.Attributes[name] = present
+		}
 		merged.Functions[kind] = caps
 	}
 	return merged

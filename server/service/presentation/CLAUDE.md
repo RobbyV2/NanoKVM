@@ -147,14 +147,41 @@ yields `0x050f` or `0x0515`, and without the tolerant tier `GetMode` returns
 miss its already-in-that-mode short circuit and reboot the device. Do not tighten it to
 an exact match.
 
-## The capability table is not a hardware measurement
+## The capability table, and why six IN is silicon
 
-`staticV1` is a plain data literal and the only table this package ships. Its six IN and
-five OUT endpoints are what the shipping scripts demonstrably achieve at full flag
-expansion, not a probe result. The real `num_dev_ep` lives in the dwc2 `GHWCFG` registers
-and is not readable from `/sys/class/udc/*`, so the budget cannot be probed at runtime at
-all. Availability can be probed, and `LoadCapabilities` merges probe results for
-availability only, never for the budget.
+`staticV1` is a plain data literal and the only table this package ships. Its six IN
+endpoints started as what the shipping scripts demonstrably achieve at full flag
+expansion. They have since been read off the hardware and they are right, but for a
+reason worth writing down, because the obvious workaround does not exist.
+
+`/sys/class/udc/*` does not carry the budget, but `CONFIG_DEBUG_FS=y` on the device and
+`S01fs` mounts it, so `/sys/kernel/debug/usb/4340000.usb/` does. On the SG2002:
+
+```
+num_dev_ep       : 7        GHWCFG2 = 0x228f5c52
+total_fifo_size  : 3072      GHWCFG3 = 0x0c0004e8
+en_multiple_tx_fifo : 1      GHWCFG4 = 0xda00ba30 -> NumDevInEps = 6
+```
+
+`dwc2_hsotg_tx_fifo_count` returns `hw_params.num_dev_in_eps` in dedicated-FIFO mode, and
+`dwc2_hsotg_ep_enable` refuses an IN endpoint it cannot give a unique TX FIFO to. So the
+ceiling is six IN endpoints besides ep0, whatever the device tree says. Widening
+`g-tx-fifo-size` past six entries does not help and is actively harmful: reading
+`DPTXFSIZ1..8` through `devmem` on a running device gives
+
+```
+0x104 0x03000238  0x108 0x02000538  0x10c 0x02000738  0x110 0x01800938
+0x114 0x00800AB8  0x118 0x00800B38  0x11c 0x00800AB8  0x120 0x00800B38
+```
+
+where `0x11c` and `0x120` return exactly what `0x114` and `0x118` hold, and the pattern
+repeats again from `0x124`. Only six of those registers are implemented; a seventh entry
+in the device tree would land on FIFO 5's configuration. The FIFO *depths* are a real
+allocation - 536 rx + 32 np-tx + 2432 tx = 3000 of 3072 words - but there is nothing to
+spend the remaining 72 words on.
+
+Availability and per-function attributes can be probed, and `LoadCapabilities` merges
+probe results for those only, never for the budget.
 
 The predecessor `staticV0` is gone. It lacked the `uvc` and `uac2` entries and every
 `INPackets` value, so `supportsMedia` rejects a table of that shape on disk and
@@ -162,6 +189,15 @@ The predecessor `staticV0` is gone. It lacked the `uvc` and `uac2` entries and e
 a table no device runs, and in particular were seating no FIFOs at all for `ncm`,
 `rndis` and `mass_storage`, whose IN packet sizes live only in `INPackets`. Every test
 compiles against `staticV1`. Do not reintroduce a second table that ships nowhere.
+
+`FunctionCaps.Attributes` is how a kernel option that changes a function's endpoint cost
+reaches the allocator. `UVCAttrInterruptEP` is the one that exists: `f_uvc` autoconfigures
+a control interrupt IN endpoint and never queues a request to it, since every UVC event
+reaches userspace through `v4l2_event_queue`, so the endpoint costs a dedicated FIFO to
+advertise a channel nothing writes to. The kernel fork adds `enable_interrupt_ep` to the
+uvc function group; `probeAvailability` stats it on the scratch gadget, and a profile that
+sets `Video.InterruptEndpoint` to false is refused outright on a kernel without it rather
+than silently under-counting and failing at bind.
 
 `InFIFOWords` is the six dedicated dwc2 IN FIFOs in words, and `SeatFIFOs` assigns the
 smallest FIFO that holds each IN packet, so a plan is refused when a packet fits no
@@ -178,6 +214,36 @@ measured refusal from a guessed one. If a real endpoint budget is ever measured,
 to `/etc/kvm/presentation/capability.json` rather than editing the literal, which is what
 the precedence order in `LoadCapabilities` is for; a table written there is ignored unless
 it carries the media functions and a FIFO map.
+
+## The HID layout
+
+Three roles - keyboard, relative mouse, absolute pointer - are distributed over one, two
+or three `hid.GS*` functions, and a function carrying more than one role separates them
+with Report IDs. That is the only lever that gets camera, microphone, NIC and a full HID
+set inside six IN endpoints:
+
+```
+uvc.cam0 2 + uac2.mic0 1 + ncm.usb0 2 = 5 IN, leaving one for HID
+```
+
+Dropping the control interrupt endpoint takes `uvc` to 1 and leaves room for two HID
+interfaces, which is what keeps the boot-protocol keyboard on an interface of its own.
+`hidLayoutFunctions` clears `protocol` and `subclass` on any interface carrying more than
+one role, because `bInterfaceProtocol` 1 and the boot subclass promise a boot report a
+report-ID composite cannot produce.
+
+Two properties are load-bearing. A one-role group returns the byte-pinned descriptor
+unchanged, so the default layout compiles to exactly what the golden traces record.
+And the instances stay a **prefix** of GS0, GS1, GS2 in order, for the reason at the top
+of this file: `f_hid` hands out `/dev/hidgN` in mkdir order, so a layout that skipped GS1
+would put the pointer on the mouse's minor.
+
+`HIDRoutes` is the other half. `service/hid` no longer hardcodes hidg0/1/2: the manager
+pushes the active profile's routes through the optional `HIDRouter` interface inside the
+`withHIDQuiesced` bracket, before the writers reopen, so a role that has moved node or
+gained a Report ID prefix is writing to the right place by the time the gadget is back. A
+nil route table means no layout has been pushed and every role keeps its historical node,
+which is what makes an unwired `Hid` behave exactly as it did before roles existed.
 
 ## Store and sentinels
 

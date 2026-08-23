@@ -487,6 +487,9 @@ func (c *compiler) uvc(dir, name string, video VideoFunction) {
 	}
 	c.rmdir(dir + "/control/header/h")
 	c.mkdir(dir)
+	if video.InterruptEndpoint != nil {
+		c.write(dir+"/"+UVCAttrInterruptEP, boolAttr(*video.InterruptEndpoint))
+	}
 	c.write(dir+"/streaming_interval", strconv.Itoa(int(video.StreamingInterval)))
 	c.write(dir+"/streaming_maxpacket", strconv.Itoa(int(video.StreamingMaxPacket)))
 	c.write(dir+"/streaming_maxburst", strconv.Itoa(int(video.StreamingMaxBurst)))

@@ -171,7 +171,7 @@ func TestProbeNeverProbesHID(t *testing.T) {
 }
 
 func TestWithAvailabilityKeepsBudget(t *testing.T) {
-	merged := staticV1.withAvailability(map[FunctionKind]bool{FunctionNCM: false})
+	merged := staticV1.withAvailability(map[FunctionKind]FunctionProbe{FunctionNCM: {Available: false}})
 
 	if merged.Source != SourceProbeV1 {
 		t.Fatalf("source = %q, want %q", merged.Source, SourceProbeV1)
@@ -251,7 +251,7 @@ func TestLoadCapabilitiesAbandonsAStalledProbe(t *testing.T) {
 	probeBudget = 50 * time.Millisecond
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })
-	probe = func() (map[FunctionKind]bool, error) {
+	probe = func() (map[FunctionKind]FunctionProbe, error) {
 		<-release
 		return nil, nil
 	}

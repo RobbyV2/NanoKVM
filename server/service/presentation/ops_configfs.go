@@ -331,20 +331,28 @@ func (o *ConfigFSOps) pollUDCCount(ctx context.Context, want int) error {
 // cannot reach, so its mkdir lives here rather than behind the interface. It is
 // never bound and never carries a hid.* function, because f_hid would consume a
 // /dev/hidgN minor and shift the numbering hid/hid.go:29-32 depends on.
-func probeAvailability() (map[FunctionKind]bool, error) {
+func probeAvailability() (map[FunctionKind]FunctionProbe, error) {
 	if err := os.Mkdir(probeGadgetDir, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 		return nil, fmt.Errorf("create probe gadget %s: %w", probeGadgetDir, err)
 	}
 	defer func() { _ = os.Remove(probeGadgetDir) }()
 
-	available := make(map[FunctionKind]bool, len(probeKinds))
+	available := make(map[FunctionKind]FunctionProbe, len(probeKinds))
 	for _, kind := range probeKinds {
 		dir := filepath.Join(probeGadgetDir, functionsDir, string(kind)+".probe")
 		err := os.Mkdir(dir, 0o755)
-		available[kind] = err == nil || errors.Is(err, os.ErrExist)
-		if available[kind] {
+		probed := FunctionProbe{Available: err == nil || errors.Is(err, os.ErrExist)}
+		if probed.Available {
+			for _, name := range probeAttributes[kind] {
+				if probed.Attributes == nil {
+					probed.Attributes = make(map[string]bool, len(probeAttributes[kind]))
+				}
+				_, statErr := os.Stat(filepath.Join(dir, name))
+				probed.Attributes[name] = statErr == nil
+			}
 			_ = os.Remove(dir)
 		}
+		available[kind] = probed
 	}
 	return available, nil
 }

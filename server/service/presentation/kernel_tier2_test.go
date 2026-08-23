@@ -497,3 +497,92 @@ func TestKernelTier2ApplyChangesAttributesOnALinkedGadget(t *testing.T) {
 		t.Fatalf("the apply renumbered the minors:\n before %v\n after  %v", minors, after)
 	}
 }
+
+// Why service/hid still reboots after a mode change. hid-only writes bcdUSB and
+// the standard profile leaves it alone, so the way back to normal keeps the USB
+// 1.1 descriptor the host enumerated hid-only with. Nothing else survives the
+// round trip: the descriptors go back and the minors hold.
+func TestKernelTier2ModeRoundTripKeepsHIDOnlyBCDUSB(t *testing.T) {
+	manager := kernelManager(t)
+	bootstrapHIDGadget(t)
+
+	minors := hidMinors(t)
+	standard := kernelProfile(standardProfile())
+	for _, profile := range []Profile{kernelProfile(hidOnlyProfile()), standard} {
+		plan, err := Compile(profile, manager.caps)
+		if err != nil {
+			t.Fatalf("compile %s: %v", profile.Name, err)
+		}
+		if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+			t.Fatalf("apply %s: %v", profile.Name, err)
+		}
+	}
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+
+	if after := hidMinors(t); !maps.Equal(minors, after) {
+		t.Fatalf("the mode round trip renumbered the minors:\n before %v\n after  %v", minors, after)
+	}
+	for _, function := range standard.Functions {
+		path := filepath.Join(GadgetRoot, functionsDir, string(function.Kind)+"."+function.Instance, "report_desc")
+		stored, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		if !bytes.Equal(stored, function.HID.ReportDesc) {
+			t.Fatalf("%s did not go back to the standard descriptor", path)
+		}
+	}
+
+	data, err := os.ReadFile(filepath.Join(GadgetRoot, "bcdUSB"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(data)); got != "0x0101" {
+		t.Fatalf("bcdUSB = %q: the round trip now restores it, so SetHidMode no longer needs its reboot", got)
+	}
+}
+
+// A composite report descriptor is the one thing in the layout work that no
+// pure test can settle: hid-generic parses the same bytes the attached host
+// will, and an ill-formed Report ID shows up as a HID device that never
+// appears rather than as a failed write. What this cannot show is the dwc2
+// FIFO budget, because dummy_hcd has endpoints the SG2002 does not.
+func TestKernelTier2CompositeHIDReportDescriptorBinds(t *testing.T) {
+	kernelint.RequireTier2(t)
+	manager := kernelManager(t)
+
+	profile := kernelProfile(standardProfile())
+	if err := SetHIDLayout(&profile, [][]HIDRole{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}}); err != nil {
+		t.Fatal(err)
+	}
+	profile = kernelProfile(profile)
+	if got := len(profile.Functions); got != 1 {
+		t.Fatalf("hid functions = %d, want 1", got)
+	}
+	if profile.Functions[0].HID.ReportLength != 9 {
+		t.Fatalf("report length = %d, want 9", profile.Functions[0].HID.ReportLength)
+	}
+
+	plan, err := Compile(profile, manager.caps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+		t.Fatalf("apply the composite plan against %s: %v", kernelint.DummyUDC, err)
+	}
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+
+	path := filepath.Join(GadgetRoot, functionsDir, functionName(profile.Functions[0]), "report_desc")
+	stored, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	if !bytes.Equal(stored, profile.Functions[0].HID.ReportDesc) {
+		t.Fatalf("%s round-tripped %d of %d bytes", path, len(stored), len(profile.Functions[0].HID.ReportDesc))
+	}
+
+	waitFor(t, "hid-generic to parse the composite report descriptor", func() bool {
+		entries, err := os.ReadDir("/sys/bus/hid/devices")
+		return err == nil && len(entries) >= 1
+	})
+}
