@@ -34,7 +34,7 @@ done
 # Check the toolchain up front. builder-image reuses any existing image, so an
 # image built before a tooling change silently lacks it - and without this the
 # SDK build would run for minutes before server/build.sh failed at the end.
-for tool in go riscv64-unknown-linux-musl-gcc patchelf; do
+for tool in go riscv64-unknown-linux-musl-gcc patchelf readelf; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "[ERROR] '$tool' is missing from the builder image" >&2
         echo "        the image is out of date; rebuild it with: make rebuild-image" >&2
@@ -140,5 +140,17 @@ else
         echo "  ok      $(printf '%s\n' "$needed" | wc -l | tr -d ' ') libkvm symbols resolve"
     fi
 fi
+
+tinyalsa="$NANOKVM_PATH/server/dl_lib/libtinyalsa.so"
+if [ ! -f "$tinyalsa" ]; then
+    echo "[ERROR] missing server/dl_lib/libtinyalsa.so" >&2
+    exit 1
+fi
+for symbol in pcm_open pcm_is_ready pcm_wait pcm_write pcm_prepare pcm_stop pcm_close; do
+    if ! readelf --dyn-syms --wide "$tinyalsa" | awk '$7 != "UND" { print $8 }' | sed 's/@.*//' | grep -qx "$symbol"; then
+        echo "[ERROR] libtinyalsa.so does not export $symbol" >&2
+        exit 1
+    fi
+done
 
 echo "[DONE] riscv64 artifacts built"
