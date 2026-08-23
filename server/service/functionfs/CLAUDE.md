@@ -9,3 +9,5 @@ Supported transfers are control, bulk, and interrupt at alternate setting zero. 
 USBFS retains URB and buffer pointers after `ioctl`. Pin both until reap or a synchronizing file close. Never complete or unpin a request merely because discard failed.
 
 Cleanup order is unbind, unlink `configs/c.1/ffs.hybrid`, restore the persistent presentation, close and unmount FunctionFS, detach VHCI, then clear the recovery marker. Hardware proof still gates enumeration, resets, stalls, and sustained throughput.
+
+`kernel_tier2_test.go` holds the ordering contract to a real kernel: `mount -t functionfs hybrid` is `ENODEV` until `functions/ffs.hybrid` exists in configfs, `ENOENT` under a name no instance carries, and `functionfs` is absent from `/proc/filesystems` entirely until the first instance, so a preflight that greps it reads the wrong thing. See `service/presentation/CLAUDE.md` for how the tier runs.

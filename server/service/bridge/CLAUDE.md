@@ -161,3 +161,10 @@ in preference to its own `ip route | grep eth0`. An OTA can ship a new server wi
 `usb0` is enslaved after the dead-man is disarmed. Its worst case is an attached host with
 no network, not a device with no management plane, so it takes its own smaller snapshot and
 its own rollback rather than sitting inside the one that holds the management address.
+
+## Testing against a real kernel
+
+`kernel_tier1_test.go` drives `Enable`, `Disable`, `ReattachGadget` and the dead-man
+rollback against real veth pairs and a real `br0` inside a network namespace, with only
+`S30eth` and `iptables` stubbed. It runs in CI on every push; see
+`service/presentation/CLAUDE.md` for the build tag and the tier split.
