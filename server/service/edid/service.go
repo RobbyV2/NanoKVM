@@ -71,6 +71,19 @@ func (s *Service) GetEdid(c *gin.Context) {
 		result.AppliedAt = record.AppliedAt.UTC().Format(time.RFC3339)
 	}
 
+	pending, err := s.store.Pending()
+	if err != nil {
+		log.Errorf("edid: read pending power cycle failed: %s", err)
+	}
+	if pending != nil {
+		result.PendingPowerCycle = &proto.EdidPending{
+			SHA256:    pending.SHA256,
+			Source:    pending.Source,
+			State:     pending.State,
+			AppliedAt: pending.AppliedAt.UTC().Format(time.RFC3339),
+		}
+	}
+
 	backups, err := s.store.History()
 	if err != nil {
 		log.Errorf("edid: read history failed: %s", err)

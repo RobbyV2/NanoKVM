@@ -63,12 +63,23 @@ type EdidBackup struct {
 	Size      int    `json:"size"`
 }
 
+// Armed between a flash that reached the chip and the power cycle that makes it
+// live, and readable after a reload or a restart, both of which the apply
+// response alone does not survive.
+type EdidPending struct {
+	SHA256    string    `json:"sha256"`
+	Source    string    `json:"source"`
+	State     EdidState `json:"state"`
+	AppliedAt string    `json:"appliedAt"`
+}
+
 type GetEdidRsp struct {
 	Active              *EdidSummary  `json:"active"`
 	Source              string        `json:"source,omitempty"`
 	AppliedAt           string        `json:"appliedAt,omitempty"`
 	UnverifiedSinceBoot bool          `json:"unverifiedSinceBoot"`
 	Preflight           EdidPreflight `json:"preflight"`
+	PendingPowerCycle   *EdidPending  `json:"pendingPowerCycle"`
 	Backups             []EdidBackup  `json:"backups"`
 	FactoryAvailable    bool          `json:"factoryAvailable"`
 }

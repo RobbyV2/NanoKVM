@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"NanoKVM-Server/proto"
 )
 
 func useTestStore(t *testing.T) *Store {
@@ -235,6 +237,61 @@ func TestLockIsExclusiveAndBreaksAStaleHolder(t *testing.T) {
 		t.Fatalf("stale lock was not broken: %v", err)
 	}
 	unlock()
+}
+
+func useBootID(t *testing.T, id string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "boot_id")
+	swapString(t, &bootIDFile, path)
+	writeBootID(t, path, id)
+	return path
+}
+
+func writeBootID(t *testing.T, path, id string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(id+"\n"), 0o600); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func TestPendingSurvivesARestartAndClearsOnTheNextBoot(t *testing.T) {
+	store := useTestStore(t)
+	bootFile := useBootID(t, "6dd6a3ff-1f1a-4d31-9b2f-2f9f0f4c1a11")
+	blob := fixture(t)
+
+	armed := Pending{SHA256: digest(blob), Source: "profile:abc", State: proto.EdidStateSuccess, AppliedAt: time.Now().UTC()}
+	if err := store.ArmPending(armed); err != nil {
+		t.Fatalf("arm pending: %v", err)
+	}
+	assertMode(t, filepath.Join(store.Dir(), pendingName), 0o600)
+
+	// A fresh Store is what a restarted server reads with.
+	pending, err := NewStore().Pending()
+	if err != nil {
+		t.Fatalf("pending: %v", err)
+	}
+	if pending == nil {
+		t.Fatal("the pending power cycle did not survive a restart")
+	}
+	if pending.SHA256 != armed.SHA256 || pending.Source != armed.Source || pending.State != armed.State {
+		t.Fatalf("pending %+v, want the flash it was armed with", pending)
+	}
+	if pending.AppliedAt.IsZero() {
+		t.Fatal("pending carries no time, so the operator cannot tell when it was armed")
+	}
+
+	writeBootID(t, bootFile, "0a5c2f8e-77c4-42a1-8f0e-6f3b9d2c4e55")
+
+	pending, err = NewStore().Pending()
+	if err != nil {
+		t.Fatalf("pending after the power cycle: %v", err)
+	}
+	if pending != nil {
+		t.Fatalf("pending %+v survived the boot that made the edid live", pending)
+	}
+	if _, err := os.Stat(filepath.Join(store.Dir(), pendingName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the marker file outlived the boot it names: %v", err)
+	}
 }
 
 func TestArchiveRejectsAnythingThatIsNot256Bytes(t *testing.T) {

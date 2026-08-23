@@ -439,6 +439,32 @@ func TestApplyArchivesOnlyAfterTheReadbackIsConfirmed(t *testing.T) {
 	}
 }
 
+func TestApplyArmsThePendingPowerCycle(t *testing.T) {
+	blob := fixture(t)
+	flasher := &fakeFlasher{results: []Result{verifiedRun()}}
+	applier, _ := useApplier(t, flasher)
+	useBootID(t, "4b1d8e2a-9c33-4f57-b0a6-1e7c5d8f2a90")
+
+	outcome, err := applier.Apply(context.Background(), blob, "upload")
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if !outcome.RequiresPowerCycle {
+		t.Fatal("a verified flash on alpha must require a power cycle")
+	}
+
+	pending, err := applier.store.Pending()
+	if err != nil {
+		t.Fatalf("pending: %v", err)
+	}
+	if pending == nil {
+		t.Fatal("nothing was recorded, so a reload leaves the operator unaware the edid is not live yet")
+	}
+	if pending.SHA256 != digest(blob) || pending.Source != "upload" || pending.State != proto.EdidStateSuccess {
+		t.Fatalf("pending %+v, want the flash that was just written", pending)
+	}
+}
+
 func TestApplyDoesNotArchiveAMismatch(t *testing.T) {
 	blob := fixture(t)
 	read := bytes.Clone(blob)
@@ -583,6 +609,9 @@ func TestApplyRejectsBeforeSpawning(t *testing.T) {
 			}
 			if outcome.RequiresPowerCycle {
 				t.Fatal("nothing was written, so nothing needs a power cycle")
+			}
+			if pending, err := applier.store.Pending(); err != nil || pending != nil {
+				t.Fatalf("pending %+v (%v), want nothing armed by an apply that never wrote", pending, err)
 			}
 		})
 	}

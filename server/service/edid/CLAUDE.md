@@ -83,6 +83,16 @@ power cycled, because the LT6911 reloads its EDID region only out of reset.
 `RequiresPowerCycle` says so and nothing in the API claims the new EDID is live before
 that.
 
+That waiting state has to outlive the response that reported it, because a reload or a
+`S95nanokvm restart` would otherwise leave the operator looking at a record of an EDID
+the chip is not presenting yet. `pending.json` holds it, and the clearing signal is
+`/proc/sys/kernel/random/boot_id`, because with no read primitive nothing here can ask
+the chip what it holds. The power cycle the operator is being asked for necessarily
+produces a new boot id, so the marker cannot outlive the event it waits for, while a
+service restart keeps the same one and leaves it armed. A warm reboot clears it one
+power cycle early; that is the cost of the only observable that moves when the chip
+does, and it beats a notice nothing can retire.
+
 ## The whole flash is serialized against the capture pipeline
 
 `kvm_vision.cpp` runs the HDMI detection thread against `/dev/i2c-4` and `hdmi.cpp`

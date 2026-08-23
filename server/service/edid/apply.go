@@ -439,6 +439,12 @@ func (a *Applier) Apply(ctx context.Context, data []byte, source string) (Outcom
 	}
 
 	outcome.RequiresPowerCycle = pre.RequiresPowerCycle && touchedFlash(outcome.State)
+	if outcome.RequiresPowerCycle {
+		pending := Pending{SHA256: digest(blob), Source: source, State: outcome.State, AppliedAt: time.Now().UTC()}
+		if err := a.store.ArmPending(pending); err != nil {
+			log.Errorf("edid: recording the pending power cycle failed: %s", err)
+		}
+	}
 
 	if outcome.Verified {
 		record, err := a.store.Archive(blob, source, decoded)

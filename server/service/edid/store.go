@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"NanoKVM-Server/proto"
 	"NanoKVM-Server/utils"
 )
 
@@ -27,8 +28,13 @@ const StoreDir = "/etc/kvm/edid"
 const (
 	activeBinName  = "last-applied.bin"
 	activeJSONName = "last-applied.json"
+	pendingName    = "pending.json"
 	historyDirName = "history"
 	lockName       = ".lock"
+
+	// A new one of these is exactly what the operator is being asked to
+	// produce, and nothing short of a reboot produces one.
+	bootIDPath = "/proc/sys/kernel/random/boot_id"
 
 	dirMode  os.FileMode = 0o755
 	fileMode os.FileMode = 0o600
@@ -51,6 +57,7 @@ var (
 	storeDir = StoreDir
 
 	processAlive = defaultProcessAlive
+	bootIDFile   = bootIDPath
 )
 
 // last-applied.json. The decoded fields keep the file legible from a serial
@@ -64,6 +71,28 @@ type Record struct {
 	PreferredMode string    `json:"preferredMode"`
 	Extensions    uint8     `json:"extensions"`
 	Audio         bool      `json:"audio"`
+}
+
+// pending.json. On alpha and beta the chip reloads its EDID region only out of
+// reset, so between a flash and the power cycle the device presents the old
+// EDID and the record says otherwise. The marker is what the operator sees
+// after a page reload or a service restart, both of which the apply response
+// alone does not survive.
+//
+// Boot is the clearing signal because the tool has no read mode: nothing on
+// this device can ask the chip what it holds. A power cycle necessarily gives
+// the SoC a new boot_id, so the marker cannot outlive the event it waits for,
+// and a service restart, which does not reset the chip, keeps the same one and
+// leaves the marker armed. A warm reboot clears it a power cycle early; that is
+// the price of the only observable that moves when the chip does, and it beats
+// a notice nothing can ever retire. A board where boot_id cannot be read keeps
+// the marker until the next apply, which is the safe direction to be wrong in.
+type Pending struct {
+	SHA256    string          `json:"sha256"`
+	Source    string          `json:"source"`
+	State     proto.EdidState `json:"state"`
+	AppliedAt time.Time       `json:"appliedAt"`
+	Boot      string          `json:"boot"`
 }
 
 type Backup struct {
@@ -91,6 +120,10 @@ func (s *Store) activePath() string {
 
 func (s *Store) recordPath() string {
 	return filepath.Join(s.dir, activeJSONName)
+}
+
+func (s *Store) pendingPath() string {
+	return filepath.Join(s.dir, pendingName)
 }
 
 func (s *Store) historyDir() string {
@@ -209,6 +242,67 @@ func (s *Store) previousTimestamp() time.Time {
 		return info.ModTime().UTC()
 	}
 	return time.Now().UTC()
+}
+
+func (s *Store) ArmPending(pending Pending) error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	if err := os.MkdirAll(s.dir, dirMode); err != nil {
+		return fmt.Errorf("create %s: %w", s.dir, err)
+	}
+
+	pending.AppliedAt = pending.AppliedAt.UTC()
+	pending.Boot = bootID()
+
+	encoded, err := json.MarshalIndent(pending, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode edid pending: %w", err)
+	}
+	encoded = append(encoded, '\n')
+	if err := utils.WriteFileAtomic(s.pendingPath(), encoded, fileMode); err != nil {
+		return fmt.Errorf("write %s: %w", s.pendingPath(), err)
+	}
+	return nil
+}
+
+// Clears the marker on the first read from a different boot, so the power cycle
+// retires it whether or not anyone was watching when it happened.
+func (s *Store) Pending() (*Pending, error) {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+
+	raw, err := os.ReadFile(s.pendingPath())
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read %s: %w", s.pendingPath(), err)
+	}
+
+	var pending Pending
+	if err := json.Unmarshal(raw, &pending); err != nil {
+		return nil, s.clearPending()
+	}
+	if pending.Boot != bootID() {
+		return nil, s.clearPending()
+	}
+	return &pending, nil
+}
+
+func (s *Store) clearPending() error {
+	if err := os.Remove(s.pendingPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove %s: %w", s.pendingPath(), err)
+	}
+	return nil
+}
+
+func bootID() string {
+	data, err := os.ReadFile(bootIDFile)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // Newest first. The id format sorts lexicographically in timestamp order.
