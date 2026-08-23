@@ -82,6 +82,9 @@ func newConn(server *Server, netConn net.Conn) *conn {
 func (c *conn) serve() {
 	defer c.close()
 
+	c.server.pump.acquire()
+	defer c.server.pump.release()
+
 	if err := c.handshake(); err != nil {
 		log.Debugf("vnc handshake with %s failed: %s", c.net.RemoteAddr(), err)
 		return
@@ -102,9 +105,6 @@ func (c *conn) serve() {
 		defer c.workers.Done()
 		hid.GetHid().MouseReports(c.mouse)
 	}()
-
-	c.server.pump.acquire()
-	defer c.server.pump.release()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -147,6 +147,12 @@ func (c *conn) handshake() error {
 	}
 
 	width, height, _, _ := c.server.Screen()
+	if first := c.server.pump.wait(firstFrameWait); first.version != 0 {
+		width, height = first.width, first.height
+	} else if width == 0 || height == 0 {
+		width, height = fallbackWidth, fallbackHeight
+	}
+
 	c.width = width
 	c.height = height
 	return writeServerInit(c.net, width, height, "NanoKVM")

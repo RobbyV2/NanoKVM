@@ -17,6 +17,14 @@ const (
 
 	// A Tight rectangle length is a 3-byte compact integer at most.
 	maxTightPayload = 1<<22 - 1
+
+	// RFB has no way to say "whatever the source is delivering", so a frame
+	// whose real size cannot be established falls back to the largest mode the
+	// encoder produces and is corrected by DesktopSize once one can.
+	fallbackWidth  uint16 = 1920
+	fallbackHeight uint16 = 1080
+
+	firstFrameWait = time.Second
 )
 
 type frame struct {
@@ -115,7 +123,16 @@ func frameInterval(fps int) time.Duration {
 	return time.Second / time.Duration(fps)
 }
 
+// publish takes the frame size from the encoder's own output: the configured
+// resolution may be ResolutionNative, and the source can change mode underneath
+// a running session.
 func (p *framePump) publish(data []byte, width uint16, height uint16) {
+	if actualWidth, actualHeight, ok := jpegSize(data); ok {
+		width, height = actualWidth, actualHeight
+	} else if width == 0 || height == 0 {
+		width, height = fallbackWidth, fallbackHeight
+	}
+
 	p.mutex.Lock()
 	p.current = frame{data: data, width: width, height: height, version: p.current.version + 1}
 	changed := p.changed
@@ -130,6 +147,80 @@ func (p *framePump) snapshot() (frame, <-chan struct{}) {
 	defer p.mutex.Unlock()
 
 	return p.current, p.changed
+}
+
+// wait blocks for the first captured frame so ServerInit can declare the real
+// framebuffer size. It returns the zero frame if the source stays silent.
+func (p *framePump) wait(timeout time.Duration) frame {
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+
+	for {
+		current, changed := p.snapshot()
+		if current.version != 0 {
+			return current
+		}
+
+		select {
+		case <-changed:
+		case <-deadline.C:
+			return frame{}
+		}
+	}
+}
+
+// jpegSize reads the frame size out of the JPEG's SOF marker, which is the only
+// authoritative record of what the encoder actually produced.
+func jpegSize(data []byte) (uint16, uint16, bool) {
+	if len(data) < 4 || data[0] != 0xff || data[1] != 0xd8 {
+		return 0, 0, false
+	}
+
+	for index := 2; index+3 < len(data); {
+		if data[index] != 0xff {
+			return 0, 0, false
+		}
+
+		marker := data[index+1]
+		if marker == 0xff {
+			index++
+			continue
+		}
+		if marker == 0x01 || (marker >= 0xd0 && marker <= 0xd9) {
+			index += 2
+			continue
+		}
+		if marker == 0xda {
+			return 0, 0, false
+		}
+
+		length := int(binary.BigEndian.Uint16(data[index+2:]))
+		if length < 2 || index+2+length > len(data) {
+			return 0, 0, false
+		}
+		if isStartOfFrame(marker) {
+			if length < 8 {
+				return 0, 0, false
+			}
+			height := binary.BigEndian.Uint16(data[index+5:])
+			width := binary.BigEndian.Uint16(data[index+7:])
+			if width == 0 || height == 0 {
+				return 0, 0, false
+			}
+			return width, height, true
+		}
+
+		index += 2 + length
+	}
+
+	return 0, 0, false
+}
+
+func isStartOfFrame(marker byte) bool {
+	if marker < 0xc0 || marker > 0xcf {
+		return false
+	}
+	return marker != 0xc4 && marker != 0xc8 && marker != 0xcc
 }
 
 // writeTightJPEG emits one framebuffer update carrying the hardware encoder's

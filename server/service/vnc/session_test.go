@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,6 +18,20 @@ func testJPEG(marker byte) []byte {
 	jpeg := bytes.Repeat([]byte{marker}, 512)
 	jpeg[0], jpeg[1] = 0xff, 0xd8
 	return jpeg
+}
+
+// sizedJPEG builds a JPEG whose SOF0 marker declares the given size, so a test
+// can assert that the rectangle header matches the payload the client decodes.
+func sizedJPEG(width uint16, height uint16, marker byte) []byte {
+	jpeg := []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10}
+	jpeg = append(jpeg, "JFIF\x00"...)
+	jpeg = append(jpeg, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00)
+	jpeg = append(jpeg, 0xff, 0xc0, 0x00, 0x11, 0x08)
+	jpeg = binary.BigEndian.AppendUint16(jpeg, height)
+	jpeg = binary.BigEndian.AppendUint16(jpeg, width)
+	jpeg = append(jpeg, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01)
+	jpeg = append(jpeg, bytes.Repeat([]byte{marker}, 128)...)
+	return append(jpeg, 0xff, 0xd9)
 }
 
 func startServer(t *testing.T, server *Server) net.Addr {
@@ -133,16 +148,38 @@ func (c *testClient) requestUpdate(incremental byte) {
 	c.write(message)
 }
 
-func (c *testClient) readUpdate() []byte {
+// readRectHeader consumes one framebuffer update carrying a single rectangle
+// and returns the size and encoding the server declared for it.
+func (c *testClient) readRectHeader() (uint16, uint16, int32) {
 	c.t.Helper()
 
 	header := c.read(16)
 	if header[0] != 0 || binary.BigEndian.Uint16(header[2:4]) != 1 {
 		c.t.Fatalf("unexpected update header % x", header)
 	}
-	if int32(binary.BigEndian.Uint32(header[12:16])) != encodingTight {
-		c.t.Fatalf("encoding = %d, want Tight", int32(binary.BigEndian.Uint32(header[12:16])))
+	return binary.BigEndian.Uint16(header[8:10]),
+		binary.BigEndian.Uint16(header[10:12]),
+		int32(binary.BigEndian.Uint32(header[12:16]))
+}
+
+func (c *testClient) readUpdate() []byte {
+	_, _, data := c.readTightUpdate()
+	return data
+}
+
+func (c *testClient) readTightUpdate() (uint16, uint16, []byte) {
+	c.t.Helper()
+
+	width, height, encoding := c.readRectHeader()
+	if encoding != encodingTight {
+		c.t.Fatalf("encoding = %d, want Tight", encoding)
 	}
+	return width, height, c.readTightPayload()
+}
+
+func (c *testClient) readTightPayload() []byte {
+	c.t.Helper()
+
 	if control := c.read(1); control[0] != tightJPEG {
 		c.t.Fatalf("tight compression control = %#x, want %#x", control[0], tightJPEG)
 	}
@@ -157,6 +194,23 @@ func (c *testClient) readUpdate() []byte {
 		}
 	}
 	return c.read(length)
+}
+
+func (c *testClient) handshakeNone() (uint16, uint16) {
+	c.t.Helper()
+
+	c.read(12)
+	c.write([]byte(protocolVersion))
+	types := c.read(1)
+	c.read(int(types[0]))
+	c.write([]byte{securityNone})
+	c.read(4)
+	c.write([]byte{1})
+
+	init := c.read(24)
+	c.read(int(binary.BigEndian.Uint32(init[20:24])))
+
+	return binary.BigEndian.Uint16(init[0:2]), binary.BigEndian.Uint16(init[2:4])
 }
 
 func TestSessionDeliversHardwareJPEGAndSurvivesMissingHID(t *testing.T) {
@@ -319,5 +373,106 @@ func TestSessionRefusesClientWithoutTight(t *testing.T) {
 
 	if _, err := client.r.Read(make([]byte, 1)); err == nil {
 		t.Fatal("a client without Tight support was served instead of disconnected")
+	}
+}
+
+func TestSessionDeclaresTheResolutionTheEncoderActuallyProduced(t *testing.T) {
+	jpeg := sizedJPEG(1920, 1080, 0x5a)
+
+	// The stock configuration asks the encoder for the source's native
+	// resolution, so the injected screen callback reports no size at all.
+	addr := startServer(t, &Server{
+		AllowNone: true,
+		Screen:    func() (uint16, uint16, uint16, int) { return 0, 0, 80, 30 },
+		ReadJPEG:  func(uint16, uint16, uint16) ([]byte, int) { return jpeg, 0 },
+	})
+	client := dial(t, addr)
+
+	width, height := client.handshakeNone()
+	if width == 0 || height == 0 {
+		t.Fatalf("ServerInit framebuffer = %dx%d, want a real size", width, height)
+	}
+	if width != 1920 || height != 1080 {
+		t.Fatalf("ServerInit framebuffer = %dx%d, want 1920x1080", width, height)
+	}
+
+	client.setEncodings(encodingTight, encodingDesktopSize)
+	client.requestUpdate(0)
+
+	rectWidth, rectHeight, data := client.readTightUpdate()
+	if rectWidth == 0 || rectHeight == 0 {
+		t.Fatalf("rectangle = %dx%d, want a real size", rectWidth, rectHeight)
+	}
+	if !bytes.Equal(data, jpeg) {
+		t.Fatal("update did not carry the encoder's JPEG unchanged")
+	}
+
+	jpegWidth, jpegHeight, ok := jpegSize(data)
+	if !ok {
+		t.Fatal("payload has no SOF marker")
+	}
+	if rectWidth != jpegWidth || rectHeight != jpegHeight {
+		t.Fatalf("rectangle = %dx%d, but its JPEG is %dx%d", rectWidth, rectHeight, jpegWidth, jpegHeight)
+	}
+}
+
+func TestSessionFollowsASourceModeChange(t *testing.T) {
+	small := sizedJPEG(1280, 720, 0x11)
+	large := sizedJPEG(1920, 1080, 0x22)
+
+	var mutex sync.Mutex
+	current := small
+	source := func(uint16, uint16, uint16) ([]byte, int) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		return current, 0
+	}
+
+	addr := startServer(t, &Server{
+		AllowNone: true,
+		Screen:    func() (uint16, uint16, uint16, int) { return 0, 0, 80, 30 },
+		ReadJPEG:  source,
+	})
+	client := dial(t, addr)
+
+	if width, height := client.handshakeNone(); width != 1280 || height != 720 {
+		t.Fatalf("ServerInit framebuffer = %dx%d, want 1280x720", width, height)
+	}
+
+	client.setEncodings(encodingTight, encodingDesktopSize)
+	client.requestUpdate(0)
+	if width, height, _ := client.readTightUpdate(); width != 1280 || height != 720 {
+		t.Fatalf("rectangle = %dx%d, want 1280x720", width, height)
+	}
+
+	mutex.Lock()
+	current = large
+	mutex.Unlock()
+
+	resized := false
+	for attempt := 0; attempt < 40 && !resized; attempt++ {
+		time.Sleep(50 * time.Millisecond)
+		client.requestUpdate(0)
+		width, height, encoding := client.readRectHeader()
+		if encoding == encodingDesktopSize {
+			if width != 1920 || height != 1080 {
+				t.Fatalf("DesktopSize = %dx%d, want 1920x1080", width, height)
+			}
+			resized = true
+			break
+		}
+		client.readTightPayload()
+	}
+	if !resized {
+		t.Fatal("the client was never told the screen resized")
+	}
+
+	client.requestUpdate(0)
+	width, height, data := client.readTightUpdate()
+	if width != 1920 || height != 1080 {
+		t.Fatalf("rectangle after the resize = %dx%d, want 1920x1080", width, height)
+	}
+	if !bytes.Equal(data, large) {
+		t.Fatal("update after the resize did not carry the new frame")
 	}
 }

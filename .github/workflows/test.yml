@@ -85,8 +85,10 @@ jobs:
           # fails to link. Derive that set from the import graph rather than
           # naming packages: a new package with tests that reaches common would
           # otherwise turn this job red with no explanation, and a package that
-          # stops reaching it would stay silently excluded.
-          blocked=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{$p := .ImportPath}}{{range .Deps}}{{if eq . "NanoKVM-Server/common"}}{{$p}}{{end}}{{end}}{{end}}' ./... \
+          # stops reaching it would stay silently excluded. .Deps never lists the
+          # package itself, so common is matched by import path as well: a test
+          # file added there has to fail this check, not the linker.
+          blocked=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{$p := .ImportPath}}{{if eq $p "NanoKVM-Server/common"}}{{$p}}{{end}}{{range .Deps}}{{if eq . "NanoKVM-Server/common"}}{{$p}}{{end}}{{end}}{{end}}' ./... \
             | grep -v '^$' | LC_ALL=C sort)
           expected=$(printf '%s\n' \
             NanoKVM-Server/service/picoclaw \
