@@ -499,6 +499,42 @@ func TestAdminDisconnectStopsTheSourceCapture(t *testing.T) {
 	}
 }
 
+func TestDisconnectAllRejectsNonAdmins(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	service := NewServiceWith(registry)
+	alice := Actor{Username: "alice"}
+	source := mustSource(t, registry, alice, "Pixel", KindCamera)
+	if _, err := registry.Claim(alice, source.ID, "stream", "uvc.cam0"); err != nil {
+		t.Fatal(err)
+	}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("principal", middleware.Principal{Username: "alice", Role: authn.RoleUser})
+		c.Next()
+	})
+	router.DELETE("/bindings", service.DisconnectAll)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/bindings", nil))
+
+	var refused struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &refused); err != nil {
+		t.Fatal(err)
+	}
+	// -1 rather than -2: the registry refuses this too, but only the handler
+	// can tell the caller it was the role and not the sweep that failed.
+	if refused.Code != -1 || refused.Msg != ErrForbidden.Error() {
+		t.Fatalf("response = %s", recorder.Body.String())
+	}
+	if len(registry.Snapshot().Bindings) != 1 {
+		t.Fatal("refused disconnect still dropped the binding")
+	}
+}
+
 func TestRESTClaimRefusesAndAdminTakesOver(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	registry := mustRegistry(t, testSlots, RegistryOptions{})

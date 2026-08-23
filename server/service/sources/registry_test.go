@@ -381,3 +381,80 @@ func sinkByID(t *testing.T, snapshot Snapshot, id string) Sink {
 	t.Fatalf("sink %s not found", id)
 	return Sink{}
 }
+
+func TestReleaseRefusesANonOwner(t *testing.T) {
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	alice := Actor{Username: "alice"}
+	source := mustSource(t, registry, alice, "Pixel", KindCamera)
+	if _, err := registry.Claim(alice, source.ID, "stream", "uvc.cam0"); err != nil {
+		t.Fatal(err)
+	}
+
+	bob := Actor{Username: "bob"}
+	if err := registry.Release(bob, "uvc.cam0", ReasonReleased); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("stranger release: err = %v, want %v", err, ErrForbidden)
+	}
+	if len(registry.Snapshot().Bindings) != 1 {
+		t.Fatal("refused release still dropped the binding")
+	}
+
+	if err := registry.Release(Actor{Username: "root", Admin: true}, "uvc.cam0", ReasonReleased); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDisconnectAllRefusesANonAdmin(t *testing.T) {
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	alice := Actor{Username: "alice"}
+	source := mustSource(t, registry, alice, "Pixel", KindCamera)
+	if _, err := registry.Claim(alice, source.ID, "stream", "uvc.cam0"); err != nil {
+		t.Fatal(err)
+	}
+
+	// The owner of the only binding is still not allowed to sweep the table.
+	if err := registry.DisconnectAll(alice); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("non-admin disconnect: err = %v, want %v", err, ErrForbidden)
+	}
+	if len(registry.Snapshot().Bindings) != 1 {
+		t.Fatal("refused disconnect still dropped the binding")
+	}
+}
+
+// Resume carries the same USB restriction as Claim because a lease outlives the
+// role that was checked when it was taken: the grace window is where an admin
+// who has since been demoted would otherwise walk back onto the hybrid sink.
+func TestResumeRefusesANonAdminOnTheUSBSink(t *testing.T) {
+	registry := mustRegistry(t, nil, RegistryOptions{})
+	admin := Actor{Username: "alice", Admin: true}
+	source, err := registry.RegisterSource(admin, Hello{Label: "Browser", Streams: []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	claim, err := registry.Claim(admin, source.ID, "usb", HybridSinkID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry.DisconnectSource(source.ID)
+
+	demoted := Actor{Username: "alice"}
+	next, err := registry.RegisterSource(demoted, Hello{Label: "Browser", Streams: []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := registry.Resume(demoted, next.ID, "usb", HybridSinkID, claim.Token); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("demoted resume: err = %v, want %v", err, ErrForbidden)
+	}
+	if sinkByID(t, registry.Snapshot(), HybridSinkID).Binding.State != StateOrphaned {
+		t.Fatal("refused resume still reattached the lease")
+	}
+
+	if _, err := registry.Resume(admin, next.ID, "usb", HybridSinkID, claim.Token); err != nil {
+		t.Fatal(err)
+	}
+}
