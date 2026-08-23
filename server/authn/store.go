@@ -138,18 +138,14 @@ func (s *Store) Get(username string) (*User, error) {
 }
 
 func (s *Store) Authenticate(username, password string) (*User, bool, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	db, err := s.loadLocked(true)
-	if err != nil {
+	user, err := s.loadForAuthentication(username)
+	if err != nil || user == nil {
 		return nil, false, err
 	}
-	user, err := findUser(db.Users, username)
-	if err != nil || !user.Enabled {
-		return nil, false, nil
-	}
 
+	// bcrypt at the default cost takes about a second on this hardware, so it
+	// runs outside the store lock: holding the write lock across it serialised
+	// every login and every session recheck behind the slowest one.
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) == nil {
 		return user, true, nil
 	}
@@ -160,25 +156,60 @@ func (s *Store) Authenticate(username, password string) (*User, bool, error) {
 	if decodeErr != nil || legacyPassword != password {
 		return nil, false, nil
 	}
+	return s.upgradeLegacyPassword(username, password)
+}
 
-	hash, hashErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if hashErr != nil {
-		return nil, false, hashErr
+func (s *Store) loadForAuthentication(username string) (*User, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	db, err := s.loadLocked(true)
+	if err != nil {
+		return nil, err
 	}
-	for index := range db.Users {
-		if db.Users[index].Username == username {
-			db.Users[index].PasswordHash = string(hash)
-			if db.Users[index].TokenVersion == 0 {
-				db.Users[index].TokenVersion = 1
-			}
-			user = cloneUser(&db.Users[index])
-			break
+	user, findErr := findUser(db.Users, username)
+	if findErr != nil || !user.Enabled {
+		return nil, nil
+	}
+	return user, nil
+}
+
+func (s *Store) upgradeLegacyPassword(username, password string) (*User, bool, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, false, err
+	}
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	db, err := s.loadLocked(true)
+	if err != nil {
+		return nil, false, err
+	}
+	index := userIndex(db.Users, username)
+	if index < 0 || !db.Users[index].Enabled {
+		return nil, false, nil
+	}
+
+	// A concurrent login or password change may have replaced the record since
+	// the compare above, so re-check it before overwriting anything.
+	legacyPassword, decodeErr := utils.DecodeDecrypt(db.Users[index].PasswordHash)
+	if decodeErr != nil || legacyPassword != password {
+		if bcrypt.CompareHashAndPassword([]byte(db.Users[index].PasswordHash), []byte(password)) != nil {
+			return nil, false, nil
 		}
+		return cloneUser(&db.Users[index]), true, nil
+	}
+
+	db.Users[index].PasswordHash = string(hash)
+	if db.Users[index].TokenVersion == 0 {
+		db.Users[index].TokenVersion = 1
 	}
 	if err = s.saveLocked(db); err != nil {
 		return nil, false, err
 	}
-	return user, true, nil
+	return cloneUser(&db.Users[index]), true, nil
 }
 
 func (s *Store) ValidateToken(username string, tokenVersion uint64) (*User, error) {

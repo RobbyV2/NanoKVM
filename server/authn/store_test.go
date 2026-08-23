@@ -9,6 +9,9 @@ import (
 	"sync"
 	"testing"
 
+	"NanoKVM-Server/utils"
+
+	"github.com/mervick/aes-everywhere/go/aes256"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -208,5 +211,51 @@ func TestConcurrentCreatesDoNotLoseUsers(t *testing.T) {
 	}
 	if len(users) != count+1 {
 		t.Fatalf("got %d users, want %d", len(users), count+1)
+	}
+}
+
+func TestConcurrentLoginsUpgradeReversiblePasswordOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pwd")
+	legacy, _ := json.Marshal(legacyAccount{
+		Username: "owner",
+		Password: aes256.Encrypt("legacy-password", utils.SecretKey),
+	})
+	if err := os.WriteFile(path, legacy, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewStore(path)
+	const count = 8
+	var workers sync.WaitGroup
+	results := make(chan error, count)
+	for index := 0; index < count; index++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			user, ok, err := store.Authenticate("owner", "legacy-password")
+			if err != nil || !ok || user.Username != "owner" {
+				results <- fmt.Errorf("authenticate: user=%+v ok=%v err=%v", user, ok, err)
+				return
+			}
+			results <- nil
+		}()
+	}
+	workers.Wait()
+	close(results)
+	for err := range results {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	user, err := store.Get("owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte("legacy-password")) != nil {
+		t.Fatalf("password was not upgraded to bcrypt: %q", user.PasswordHash)
+	}
+	if _, ok, err := store.Authenticate("owner", "wrong-password"); err != nil || ok {
+		t.Fatalf("wrong password accepted after upgrade: ok=%v err=%v", ok, err)
 	}
 }
