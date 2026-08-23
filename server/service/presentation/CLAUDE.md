@@ -144,3 +144,12 @@ inputs. Every apply rewrites them to match the active profile. They exist becaus
 on every app update, so an OTA or a downgrade can put the shell script back in charge of
 the boot path, and it must boot the user's gadget rather than a stale one. Removing them
 is a separate change, gated on the init script no longer being the boot-time configurator.
+
+## Profile packages
+
+The admin API stores custom profiles as JSON and keeps built-ins read-only in code. It accepts
+incompatible profiles for inspection and export; only preview and apply run the endpoint
+allocator. Package imports are ZIP archives with a strict `manifest.json`, SHA-256 references,
+and bounded descriptor assets. Device, configuration, BOS, string, and HID report descriptors
+are validated and preserved. The ConfigFS compiler still applies only fields and functions it
+models, so preserved assets are not evidence that a profile is descriptor-compatible.

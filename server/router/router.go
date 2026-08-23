@@ -41,6 +41,7 @@ func server(r *gin.Engine) {
 	streamRouter(r)
 	storageRouter(r)
 	networkRouter(r)
+	presentationRouter(r)
 	hidRouter(r)
 	controlRouter(r, control, picoclawService)
 	mcpRouter(r, control, picoclawService)

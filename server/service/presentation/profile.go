@@ -2,12 +2,16 @@ package presentation
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -55,6 +59,12 @@ func ParseNetworkKind(name string) (FunctionKind, error) {
 }
 
 var hidInstances = [...]string{"GS0", "GS1", "GS2"}
+
+var (
+	profileNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
+	instancePattern    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`)
+	stringIndexPattern = regexp.MustCompile(`^(?:0x[0-9A-Fa-f]{4}:)?(?:[1-9][0-9]{0,2})$`)
+)
 
 var (
 	descKeyboardStandard = []byte{
@@ -105,13 +115,22 @@ var (
 )
 
 type Profile struct {
-	SchemaVersion int        `json:"schema_version"`
-	Name          string     `json:"name"`
-	BuiltIn       bool       `json:"built_in"`
-	Device        Device     `json:"device"`
-	Config        ConfigDesc `json:"config"`
-	Functions     []Function `json:"functions"`
-	OSDesc        *OSDesc    `json:"os_desc,omitempty"`
+	SchemaVersion int            `json:"schema_version"`
+	Name          string         `json:"name"`
+	BuiltIn       bool           `json:"built_in"`
+	Device        Device         `json:"device"`
+	Config        ConfigDesc     `json:"config"`
+	Functions     []Function     `json:"functions"`
+	OSDesc        *OSDesc        `json:"os_desc,omitempty"`
+	Descriptors   *DescriptorSet `json:"descriptors,omitempty"`
+}
+
+type DescriptorSet struct {
+	Device         []byte            `json:"device,omitempty"`
+	Configurations [][]byte          `json:"configurations,omitempty"`
+	BOS            []byte            `json:"bos,omitempty"`
+	Strings        map[string]string `json:"strings,omitempty"`
+	HIDReports     map[string][]byte `json:"hid_reports,omitempty"`
 }
 
 type Device struct {
@@ -190,6 +209,9 @@ func (p *Profile) Validate() error {
 	if p.Name == "" {
 		return fmt.Errorf("profile name is empty")
 	}
+	if !profileNamePattern.MatchString(p.Name) {
+		return fmt.Errorf("profile name %q must match %s", p.Name, profileNamePattern)
+	}
 	if err := p.Device.validate(); err != nil {
 		return fmt.Errorf("device: %w", err)
 	}
@@ -225,7 +247,14 @@ func (p *Profile) Validate() error {
 		return err
 	}
 	if p.OSDesc != nil {
-		return p.OSDesc.validate()
+		if err := p.OSDesc.validate(); err != nil {
+			return err
+		}
+	}
+	if p.Descriptors != nil {
+		if err := p.Descriptors.validate(); err != nil {
+			return fmt.Errorf("descriptors: %w", err)
+		}
 	}
 	return nil
 }
@@ -271,6 +300,16 @@ func (d *Device) validate() error {
 	if d.Manufacturer == "" || d.Product == "" {
 		return fmt.Errorf("manufacturer and product are required")
 	}
+	for name, value := range map[string]string{"manufacturer": d.Manufacturer, "product": d.Product} {
+		if err := usbString(name, value); err != nil {
+			return err
+		}
+	}
+	if d.Serial != nil {
+		if err := usbString("serial", *d.Serial); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -284,15 +323,21 @@ func (c *ConfigDesc) validate() error {
 	if c.Configuration == "" {
 		return fmt.Errorf("configuration string is empty")
 	}
-	return nil
+	if c.BMAttributes&^0xE0 != 0 {
+		return fmt.Errorf("bmAttributes 0x%02X contains reserved bits", c.BMAttributes)
+	}
+	return usbString("configuration", c.Configuration)
 }
 
 func (f *Function) validate() error {
-	if f.Instance == "" {
-		return fmt.Errorf("instance is empty")
+	if !instancePattern.MatchString(f.Instance) {
+		return fmt.Errorf("invalid instance %q", f.Instance)
 	}
 	switch f.Kind {
 	case FunctionHID:
+		if f.Instance != "GS0" && f.Instance != "GS1" && f.Instance != "GS2" {
+			return fmt.Errorf("unsupported hid instance %q", f.Instance)
+		}
 		if f.HID == nil || f.Net != nil || f.Storage != nil {
 			return fmt.Errorf("expects exactly a hid payload")
 		}
@@ -338,8 +383,13 @@ func (n *NetFunction) validate() error {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
-	if n.CompatibleID == "" {
-		return fmt.Errorf("compatible id is empty")
+	for name, value := range map[string]string{"compatible id": n.CompatibleID, "sub-compatible id": n.SubCompatibleID} {
+		if name == "compatible id" && value == "" {
+			return fmt.Errorf("compatible id is empty")
+		}
+		if len(value) > 8 || strings.IndexFunc(value, func(r rune) bool { return r < 0x20 || r > 0x7E }) >= 0 {
+			return fmt.Errorf("%s must be at most 8 printable ASCII bytes", name)
+		}
 	}
 	return nil
 }
@@ -351,15 +401,257 @@ func (s *StorageFunction) validate() error {
 	if s.File == "" {
 		return fmt.Errorf("backing file is empty")
 	}
+	clean := filepath.Clean(s.File)
+	if clean != s.File || !filepath.IsAbs(clean) || strings.ContainsAny(s.File, "\x00\r\n") {
+		return fmt.Errorf("backing file %q is not a clean absolute path", s.File)
+	}
 	return nil
 }
 
 func (o *OSDesc) validate() error {
-	if err := hexU16("os desc vendor code", o.VendorCode); err != nil {
+	if err := hexUint("os desc vendor code", o.VendorCode, 8); err != nil {
 		return err
 	}
-	if o.QwSign == "" {
-		return fmt.Errorf("os desc qw_sign is empty")
+	if o.QwSign == "" || len(o.QwSign) > 14 || strings.IndexFunc(o.QwSign, func(r rune) bool { return r < 0x20 || r > 0x7E }) >= 0 {
+		return fmt.Errorf("os desc qw_sign must be 1 to 14 printable ASCII bytes")
+	}
+	return nil
+}
+
+func (d *DescriptorSet) validate() error {
+	if len(d.Device) == 0 && len(d.Configurations) == 0 && len(d.BOS) == 0 && len(d.Strings) == 0 && len(d.HIDReports) == 0 {
+		return fmt.Errorf("descriptor set is empty")
+	}
+	if len(d.Device) != 0 {
+		if err := validateDeviceDescriptor(d.Device, len(d.Configurations), d.Strings); err != nil {
+			return err
+		}
+	}
+	for i, config := range d.Configurations {
+		if err := validateConfigurationDescriptor(config, d.Strings); err != nil {
+			return fmt.Errorf("configuration %d: %w", i, err)
+		}
+	}
+	if len(d.BOS) != 0 {
+		if err := validateBOSDescriptor(d.BOS); err != nil {
+			return err
+		}
+	}
+	for index, value := range d.Strings {
+		if !stringIndexPattern.MatchString(index) {
+			return fmt.Errorf("invalid string index %q", index)
+		}
+		parts := strings.Split(index, ":")
+		n, err := strconv.ParseUint(parts[len(parts)-1], 10, 8)
+		if err != nil || n == 0 {
+			return fmt.Errorf("invalid string index %q", index)
+		}
+		if err := usbString("descriptor string "+index, value); err != nil {
+			return err
+		}
+	}
+	for instance, report := range d.HIDReports {
+		if !instancePattern.MatchString(instance) {
+			return fmt.Errorf("invalid hid report name %q", instance)
+		}
+		if err := validateHIDReportDescriptor(report); err != nil {
+			return fmt.Errorf("hid report %s: %w", instance, err)
+		}
+	}
+	return nil
+}
+
+func validateDeviceDescriptor(data []byte, configurations int, strings map[string]string) error {
+	if len(data) != 18 || data[0] != 18 || data[1] != 1 {
+		return fmt.Errorf("device descriptor must be one 18-byte device descriptor")
+	}
+	if packet := data[7]; packet != 8 && packet != 16 && packet != 32 && packet != 64 {
+		return fmt.Errorf("device descriptor has invalid endpoint-zero packet size %d", packet)
+	}
+	if data[17] == 0 || int(data[17]) != configurations {
+		return fmt.Errorf("device descriptor names %d configurations, package has %d", data[17], configurations)
+	}
+	for _, index := range data[14:17] {
+		if index == 0 || descriptorStringExists(strings, index) {
+			continue
+		}
+		return fmt.Errorf("device descriptor references missing string %d", index)
+	}
+	return nil
+}
+
+func descriptorStringExists(values map[string]string, index byte) bool {
+	want := strconv.Itoa(int(index))
+	for key := range values {
+		parts := strings.Split(key, ":")
+		if parts[len(parts)-1] == want {
+			return true
+		}
+	}
+	return false
+}
+
+func validateConfigurationDescriptor(data []byte, strings map[string]string) error {
+	if len(data) < 9 || data[0] != 9 || data[1] != 2 {
+		return fmt.Errorf("missing configuration header")
+	}
+	if total := int(binary.LittleEndian.Uint16(data[2:4])); total != len(data) {
+		return fmt.Errorf("wTotalLength is %d, file is %d", total, len(data))
+	}
+	if data[5] == 0 {
+		return fmt.Errorf("bConfigurationValue is zero")
+	}
+	if data[6] != 0 && !descriptorStringExists(strings, data[6]) {
+		return fmt.Errorf("configuration references missing string %d", data[6])
+	}
+
+	type interfaceKey struct{ number, alternate byte }
+	interfaces := make(map[byte]bool)
+	endpoints := make(map[interfaceKey]map[byte]bool)
+	endpointOwners := make(map[byte]byte)
+	declared := make(map[interfaceKey]byte)
+	var current *interfaceKey
+	for offset := 0; offset < len(data); {
+		length := int(data[offset])
+		if length < 2 || offset+length > len(data) {
+			return fmt.Errorf("descriptor at offset %d overruns the configuration", offset)
+		}
+		typeID := data[offset+1]
+		switch typeID {
+		case 4:
+			if length < 9 {
+				return fmt.Errorf("short interface descriptor at offset %d", offset)
+			}
+			key := interfaceKey{data[offset+2], data[offset+3]}
+			if _, exists := declared[key]; exists {
+				return fmt.Errorf("duplicate interface %d alternate %d", key.number, key.alternate)
+			}
+			interfaces[key.number] = true
+			if data[offset+8] != 0 && !descriptorStringExists(strings, data[offset+8]) {
+				return fmt.Errorf("interface %d references missing string %d", key.number, data[offset+8])
+			}
+			declared[key] = data[offset+4]
+			endpoints[key] = make(map[byte]bool)
+			current = &key
+		case 5:
+			if length < 7 || current == nil {
+				return fmt.Errorf("endpoint descriptor at offset %d has no interface", offset)
+			}
+			address := data[offset+2]
+			if address&0x0F == 0 || address&0x70 != 0 {
+				return fmt.Errorf("invalid endpoint address 0x%02X", address)
+			}
+			if endpoints[*current][address] {
+				return fmt.Errorf("duplicate endpoint 0x%02X", address)
+			}
+			if owner, exists := endpointOwners[address]; exists && owner != current.number {
+				return fmt.Errorf("endpoint 0x%02X belongs to interfaces %d and %d", address, owner, current.number)
+			}
+			endpoints[*current][address] = true
+			endpointOwners[address] = current.number
+			packet := binary.LittleEndian.Uint16(data[offset+4:offset+6]) & 0x07FF
+			if packet == 0 || packet > 1024 {
+				return fmt.Errorf("invalid endpoint packet size %d", packet)
+			}
+		case 11:
+			if length < 8 {
+				return fmt.Errorf("short interface association descriptor at offset %d", offset)
+			}
+			if data[offset+7] != 0 && !descriptorStringExists(strings, data[offset+7]) {
+				return fmt.Errorf("interface association references missing string %d", data[offset+7])
+			}
+		}
+		offset += length
+	}
+	if len(interfaces) != int(data[4]) {
+		return fmt.Errorf("bNumInterfaces is %d, descriptors define %d", data[4], len(interfaces))
+	}
+	for key := range declared {
+		if key.alternate == 0 {
+			continue
+		}
+		if _, ok := declared[interfaceKey{number: key.number}]; !ok {
+			return fmt.Errorf("interface %d has no alternate setting zero", key.number)
+		}
+	}
+	for key, count := range declared {
+		if len(endpoints[key]) != int(count) {
+			return fmt.Errorf("interface %d alternate %d declares %d endpoints, has %d", key.number, key.alternate, count, len(endpoints[key]))
+		}
+	}
+	return nil
+}
+
+func validateBOSDescriptor(data []byte) error {
+	if len(data) < 5 || data[0] != 5 || data[1] != 15 {
+		return fmt.Errorf("bos descriptor is missing its header")
+	}
+	if total := int(binary.LittleEndian.Uint16(data[2:4])); total != len(data) {
+		return fmt.Errorf("bos wTotalLength is %d, file is %d", total, len(data))
+	}
+	capabilities := 0
+	for offset := 5; offset < len(data); {
+		length := int(data[offset])
+		if length < 3 || offset+length > len(data) || data[offset+1] != 16 {
+			return fmt.Errorf("invalid bos capability at offset %d", offset)
+		}
+		capabilities++
+		offset += length
+	}
+	if capabilities != int(data[4]) {
+		return fmt.Errorf("bos names %d capabilities, has %d", data[4], capabilities)
+	}
+	return nil
+}
+
+func validateHIDReportDescriptor(data []byte) error {
+	if len(data) == 0 || len(data) > 64<<10 {
+		return fmt.Errorf("size %d is outside 1..65536", len(data))
+	}
+	mainItems := 0
+	collections := 0
+	for offset := 0; offset < len(data); {
+		prefix := data[offset]
+		if prefix == 0xFE {
+			if offset+3 > len(data) || offset+3+int(data[offset+1]) > len(data) {
+				return fmt.Errorf("truncated long item at offset %d", offset)
+			}
+			offset += 3 + int(data[offset+1])
+			continue
+		}
+		size := int(prefix & 0x03)
+		if size == 3 {
+			size = 4
+		}
+		if offset+1+size > len(data) {
+			return fmt.Errorf("truncated item at offset %d", offset)
+		}
+		if prefix&0x0C == 0 && prefix&0xF0 >= 0x80 && prefix&0xF0 <= 0xB0 {
+			mainItems++
+		}
+		switch prefix & 0xFC {
+		case 0xA0:
+			collections++
+		case 0xC0:
+			collections--
+			if collections < 0 {
+				return fmt.Errorf("collection closes before it opens at offset %d", offset)
+			}
+		}
+		offset += 1 + size
+	}
+	if collections != 0 {
+		return fmt.Errorf("%d collections remain open", collections)
+	}
+	if mainItems == 0 {
+		return fmt.Errorf("contains no input, output, feature, or collection item")
+	}
+	return nil
+}
+
+func usbString(name, value string) error {
+	if !utf8.ValidString(value) || len(value) > 126 || strings.IndexFunc(value, func(r rune) bool { return r < 0x20 || r == 0x7F }) >= 0 {
+		return fmt.Errorf("%s must be valid UTF-8 without control characters and at most 126 bytes", name)
 	}
 	return nil
 }
@@ -402,10 +694,14 @@ func reportLength(desc []byte) (uint16, error) {
 }
 
 func hexU16(name, value string) error {
+	return hexUint(name, value, 16)
+}
+
+func hexUint(name, value string, bits int) error {
 	if !strings.HasPrefix(value, "0x") {
 		return fmt.Errorf("%s %q is not 0x-prefixed", name, value)
 	}
-	if _, err := strconv.ParseUint(value[2:], 16, 16); err != nil {
+	if _, err := strconv.ParseUint(value[2:], 16, bits); err != nil {
 		return fmt.Errorf("%s %q: %w", name, value, err)
 	}
 	return nil
