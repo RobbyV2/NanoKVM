@@ -97,6 +97,37 @@ jobs:
           # shellcheck disable=SC2086 # PACKAGES is a space-separated list of import paths.
           go test $PACKAGES
 
+  kernel:
+    name: Kernel tier 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Tier 2 is not wired here and cannot be on a GitHub-hosted runner as it
+    # stands. The -azure kernel is built with CONFIG_USB_GADGET unset, so
+    # libcomposite, every usb_f_*, raw_gadget and usbip-host are absent from
+    # both linux-modules-azure and linux-modules-extra-azure; there is nothing
+    # to install. Only vhci-hcd, configfs, bridge and veth survive, which is
+    # exactly what this job runs. Running tier 2 in CI needs a nested KVM job whose
+    # /dev/kvm has been checked in a real run rather than read about in the
+    # docs, and until someone does that it is "make kernelint-tier2" locally.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: Kernel tier 1
+        # Root, because the tests load vhci_hcd and add links. Everything they
+        # touch is inside a network namespace the script creates and deletes.
+        run: sudo env "PATH=$PATH" scripts/kernelint.sh tier1
+
   web:
     name: Web
     runs-on: ubuntu-latest
