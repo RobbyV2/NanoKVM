@@ -7,6 +7,7 @@ import {
   LoaderCircleIcon,
   SaveIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   Undo2Icon,
   UploadIcon
 } from 'lucide-react';
@@ -14,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/presentation.ts';
 import type {
+  Preset,
   PresentationPreview,
   PresentationProfile,
   PresentationStatus,
@@ -29,12 +31,14 @@ import {
 } from '@/pages/desktop/capture-status/model.ts';
 
 import {
+  applyPreset,
   descriptorCount,
   editIdentity,
   formatFIFOs,
   identityChanged,
   identityFields,
   isProfileName,
+  matchPreset,
   recoveryKey,
   type IdentityFields
 } from './editor.ts';
@@ -49,6 +53,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   const fileInput = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<PresentationStatus>();
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [selected, setSelected] = useState('');
   const [profile, setProfile] = useState<PresentationProfile>();
   const [fields, setFields] = useState<IdentityFields>();
@@ -99,6 +104,13 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    api.getPresets().then((rsp) => {
+      if (rsp.code !== 0) setError(rsp.msg);
+      else setPresets(rsp.data.presets as Preset[]);
+    });
+  }, []);
 
   useEffect(() => {
     return client.on(CAPTURE_STATUS_EVENT, (message) => {
@@ -257,6 +269,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   }
 
   const readOnly = profile?.built_in !== false;
+  const preset = fields && matchPreset(presets, fields);
   const assets = profile ? descriptorCount(profile) : 0;
   const snapshot = status?.snapshot;
   const udc = snapshot?.udc;
@@ -436,13 +449,47 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                     </div>
                   )}
                 </div>
+                {!readOnly && presets.length > 0 && (
+                  <label className="block space-y-1">
+                    <span className="text-xs text-neutral-400">
+                      {t('settings.presentation.preset')}
+                    </span>
+                    <Select
+                      className="w-full"
+                      size="small"
+                      value={preset?.id}
+                      placeholder={t('settings.presentation.presetPlaceholder')}
+                      options={presets.map((item) => ({
+                        value: item.id,
+                        label: `${item.manufacturer} ${item.product} · ${item.vendor_id}:${item.product_id}`
+                      }))}
+                      onChange={(id) => {
+                        const picked = presets.find((item) => item.id === id);
+                        if (picked) setFields(applyPreset(fields, picked));
+                      }}
+                    />
+                    <span className="block text-xs text-neutral-500">
+                      {preset
+                        ? t('settings.presentation.presetSource', { source: preset.source })
+                        : t('settings.presentation.presetHint')}
+                    </span>
+                  </label>
+                )}
                 <div className="grid grid-cols-2 gap-3">
-                  <Field
-                    label={t('settings.presentation.vendorId')}
-                    value={fields.vendorId}
-                    disabled={readOnly}
-                    onChange={(vendorId) => setFields({ ...fields, vendorId })}
-                  />
+                  <div className="space-y-1">
+                    <Field
+                      label={t('settings.presentation.vendorId')}
+                      value={fields.vendorId}
+                      disabled={readOnly}
+                      onChange={(vendorId) => setFields({ ...fields, vendorId })}
+                    />
+                    {preview?.device.foreign_vendor && (
+                      <div className="flex items-center space-x-1 text-xs text-amber-500">
+                        <TriangleAlertIcon size={13} className="shrink-0" />
+                        <span>{t('settings.presentation.foreignVendor')}</span>
+                      </div>
+                    )}
+                  </div>
                   <Field
                     label={t('settings.presentation.productId')}
                     value={fields.productId}

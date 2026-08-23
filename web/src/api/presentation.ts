@@ -11,6 +11,16 @@ export type DeviceIdentity = {
   serial?: string;
   manufacturer: string;
   product: string;
+  foreign_vendor: boolean;
+};
+
+export type Preset = {
+  id: string;
+  vendor_id: string;
+  product_id: string;
+  manufacturer: string;
+  product: string;
+  source: string;
 };
 
 export type RecoveryAction = 'power-cycle' | 'host-reboot' | 'hdmi-reset' | 'usb-reconnect';
@@ -130,6 +140,10 @@ export type PresentationStatus = {
 
 export function getStatus() {
   return http.get('/api/presentation/status');
+}
+
+export function getPresets() {
+  return http.get('/api/presentation/presets');
 }
 
 export function getProfiles() {

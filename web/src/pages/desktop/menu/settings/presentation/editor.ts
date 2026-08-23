@@ -1,4 +1,4 @@
-import type { FIFOAssignment, PresentationProfile } from '@/api/presentation.ts';
+import type { FIFOAssignment, Preset, PresentationProfile } from '@/api/presentation.ts';
 
 export type IdentityFields = {
   vendorId: string;
@@ -48,6 +48,28 @@ export function editIdentity(
     },
     config: { ...profile.config, configuration: fields.configuration.trim() }
   };
+}
+
+export function applyPreset(fields: IdentityFields, preset: Preset): IdentityFields {
+  return {
+    ...fields,
+    vendorId: preset.vendor_id,
+    productId: preset.product_id,
+    manufacturer: preset.manufacturer,
+    product: preset.product
+  };
+}
+
+// Mirrors Preset.matches on the server, which is what demotes a profile's
+// preset provenance once the four fields stop agreeing with the entry.
+export function matchPreset(presets: Preset[], fields: IdentityFields) {
+  return presets.find(
+    (preset) =>
+      preset.vendor_id.toLowerCase() === fields.vendorId.trim().toLowerCase() &&
+      preset.product_id.toLowerCase() === fields.productId.trim().toLowerCase() &&
+      preset.manufacturer === fields.manufacturer.trim() &&
+      preset.product === fields.product.trim()
+  );
 }
 
 export function descriptorCount(profile: PresentationProfile) {

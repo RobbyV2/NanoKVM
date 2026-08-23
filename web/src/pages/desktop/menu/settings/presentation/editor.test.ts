@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { PresentationProfile } from '../../../../../api/presentation.ts';
+import type { Preset, PresentationProfile } from '../../../../../api/presentation.ts';
 import {
+  applyPreset,
   descriptorCount,
   editIdentity,
   formatFIFOs,
   identityChanged,
   identityFields,
   isProfileName,
+  matchPreset,
   recoveryKey
 } from './editor.ts';
 
@@ -59,6 +61,37 @@ test('safe identity edits preserve functions and descriptor assets', () => {
   assert.equal(edited.device.serial, undefined);
   assert.strictEqual(edited.functions, profile.functions);
   assert.strictEqual(edited.descriptors, profile.descriptors);
+});
+
+const presets: Preset[] = [
+  {
+    id: 'logitech-unifying-receiver',
+    vendor_id: '0x046d',
+    product_id: '0xc52b',
+    manufacturer: 'Logitech, Inc.',
+    product: 'Unifying Receiver',
+    source: 'usb.ids 046d:c52b'
+  }
+];
+
+test('a preset fills the identity it can state and leaves the rest alone', () => {
+  const filled = applyPreset(identityFields(profile), presets[0]);
+
+  assert.equal(filled.vendorId, '0x046d');
+  assert.equal(filled.productId, '0xc52b');
+  assert.equal(filled.manufacturer, 'Logitech, Inc.');
+  assert.equal(filled.product, 'Unifying Receiver');
+  assert.equal(filled.serial, '0123');
+  assert.equal(filled.bcdDevice, '0x0510');
+  assert.equal(filled.configuration, 'NanoKVM');
+});
+
+test('a preset stays selected only while all four fields still agree', () => {
+  const filled = applyPreset(identityFields(profile), presets[0]);
+  assert.equal(matchPreset(presets, filled)?.id, 'logitech-unifying-receiver');
+  assert.equal(matchPreset(presets, { ...filled, vendorId: '0x046D' })?.id, presets[0].id);
+  assert.equal(matchPreset(presets, { ...filled, product: 'Desk KVM' }), undefined);
+  assert.equal(matchPreset(presets, identityFields(profile)), undefined);
 });
 
 test('descriptor summary counts every stored asset', () => {
