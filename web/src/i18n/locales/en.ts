@@ -451,7 +451,13 @@ const en = {
         deleteTitle: 'Delete this profile?',
         deleteDesc: 'Delete {{profile}} from NanoKVM.',
         identity: 'USB identity',
+        preset: 'Preset identity',
+        presetPlaceholder: 'Copy identity from a known device',
+        presetHint:
+          'A preset fills the vendor ID, the product ID and the two name fields. It carries no descriptors.',
+        presetSource: 'Identity as recorded in {{source}}',
         vendorId: 'Vendor ID',
+        foreignVendor: 'This vendor ID belongs to another manufacturer',
         productId: 'Product ID',
         bcdUSB: 'USB version',
         bcdDevice: 'Device version',

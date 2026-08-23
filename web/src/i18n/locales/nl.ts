@@ -287,9 +287,32 @@ const nl = {
       cancelBtn: 'Nee'
     },
     devices: {
+      title: 'Apparaten',
+      stale: 'De live status van de apparaten is niet beschikbaar. Bezig met opnieuw verbinden.',
+      empty: 'Er zijn geen camera- of microfoonplekken geconfigureerd.',
+      available: 'Beschikbaar',
+      waiting: 'De host wacht op een bron',
+      hostOpen: 'Host open',
+      hostIdle: 'Host inactief',
+      sending: 'Verzendt vanuit deze browser',
+      black: 'Zwart beeld',
+      silence: 'Digitale stilte',
+      resuming: 'Wacht op hervatten',
+      stop: 'Delen stoppen',
+      disconnect: 'Loskoppelen',
       takeover: 'Overnemen',
       refused: 'In gebruik door {{owner}} vanaf {{source}}',
+      connectedSources_one: '{{count}} verbonden bron',
+      connectedSources_other: '{{count}} verbonden bronnen',
+      connectedSources: '{{count}} verbonden bronnen',
+      connection: {
+        connecting: 'Verbinden',
+        connected: 'Live',
+        disconnected: 'Opnieuw verbinden'
+      },
       share: {
+        camera: 'Camera delen',
+        microphone: 'Microfoon delen',
         usbDevice: 'USB delen'
       },
       permission: {
@@ -391,6 +414,9 @@ const nl = {
         cancelBtn: 'Annuleren'
       },
       presentation: {
+        title: 'USB-presentatie',
+        loading: 'Laden...',
+        current: 'Huidige USB-presentatie',
         noProfile: 'Geen profiel toegepast',
         linked: 'Gekoppelde functies',
         hostState: 'USB van de host',
@@ -415,7 +441,46 @@ const nl = {
         rollback: 'Terugdraaien',
         rollbackTitle: 'Terugdraaien naar {{profile}}?',
         rollbackDesc: 'De gadget wordt opnieuw geënumereerd; USB-functies vallen even weg.',
+        profile: 'USB-profiel',
+        builtIn: 'ingebouwd',
         descriptors: 'descriptors',
+        clone: 'Klonen',
+        cloneTitle: 'Dit profiel klonen',
+        cloneToEdit:
+          'Ingebouwde profielen blijven alleen-lezen. Kloon dit profiel om de identiteit te bewerken.',
+        profileName: 'Profielnaam',
+        profileNameHint: 'Kleine letters, cijfers, punten, liggende streepjes en koppeltekens.',
+        import: 'Pakket importeren',
+        export: 'Pakket exporteren',
+        delete: 'Verwijderen',
+        deleteTitle: 'Dit profiel verwijderen?',
+        deleteDesc: '{{profile}} van de NanoKVM verwijderen.',
+        identity: 'USB-identiteit',
+        preset: 'Vooraf ingestelde identiteit',
+        presetPlaceholder: 'Identiteit van een bekend apparaat overnemen',
+        presetHint:
+          'Een voorinstelling vult de Vendor ID, de Product ID en de twee naamvelden. Descriptors brengt ze niet mee.',
+        presetSource: 'Identiteit zoals vastgelegd in {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Deze Vendor ID hoort bij een andere fabrikant',
+        productId: 'Product ID',
+        bcdUSB: 'USB-versie',
+        bcdDevice: 'Apparaatversie',
+        manufacturer: 'Fabrikant',
+        product: 'Product',
+        serial: 'Serienummer',
+        configuration: 'Configuratiereeks',
+        functions: 'Functies',
+        descriptorAssets: 'Opgeslagen descriptors: {{count}}',
+        endpointUse:
+          'IN {{inUse}} in gebruik, {{inFree}} vrij; OUT {{outUse}} in gebruik, {{outFree}} vrij',
+        preview: 'Valideren',
+        save: 'Opslaan',
+        apply: 'Toepassen',
+        applyTitle: 'Dit USB-profiel toepassen?',
+        applyDesc: 'De NanoKVM presenteert {{profile}} aan de aangesloten computer.',
+        reconnect:
+          'Toetsenbord, muis en andere USB-functies vallen even weg terwijl de gadget opnieuw wordt gekoppeld.',
         applyLinks: 'Koppelt: {{functions}}',
         applyRemoves: 'Verwijdert: {{functions}}',
         applyNoHid:
@@ -427,7 +492,11 @@ const nl = {
           'Er verdwijnt een interface uit het samengestelde apparaat; de host heeft mogelijk een herstart nodig om de rest opnieuw te binden.',
         recoveryHdmiReset:
           'Een videofunctie wordt opnieuw opgebouwd, waardoor de opnameketen erachter reset.',
-        recoveryReconnect: 'De host enumereert het apparaat opnieuw; USB-functies vallen even weg.'
+        recoveryReconnect: 'De host enumereert het apparaat opnieuw; USB-functies vallen even weg.',
+        cancel: 'Annuleren',
+        noFunctions: 'Geen gekoppelde functies',
+        loadFailed: 'De presentatieprofielen konden niet worden geladen',
+        operationFailed: 'De presentatiebewerking is mislukt'
       },
       passthrough: {
         title: 'USB-passthrough',

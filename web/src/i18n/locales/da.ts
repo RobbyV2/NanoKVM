@@ -284,9 +284,32 @@ const da = {
       cancelBtn: 'Annuller'
     },
     devices: {
+      title: 'Enheder',
+      stale: 'Enhedernes livestatus er ikke tilgængelig. Opretter forbindelse igen.',
+      empty: 'Der er ikke konfigureret nogen kamera- eller mikrofonpladser.',
+      available: 'Tilgængelig',
+      waiting: 'Værten venter på en kilde',
+      hostOpen: 'Vært åben',
+      hostIdle: 'Vært inaktiv',
+      sending: 'Sender fra denne browser',
+      black: 'Sort video',
+      silence: 'Digital stilhed',
+      resuming: 'Venter på at fortsætte',
+      stop: 'Stop deling',
+      disconnect: 'Afbryd',
       takeover: 'Overtag',
       refused: 'Bruges af {{owner}} fra {{source}}',
+      connectedSources_one: '{{count}} tilsluttet kilde',
+      connectedSources_other: '{{count}} tilsluttede kilder',
+      connectedSources: '{{count}} tilsluttede kilder',
+      connection: {
+        connecting: 'Opretter forbindelse',
+        connected: 'Live',
+        disconnected: 'Opretter forbindelse igen'
+      },
       share: {
+        camera: 'Del kamera',
+        microphone: 'Del mikrofon',
         usbDevice: 'Del USB'
       },
       permission: {
@@ -387,6 +410,9 @@ const da = {
         cancelBtn: 'Annuller'
       },
       presentation: {
+        title: 'USB-præsentation',
+        loading: 'Indlæser...',
+        current: 'Nuværende USB-præsentation',
         noProfile: 'Ingen profil anvendt',
         linked: 'Tilknyttede funktioner',
         hostState: 'Værtens USB',
@@ -411,7 +437,46 @@ const da = {
         rollback: 'Rul tilbage',
         rollbackTitle: 'Rul tilbage til {{profile}}?',
         rollbackDesc: 'Gadgetten opregnes på ny; USB-funktioner falder kortvarigt ud.',
+        profile: 'USB-profil',
+        builtIn: 'indbygget',
         descriptors: 'deskriptorer',
+        clone: 'Klon',
+        cloneTitle: 'Klon denne profil',
+        cloneToEdit:
+          'Indbyggede profiler forbliver skrivebeskyttede. Klon denne profil for at redigere dens identitet.',
+        profileName: 'Profilnavn',
+        profileNameHint: 'Små bogstaver, tal, punktummer, understreger og bindestreger.',
+        import: 'Importer pakke',
+        export: 'Eksporter pakke',
+        delete: 'Slet',
+        deleteTitle: 'Slet denne profil?',
+        deleteDesc: 'Slet {{profile}} fra NanoKVM.',
+        identity: 'USB-identitet',
+        preset: 'Forudindstillet identitet',
+        presetPlaceholder: 'Kopier identitet fra en kendt enhed',
+        presetHint:
+          'En forudindstilling udfylder Vendor ID, Product ID og de to navnefelter. Den medbringer ingen deskriptorer.',
+        presetSource: 'Identitet som registreret i {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Dette Vendor ID tilhører en anden producent',
+        productId: 'Product ID',
+        bcdUSB: 'USB-version',
+        bcdDevice: 'Enhedsversion',
+        manufacturer: 'Producent',
+        product: 'Produkt',
+        serial: 'Serienummer',
+        configuration: 'Konfigurationsstreng',
+        functions: 'Funktioner',
+        descriptorAssets: 'Gemte deskriptorfiler: {{count}}',
+        endpointUse:
+          'IN {{inUse}} brugt, {{inFree}} ledige; OUT {{outUse}} brugt, {{outFree}} ledige',
+        preview: 'Validér',
+        save: 'Gem',
+        apply: 'Anvend',
+        applyTitle: 'Anvend denne USB-profil?',
+        applyDesc: 'NanoKVM vil præsentere {{profile}} for den tilsluttede computer.',
+        reconnect:
+          'Tastatur, mus og andre USB-funktioner afbrydes kortvarigt, mens gadgetten bindes igen.',
         applyLinks: 'Tilknytter: {{functions}}',
         applyRemoves: 'Fjerner: {{functions}}',
         applyNoHid:
@@ -422,7 +487,11 @@ const da = {
         recoveryReboot:
           'En grænseflade forsvinder fra den sammensatte enhed; værten kan have brug for en genstart for at binde resten igen.',
         recoveryHdmiReset: 'En videofunktion bygges op igen, så optagekæden bag den nulstilles.',
-        recoveryReconnect: 'Værten opregner enheden på ny; USB-funktioner falder kortvarigt ud.'
+        recoveryReconnect: 'Værten opregner enheden på ny; USB-funktioner falder kortvarigt ud.',
+        cancel: 'Annuller',
+        noFunctions: 'Ingen tilknyttede funktioner',
+        loadFailed: 'Præsentationsprofilerne kunne ikke indlæses',
+        operationFailed: 'Præsentationshandlingen mislykkedes'
       },
       passthrough: {
         title: 'USB-passthrough',

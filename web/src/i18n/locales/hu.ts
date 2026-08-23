@@ -287,9 +287,32 @@ const hu = {
       cancelBtn: 'Nem'
     },
     devices: {
+      title: 'Eszközök',
+      stale: 'Az eszközök élő állapota nem érhető el. Újracsatlakozás folyamatban.',
+      empty: 'Nincs beállítva kamera- vagy mikrofonhely.',
+      available: 'Elérhető',
+      waiting: 'A gazdagép forrásra vár',
+      hostOpen: 'A gazdagép nyitva',
+      hostIdle: 'A gazdagép tétlen',
+      sending: 'Küldés erről a böngészőről',
+      black: 'Fekete kép',
+      silence: 'Digitális csend',
+      resuming: 'Folytatásra vár',
+      stop: 'Megosztás leállítása',
+      disconnect: 'Lecsatlakoztatás',
       takeover: 'Átvétel',
       refused: 'Használatban: {{owner}}, forrás: {{source}}',
+      connectedSources_one: '{{count}} csatlakoztatott forrás',
+      connectedSources_other: '{{count}} csatlakoztatott forrás',
+      connectedSources: '{{count}} csatlakoztatott forrás',
+      connection: {
+        connecting: 'Csatlakozás',
+        connected: 'Élő',
+        disconnected: 'Újracsatlakozás'
+      },
       share: {
+        camera: 'Kamera megosztása',
+        microphone: 'Mikrofon megosztása',
         usbDevice: 'USB megosztása'
       },
       permission: {
@@ -389,6 +412,9 @@ const hu = {
         cancelBtn: 'Mégse'
       },
       presentation: {
+        title: 'USB-megjelenés',
+        loading: 'Betöltés...',
+        current: 'Jelenlegi USB-megjelenés',
         noProfile: 'Nincs alkalmazott profil',
         linked: 'Összekapcsolt funkciók',
         hostState: 'A gazdagép USB-je',
@@ -413,7 +439,47 @@ const hu = {
         rollback: 'Visszaállítás',
         rollbackTitle: 'Visszaáll erre: {{profile}}?',
         rollbackDesc: 'A gadget újra felsorolódik; az USB-funkciók rövid időre kiesnek.',
+        profile: 'USB-profil',
+        builtIn: 'beépített',
         descriptors: 'leírók',
+        clone: 'Klónozás',
+        cloneTitle: 'A profil klónozása',
+        cloneToEdit:
+          'A beépített profilok csak olvashatók maradnak. Klónozza ezt a profilt az identitásának szerkesztéséhez.',
+        profileName: 'Profil neve',
+        profileNameHint: 'Kisbetűk, számjegyek, pontok, aláhúzások és kötőjelek.',
+        import: 'Csomag importálása',
+        export: 'Csomag exportálása',
+        delete: 'Törlés',
+        deleteTitle: 'Törli ezt a profilt?',
+        deleteDesc: '{{profile}} törlése a NanoKVM-ről.',
+        identity: 'USB-identitás',
+        preset: 'Előbeállított identitás',
+        presetPlaceholder: 'Identitás átvétele egy ismert eszközről',
+        presetHint:
+          'Egy előbeállítás kitölti a Vendor ID-t, a Product ID-t és a két névmezőt. Leírókat nem hoz magával.',
+        presetSource: 'Az identitás úgy, ahogy a(z) {{source}} rögzíti',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Ez a Vendor ID egy másik gyártóé',
+        productId: 'Product ID',
+        bcdUSB: 'USB-verzió',
+        bcdDevice: 'Eszközverzió',
+        manufacturer: 'Gyártó',
+        product: 'Termék',
+        serial: 'Sorozatszám',
+        configuration: 'Konfigurációs karakterlánc',
+        functions: 'Funkciók',
+        descriptorAssets: 'Tárolt leírófájlok: {{count}}',
+        endpointUse:
+          'IN {{inUse}} használatban, {{inFree}} szabad; OUT {{outUse}} használatban, {{outFree}} szabad',
+        preview: 'Ellenőrzés',
+        save: 'Mentés',
+        apply: 'Alkalmaz',
+        applyTitle: 'Alkalmazza ezt az USB-profilt?',
+        applyDesc:
+          'A NanoKVM a(z) {{profile}} profilt fogja mutatni a csatlakoztatott számítógépnek.',
+        reconnect:
+          'A billentyűzet, az egér és a többi USB-funkció rövid időre lecsatlakozik, amíg a gadget újra hozzákötődik.',
         applyLinks: 'Összekapcsolja: {{functions}}',
         applyRemoves: 'Eltávolítja: {{functions}}',
         applyNoHid:
@@ -426,7 +492,11 @@ const hu = {
         recoveryHdmiReset:
           'Egy videofunkció újraépül, ezért a mögötte lévő rögzítési lánc alaphelyzetbe áll.',
         recoveryReconnect:
-          'A gazdagép újra felsorolja az eszközt; az USB-funkciók rövid időre kiesnek.'
+          'A gazdagép újra felsorolja az eszközt; az USB-funkciók rövid időre kiesnek.',
+        cancel: 'Mégse',
+        noFunctions: 'Nincs összekapcsolt funkció',
+        loadFailed: 'A megjelenési profilok betöltése nem sikerült',
+        operationFailed: 'Az USB-megjelenés művelete nem sikerült'
       },
       passthrough: {
         title: 'USB-átjátszás',

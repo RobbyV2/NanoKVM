@@ -283,9 +283,32 @@ const vi = {
       cancelBtn: 'Không'
     },
     devices: {
+      title: 'Thiết bị',
+      stale: 'Không lấy được trạng thái trực tiếp của thiết bị. Đang kết nối lại.',
+      empty: 'Chưa cấu hình khe camera hoặc micrô nào.',
+      available: 'Sẵn sàng',
+      waiting: 'Máy chủ đang chờ một nguồn',
+      hostOpen: 'Máy chủ đang mở',
+      hostIdle: 'Máy chủ đang rảnh',
+      sending: 'Đang gửi từ trình duyệt này',
+      black: 'Hình đen',
+      silence: 'Im lặng số',
+      resuming: 'Đang chờ tiếp tục',
+      stop: 'Dừng chia sẻ',
+      disconnect: 'Ngắt kết nối',
       takeover: 'Tiếp quản',
       refused: 'Đang được {{owner}} dùng từ {{source}}',
+      connectedSources_one: '{{count}} nguồn đã kết nối',
+      connectedSources_other: '{{count}} nguồn đã kết nối',
+      connectedSources: '{{count}} nguồn đã kết nối',
+      connection: {
+        connecting: 'Đang kết nối',
+        connected: 'Trực tiếp',
+        disconnected: 'Đang kết nối lại'
+      },
       share: {
+        camera: 'Chia sẻ camera',
+        microphone: 'Chia sẻ micrô',
         usbDevice: 'Chia sẻ USB'
       },
       permission: {
@@ -383,6 +406,9 @@ const vi = {
         cancelBtn: 'Hủy'
       },
       presentation: {
+        title: 'Trình diện USB',
+        loading: 'Đang tải...',
+        current: 'Trình diện USB hiện tại',
         noProfile: 'Chưa áp dụng hồ sơ nào',
         linked: 'Chức năng đã liên kết',
         hostState: 'USB của máy chủ',
@@ -407,7 +433,45 @@ const vi = {
         rollback: 'Quay lui',
         rollbackTitle: 'Quay lui về {{profile}}?',
         rollbackDesc: 'Gadget sẽ được liệt kê lại; các chức năng USB mất trong giây lát.',
+        profile: 'Hồ sơ USB',
+        builtIn: 'dựng sẵn',
         descriptors: 'bộ mô tả',
+        clone: 'Nhân bản',
+        cloneTitle: 'Nhân bản hồ sơ này',
+        cloneToEdit:
+          'Các hồ sơ dựng sẵn vẫn chỉ đọc. Hãy nhân bản hồ sơ này để sửa danh tính của nó.',
+        profileName: 'Tên hồ sơ',
+        profileNameHint: 'Chữ thường, chữ số, dấu chấm, dấu gạch dưới và dấu gạch ngang.',
+        import: 'Nhập gói',
+        export: 'Xuất gói',
+        delete: 'Xóa',
+        deleteTitle: 'Xóa hồ sơ này?',
+        deleteDesc: 'Xóa {{profile}} khỏi NanoKVM.',
+        identity: 'Danh tính USB',
+        preset: 'Danh tính dựng sẵn',
+        presetPlaceholder: 'Sao chép danh tính từ một thiết bị đã biết',
+        presetHint:
+          'Một mẫu dựng sẵn điền Vendor ID, Product ID và hai trường tên. Nó không mang theo bộ mô tả nào.',
+        presetSource: 'Danh tính như được ghi trong {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Vendor ID này thuộc về một nhà sản xuất khác',
+        productId: 'Product ID',
+        bcdUSB: 'Phiên bản USB',
+        bcdDevice: 'Phiên bản thiết bị',
+        manufacturer: 'Nhà sản xuất',
+        product: 'Sản phẩm',
+        serial: 'Số sê-ri',
+        configuration: 'Chuỗi cấu hình',
+        functions: 'Chức năng',
+        descriptorAssets: 'Tệp bộ mô tả đã lưu: {{count}}',
+        endpointUse: 'IN dùng {{inUse}}, còn {{inFree}}; OUT dùng {{outUse}}, còn {{outFree}}',
+        preview: 'Kiểm tra',
+        save: 'Lưu',
+        apply: 'Áp dụng',
+        applyTitle: 'Áp dụng hồ sơ USB này?',
+        applyDesc: 'NanoKVM sẽ trình diện {{profile}} với máy tính đang kết nối.',
+        reconnect:
+          'Bàn phím, chuột và các chức năng USB khác sẽ ngắt trong giây lát khi gadget được gắn lại.',
         applyLinks: 'Liên kết: {{functions}}',
         applyRemoves: 'Gỡ bỏ: {{functions}}',
         applyNoHid:
@@ -419,7 +483,11 @@ const vi = {
           'Một giao diện biến mất khỏi thiết bị ghép; máy chủ có thể cần khởi động lại để gắn lại phần còn lại.',
         recoveryHdmiReset:
           'Một chức năng video được dựng lại, nên chuỗi thu hình phía sau nó cũng được đặt lại.',
-        recoveryReconnect: 'Máy chủ liệt kê lại thiết bị; các chức năng USB mất trong giây lát.'
+        recoveryReconnect: 'Máy chủ liệt kê lại thiết bị; các chức năng USB mất trong giây lát.',
+        cancel: 'Hủy',
+        noFunctions: 'Không có chức năng liên kết',
+        loadFailed: 'Không tải được các hồ sơ trình diện',
+        operationFailed: 'Thao tác trình diện thất bại'
       },
       passthrough: {
         title: 'Chuyển tiếp USB',

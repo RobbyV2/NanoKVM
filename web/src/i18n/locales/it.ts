@@ -287,9 +287,32 @@ const it = {
       cancelBtn: 'No'
     },
     devices: {
+      title: 'Dispositivi',
+      stale: 'Lo stato in tempo reale dei dispositivi non è disponibile. Riconnessione in corso.',
+      empty: 'Non è configurato alcuno slot per fotocamera o microfono.',
+      available: 'Disponibile',
+      waiting: 'L’host attende una sorgente',
+      hostOpen: 'Host aperto',
+      hostIdle: 'Host inattivo',
+      sending: 'Invio da questo browser',
+      black: 'Video nero',
+      silence: 'Silenzio digitale',
+      resuming: 'In attesa di riprendere',
+      stop: 'Interrompi la condivisione',
+      disconnect: 'Disconnetti',
       takeover: 'Prendi il controllo',
       refused: 'In uso da {{owner}} tramite {{source}}',
+      connectedSources_one: '{{count}} sorgente collegata',
+      connectedSources_other: '{{count}} sorgenti collegate',
+      connectedSources: '{{count}} sorgenti collegate',
+      connection: {
+        connecting: 'Connessione',
+        connected: 'In diretta',
+        disconnected: 'Riconnessione'
+      },
       share: {
+        camera: 'Condividi la fotocamera',
+        microphone: 'Condividi il microfono',
         usbDevice: 'Condividi USB'
       },
       permission: {
@@ -391,6 +414,9 @@ const it = {
         cancelBtn: 'Annulla'
       },
       presentation: {
+        title: 'Presentazione USB',
+        loading: 'Caricamento...',
+        current: 'Presentazione USB attuale',
         noProfile: 'Nessun profilo applicato',
         linked: 'Funzioni collegate',
         hostState: 'USB dell’host',
@@ -415,7 +441,46 @@ const it = {
         rollback: 'Ripristina',
         rollbackTitle: 'Ripristinare {{profile}}?',
         rollbackDesc: 'Il gadget viene rienumerato; le funzioni USB cadono per un istante.',
+        profile: 'Profilo USB',
+        builtIn: 'integrato',
         descriptors: 'descrittori',
+        clone: 'Clona',
+        cloneTitle: 'Clona questo profilo',
+        cloneToEdit:
+          'I profili integrati restano in sola lettura. Clona questo profilo per modificarne l’identità.',
+        profileName: 'Nome del profilo',
+        profileNameHint: 'Lettere minuscole, cifre, punti, trattini bassi e trattini.',
+        import: 'Importa pacchetto',
+        export: 'Esporta pacchetto',
+        delete: 'Elimina',
+        deleteTitle: 'Eliminare questo profilo?',
+        deleteDesc: 'Elimina {{profile}} dal NanoKVM.',
+        identity: 'Identità USB',
+        preset: 'Identità preimpostata',
+        presetPlaceholder: 'Copia l’identità da un dispositivo noto',
+        presetHint:
+          'Un preset riempie il Vendor ID, il Product ID e i due campi del nome. Non porta con sé alcun descrittore.',
+        presetSource: 'Identità così come registrata in {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Questo Vendor ID appartiene a un altro produttore',
+        productId: 'Product ID',
+        bcdUSB: 'Versione USB',
+        bcdDevice: 'Versione del dispositivo',
+        manufacturer: 'Produttore',
+        product: 'Prodotto',
+        serial: 'Numero di serie',
+        configuration: 'Stringa di configurazione',
+        functions: 'Funzioni',
+        descriptorAssets: 'Descrittori memorizzati: {{count}}',
+        endpointUse:
+          'IN {{inUse}} in uso, {{inFree}} liberi; OUT {{outUse}} in uso, {{outFree}} liberi',
+        preview: 'Verifica',
+        save: 'Salva',
+        apply: 'Applica',
+        applyTitle: 'Applicare questo profilo USB?',
+        applyDesc: 'Il NanoKVM presenterà {{profile}} al computer collegato.',
+        reconnect:
+          'Tastiera, mouse e le altre funzioni USB si disconnettono per un istante mentre il gadget viene ricollegato.',
         applyLinks: 'Collega: {{functions}}',
         applyRemoves: 'Rimuove: {{functions}}',
         applyNoHid:
@@ -427,7 +492,12 @@ const it = {
           'Un’interfaccia sparisce dal dispositivo composito; l’host potrebbe aver bisogno di un riavvio per riassociare il resto.',
         recoveryHdmiReset:
           'Una funzione video viene ricostruita, perciò la catena di acquisizione che sta dietro si resetta.',
-        recoveryReconnect: 'L’host rienumera il dispositivo; le funzioni USB cadono per un istante.'
+        recoveryReconnect:
+          'L’host rienumera il dispositivo; le funzioni USB cadono per un istante.',
+        cancel: 'Annulla',
+        noFunctions: 'Nessuna funzione collegata',
+        loadFailed: 'Caricamento dei profili di presentazione non riuscito',
+        operationFailed: 'Operazione di presentazione non riuscita'
       },
       passthrough: {
         title: 'Passthrough USB',

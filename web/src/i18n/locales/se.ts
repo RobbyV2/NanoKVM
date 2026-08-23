@@ -282,9 +282,32 @@ const se = {
       cancelBtn: 'Nej'
     },
     devices: {
+      title: 'Enheter',
+      stale: 'Enheternas livestatus är inte tillgänglig. Återansluter.',
+      empty: 'Inga kamera- eller mikrofonplatser är konfigurerade.',
+      available: 'Tillgänglig',
+      waiting: 'Värden väntar på en källa',
+      hostOpen: 'Värden öppen',
+      hostIdle: 'Värden inaktiv',
+      sending: 'Sänder från den här webbläsaren',
+      black: 'Svart video',
+      silence: 'Digital tystnad',
+      resuming: 'Väntar på att återupptas',
+      stop: 'Sluta dela',
+      disconnect: 'Koppla från',
       takeover: 'Ta över',
       refused: 'Används av {{owner}} från {{source}}',
+      connectedSources_one: '{{count}} ansluten källa',
+      connectedSources_other: '{{count}} anslutna källor',
+      connectedSources: '{{count}} anslutna källor',
+      connection: {
+        connecting: 'Ansluter',
+        connected: 'Direkt',
+        disconnected: 'Återansluter'
+      },
       share: {
+        camera: 'Dela kamera',
+        microphone: 'Dela mikrofon',
         usbDevice: 'Dela USB'
       },
       permission: {
@@ -385,6 +408,9 @@ const se = {
         cancelBtn: 'Avbryt'
       },
       presentation: {
+        title: 'USB-presentation',
+        loading: 'Laddar...',
+        current: 'Nuvarande USB-presentation',
         noProfile: 'Ingen profil tillämpad',
         linked: 'Länkade funktioner',
         hostState: 'Värdens USB',
@@ -409,7 +435,46 @@ const se = {
         rollback: 'Återställ',
         rollbackTitle: 'Återställa till {{profile}}?',
         rollbackDesc: 'Gadgeten räknas upp på nytt; USB-funktioner faller bort en kort stund.',
+        profile: 'USB-profil',
+        builtIn: 'inbyggd',
         descriptors: 'deskriptorer',
+        clone: 'Klona',
+        cloneTitle: 'Klona den här profilen',
+        cloneToEdit:
+          'Inbyggda profiler förblir skrivskyddade. Klona den här profilen för att redigera dess identitet.',
+        profileName: 'Profilnamn',
+        profileNameHint: 'Små bokstäver, siffror, punkter, understreck och bindestreck.',
+        import: 'Importera paket',
+        export: 'Exportera paket',
+        delete: 'Ta bort',
+        deleteTitle: 'Ta bort den här profilen?',
+        deleteDesc: 'Ta bort {{profile}} från NanoKVM.',
+        identity: 'USB-identitet',
+        preset: 'Förvald identitet',
+        presetPlaceholder: 'Kopiera identitet från en känd enhet',
+        presetHint:
+          'Ett förval fyller i Vendor ID, Product ID och de två namnfälten. Det för inte med sig några deskriptorer.',
+        presetSource: 'Identitet så som den är noterad i {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Det här Vendor ID:t tillhör en annan tillverkare',
+        productId: 'Product ID',
+        bcdUSB: 'USB-version',
+        bcdDevice: 'Enhetsversion',
+        manufacturer: 'Tillverkare',
+        product: 'Produkt',
+        serial: 'Serienummer',
+        configuration: 'Konfigurationssträng',
+        functions: 'Funktioner',
+        descriptorAssets: 'Sparade deskriptorfiler: {{count}}',
+        endpointUse:
+          'IN {{inUse}} använda, {{inFree}} lediga; OUT {{outUse}} använda, {{outFree}} lediga',
+        preview: 'Validera',
+        save: 'Spara',
+        apply: 'Tillämpa',
+        applyTitle: 'Vill du tillämpa den här USB-profilen?',
+        applyDesc: 'NanoKVM kommer att presentera {{profile}} för den anslutna datorn.',
+        reconnect:
+          'Tangentbord, mus och andra USB-funktioner kopplas bort en kort stund medan gadgeten binds om.',
         applyLinks: 'Länkar: {{functions}}',
         applyRemoves: 'Tar bort: {{functions}}',
         applyNoHid:
@@ -422,7 +487,11 @@ const se = {
         recoveryHdmiReset:
           'En videofunktion byggs upp på nytt, så inspelningskedjan bakom den nollställs.',
         recoveryReconnect:
-          'Värden räknar upp enheten på nytt; USB-funktioner faller bort en kort stund.'
+          'Värden räknar upp enheten på nytt; USB-funktioner faller bort en kort stund.',
+        cancel: 'Avbryt',
+        noFunctions: 'Inga länkade funktioner',
+        loadFailed: 'Det gick inte att läsa in presentationsprofilerna',
+        operationFailed: 'Presentationsåtgärden misslyckades'
       },
       passthrough: {
         title: 'USB-genomsläpp',

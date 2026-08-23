@@ -286,9 +286,32 @@ const ja = {
       cancelBtn: 'いいえ'
     },
     devices: {
+      title: 'デバイス',
+      stale: 'デバイスのライブ状態を取得できません。再接続しています。',
+      empty: 'カメラまたはマイクのスロットが設定されていません。',
+      available: '利用可能',
+      waiting: 'ホストがソースを待っています',
+      hostOpen: 'ホスト受信中',
+      hostIdle: 'ホスト待機中',
+      sending: 'このブラウザーから送信中',
+      black: '黒画面',
+      silence: 'デジタル無音',
+      resuming: '再開待ち',
+      stop: '共有を停止',
+      disconnect: '切断',
       takeover: '引き継ぐ',
       refused: '{{source}} の {{owner}} が使用中',
+      connectedSources_one: '接続中のソース {{count}} 件',
+      connectedSources_other: '接続中のソース {{count}} 件',
+      connectedSources: '接続中のソース {{count}} 件',
+      connection: {
+        connecting: '接続中',
+        connected: 'ライブ',
+        disconnected: '再接続中'
+      },
       share: {
+        camera: 'カメラを共有',
+        microphone: 'マイクを共有',
         usbDevice: 'USB を共有'
       },
       permission: {
@@ -387,6 +410,9 @@ const ja = {
         cancelBtn: 'キャンセル'
       },
       presentation: {
+        title: 'USB プレゼンテーション',
+        loading: '読み込み中...',
+        current: '現在の USB プレゼンテーション',
         noProfile: '適用されたプロファイルはありません',
         linked: 'リンクされた機能',
         hostState: 'ホスト側 USB',
@@ -411,7 +437,45 @@ const ja = {
         rollback: 'ロールバック',
         rollbackTitle: '{{profile}} にロールバックしますか？',
         rollbackDesc: 'ガジェットが再列挙され、USB 機能が一時的に切断されます。',
+        profile: 'USB プロファイル',
+        builtIn: '組み込み',
         descriptors: 'ディスクリプター',
+        clone: '複製',
+        cloneTitle: 'このプロファイルを複製',
+        cloneToEdit:
+          '組み込みプロファイルは読み取り専用のままです。アイデンティティを編集するにはこのプロファイルを複製してください。',
+        profileName: 'プロファイル名',
+        profileNameHint: '英小文字、数字、ピリオド、アンダースコア、ハイフンが使えます。',
+        import: 'パッケージをインポート',
+        export: 'パッケージをエクスポート',
+        delete: '削除',
+        deleteTitle: 'このプロファイルを削除しますか？',
+        deleteDesc: '{{profile}} を NanoKVM から削除します。',
+        identity: 'USB アイデンティティ',
+        preset: 'プリセットのアイデンティティ',
+        presetPlaceholder: '既知のデバイスからアイデンティティをコピー',
+        presetHint:
+          'プリセットは Vendor ID、Product ID、そして 2 つの名前欄を埋めます。ディスクリプターは付いてきません。',
+        presetSource: '{{source}} に記録されているとおりのアイデンティティ',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'この Vendor ID は別のメーカーのものです',
+        productId: 'Product ID',
+        bcdUSB: 'USB バージョン',
+        bcdDevice: 'デバイスバージョン',
+        manufacturer: 'メーカー',
+        product: '製品名',
+        serial: 'シリアル番号',
+        configuration: 'コンフィギュレーション文字列',
+        functions: '機能',
+        descriptorAssets: '保存済みのディスクリプターファイル: {{count}}',
+        endpointUse: 'IN 使用 {{inUse}}、空き {{inFree}}／OUT 使用 {{outUse}}、空き {{outFree}}',
+        preview: '検証',
+        save: '保存',
+        apply: '適用',
+        applyTitle: 'この USB プロファイルを適用しますか？',
+        applyDesc: 'NanoKVM は接続されたコンピューターに {{profile}} を提示します。',
+        reconnect:
+          'ガジェットが再バインドされる間、キーボード、マウス、その他の USB 機能が一時的に切断されます。',
         applyLinks: 'リンクする機能: {{functions}}',
         applyRemoves: '削除する機能: {{functions}}',
         applyNoHid: 'この適用の後に HID 機能は残りません。キーボードとマウスは動作しなくなります。',
@@ -422,7 +486,11 @@ const ja = {
           '複合デバイスからインターフェイスがひとつ消えるため、残りを再バインドするにはホストの再起動が必要になる場合があります。',
         recoveryHdmiReset:
           'ビデオ機能が作り直されるため、その背後にあるキャプチャ経路もリセットされます。',
-        recoveryReconnect: 'ホストがデバイスを再列挙し、USB 機能が一時的に切断されます。'
+        recoveryReconnect: 'ホストがデバイスを再列挙し、USB 機能が一時的に切断されます。',
+        cancel: 'キャンセル',
+        noFunctions: 'リンクされた機能はありません',
+        loadFailed: 'プレゼンテーションプロファイルを読み込めませんでした',
+        operationFailed: 'プレゼンテーションの操作に失敗しました'
       },
       passthrough: {
         title: 'USB パススルー',

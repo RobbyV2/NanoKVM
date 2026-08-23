@@ -288,9 +288,32 @@ const fr = {
       cancelBtn: 'Non'
     },
     devices: {
+      title: 'Appareils',
+      stale: 'L’état en direct des appareils est indisponible. Reconnexion en cours.',
+      empty: 'Aucun emplacement de caméra ou de microphone n’est configuré.',
+      available: 'Disponible',
+      waiting: 'L’hôte attend une source',
+      hostOpen: 'Hôte ouvert',
+      hostIdle: 'Hôte inactif',
+      sending: 'Émission depuis ce navigateur',
+      black: 'Vidéo noire',
+      silence: 'Silence numérique',
+      resuming: 'En attente de reprise',
+      stop: 'Arrêter le partage',
+      disconnect: 'Déconnecter',
       takeover: 'Reprendre',
       refused: 'Utilisé par {{owner}} depuis {{source}}',
+      connectedSources_one: '{{count}} source connectée',
+      connectedSources_other: '{{count}} sources connectées',
+      connectedSources: '{{count}} sources connectées',
+      connection: {
+        connecting: 'Connexion',
+        connected: 'En direct',
+        disconnected: 'Reconnexion'
+      },
       share: {
+        camera: 'Partager la caméra',
+        microphone: 'Partager le microphone',
         usbDevice: 'Partager l’USB'
       },
       permission: {
@@ -391,6 +414,9 @@ const fr = {
         cancelBtn: 'Annuler'
       },
       presentation: {
+        title: 'Présentation USB',
+        loading: 'Chargement...',
+        current: 'Présentation USB actuelle',
         noProfile: 'Aucun profil appliqué',
         linked: 'Fonctions liées',
         hostState: 'USB de l’hôte',
@@ -415,7 +441,46 @@ const fr = {
         rollback: 'Revenir en arrière',
         rollbackTitle: 'Revenir à {{profile}} ?',
         rollbackDesc: 'Le gadget est réénuméré ; les fonctions USB tombent brièvement.',
+        profile: 'Profil USB',
+        builtIn: 'intégré',
         descriptors: 'descripteurs',
+        clone: 'Cloner',
+        cloneTitle: 'Cloner ce profil',
+        cloneToEdit:
+          'Les profils intégrés restent en lecture seule. Clonez ce profil pour modifier son identité.',
+        profileName: 'Nom du profil',
+        profileNameHint: 'Lettres minuscules, chiffres, points, tirets bas et traits d’union.',
+        import: 'Importer un paquet',
+        export: 'Exporter le paquet',
+        delete: 'Supprimer',
+        deleteTitle: 'Supprimer ce profil ?',
+        deleteDesc: 'Supprimer {{profile}} du NanoKVM.',
+        identity: 'Identité USB',
+        preset: 'Identité prédéfinie',
+        presetPlaceholder: 'Copier l’identité d’un appareil connu',
+        presetHint:
+          'Un préréglage remplit le Vendor ID, le Product ID et les deux champs de nom. Il n’apporte aucun descripteur.',
+        presetSource: 'Identité telle qu’enregistrée dans {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Ce Vendor ID appartient à un autre fabricant',
+        productId: 'Product ID',
+        bcdUSB: 'Version USB',
+        bcdDevice: 'Version de l’appareil',
+        manufacturer: 'Fabricant',
+        product: 'Produit',
+        serial: 'Numéro de série',
+        configuration: 'Chaîne de configuration',
+        functions: 'Fonctions',
+        descriptorAssets: 'Descripteurs stockés : {{count}}',
+        endpointUse:
+          'IN {{inUse}} utilisés, {{inFree}} libres ; OUT {{outUse}} utilisés, {{outFree}} libres',
+        preview: 'Valider',
+        save: 'Enregistrer',
+        apply: 'Appliquer',
+        applyTitle: 'Appliquer ce profil USB ?',
+        applyDesc: 'Le NanoKVM présentera {{profile}} à l’ordinateur connecté.',
+        reconnect:
+          'Le clavier, la souris et les autres fonctions USB se déconnectent brièvement pendant que le gadget est relié à nouveau.',
         applyLinks: 'Lie : {{functions}}',
         applyRemoves: 'Retire : {{functions}}',
         applyNoHid:
@@ -428,7 +493,11 @@ const fr = {
         recoveryHdmiReset:
           'Une fonction vidéo est reconstruite, ce qui réinitialise la chaîne de capture qui se trouve derrière.',
         recoveryReconnect:
-          'L’hôte réénumère le périphérique ; les fonctions USB tombent brièvement.'
+          'L’hôte réénumère le périphérique ; les fonctions USB tombent brièvement.',
+        cancel: 'Annuler',
+        noFunctions: 'Aucune fonction liée',
+        loadFailed: 'Échec du chargement des profils de présentation',
+        operationFailed: 'L’opération de présentation a échoué'
       },
       passthrough: {
         title: 'Passthrough USB',

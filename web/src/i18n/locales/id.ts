@@ -285,9 +285,32 @@ const id = {
       cancelBtn: 'Tidak'
     },
     devices: {
+      title: 'Perangkat',
+      stale: 'Status langsung perangkat tidak tersedia. Menyambung ulang.',
+      empty: 'Tidak ada slot kamera atau mikrofon yang dikonfigurasi.',
+      available: 'Tersedia',
+      waiting: 'Host menunggu sebuah sumber',
+      hostOpen: 'Host terbuka',
+      hostIdle: 'Host menganggur',
+      sending: 'Mengirim dari peramban ini',
+      black: 'Video hitam',
+      silence: 'Senyap digital',
+      resuming: 'Menunggu untuk dilanjutkan',
+      stop: 'Hentikan berbagi',
+      disconnect: 'Putuskan',
       takeover: 'Ambil alih',
       refused: 'Sedang dipakai oleh {{owner}} dari {{source}}',
+      connectedSources_one: '{{count}} sumber tersambung',
+      connectedSources_other: '{{count}} sumber tersambung',
+      connectedSources: '{{count}} sumber tersambung',
+      connection: {
+        connecting: 'Menyambungkan',
+        connected: 'Langsung',
+        disconnected: 'Menyambung ulang'
+      },
       share: {
+        camera: 'Bagikan kamera',
+        microphone: 'Bagikan mikrofon',
         usbDevice: 'Bagikan USB'
       },
       permission: {
@@ -388,6 +411,9 @@ const id = {
         cancelBtn: 'Batal'
       },
       presentation: {
+        title: 'Presentasi USB',
+        loading: 'Memuat...',
+        current: 'Presentasi USB saat ini',
         noProfile: 'Tidak ada profil yang diterapkan',
         linked: 'Fungsi yang tertaut',
         hostState: 'USB host',
@@ -412,7 +438,46 @@ const id = {
         rollback: 'Kembalikan',
         rollbackTitle: 'Kembalikan ke {{profile}}?',
         rollbackDesc: 'Gadget dienumerasi ulang; fungsi USB terputus sesaat.',
+        profile: 'Profil USB',
+        builtIn: 'bawaan',
         descriptors: 'deskriptor',
+        clone: 'Klon',
+        cloneTitle: 'Klon profil ini',
+        cloneToEdit:
+          'Profil bawaan tetap hanya-baca. Klon profil ini untuk menyunting identitasnya.',
+        profileName: 'Nama profil',
+        profileNameHint: 'Huruf kecil, angka, titik, garis bawah, dan tanda hubung.',
+        import: 'Impor paket',
+        export: 'Ekspor paket',
+        delete: 'Hapus',
+        deleteTitle: 'Hapus profil ini?',
+        deleteDesc: 'Hapus {{profile}} dari NanoKVM.',
+        identity: 'Identitas USB',
+        preset: 'Identitas preset',
+        presetPlaceholder: 'Salin identitas dari perangkat yang dikenal',
+        presetHint:
+          'Preset mengisi Vendor ID, Product ID, dan kedua kolom nama. Preset tidak membawa deskriptor.',
+        presetSource: 'Identitas seperti yang tercatat di {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Vendor ID ini milik produsen lain',
+        productId: 'Product ID',
+        bcdUSB: 'Versi USB',
+        bcdDevice: 'Versi perangkat',
+        manufacturer: 'Produsen',
+        product: 'Produk',
+        serial: 'Nomor seri',
+        configuration: 'Untai konfigurasi',
+        functions: 'Fungsi',
+        descriptorAssets: 'Berkas deskriptor tersimpan: {{count}}',
+        endpointUse:
+          'IN {{inUse}} terpakai, {{inFree}} bebas; OUT {{outUse}} terpakai, {{outFree}} bebas',
+        preview: 'Validasi',
+        save: 'Simpan',
+        apply: 'Terapkan',
+        applyTitle: 'Terapkan profil USB ini?',
+        applyDesc: 'NanoKVM akan menampilkan {{profile}} ke komputer yang tersambung.',
+        reconnect:
+          'Papan ketik, tetikus, dan fungsi USB lainnya terputus sesaat saat gadget diikat ulang.',
         applyLinks: 'Menautkan: {{functions}}',
         applyRemoves: 'Menghapus: {{functions}}',
         applyNoHid:
@@ -424,7 +489,11 @@ const id = {
           'Sebuah antarmuka hilang dari perangkat komposit; host mungkin perlu di-boot ulang agar sisanya terikat kembali.',
         recoveryHdmiReset:
           'Sebuah fungsi video dibangun ulang, sehingga alur penangkapan di belakangnya ikut direset.',
-        recoveryReconnect: 'Host mengenumerasi ulang perangkat; fungsi USB terputus sesaat.'
+        recoveryReconnect: 'Host mengenumerasi ulang perangkat; fungsi USB terputus sesaat.',
+        cancel: 'Batal',
+        noFunctions: 'Tidak ada fungsi yang tertaut',
+        loadFailed: 'Gagal memuat profil presentasi',
+        operationFailed: 'Operasi presentasi gagal'
       },
       passthrough: {
         title: 'Passthrough USB',

@@ -285,9 +285,32 @@ const ru = {
       cancelBtn: 'Нет'
     },
     devices: {
+      title: 'Устройства',
+      stale: 'Текущее состояние устройств недоступно. Идёт переподключение.',
+      empty: 'Слоты камеры и микрофона не настроены.',
+      available: 'Доступно',
+      waiting: 'Хост ждёт источник',
+      hostOpen: 'Хост открыл поток',
+      hostIdle: 'Хост простаивает',
+      sending: 'Передача из этого браузера',
+      black: 'Чёрное видео',
+      silence: 'Цифровая тишина',
+      resuming: 'Ожидание возобновления',
+      stop: 'Остановить передачу',
+      disconnect: 'Отключить',
       takeover: 'Перехватить',
       refused: 'Занято: {{owner}} с источника {{source}}',
+      connectedSources_one: '{{count}} подключённый источник',
+      connectedSources_other: '{{count}} подключённых источников',
+      connectedSources: '{{count}} подключённых источников',
+      connection: {
+        connecting: 'Подключение',
+        connected: 'В эфире',
+        disconnected: 'Переподключение'
+      },
       share: {
+        camera: 'Поделиться камерой',
+        microphone: 'Поделиться микрофоном',
         usbDevice: 'Поделиться USB'
       },
       permission: {
@@ -387,6 +410,9 @@ const ru = {
         cancelBtn: 'Отмена'
       },
       presentation: {
+        title: 'Представление USB',
+        loading: 'Загрузка...',
+        current: 'Текущее представление USB',
         noProfile: 'Профиль не применён',
         linked: 'Связанные функции',
         hostState: 'USB хоста',
@@ -411,7 +437,46 @@ const ru = {
         rollback: 'Откатить',
         rollbackTitle: 'Откатиться к {{profile}}?',
         rollbackDesc: 'Гаджет будет перечислен заново; функции USB ненадолго пропадут.',
+        profile: 'Профиль USB',
+        builtIn: 'встроенный',
         descriptors: 'дескрипторы',
+        clone: 'Клонировать',
+        cloneTitle: 'Клонировать этот профиль',
+        cloneToEdit:
+          'Встроенные профили остаются только для чтения. Клонируйте этот профиль, чтобы изменить его идентичность.',
+        profileName: 'Имя профиля',
+        profileNameHint: 'Строчные буквы, цифры, точки, подчёркивания и дефисы.',
+        import: 'Импортировать пакет',
+        export: 'Экспортировать пакет',
+        delete: 'Удалить',
+        deleteTitle: 'Удалить этот профиль?',
+        deleteDesc: 'Удалить {{profile}} с NanoKVM.',
+        identity: 'Идентичность USB',
+        preset: 'Готовая идентичность',
+        presetPlaceholder: 'Скопировать идентичность известного устройства',
+        presetHint:
+          'Заготовка заполняет Vendor ID, Product ID и оба поля с названием. Дескрипторы она с собой не приносит.',
+        presetSource: 'Идентичность в том виде, в каком она записана в {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Этот Vendor ID принадлежит другому производителю',
+        productId: 'Product ID',
+        bcdUSB: 'Версия USB',
+        bcdDevice: 'Версия устройства',
+        manufacturer: 'Производитель',
+        product: 'Продукт',
+        serial: 'Серийный номер',
+        configuration: 'Строка конфигурации',
+        functions: 'Функции',
+        descriptorAssets: 'Сохранённые файлы дескрипторов: {{count}}',
+        endpointUse:
+          'IN {{inUse}} занято, {{inFree}} свободно; OUT {{outUse}} занято, {{outFree}} свободно',
+        preview: 'Проверить',
+        save: 'Сохранить',
+        apply: 'Применить',
+        applyTitle: 'Применить этот профиль USB?',
+        applyDesc: 'NanoKVM представит подключённому компьютеру {{profile}}.',
+        reconnect:
+          'Клавиатура, мышь и другие функции USB ненадолго отключатся, пока гаджет привязывается заново.',
         applyLinks: 'Подключит: {{functions}}',
         applyRemoves: 'Удалит: {{functions}}',
         applyNoHid:
@@ -423,7 +488,11 @@ const ru = {
           'Из составного устройства исчезает интерфейс; хосту может понадобиться перезагрузка, чтобы заново привязать остальные.',
         recoveryHdmiReset:
           'Видеофункция создаётся заново, поэтому стоящий за ней тракт захвата сбрасывается.',
-        recoveryReconnect: 'Хост заново перечисляет устройство; функции USB ненадолго пропадут.'
+        recoveryReconnect: 'Хост заново перечисляет устройство; функции USB ненадолго пропадут.',
+        cancel: 'Отмена',
+        noFunctions: 'Нет связанных функций',
+        loadFailed: 'Не удалось загрузить профили представления',
+        operationFailed: 'Операция с представлением не удалась'
       },
       passthrough: {
         title: 'Проброс USB',

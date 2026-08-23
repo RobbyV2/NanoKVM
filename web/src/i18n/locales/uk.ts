@@ -286,9 +286,32 @@ const uk = {
       cancelBtn: 'Ні'
     },
     devices: {
+      title: 'Пристрої',
+      stale: 'Поточний стан пристроїв недоступний. Триває перепідключення.',
+      empty: 'Жодного слота камери чи мікрофона не налаштовано.',
+      available: 'Доступно',
+      waiting: 'Хост чекає на джерело',
+      hostOpen: 'Хост відкрив потік',
+      hostIdle: 'Хост не активний',
+      sending: 'Передавання з цього браузера',
+      black: 'Чорне відео',
+      silence: 'Цифрова тиша',
+      resuming: 'Очікування відновлення',
+      stop: 'Зупинити передавання',
+      disconnect: 'Від’єднати',
       takeover: 'Перехопити',
       refused: 'Зайнято: {{owner}} із джерела {{source}}',
+      connectedSources_one: '{{count}} під’єднане джерело',
+      connectedSources_other: '{{count}} під’єднаних джерел',
+      connectedSources: '{{count}} під’єднаних джерел',
+      connection: {
+        connecting: 'Підключення',
+        connected: 'В ефірі',
+        disconnected: 'Перепідключення'
+      },
       share: {
+        camera: 'Поділитися камерою',
+        microphone: 'Поділитися мікрофоном',
         usbDevice: 'Поділитися USB'
       },
       permission: {
@@ -388,6 +411,9 @@ const uk = {
         cancelBtn: 'Скасувати'
       },
       presentation: {
+        title: 'Представлення USB',
+        loading: 'Завантаження...',
+        current: 'Поточне представлення USB',
         noProfile: 'Жодного профілю не застосовано',
         linked: 'Пов’язані функції',
         hostState: 'USB хоста',
@@ -412,7 +438,46 @@ const uk = {
         rollback: 'Відкотити',
         rollbackTitle: 'Відкотитися до {{profile}}?',
         rollbackDesc: 'Ґаджет буде перелічено заново; функції USB ненадовго зникнуть.',
+        profile: 'Профіль USB',
+        builtIn: 'вбудований',
         descriptors: 'дескриптори',
+        clone: 'Клонувати',
+        cloneTitle: 'Клонувати цей профіль',
+        cloneToEdit:
+          'Вбудовані профілі лишаються лише для читання. Клонуйте цей профіль, щоб змінити його ідентичність.',
+        profileName: 'Назва профілю',
+        profileNameHint: 'Малі літери, цифри, крапки, підкреслення та дефіси.',
+        import: 'Імпортувати пакет',
+        export: 'Експортувати пакет',
+        delete: 'Видалити',
+        deleteTitle: 'Видалити цей профіль?',
+        deleteDesc: 'Видалити {{profile}} з NanoKVM.',
+        identity: 'Ідентичність USB',
+        preset: 'Готова ідентичність',
+        presetPlaceholder: 'Скопіювати ідентичність відомого пристрою',
+        presetHint:
+          'Заготовка заповнює Vendor ID, Product ID та обидва поля з назвою. Дескрипторів вона із собою не несе.',
+        presetSource: 'Ідентичність у тому вигляді, у якому її записано в {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Цей Vendor ID належить іншому виробнику',
+        productId: 'Product ID',
+        bcdUSB: 'Версія USB',
+        bcdDevice: 'Версія пристрою',
+        manufacturer: 'Виробник',
+        product: 'Продукт',
+        serial: 'Серійний номер',
+        configuration: 'Рядок конфігурації',
+        functions: 'Функції',
+        descriptorAssets: 'Збережені файли дескрипторів: {{count}}',
+        endpointUse:
+          'IN {{inUse}} зайнято, {{inFree}} вільно; OUT {{outUse}} зайнято, {{outFree}} вільно',
+        preview: 'Перевірити',
+        save: 'Зберегти',
+        apply: 'Застосувати',
+        applyTitle: 'Застосувати цей профіль USB?',
+        applyDesc: 'NanoKVM представить під’єднаному комп’ютеру {{profile}}.',
+        reconnect:
+          'Клавіатура, миша та інші функції USB ненадовго від’єднаються, поки ґаджет прив’язується заново.',
         applyLinks: 'Під’єднає: {{functions}}',
         applyRemoves: 'Вилучить: {{functions}}',
         applyNoHid:
@@ -424,7 +489,11 @@ const uk = {
           'Зі складеного пристрою зникає інтерфейс; хосту може знадобитися перезавантаження, щоб знову прив’язати решту.',
         recoveryHdmiReset:
           'Відеофункцію буде створено заново, тож тракт захоплення за нею скидається.',
-        recoveryReconnect: 'Хост заново перелічує пристрій; функції USB ненадовго зникнуть.'
+        recoveryReconnect: 'Хост заново перелічує пристрій; функції USB ненадовго зникнуть.',
+        cancel: 'Скасувати',
+        noFunctions: 'Немає пов’язаних функцій',
+        loadFailed: 'Не вдалося завантажити профілі представлення',
+        operationFailed: 'Операція з представленням не вдалася'
       },
       passthrough: {
         title: 'Проброс USB',

@@ -286,9 +286,32 @@ const pl = {
       cancelBtn: 'Nie'
     },
     devices: {
+      title: 'Urządzenia',
+      stale: 'Stan urządzeń na żywo jest niedostępny. Trwa ponowne łączenie.',
+      empty: 'Nie skonfigurowano żadnego slotu kamery ani mikrofonu.',
+      available: 'Dostępny',
+      waiting: 'Host czeka na źródło',
+      hostOpen: 'Host otwarty',
+      hostIdle: 'Host bezczynny',
+      sending: 'Nadawanie z tej przeglądarki',
+      black: 'Czarny obraz',
+      silence: 'Cyfrowa cisza',
+      resuming: 'Oczekiwanie na wznowienie',
+      stop: 'Zatrzymaj udostępnianie',
+      disconnect: 'Odłącz',
       takeover: 'Przejmij',
       refused: 'Używane przez {{owner}} ze źródła {{source}}',
+      connectedSources_one: '{{count}} podłączone źródło',
+      connectedSources_other: '{{count}} podłączonych źródeł',
+      connectedSources: '{{count}} podłączonych źródeł',
+      connection: {
+        connecting: 'Łączenie',
+        connected: 'Na żywo',
+        disconnected: 'Ponowne łączenie'
+      },
       share: {
+        camera: 'Udostępnij kamerę',
+        microphone: 'Udostępnij mikrofon',
         usbDevice: 'Udostępnij USB'
       },
       permission: {
@@ -389,6 +412,9 @@ const pl = {
         cancelBtn: 'Anuluj'
       },
       presentation: {
+        title: 'Prezentacja USB',
+        loading: 'Ładowanie...',
+        current: 'Bieżąca prezentacja USB',
         noProfile: 'Nie zastosowano żadnego profilu',
         linked: 'Powiązane funkcje',
         hostState: 'USB hosta',
@@ -413,7 +439,46 @@ const pl = {
         rollback: 'Wycofaj',
         rollbackTitle: 'Wycofać do {{profile}}?',
         rollbackDesc: 'Gadżet zostanie ponownie wyliczony; funkcje USB na chwilę znikną.',
+        profile: 'Profil USB',
+        builtIn: 'wbudowany',
         descriptors: 'deskryptory',
+        clone: 'Sklonuj',
+        cloneTitle: 'Sklonuj ten profil',
+        cloneToEdit:
+          'Wbudowane profile pozostają tylko do odczytu. Sklonuj ten profil, aby edytować jego tożsamość.',
+        profileName: 'Nazwa profilu',
+        profileNameHint: 'Małe litery, cyfry, kropki, podkreślenia i myślniki.',
+        import: 'Importuj pakiet',
+        export: 'Eksportuj pakiet',
+        delete: 'Usuń',
+        deleteTitle: 'Usunąć ten profil?',
+        deleteDesc: 'Usuń {{profile}} z NanoKVM.',
+        identity: 'Tożsamość USB',
+        preset: 'Predefiniowana tożsamość',
+        presetPlaceholder: 'Skopiuj tożsamość ze znanego urządzenia',
+        presetHint:
+          'Predefiniowana tożsamość wypełnia Vendor ID, Product ID i oba pola nazwy. Nie niesie ze sobą żadnych deskryptorów.',
+        presetSource: 'Tożsamość zapisana w {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'To Vendor ID należy do innego producenta',
+        productId: 'Product ID',
+        bcdUSB: 'Wersja USB',
+        bcdDevice: 'Wersja urządzenia',
+        manufacturer: 'Producent',
+        product: 'Produkt',
+        serial: 'Numer seryjny',
+        configuration: 'Ciąg konfiguracji',
+        functions: 'Funkcje',
+        descriptorAssets: 'Zapisane pliki deskryptorów: {{count}}',
+        endpointUse:
+          'IN {{inUse}} zajęte, {{inFree}} wolne; OUT {{outUse}} zajęte, {{outFree}} wolne',
+        preview: 'Sprawdź',
+        save: 'Zapisz',
+        apply: 'Zastosuj',
+        applyTitle: 'Zastosować ten profil USB?',
+        applyDesc: 'NanoKVM przedstawi podłączonemu komputerowi {{profile}}.',
+        reconnect:
+          'Klawiatura, mysz i pozostałe funkcje USB na chwilę się rozłączą, gdy gadżet zostanie powiązany na nowo.',
         applyLinks: 'Powiąże: {{functions}}',
         applyRemoves: 'Usunie: {{functions}}',
         applyNoHid:
@@ -425,7 +490,11 @@ const pl = {
           'Z urządzenia złożonego zniknie jeden interfejs; host może potrzebować ponownego uruchomienia, aby powiązać resztę.',
         recoveryHdmiReset:
           'Funkcja wideo jest budowana od nowa, więc stojący za nią tor przechwytywania zostaje zresetowany.',
-        recoveryReconnect: 'Host ponownie wylicza urządzenie; funkcje USB na chwilę znikną.'
+        recoveryReconnect: 'Host ponownie wylicza urządzenie; funkcje USB na chwilę znikną.',
+        cancel: 'Anuluj',
+        noFunctions: 'Brak powiązanych funkcji',
+        loadFailed: 'Nie udało się wczytać profili prezentacji',
+        operationFailed: 'Operacja na prezentacji nie powiodła się'
       },
       passthrough: {
         title: 'Przekazywanie USB',

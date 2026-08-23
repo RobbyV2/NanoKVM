@@ -289,9 +289,32 @@ const de = {
       cancelBtn: 'Nein'
     },
     devices: {
+      title: 'Geräte',
+      stale: 'Der Live-Status der Geräte ist nicht verfügbar. Verbindung wird wiederhergestellt.',
+      empty: 'Es sind keine Kamera- oder Mikrofon-Slots eingerichtet.',
+      available: 'Verfügbar',
+      waiting: 'Der Host wartet auf eine Quelle',
+      hostOpen: 'Host geöffnet',
+      hostIdle: 'Host untätig',
+      sending: 'Sendet aus diesem Browser',
+      black: 'Schwarzes Video',
+      silence: 'Digitale Stille',
+      resuming: 'Wartet auf Fortsetzung',
+      stop: 'Freigabe beenden',
+      disconnect: 'Trennen',
       takeover: 'Übernehmen',
       refused: 'In Benutzung von {{owner}} über {{source}}',
+      connectedSources_one: '{{count}} verbundene Quelle',
+      connectedSources_other: '{{count}} verbundene Quellen',
+      connectedSources: '{{count}} verbundene Quellen',
+      connection: {
+        connecting: 'Verbindung wird hergestellt',
+        connected: 'Live',
+        disconnected: 'Verbindung wird wiederhergestellt'
+      },
       share: {
+        camera: 'Kamera freigeben',
+        microphone: 'Mikrofon freigeben',
         usbDevice: 'USB freigeben'
       },
       permission: {
@@ -393,6 +416,9 @@ const de = {
         cancelBtn: 'Abbrechen'
       },
       presentation: {
+        title: 'USB-Darstellung',
+        loading: 'Lädt...',
+        current: 'Aktuelle USB-Darstellung',
         noProfile: 'Kein Profil angewendet',
         linked: 'Verknüpfte Funktionen',
         hostState: 'USB des Hosts',
@@ -417,7 +443,46 @@ const de = {
         rollback: 'Zurückrollen',
         rollbackTitle: 'Auf {{profile}} zurückrollen?',
         rollbackDesc: 'Das Gadget wird neu enumeriert; USB-Funktionen fallen kurz aus.',
+        profile: 'USB-Profil',
+        builtIn: 'integriert',
         descriptors: 'Deskriptoren',
+        clone: 'Klonen',
+        cloneTitle: 'Dieses Profil klonen',
+        cloneToEdit:
+          'Integrierte Profile bleiben schreibgeschützt. Klonen Sie dieses Profil, um seine Identität zu bearbeiten.',
+        profileName: 'Profilname',
+        profileNameHint: 'Kleinbuchstaben, Ziffern, Punkte, Unterstriche und Bindestriche.',
+        import: 'Paket importieren',
+        export: 'Paket exportieren',
+        delete: 'Löschen',
+        deleteTitle: 'Dieses Profil löschen?',
+        deleteDesc: '{{profile}} vom NanoKVM löschen.',
+        identity: 'USB-Identität',
+        preset: 'Vorlage für die Identität',
+        presetPlaceholder: 'Identität von einem bekannten Gerät übernehmen',
+        presetHint:
+          'Eine Vorlage füllt die Vendor-ID, die Product-ID und die beiden Namensfelder. Deskriptoren bringt sie nicht mit.',
+        presetSource: 'Identität wie in {{source}} verzeichnet',
+        vendorId: 'Vendor-ID',
+        foreignVendor: 'Diese Vendor-ID gehört einem anderen Hersteller',
+        productId: 'Product-ID',
+        bcdUSB: 'USB-Version',
+        bcdDevice: 'Geräteversion',
+        manufacturer: 'Hersteller',
+        product: 'Produkt',
+        serial: 'Seriennummer',
+        configuration: 'Konfigurationsstring',
+        functions: 'Funktionen',
+        descriptorAssets: 'Gespeicherte Deskriptor-Dateien: {{count}}',
+        endpointUse:
+          'IN {{inUse}} belegt, {{inFree}} frei; OUT {{outUse}} belegt, {{outFree}} frei',
+        preview: 'Prüfen',
+        save: 'Speichern',
+        apply: 'Anwenden',
+        applyTitle: 'Dieses USB-Profil anwenden?',
+        applyDesc: 'NanoKVM zeigt dem angeschlossenen Rechner {{profile}}.',
+        reconnect:
+          'Tastatur, Maus und andere USB-Funktionen werden kurz getrennt, während das Gadget neu gebunden wird.',
         applyLinks: 'Verknüpft: {{functions}}',
         applyRemoves: 'Entfernt: {{functions}}',
         applyNoHid:
@@ -429,7 +494,11 @@ const de = {
           'Eine Schnittstelle verschwindet aus dem Verbundgerät; der Host braucht unter Umständen einen Neustart, um den Rest neu zu binden.',
         recoveryHdmiReset:
           'Eine Videofunktion wird neu aufgebaut, dadurch setzt sich die dahinterliegende Aufnahmekette zurück.',
-        recoveryReconnect: 'Der Host enumeriert das Gerät neu; USB-Funktionen fallen kurz aus.'
+        recoveryReconnect: 'Der Host enumeriert das Gerät neu; USB-Funktionen fallen kurz aus.',
+        cancel: 'Abbrechen',
+        noFunctions: 'Keine verknüpften Funktionen',
+        loadFailed: 'Die Darstellungsprofile konnten nicht geladen werden',
+        operationFailed: 'Die Aktion an der USB-Darstellung ist fehlgeschlagen'
       },
       passthrough: {
         title: 'USB-Passthrough',

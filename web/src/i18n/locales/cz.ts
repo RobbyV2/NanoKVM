@@ -286,9 +286,32 @@ const cz = {
       cancelBtn: 'Ne'
     },
     devices: {
+      title: 'Zařízení',
+      stale: 'Živý stav zařízení není dostupný. Probíhá opětovné připojení.',
+      empty: 'Není nakonfigurován žádný slot pro kameru ani mikrofon.',
+      available: 'Dostupné',
+      waiting: 'Hostitel čeká na zdroj',
+      hostOpen: 'Hostitel otevřen',
+      hostIdle: 'Hostitel nečinný',
+      sending: 'Odesílá se z tohoto prohlížeče',
+      black: 'Černé video',
+      silence: 'Digitální ticho',
+      resuming: 'Čeká na obnovení',
+      stop: 'Ukončit sdílení',
+      disconnect: 'Odpojit',
       takeover: 'Převzít',
       refused: 'Používá {{owner}} ze zdroje {{source}}',
+      connectedSources_one: '{{count}} připojený zdroj',
+      connectedSources_other: '{{count}} připojených zdrojů',
+      connectedSources: '{{count}} připojených zdrojů',
+      connection: {
+        connecting: 'Připojování',
+        connected: 'Živě',
+        disconnected: 'Opětovné připojování'
+      },
       share: {
+        camera: 'Sdílet kameru',
+        microphone: 'Sdílet mikrofon',
         usbDevice: 'Sdílet USB'
       },
       permission: {
@@ -387,6 +410,9 @@ const cz = {
         cancelBtn: 'Zrušit'
       },
       presentation: {
+        title: 'Prezentace USB',
+        loading: 'Načítání...',
+        current: 'Aktuální prezentace USB',
         noProfile: 'Není použit žádný profil',
         linked: 'Propojené funkce',
         hostState: 'USB hostitele',
@@ -411,7 +437,46 @@ const cz = {
         rollback: 'Vrátit zpět',
         rollbackTitle: 'Vrátit se k profilu {{profile}}?',
         rollbackDesc: 'Gadget se znovu vyčíslí; USB funkce na okamžik vypadnou.',
+        profile: 'Profil USB',
+        builtIn: 'vestavěný',
         descriptors: 'deskriptory',
+        clone: 'Klonovat',
+        cloneTitle: 'Klonovat tento profil',
+        cloneToEdit:
+          'Vestavěné profily zůstávají jen pro čtení. Naklonujte tento profil, chcete-li upravit jeho identitu.',
+        profileName: 'Název profilu',
+        profileNameHint: 'Malá písmena, číslice, tečky, podtržítka a pomlčky.',
+        import: 'Importovat balíček',
+        export: 'Exportovat balíček',
+        delete: 'Smazat',
+        deleteTitle: 'Smazat tento profil?',
+        deleteDesc: 'Smazat {{profile}} z NanoKVM.',
+        identity: 'Identita USB',
+        preset: 'Předvolená identita',
+        presetPlaceholder: 'Převzít identitu ze známého zařízení',
+        presetHint:
+          'Předvolba vyplní Vendor ID, Product ID a obě pole s názvem. Žádné deskriptory s sebou nenese.',
+        presetSource: 'Identita tak, jak je zaznamenána v {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Toto Vendor ID patří jinému výrobci',
+        productId: 'Product ID',
+        bcdUSB: 'Verze USB',
+        bcdDevice: 'Verze zařízení',
+        manufacturer: 'Výrobce',
+        product: 'Produkt',
+        serial: 'Sériové číslo',
+        configuration: 'Konfigurační řetězec',
+        functions: 'Funkce',
+        descriptorAssets: 'Uložené soubory deskriptorů: {{count}}',
+        endpointUse:
+          'IN {{inUse}} použito, {{inFree}} volných; OUT {{outUse}} použito, {{outFree}} volných',
+        preview: 'Ověřit',
+        save: 'Uložit',
+        apply: 'Použít',
+        applyTitle: 'Použít tento profil USB?',
+        applyDesc: 'NanoKVM bude připojenému počítači předkládat {{profile}}.',
+        reconnect:
+          'Klávesnice, myš a další funkce USB se na okamžik odpojí, než se gadget znovu naváže.',
         applyLinks: 'Propojí: {{functions}}',
         applyRemoves: 'Odebere: {{functions}}',
         applyNoHid:
@@ -423,7 +488,11 @@ const cz = {
           'Ze složeného zařízení zmizí jedno rozhraní; hostitel může potřebovat restart, aby zbytek znovu navázal.',
         recoveryHdmiReset:
           'Videofunkce se vytvoří znovu, takže se resetuje i řetězec zachytávání za ní.',
-        recoveryReconnect: 'Hostitel zařízení znovu vyčíslí; USB funkce na okamžik vypadnou.'
+        recoveryReconnect: 'Hostitel zařízení znovu vyčíslí; USB funkce na okamžik vypadnou.',
+        cancel: 'Zrušit',
+        noFunctions: 'Žádné propojené funkce',
+        loadFailed: 'Profily prezentace se nepodařilo načíst',
+        operationFailed: 'Operace s prezentací selhala'
       },
       passthrough: {
         title: 'Průchod USB',

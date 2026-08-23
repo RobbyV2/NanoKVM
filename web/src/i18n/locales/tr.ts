@@ -284,9 +284,32 @@ const tr = {
       cancelBtn: 'Hayır'
     },
     devices: {
+      title: 'Cihazlar',
+      stale: 'Cihazların canlı durumu kullanılamıyor. Yeniden bağlanılıyor.',
+      empty: 'Yapılandırılmış kamera veya mikrofon yuvası yok.',
+      available: 'Kullanılabilir',
+      waiting: 'Host bir kaynak bekliyor',
+      hostOpen: 'Host açık',
+      hostIdle: 'Host boşta',
+      sending: 'Bu tarayıcıdan gönderiliyor',
+      black: 'Siyah görüntü',
+      silence: 'Dijital sessizlik',
+      resuming: 'Sürdürülmeyi bekliyor',
+      stop: 'Paylaşımı durdur',
+      disconnect: 'Bağlantıyı kes',
       takeover: 'Devral',
       refused: '{{source}} üzerinden {{owner}} kullanıyor',
+      connectedSources_one: '{{count}} bağlı kaynak',
+      connectedSources_other: '{{count}} bağlı kaynak',
+      connectedSources: '{{count}} bağlı kaynak',
+      connection: {
+        connecting: 'Bağlanıyor',
+        connected: 'Canlı',
+        disconnected: 'Yeniden bağlanıyor'
+      },
       share: {
+        camera: 'Kamerayı paylaş',
+        microphone: 'Mikrofonu paylaş',
         usbDevice: 'USB paylaş'
       },
       permission: {
@@ -386,6 +409,9 @@ const tr = {
         cancelBtn: 'İptal'
       },
       presentation: {
+        title: 'USB sunumu',
+        loading: 'Yükleniyor...',
+        current: 'Mevcut USB sunumu',
         noProfile: 'Uygulanmış profil yok',
         linked: 'Bağlı işlevler',
         hostState: 'Host USB',
@@ -410,7 +436,46 @@ const tr = {
         rollback: 'Geri al',
         rollbackTitle: '{{profile}} profiline geri dönülsün mü?',
         rollbackDesc: 'Gadget yeniden numaralandırılır; USB işlevleri kısa süre kesilir.',
+        profile: 'USB profili',
+        builtIn: 'yerleşik',
         descriptors: 'tanımlayıcılar',
+        clone: 'Klonla',
+        cloneTitle: 'Bu profili klonla',
+        cloneToEdit:
+          'Yerleşik profiller salt okunur kalır. Kimliğini düzenlemek için bu profili klonlayın.',
+        profileName: 'Profil adı',
+        profileNameHint: 'Küçük harfler, rakamlar, noktalar, alt çizgiler ve kısa çizgiler.',
+        import: 'Paketi içe aktar',
+        export: 'Paketi dışa aktar',
+        delete: 'Sil',
+        deleteTitle: 'Bu profil silinsin mi?',
+        deleteDesc: '{{profile}} profilini NanoKVM’den sil.',
+        identity: 'USB kimliği',
+        preset: 'Hazır kimlik',
+        presetPlaceholder: 'Kimliği bilinen bir cihazdan kopyala',
+        presetHint:
+          'Bir ön ayar Vendor ID, Product ID ve iki ad alanını doldurur. Yanında tanımlayıcı getirmez.',
+        presetSource: '{{source}} kaydındaki haliyle kimlik',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Bu Vendor ID başka bir üreticiye ait',
+        productId: 'Product ID',
+        bcdUSB: 'USB sürümü',
+        bcdDevice: 'Cihaz sürümü',
+        manufacturer: 'Üretici',
+        product: 'Ürün',
+        serial: 'Seri numarası',
+        configuration: 'Yapılandırma dizesi',
+        functions: 'İşlevler',
+        descriptorAssets: 'Saklanan tanımlayıcı dosyaları: {{count}}',
+        endpointUse:
+          'IN {{inUse}} kullanımda, {{inFree}} boş; OUT {{outUse}} kullanımda, {{outFree}} boş',
+        preview: 'Doğrula',
+        save: 'Kaydet',
+        apply: 'Uygula',
+        applyTitle: 'Bu USB profili uygulansın mı?',
+        applyDesc: 'NanoKVM bağlı bilgisayara {{profile}} profilini sunacak.',
+        reconnect:
+          'Gadget yeniden bağlanırken klavye, fare ve diğer USB işlevleri kısa süre kesilir.',
         applyLinks: 'Bağlar: {{functions}}',
         applyRemoves: 'Kaldırır: {{functions}}',
         applyNoHid:
@@ -422,7 +487,11 @@ const tr = {
           'Bileşik cihazdan bir arabirim kaybolur; host’un geri kalanını yeniden bağlamak için yeniden başlatılması gerekebilir.',
         recoveryHdmiReset:
           'Bir video işlevi yeniden kurulur, bu yüzden arkasındaki yakalama hattı sıfırlanır.',
-        recoveryReconnect: 'Host cihazı yeniden numaralandırır; USB işlevleri kısa süre kesilir.'
+        recoveryReconnect: 'Host cihazı yeniden numaralandırır; USB işlevleri kısa süre kesilir.',
+        cancel: 'İptal',
+        noFunctions: 'Bağlı işlev yok',
+        loadFailed: 'Sunum profilleri yüklenemedi',
+        operationFailed: 'Sunum işlemi başarısız oldu'
       },
       passthrough: {
         title: 'USB Geçişi',

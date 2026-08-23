@@ -281,9 +281,32 @@ const ko = {
       cancelBtn: '아니오'
     },
     devices: {
+      title: '장치',
+      stale: '장치의 실시간 상태를 가져올 수 없습니다. 다시 연결하는 중입니다.',
+      empty: '구성된 카메라 또는 마이크 슬롯이 없습니다.',
+      available: '사용 가능',
+      waiting: '호스트가 소스를 기다리는 중',
+      hostOpen: '호스트 열림',
+      hostIdle: '호스트 대기 중',
+      sending: '이 브라우저에서 전송 중',
+      black: '검은 화면',
+      silence: '디지털 무음',
+      resuming: '재개 대기 중',
+      stop: '공유 중지',
+      disconnect: '연결 해제',
       takeover: '가져오기',
       refused: '{{source}}의 {{owner}}이(가) 사용 중',
+      connectedSources_one: '연결된 소스 {{count}}개',
+      connectedSources_other: '연결된 소스 {{count}}개',
+      connectedSources: '연결된 소스 {{count}}개',
+      connection: {
+        connecting: '연결 중',
+        connected: '실시간',
+        disconnected: '다시 연결 중'
+      },
       share: {
+        camera: '카메라 공유',
+        microphone: '마이크 공유',
         usbDevice: 'USB 공유'
       },
       permission: {
@@ -382,6 +405,9 @@ const ko = {
         cancelBtn: '취소'
       },
       presentation: {
+        title: 'USB 프레젠테이션',
+        loading: '불러오는 중...',
+        current: '현재 USB 프레젠테이션',
         noProfile: '적용된 프로필 없음',
         linked: '연결된 기능',
         hostState: '호스트 USB',
@@ -406,7 +432,45 @@ const ko = {
         rollback: '롤백',
         rollbackTitle: '{{profile}}(으)로 롤백할까요?',
         rollbackDesc: '가젯이 다시 열거되며 USB 기능이 잠시 끊깁니다.',
+        profile: 'USB 프로필',
+        builtIn: '내장',
         descriptors: '디스크립터',
+        clone: '복제',
+        cloneTitle: '이 프로필 복제',
+        cloneToEdit:
+          '내장 프로필은 읽기 전용으로 유지됩니다. 아이덴티티를 수정하려면 이 프로필을 복제하세요.',
+        profileName: '프로필 이름',
+        profileNameHint: '소문자, 숫자, 마침표, 밑줄, 하이픈을 쓸 수 있습니다.',
+        import: '패키지 가져오기',
+        export: '패키지 내보내기',
+        delete: '삭제',
+        deleteTitle: '이 프로필을 삭제할까요?',
+        deleteDesc: 'NanoKVM에서 {{profile}}을(를) 삭제합니다.',
+        identity: 'USB 아이덴티티',
+        preset: '프리셋 아이덴티티',
+        presetPlaceholder: '알려진 장치에서 아이덴티티 복사',
+        presetHint:
+          '프리셋은 Vendor ID, Product ID와 두 개의 이름 항목을 채웁니다. 디스크립터는 함께 오지 않습니다.',
+        presetSource: '{{source}}에 기록된 그대로의 아이덴티티',
+        vendorId: 'Vendor ID',
+        foreignVendor: '이 Vendor ID는 다른 제조사의 것입니다',
+        productId: 'Product ID',
+        bcdUSB: 'USB 버전',
+        bcdDevice: '장치 버전',
+        manufacturer: '제조사',
+        product: '제품명',
+        serial: '일련번호',
+        configuration: '구성 문자열',
+        functions: '기능',
+        descriptorAssets: '저장된 디스크립터 파일: {{count}}',
+        endpointUse:
+          'IN {{inUse}}개 사용, {{inFree}}개 여유; OUT {{outUse}}개 사용, {{outFree}}개 여유',
+        preview: '검증',
+        save: '저장',
+        apply: '적용',
+        applyTitle: '이 USB 프로필을 적용할까요?',
+        applyDesc: 'NanoKVM이 연결된 컴퓨터에 {{profile}}을(를) 제시합니다.',
+        reconnect: '가젯이 다시 바인딩되는 동안 키보드, 마우스 등 USB 기능이 잠시 끊깁니다.',
         applyLinks: '연결: {{functions}}',
         applyRemoves: '제거: {{functions}}',
         applyNoHid: '이 적용 후에는 HID 기능이 남지 않습니다. 키보드와 마우스가 동작을 멈춥니다.',
@@ -417,7 +481,11 @@ const ko = {
           '복합 장치에서 인터페이스 하나가 사라집니다. 나머지를 다시 바인딩하려면 호스트를 재부팅해야 할 수 있습니다.',
         recoveryHdmiReset:
           '비디오 기능이 다시 만들어지므로 그 뒤의 캡처 파이프라인도 초기화됩니다.',
-        recoveryReconnect: '호스트가 장치를 다시 열거하며 USB 기능이 잠시 끊깁니다.'
+        recoveryReconnect: '호스트가 장치를 다시 열거하며 USB 기능이 잠시 끊깁니다.',
+        cancel: '취소',
+        noFunctions: '연결된 기능 없음',
+        loadFailed: '프레젠테이션 프로필을 불러오지 못했습니다',
+        operationFailed: '프레젠테이션 작업에 실패했습니다'
       },
       passthrough: {
         title: 'USB 패스스루',

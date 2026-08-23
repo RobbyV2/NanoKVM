@@ -283,9 +283,32 @@ const ca = {
       cancelBtn: 'No'
     },
     devices: {
+      title: 'Dispositius',
+      stale: 'L’estat en directe dels dispositius no està disponible. S’està reconnectant.',
+      empty: 'No hi ha cap ranura de càmera ni de micròfon configurada.',
+      available: 'Disponible',
+      waiting: 'L’amfitrió espera una font',
+      hostOpen: 'Amfitrió obert',
+      hostIdle: 'Amfitrió inactiu',
+      sending: 'S’està enviant des d’aquest navegador',
+      black: 'Vídeo negre',
+      silence: 'Silenci digital',
+      resuming: 'A l’espera de reprendre',
+      stop: 'Atura la compartició',
+      disconnect: 'Desconnecta',
       takeover: 'Pren el control',
       refused: 'En ús per {{owner}} des de {{source}}',
+      connectedSources_one: '{{count}} font connectada',
+      connectedSources_other: '{{count}} fonts connectades',
+      connectedSources: '{{count}} fonts connectades',
+      connection: {
+        connecting: 'S’està connectant',
+        connected: 'En directe',
+        disconnected: 'S’està reconnectant'
+      },
       share: {
+        camera: 'Comparteix la càmera',
+        microphone: 'Comparteix el micròfon',
         usbDevice: 'Comparteix USB'
       },
       permission: {
@@ -386,6 +409,9 @@ const ca = {
         cancelBtn: 'Cancel·la'
       },
       presentation: {
+        title: 'Presentació USB',
+        loading: 'Carregant...',
+        current: 'Presentació USB actual',
         noProfile: 'Cap perfil aplicat',
         linked: 'Funcions enllaçades',
         hostState: 'USB de l’amfitrió',
@@ -410,7 +436,46 @@ const ca = {
         rollback: 'Reverteix',
         rollbackTitle: 'Voleu revertir a {{profile}}?',
         rollbackDesc: 'El gadget es torna a enumerar; les funcions USB cauen breument.',
+        profile: 'Perfil USB',
+        builtIn: 'integrat',
         descriptors: 'descriptors',
+        clone: 'Clona',
+        cloneTitle: 'Clona aquest perfil',
+        cloneToEdit:
+          'Els perfils integrats són només de lectura. Cloneu aquest perfil per editar-ne la identitat.',
+        profileName: 'Nom del perfil',
+        profileNameHint: 'Lletres minúscules, xifres, punts, guions baixos i guions.',
+        import: 'Importa un paquet',
+        export: 'Exporta el paquet',
+        delete: 'Suprimeix',
+        deleteTitle: 'Voleu suprimir aquest perfil?',
+        deleteDesc: 'Suprimeix {{profile}} del NanoKVM.',
+        identity: 'Identitat USB',
+        preset: 'Identitat predefinida',
+        presetPlaceholder: 'Copia la identitat d’un dispositiu conegut',
+        presetHint:
+          'Una predefinició omple el Vendor ID, el Product ID i els dos camps de nom. No aporta cap descriptor.',
+        presetSource: 'Identitat tal com consta a {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Aquest Vendor ID pertany a un altre fabricant',
+        productId: 'Product ID',
+        bcdUSB: 'Versió d’USB',
+        bcdDevice: 'Versió del dispositiu',
+        manufacturer: 'Fabricant',
+        product: 'Producte',
+        serial: 'Número de sèrie',
+        configuration: 'Cadena de configuració',
+        functions: 'Funcions',
+        descriptorAssets: 'Descriptors emmagatzemats: {{count}}',
+        endpointUse:
+          'IN {{inUse}} en ús, {{inFree}} lliures; OUT {{outUse}} en ús, {{outFree}} lliures',
+        preview: 'Valida',
+        save: 'Desa',
+        apply: 'Aplica',
+        applyTitle: 'Voleu aplicar aquest perfil USB?',
+        applyDesc: 'El NanoKVM presentarà {{profile}} a l’ordinador connectat.',
+        reconnect:
+          'El teclat, el ratolí i la resta de funcions USB es desconnecten breument mentre es torna a enllaçar el gadget.',
         applyLinks: 'Enllaça: {{functions}}',
         applyRemoves: 'Elimina: {{functions}}',
         applyNoHid:
@@ -423,7 +488,11 @@ const ca = {
         recoveryHdmiReset:
           'Es reconstrueix una funció de vídeo, de manera que la cadena de captura que hi ha al darrere es reinicia.',
         recoveryReconnect:
-          'L’amfitrió torna a enumerar el dispositiu; les funcions USB cauen breument.'
+          'L’amfitrió torna a enumerar el dispositiu; les funcions USB cauen breument.',
+        cancel: 'Cancel·la',
+        noFunctions: 'Cap funció enllaçada',
+        loadFailed: 'No s’han pogut carregar els perfils de presentació',
+        operationFailed: 'L’operació de presentació ha fallat'
       },
       passthrough: {
         title: 'Passthrough USB',

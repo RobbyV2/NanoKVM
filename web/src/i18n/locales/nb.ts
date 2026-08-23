@@ -285,9 +285,32 @@ const nb = {
       cancelBtn: 'Nei'
     },
     devices: {
+      title: 'Enheter',
+      stale: 'Sanntidsstatusen for enhetene er utilgjengelig. Kobler til igjen.',
+      empty: 'Ingen kamera- eller mikrofonplasser er satt opp.',
+      available: 'Tilgjengelig',
+      waiting: 'Verten venter på en kilde',
+      hostOpen: 'Vert åpen',
+      hostIdle: 'Vert inaktiv',
+      sending: 'Sender fra denne nettleseren',
+      black: 'Svart video',
+      silence: 'Digital stillhet',
+      resuming: 'Venter på å fortsette',
+      stop: 'Stopp deling',
+      disconnect: 'Koble fra',
       takeover: 'Overta',
       refused: 'I bruk av {{owner}} fra {{source}}',
+      connectedSources_one: '{{count}} tilkoblet kilde',
+      connectedSources_other: '{{count}} tilkoblede kilder',
+      connectedSources: '{{count}} tilkoblede kilder',
+      connection: {
+        connecting: 'Kobler til',
+        connected: 'Direkte',
+        disconnected: 'Kobler til igjen'
+      },
       share: {
+        camera: 'Del kamera',
+        microphone: 'Del mikrofon',
         usbDevice: 'Del USB'
       },
       permission: {
@@ -388,6 +411,9 @@ const nb = {
         cancelBtn: 'Avbryt'
       },
       presentation: {
+        title: 'USB-presentasjon',
+        loading: 'Laster...',
+        current: 'Nåværende USB-presentasjon',
         noProfile: 'Ingen profil tatt i bruk',
         linked: 'Tilknyttede funksjoner',
         hostState: 'Vertens USB',
@@ -412,7 +438,46 @@ const nb = {
         rollback: 'Rull tilbake',
         rollbackTitle: 'Rulle tilbake til {{profile}}?',
         rollbackDesc: 'Gadgeten opplistes på nytt; USB-funksjoner faller ut en kort stund.',
+        profile: 'USB-profil',
+        builtIn: 'innebygd',
         descriptors: 'deskriptorer',
+        clone: 'Klon',
+        cloneTitle: 'Klon denne profilen',
+        cloneToEdit:
+          'Innebygde profiler forblir skrivebeskyttet. Klon denne profilen for å redigere identiteten.',
+        profileName: 'Profilnavn',
+        profileNameHint: 'Små bokstaver, tall, punktum, understreker og bindestreker.',
+        import: 'Importer pakke',
+        export: 'Eksporter pakke',
+        delete: 'Slett',
+        deleteTitle: 'Slette denne profilen?',
+        deleteDesc: 'Slett {{profile}} fra NanoKVM.',
+        identity: 'USB-identitet',
+        preset: 'Forhåndsvalgt identitet',
+        presetPlaceholder: 'Kopier identitet fra en kjent enhet',
+        presetHint:
+          'Et forhåndsvalg fyller inn Vendor ID, Product ID og de to navnefeltene. Det tar ikke med seg deskriptorer.',
+        presetSource: 'Identitet slik den er registrert i {{source}}',
+        vendorId: 'Vendor ID',
+        foreignVendor: 'Denne Vendor ID-en tilhører en annen produsent',
+        productId: 'Product ID',
+        bcdUSB: 'USB-versjon',
+        bcdDevice: 'Enhetsversjon',
+        manufacturer: 'Produsent',
+        product: 'Produkt',
+        serial: 'Serienummer',
+        configuration: 'Konfigurasjonsstreng',
+        functions: 'Funksjoner',
+        descriptorAssets: 'Lagrede deskriptorfiler: {{count}}',
+        endpointUse:
+          'IN {{inUse}} i bruk, {{inFree}} ledige; OUT {{outUse}} i bruk, {{outFree}} ledige',
+        preview: 'Valider',
+        save: 'Lagre',
+        apply: 'Bruk',
+        applyTitle: 'Vil du bruke denne USB-profilen?',
+        applyDesc: 'NanoKVM vil presentere {{profile}} for datamaskinen som er koblet til.',
+        reconnect:
+          'Tastatur, mus og andre USB-funksjoner kobles fra en kort stund mens gadgeten knyttes til på nytt.',
         applyLinks: 'Knytter til: {{functions}}',
         applyRemoves: 'Fjerner: {{functions}}',
         applyNoHid:
@@ -425,7 +490,11 @@ const nb = {
         recoveryHdmiReset:
           'En videofunksjon bygges opp på nytt, så opptakskjeden bak den nullstilles.',
         recoveryReconnect:
-          'Verten opplister enheten på nytt; USB-funksjoner faller ut en kort stund.'
+          'Verten opplister enheten på nytt; USB-funksjoner faller ut en kort stund.',
+        cancel: 'Avbryt',
+        noFunctions: 'Ingen tilknyttede funksjoner',
+        loadFailed: 'Kunne ikke laste presentasjonsprofilene',
+        operationFailed: 'Presentasjonsoperasjonen mislyktes'
       },
       passthrough: {
         title: 'USB-gjennomgang',
