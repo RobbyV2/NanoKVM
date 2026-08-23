@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Divider } from 'antd';
-import { DownloadIcon, HistoryIcon, LoaderCircleIcon } from 'lucide-react';
+import { DownloadIcon, HistoryIcon, LoaderCircleIcon, PowerIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/edid.ts';
@@ -9,6 +9,7 @@ import type { EdidResult, EdidStatus } from '@/api/edid.ts';
 import { Preset } from './preset.tsx';
 import { Recovery } from './recovery.tsx';
 import { Summary } from './summary.tsx';
+import { pendingNotice } from './utils.ts';
 
 type DisplayProps = {
   setIsLocked: (isLocked: boolean) => void;
@@ -24,6 +25,10 @@ export const Display = ({ setIsLocked }: DisplayProps) => {
   const [errMsg, setErrMsg] = useState('');
 
   const backup = status?.backups?.[0];
+
+  // armed by an apply that reached the chip and only cleared by the power cycle,
+  // so it is still the operator's next step after a reload or a server restart
+  const pending = pendingNotice(status?.pendingPowerCycle);
 
   // the flash left the edid region half written, and only a restore leaves it known again
   const needsRecovery = result?.state === 'needs_recovery';
@@ -104,6 +109,13 @@ export const Display = ({ setIsLocked }: DisplayProps) => {
                     time: new Date(status.appliedAt).toLocaleString()
                   })}
                 </span>
+              )}
+
+              {pending && (
+                <div className="flex items-center space-x-1 text-amber-500">
+                  <PowerIcon size={14} className="shrink-0" />
+                  <span className="text-sm">{t(`settings.display.${pending}`)}</span>
+                </div>
               )}
             </div>
 

@@ -34,12 +34,22 @@ export type EdidBackup = {
   size: number;
 };
 
+// armed by a flash that reached the chip, cleared by the power cycle that makes
+// it live, and so still here after a reload or a server restart
+export type EdidPending = {
+  sha256: string;
+  source: string;
+  state: string;
+  appliedAt: string;
+};
+
 export type EdidStatus = {
   active?: EdidSummary;
   source?: string;
   appliedAt?: string;
   unverifiedSinceBoot: boolean;
   preflight: EdidPreflight;
+  pendingPowerCycle?: EdidPending | null;
   backups: EdidBackup[];
   factoryAvailable: boolean;
 };

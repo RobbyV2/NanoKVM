@@ -1,4 +1,4 @@
-import type { EdidPreflight, EdidResult, EdidSummary } from '@/api/edid.ts';
+import type { EdidPending, EdidPreflight, EdidResult, EdidSummary } from '@/api/edid.ts';
 
 export type CheckLevel = 'error' | 'warning' | 'info';
 
@@ -105,8 +105,18 @@ export function buildChecks(summary?: Partial<EdidSummary>, preflight?: EdidPref
 // the flash region was touched on every outcome the server sets this on, not
 // only on the ones that verified, and a half written region is where the trip
 // to the device stops being optional
-export function powerCycleNotice(result?: EdidResult): string {
+export function powerCycleNotice(
+  result?: Pick<EdidResult, 'verified' | 'requiresPowerCycle'>
+): string {
   if (!result?.requiresPowerCycle) return '';
 
   return result.verified ? 'powerCycleNotice' : 'powerCycleUnverified';
+}
+
+// the same notice for a flash the apply response no longer carries, rebuilt
+// from the record that outlives the reload
+export function pendingNotice(pending?: EdidPending | null): string {
+  if (!pending) return '';
+
+  return powerCycleNotice({ verified: pending.state === 'success', requiresPowerCycle: true });
 }
