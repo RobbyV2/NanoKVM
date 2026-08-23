@@ -4,11 +4,13 @@ import (
 	"NanoKVM-Server/authn"
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/service/sources"
+	"NanoKVM-Server/service/webusb"
 
 	"github.com/gin-gonic/gin"
 )
 
 func sourcesRouter(r *gin.Engine, service *sources.Service) {
+	service.SetUSBBackend(webusb.NewBackend())
 	api := r.Group("/api").Use(middleware.CheckToken())
 	api.GET("/sources", service.Get)
 	api.GET("/sources/events", service.Events)

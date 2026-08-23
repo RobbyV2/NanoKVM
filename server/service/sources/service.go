@@ -22,6 +22,8 @@ import (
 
 const (
 	maxControlMessage  = 64 << 10
+	maxBinaryMessage   = (64 << 10) + 32
+	usbFrameMagic      = "NKUF"
 	helloTimeout       = 10 * time.Second
 	websocketTimeout   = 60 * time.Second
 	websocketWriteWait = 5 * time.Second
@@ -36,6 +38,19 @@ type Service struct {
 	ingress  FrameIngress
 	slots    SlotManager
 	mu       sync.Mutex
+	usb      USBBackend
+	active   map[string]BinarySession
+}
+
+type BinarySession interface {
+	Receive([]byte) error
+	Ready() <-chan error
+	Done() <-chan error
+	Close() error
+}
+
+type USBBackend interface {
+	Start(context.Context, Stream, func([]byte) error) (BinarySession, error)
 }
 
 type SlotManager interface {
@@ -86,11 +101,11 @@ var sourceUpgrader = websocket.Upgrader{
 
 func NewService() *Service {
 	registry, _ := NewRegistry(nil, RegistryOptions{})
-	return &Service{registry: registry}
+	return &Service{registry: registry, active: make(map[string]BinarySession)}
 }
 
 func NewServiceWith(registry *Registry) *Service {
-	return &Service{registry: registry}
+	return &Service{registry: registry, active: make(map[string]BinarySession)}
 }
 
 func (s *Service) SetIngress(ingress FrameIngress) {
@@ -103,6 +118,18 @@ func (s *Service) SetSlotManager(manager SlotManager) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.slots = manager
+}
+
+func (s *Service) SetUSBBackend(backend USBBackend) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.usb = backend
+}
+
+func (s *Service) usbBackend() USBBackend {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.usb
 }
 
 func (s *Service) Registry() *Registry { return s.registry }
@@ -167,6 +194,7 @@ func (s *Service) Release(c *gin.Context) {
 		return
 	}
 	s.detach(c.Param("sink"))
+	s.stopUSB(c.Param("sink"))
 	response.OkRsp(c)
 }
 
@@ -185,6 +213,7 @@ func (s *Service) DisconnectAll(c *gin.Context) {
 	for _, binding := range snapshot.Bindings {
 		s.detach(binding.SinkID)
 	}
+	s.stopAllUSB()
 	response.OkRsp(c)
 }
 
@@ -214,6 +243,7 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 	stopWatcher := middleware.WatchWebSocket(c.Request.Context(), connection)
 	defer stopWatcher()
 	defer connection.Close()
+	writer := &sourceWriter{connection: connection}
 	connection.SetReadLimit(maxControlMessage)
 	_ = connection.SetReadDeadline(time.Now().Add(helloTimeout))
 	connection.SetPongHandler(func(string) error {
@@ -222,12 +252,12 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 
 	message, err := readControl(connection)
 	if err != nil || message.Type != "hello" {
-		writeControl(connection, controlResponse{Type: "error", Message: "hello required"})
+		writer.JSON(controlResponse{Type: "error", Message: "hello required"})
 		return
 	}
 	source, err := s.registry.RegisterSource(actor, Hello{Label: message.Label, Streams: message.Streams})
 	if err != nil {
-		writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
+		writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 		return
 	}
 	defer func() {
@@ -240,7 +270,7 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		}
 	}()
 	snapshot := s.registry.Snapshot()
-	if err := writeControl(connection, controlResponse{Type: "source_ready", Source: &source, Snapshot: &snapshot}); err != nil {
+	if err := writer.JSON(controlResponse{Type: "source_ready", Source: &source, Snapshot: &snapshot}); err != nil {
 		return
 	}
 	_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
@@ -248,7 +278,15 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 
 	done := make(chan struct{})
 	defer close(done)
-	go ping(connection, done)
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	var binarySession BinarySession
+	defer func() {
+		cancel()
+		if binarySession != nil {
+			_ = binarySession.Close()
+		}
+	}()
+	go pingWriter(writer, done)
 	windowStart, count, mediaCount := time.Now(), 0, 0
 	for {
 		messageType, data, readErr := connection.ReadMessage()
@@ -257,16 +295,24 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 			return
 		}
 		if messageType == websocket.BinaryMessage {
+			if len(data) >= 4 && string(data[:4]) == usbFrameMagic {
+				if binarySession == nil || len(data) > maxBinaryMessage || binarySession.Receive(data) != nil {
+					_ = writer.JSON(controlResponse{Type: "error", Message: "invalid USB transfer"})
+					return
+				}
+				_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
+				continue
+			}
 			now := time.Now()
 			if now.Sub(windowStart) >= messageWindow {
 				windowStart, count, mediaCount = now, 0, 0
 			}
 			mediaCount++
 			if mediaCount > mediaMessageLimit {
-				writeControl(connection, controlResponse{Type: "error", Message: "media frame rate exceeded"})
+				writer.JSON(controlResponse{Type: "error", Message: "media frame rate exceeded"})
 				return
 			}
-			if err := s.handleMedia(c.Request.Context(), connection, source.ID, data); err != nil {
+			if err := s.handleMedia(c.Request.Context(), writer, source.ID, data); err != nil {
 				response := controlResponse{Type: "frame_error", Message: err.Error()}
 				var failure *frameFailure
 				if errors.As(err, &failure) {
@@ -274,7 +320,7 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 					response.StreamID = failure.frame.StreamID
 					response.Sequence = failure.frame.Sequence
 				}
-				if writeControl(connection, response) != nil {
+				if writer.JSON(response) != nil {
 					return
 				}
 			}
@@ -282,12 +328,12 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 			continue
 		}
 		if len(data) > maxControlMessage {
-			writeControl(connection, controlResponse{Type: "error", Message: "control message is too large"})
+			writer.JSON(controlResponse{Type: "error", Message: "control message is too large"})
 			return
 		}
 		message, err = decodeControl(messageType, data)
 		if err != nil {
-			writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
+			writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 			return
 		}
 		now := time.Now()
@@ -296,17 +342,17 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		}
 		count++
 		if count > messageLimit {
-			writeControl(connection, controlResponse{Type: "error", Message: "message rate exceeded"})
+			writer.JSON(controlResponse{Type: "error", Message: "message rate exceeded"})
 			return
 		}
-		if err := s.handleControl(connection, actor, source.ID, message); err != nil {
+		if err := s.handleControl(ctx, writer, actor, source.ID, message, &binarySession); err != nil {
 			return
 		}
 		_ = connection.SetReadDeadline(time.Now().Add(websocketTimeout))
 	}
 }
 
-func (s *Service) handleMedia(ctx context.Context, connection *websocket.Conn, sourceID string, data []byte) error {
+func (s *Service) handleMedia(ctx context.Context, writer *sourceWriter, sourceID string, data []byte) error {
 	frame, err := parseMediaFrame(data)
 	if err != nil {
 		return err
@@ -328,19 +374,19 @@ func (s *Service) handleMedia(ctx context.Context, connection *websocket.Conn, s
 	if err := ingress.Ingest(ctx, frame); err != nil {
 		return &frameFailure{frame: frame, err: err}
 	}
-	return writeControl(connection, controlResponse{
+	return writer.JSON(controlResponse{
 		Type: "frame_ack", SinkID: frame.SinkID, StreamID: frame.StreamID, Sequence: frame.Sequence,
 	})
 }
 
-func (s *Service) handleControl(connection *websocket.Conn, actor Actor, sourceID string, message controlMessage) error {
+func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor Actor, sourceID string, message controlMessage, active *BinarySession) error {
 	switch message.Type {
 	case "claim":
 		result, err := s.registry.Claim(actor, sourceID, message.StreamID, message.SinkID)
 		if err != nil {
 			var occupied *OccupiedError
 			if errors.As(err, &occupied) {
-				return writeControl(connection, controlResponse{
+				return writer.JSON(controlResponse{
 					Type:        "claim_refused",
 					Message:     "slot_occupied",
 					SinkID:      occupied.SinkID,
@@ -349,23 +395,141 @@ func (s *Service) handleControl(connection *websocket.Conn, actor Actor, sourceI
 					Since:       occupied.Since,
 				})
 			}
-			return writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
+			return writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 		}
-		return writeControl(connection, controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token})
+		if result.Stream.Kind == KindUSBDevice {
+			backend := s.usbBackend()
+			if backend == nil || *active != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: "WebUSB relay is unavailable"})
+			}
+			session, startErr := backend.Start(ctx, result.Stream, writer.Binary)
+			if startErr != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: startErr.Error()})
+			}
+			*active = session
+			s.trackUSB(message.SinkID, session)
+			if err := writer.JSON(controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token}); err != nil {
+				_ = session.Close()
+				s.untrackUSB(message.SinkID, session)
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				*active = nil
+				return err
+			}
+			s.watchUSB(ctx, writer, actor, message.SinkID, session)
+			return nil
+		}
+		return writer.JSON(controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token})
 	case "release":
 		if err := s.registry.Release(actor, message.SinkID, ReasonReleased); err != nil {
-			return writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
+			return writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 		}
 		s.detach(message.SinkID)
-		return writeControl(connection, controlResponse{Type: "released", SinkID: message.SinkID})
+		if *active != nil {
+			session := *active
+			s.untrackUSB(message.SinkID, session)
+			_ = session.Close()
+			*active = nil
+		}
+		return writer.JSON(controlResponse{Type: "released", SinkID: message.SinkID})
 	case "resume":
 		binding, err := s.registry.Resume(actor, sourceID, message.StreamID, message.SinkID, message.Token)
 		if err != nil {
-			return writeControl(connection, controlResponse{Type: "error", Message: err.Error()})
+			return writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 		}
-		return writeControl(connection, controlResponse{Type: "resumed", Binding: &binding})
+		stream, err := s.registry.Stream(sourceID, message.StreamID)
+		if err == nil && stream.Kind == KindUSBDevice {
+			backend := s.usbBackend()
+			if backend == nil || *active != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: "WebUSB relay is unavailable"})
+			}
+			session, startErr := backend.Start(ctx, stream, writer.Binary)
+			if startErr != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: startErr.Error()})
+			}
+			*active = session
+			s.trackUSB(message.SinkID, session)
+			if err := writer.JSON(controlResponse{Type: "resumed", Binding: &binding}); err != nil {
+				_ = session.Close()
+				s.untrackUSB(message.SinkID, session)
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				*active = nil
+				return err
+			}
+			s.watchUSB(ctx, writer, actor, message.SinkID, session)
+			return nil
+		}
+		return writer.JSON(controlResponse{Type: "resumed", Binding: &binding})
 	default:
-		return writeControl(connection, controlResponse{Type: "error", Message: "unknown message type"})
+		return writer.JSON(controlResponse{Type: "error", Message: "unknown message type"})
+	}
+}
+
+func (s *Service) watchUSB(ctx context.Context, writer *sourceWriter, actor Actor, sinkID string, session BinarySession) {
+	go func() {
+		defer s.untrackUSB(sinkID, session)
+		if err := <-session.Ready(); err != nil {
+			_ = writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: sinkID})
+			if ctx.Err() == nil {
+				_ = s.registry.Release(actor, sinkID, ReasonReleased)
+				_ = writer.Close()
+			}
+			return
+		}
+		_ = s.registry.SetBindingState(sinkID, StateStreaming)
+		if err := <-session.Done(); err != nil {
+			_ = writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: sinkID})
+		}
+		if ctx.Err() != nil {
+			return
+		}
+		if s.isUSBTracked(sinkID, session) {
+			_ = s.registry.Release(actor, sinkID, ReasonReleased)
+			_ = writer.Close()
+		}
+	}()
+}
+
+func (s *Service) trackUSB(sinkID string, session BinarySession) {
+	s.mu.Lock()
+	s.active[sinkID] = session
+	s.mu.Unlock()
+}
+
+func (s *Service) untrackUSB(sinkID string, session BinarySession) {
+	s.mu.Lock()
+	if s.active[sinkID] == session {
+		delete(s.active, sinkID)
+	}
+	s.mu.Unlock()
+}
+
+func (s *Service) isUSBTracked(sinkID string, session BinarySession) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.active[sinkID] == session
+}
+
+func (s *Service) stopUSB(sinkID string) {
+	s.mu.Lock()
+	session := s.active[sinkID]
+	delete(s.active, sinkID)
+	s.mu.Unlock()
+	if session != nil {
+		_ = session.Close()
+	}
+}
+
+func (s *Service) stopAllUSB() {
+	s.mu.Lock()
+	sessions := s.active
+	s.active = make(map[string]BinarySession)
+	s.mu.Unlock()
+	for _, session := range sessions {
+		_ = session.Close()
 	}
 }
 
@@ -466,6 +630,9 @@ func decodeControl(messageType int, data []byte) (controlMessage, error) {
 	if messageType != websocket.TextMessage {
 		return controlMessage{}, errors.New("control messages must be JSON text")
 	}
+	if len(data) > maxControlMessage {
+		return controlMessage{}, errors.New("control message is too large")
+	}
 	var message controlMessage
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -478,6 +645,36 @@ func decodeControl(messageType int, data []byte) (controlMessage, error) {
 	return message, nil
 }
 
+type sourceWriter struct {
+	mu         sync.Mutex
+	connection *websocket.Conn
+}
+
+func (w *sourceWriter) JSON(response controlResponse) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return writeControl(w.connection, response)
+}
+
+func (w *sourceWriter) Binary(data []byte) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_ = w.connection.SetWriteDeadline(time.Now().Add(websocketWriteWait))
+	return w.connection.WriteMessage(websocket.BinaryMessage, data)
+}
+
+func (w *sourceWriter) Ping() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.connection.WriteControl(websocket.PingMessage, nil, time.Now().Add(websocketWriteWait))
+}
+
+func (w *sourceWriter) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.connection.Close()
+}
+
 func writeControl(connection *websocket.Conn, response controlResponse) error {
 	_ = connection.SetWriteDeadline(time.Now().Add(websocketWriteWait))
 	return connection.WriteJSON(response)
@@ -488,13 +685,13 @@ func writeEvent(connection *websocket.Conn, event Event) error {
 	return connection.WriteJSON(event)
 }
 
-func ping(connection *websocket.Conn, done <-chan struct{}) {
+func pingWriter(writer *sourceWriter, done <-chan struct{}) {
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			if connection.WriteControl(websocket.PingMessage, nil, time.Now().Add(websocketWriteWait)) != nil {
+			if writer.Ping() != nil {
 				return
 			}
 		case <-done:

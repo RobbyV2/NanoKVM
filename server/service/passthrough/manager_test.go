@@ -139,6 +139,36 @@ func newFakeGadget() *fakeGadget {
 	return &fakeGadget{bound: true, reclaimed: make(chan struct{}, 4)}
 }
 
+func TestRemoteHybridSkipsVHCI(t *testing.T) {
+	recoveryStatePath = filepath.Join(t.TempDir(), "session.json")
+	t.Cleanup(func() { recoveryStatePath = "/etc/kvm/passthrough/session.json" })
+	gadget := &fakeHybridGadget{fakeGadget: newFakeGadget()}
+	vhci := &fakeVHCI{}
+	manager := NewManager(gadget, vhci, &fakeSpawner{}, &fakeModules{})
+	factory := &fakeHybridFactory{relay: newFakeHybridRelay()}
+	manager.hybrid = factory
+	relay := newFakeHybridRelay()
+	session, err := manager.StartRemoteHybrid(context.Background(), "Debug adapter", relay, presentation.FunctionFS{
+		Interfaces: 1,
+		Endpoints: []presentation.FunctionFSEndpoint{{
+			SourceAddress: 0x81, Address: 0x81, Transfer: presentation.EndpointBulk, MaxPacket: 64,
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.StopSession(session); err != nil {
+		t.Fatal(err)
+	}
+	attached, detached := vhci.calls()
+	if len(attached) != 0 || len(detached) != 0 {
+		t.Fatalf("remote Hybrid touched VHCI: attach=%v detach=%v", attached, detached)
+	}
+	if gadget.started != 1 || gadget.stopped != 1 || factory.cleaned != 1 {
+		t.Fatalf("lifecycle start=%d stop=%d cleanup=%d", gadget.started, gadget.stopped, factory.cleaned)
+	}
+}
+
 func (g *fakeGadget) SurrenderUDC() (string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()

@@ -271,6 +271,34 @@ func TestTokensNeverEnterSnapshotsOrEvents(t *testing.T) {
 	}
 }
 
+func TestWebUSBSinkRequiresAdmin(t *testing.T) {
+	registry := mustRegistry(t, nil, RegistryOptions{})
+	user := Actor{Username: "alice"}
+	source, err := registry.RegisterSource(user, Hello{Label: "Browser", Streams: []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := registry.Claim(user, source.ID, "usb", HybridSinkID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("non-admin claim returned %v", err)
+	}
+	admin := Actor{Username: "alice", Admin: true}
+	if _, err := registry.Claim(admin, source.ID, "usb", HybridSinkID); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWebUSBStreamIDsMustBeUnique(t *testing.T) {
+	offer := Stream{ID: "usb", Kind: KindUSBDevice, Label: "Adapter", USB: &USBOffer{
+		Profile: "webusb-adapter", Configuration: 1, Interfaces: []uint8{0},
+	}}
+	if _, err := validateHello(Hello{Label: "Browser", Streams: []Stream{offer, offer}}); err == nil {
+		t.Fatal("validateHello() accepted duplicate WebUSB stream IDs")
+	}
+}
+
 func TestRejectsHostileMetadata(t *testing.T) {
 	registry := mustRegistry(t, testSlots, RegistryOptions{})
 	actor := Actor{Username: "alice"}

@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,7 +79,7 @@ func TestSetSinksAppliesThePresentationProfileForAdmins(t *testing.T) {
 	if len(manager.cameras) != 1 || manager.cameras[0] != "Desk Camera" || len(manager.microphones) != 1 || manager.microphones[0] != "Desk Microphone" {
 		t.Fatalf("slots = %v/%v", manager.cameras, manager.microphones)
 	}
-	if snapshot := registry.Snapshot(); len(snapshot.Sinks) != 2 {
+	if snapshot := registry.Snapshot(); len(snapshot.Sinks) != 3 {
 		t.Fatalf("snapshot sinks = %+v", snapshot.Sinks)
 	}
 }
@@ -100,6 +102,111 @@ func TestSetSinksRejectsNonAdminsBeforeProfileMutation(t *testing.T) {
 	router.ServeHTTP(recorder, request)
 	if len(manager.cameras)+len(manager.microphones) != 0 || !strings.Contains(recorder.Body.String(), ErrForbidden.Error()) {
 		t.Fatalf("response = %s, slots = %v/%v", recorder.Body.String(), manager.cameras, manager.microphones)
+	}
+}
+
+type fakeBinarySession struct {
+	ready    chan error
+	done     chan error
+	received chan []byte
+	once     sync.Once
+}
+
+func (s *fakeBinarySession) Receive(data []byte) error {
+	s.received <- append([]byte(nil), data...)
+	return nil
+}
+func (s *fakeBinarySession) Ready() <-chan error { return s.ready }
+func (s *fakeBinarySession) Done() <-chan error  { return s.done }
+func (s *fakeBinarySession) Close() error {
+	s.once.Do(func() { s.done <- nil })
+	return nil
+}
+
+type fakeUSBBackend struct{ session *fakeBinarySession }
+
+func (b fakeUSBBackend) Start(context.Context, Stream, func([]byte) error) (BinarySession, error) {
+	return b.session, nil
+}
+
+func TestSourceWebSocketRoutesWebUSBBinary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, nil, RegistryOptions{})
+	service := NewServiceWith(registry)
+	session := &fakeBinarySession{ready: make(chan error, 1), done: make(chan error, 1), received: make(chan []byte, 1)}
+	session.ready <- nil
+	service.SetUSBBackend(fakeUSBBackend{session: session})
+	router := gin.New()
+	router.GET("/source", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice", Admin: true}) })
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	connection, _ := connectSource(t, server.URL, "/source", "Browser", []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}})
+	defer connection.Close()
+	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: HybridSinkID, StreamID: "usb"}); err != nil {
+		t.Fatal(err)
+	}
+	var claimed controlResponse
+	readJSON(t, connection, &claimed)
+	if claimed.Type != "claimed" {
+		t.Fatalf("claim=%+v", claimed)
+	}
+	if err := connection.WriteMessage(websocket.BinaryMessage, []byte("NKUF-response")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case received := <-session.received:
+		if string(received) != "NKUF-response" {
+			t.Fatalf("binary=%q", received)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("binary message was not routed")
+	}
+	if err := connection.WriteJSON(controlMessage{Type: "release", SinkID: HybridSinkID}); err != nil {
+		t.Fatal(err)
+	}
+	var released controlResponse
+	readJSON(t, connection, &released)
+	if released.Type != "released" {
+		t.Fatalf("release=%+v", released)
+	}
+}
+
+func TestWebUSBClaimPrecedesStartupError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, nil, RegistryOptions{})
+	service := NewServiceWith(registry)
+	session := &fakeBinarySession{ready: make(chan error, 1), done: make(chan error, 1), received: make(chan []byte, 1)}
+	session.ready <- errors.New("descriptor mismatch")
+	service.SetUSBBackend(fakeUSBBackend{session: session})
+	router := gin.New()
+	router.GET("/source", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice", Admin: true}) })
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	connection, _ := connectSource(t, server.URL, "/source", "Browser", []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}})
+	defer connection.Close()
+	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: HybridSinkID, StreamID: "usb"}); err != nil {
+		t.Fatal(err)
+	}
+	var claimed, failed controlResponse
+	readJSON(t, connection, &claimed)
+	readJSON(t, connection, &failed)
+	if claimed.Type != "claimed" || failed.Type != "error" || failed.SinkID != HybridSinkID {
+		t.Fatalf("responses = %+v then %+v", claimed, failed)
+	}
+	_ = connection.SetReadDeadline(time.Now().Add(time.Second))
+	if _, _, err := connection.ReadMessage(); err == nil {
+		t.Fatal("startup failure left the source socket open")
+	}
+	if len(registry.Snapshot().Bindings) != 0 {
+		t.Fatal("startup failure left the USB sink bound")
 	}
 }
 
@@ -291,5 +398,51 @@ func readJSON(t *testing.T, connection *websocket.Conn, destination any) {
 	}
 	if err := connection.ReadJSON(destination); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestWebUSBBinaryIsNotChargedToTheMediaBudget(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, nil, RegistryOptions{})
+	service := NewServiceWith(registry)
+	session := &fakeBinarySession{
+		ready: make(chan error, 1), done: make(chan error, 1),
+		received: make(chan []byte, mediaMessageLimit+2),
+	}
+	session.ready <- nil
+	service.SetUSBBackend(fakeUSBBackend{session: session})
+	router := gin.New()
+	router.GET("/source", func(c *gin.Context) { service.serveSource(c, Actor{Username: "alice", Admin: true}) })
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	connection, _ := connectSource(t, server.URL, "/source", "Browser", []Stream{{
+		ID: "usb", Kind: KindUSBDevice, Label: "Debug adapter",
+		USB: &USBOffer{Profile: "webusb-debug", Configuration: 1, Interfaces: []uint8{0}},
+	}})
+	defer connection.Close()
+	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: HybridSinkID, StreamID: "usb"}); err != nil {
+		t.Fatal(err)
+	}
+	var claimed controlResponse
+	readJSON(t, connection, &claimed)
+	if claimed.Type != "claimed" {
+		t.Fatalf("claim=%+v", claimed)
+	}
+	for range mediaMessageLimit + 1 {
+		if err := connection.WriteMessage(websocket.BinaryMessage, []byte("NKUF-response")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := connection.WriteJSON(controlMessage{Type: "release", SinkID: HybridSinkID}); err != nil {
+		t.Fatal(err)
+	}
+	var released controlResponse
+	readJSON(t, connection, &released)
+	if released.Type != "released" {
+		t.Fatalf("release=%+v", released)
+	}
+	if len(session.received) != mediaMessageLimit+1 {
+		t.Fatalf("relayed %d USB frames", len(session.received))
 	}
 }

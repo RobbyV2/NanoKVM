@@ -90,6 +90,7 @@ func NewRegistry(slots []Slot, options RegistryOptions) (*Registry, error) {
 	for _, slot := range validated {
 		registry.sinks[slot.ID] = slot
 	}
+	registry.sinks[HybridSinkID] = Slot{ID: HybridSinkID, Kind: KindUSBDevice, Label: "Browser USB"}
 	return registry, nil
 }
 
@@ -188,6 +189,9 @@ func (r *Registry) Claim(actor Actor, sourceID, streamID, sinkID string) (ClaimR
 	if stream.Kind != sink.Kind {
 		return ClaimResult{}, fmt.Errorf("%w: stream kind %q cannot fill %q", ErrInvalidMessage, stream.Kind, sink.Kind)
 	}
+	if sink.Kind == KindUSBDevice && !actor.Admin {
+		return ClaimResult{}, ErrForbidden
+	}
 
 	current := &binding{BindingView: BindingView{
 		SinkID:      sinkID,
@@ -205,7 +209,7 @@ func (r *Registry) Claim(actor Actor, sourceID, streamID, sinkID string) (ClaimR
 	r.bindings[sinkID] = current
 	view := current.BindingView
 	r.emitLocked(Event{Type: "binding_added", Binding: &view})
-	return ClaimResult{Binding: view, Token: base64.RawURLEncoding.EncodeToString(current.token[:])}, nil
+	return ClaimResult{Binding: view, Token: base64.RawURLEncoding.EncodeToString(current.token[:]), Stream: stream}, nil
 }
 
 func (r *Registry) Resume(actor Actor, sourceID, streamID, sinkID, encodedToken string) (BindingView, error) {
@@ -232,6 +236,9 @@ func (r *Registry) Resume(actor Actor, sourceID, streamID, sinkID, encodedToken 
 	}
 	if stream.Kind != sink.Kind {
 		return BindingView{}, fmt.Errorf("%w: stream kind %q cannot fill %q", ErrInvalidMessage, stream.Kind, sink.Kind)
+	}
+	if sink.Kind == KindUSBDevice && !actor.Admin {
+		return BindingView{}, ErrForbidden
 	}
 	if current.cancelExpiry != nil {
 		current.cancelExpiry()
@@ -288,6 +295,7 @@ func (r *Registry) SyncSlots(slots []Slot) error {
 	for _, slot := range validated {
 		next[slot.ID] = slot
 	}
+	next[HybridSinkID] = Slot{ID: HybridSinkID, Kind: KindUSBDevice, Label: "Browser USB"}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -390,6 +398,21 @@ func (r *Registry) Snapshot() Snapshot {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.snapshotLocked()
+}
+
+func (r *Registry) Stream(sourceID, streamID string) (Stream, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	source, ok := r.sources[sourceID]
+	if !ok {
+		return Stream{}, ErrNotFound
+	}
+	for _, stream := range source.Streams {
+		if stream.ID == streamID {
+			return cloneStreams([]Stream{stream})[0], nil
+		}
+	}
+	return Stream{}, ErrNotFound
 }
 
 func (r *Registry) Subscribe() (<-chan Event, func()) {
@@ -524,6 +547,12 @@ func (r *Registry) newIDLocked(prefix string, size int, exists func(string) bool
 }
 
 func outputState(sink Sink) OutputState {
+	if sink.Kind == KindUSBDevice {
+		if sink.Binding != nil && sink.Binding.State == StateStreaming {
+			return OutputSource
+		}
+		return OutputIdle
+	}
 	if !sink.Demand.Streaming {
 		return OutputIdle
 	}

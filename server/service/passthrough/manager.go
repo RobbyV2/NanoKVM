@@ -113,7 +113,12 @@ type Session struct {
 	finish sync.Once
 	done   chan struct{}
 	err    error
+	remote bool
 }
+
+func (s *Session) Done() <-chan struct{} { return s.done }
+
+func (s *Session) Err() error { return s.err }
 
 type Manager struct {
 	gadget  Gadget
@@ -290,6 +295,33 @@ func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string
 	return session, nil
 }
 
+func (m *Manager) StartRemoteHybrid(ctx context.Context, label string, relay HybridRelay, function presentation.FunctionFS) (*Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.session != nil {
+		return nil, ErrSessionActive
+	}
+	gadget, ok := m.gadget.(FunctionFSGadget)
+	if !ok {
+		return nil, fmt.Errorf("%w: FunctionFS presentation is unavailable", ErrDescriptors)
+	}
+	state := recoveryState{Mode: ModeHybrid, Source: "webusb"}
+	if err := saveRecoveryState(state); err != nil {
+		return nil, err
+	}
+	transient, err := gadget.StartFunctionFS(ctx, function)
+	if err != nil {
+		return nil, errors.Join(err, relay.Close(), m.hybrid.Cleanup(), clearRecoveryState())
+	}
+	session := &Session{
+		Mode: ModeHybrid, Exporter: "browser", BusID: label, StartedAt: time.Now(),
+		relay: relay, token: transient.Token, done: make(chan struct{}), remote: true,
+	}
+	m.session = session
+	go m.superviseHybrid(session)
+	return session, nil
+}
+
 func (m *Manager) Stop() error {
 	m.mu.Lock()
 	session := m.session
@@ -307,6 +339,21 @@ func (m *Manager) Stop() error {
 		return err
 	}
 
+	<-session.done
+	return session.err
+}
+
+func (m *Manager) StopSession(session *Session) error {
+	m.mu.Lock()
+	if m.session != session {
+		m.mu.Unlock()
+		return ErrNoSession
+	}
+	m.mu.Unlock()
+	if session.Mode != ModeHybrid {
+		return errors.New("passthrough: remote session is not Hybrid")
+	}
+	m.finishHybrid(session, nil)
 	<-session.done
 	return session.err
 }
@@ -345,7 +392,10 @@ func (m *Manager) Recover() error {
 		}
 		restoreErr := gadget.RecoverFunctionFS(context.Background())
 		cleanupErr := m.hybrid.Cleanup()
-		detachErr := m.vhci.Detach(state.Port)
+		var detachErr error
+		if state.Source != "webusb" {
+			detachErr = m.vhci.Detach(state.Port)
+		}
 		err := errors.Join(restoreErr, cleanupErr, detachErr)
 		if err == nil {
 			err = clearRecoveryState()
@@ -372,7 +422,10 @@ func (m *Manager) finishHybrid(session *Session, relayErr error) {
 		restoreErr := gadget.StopFunctionFS(context.Background(), session.token)
 		closeErr := session.relay.Close()
 		cleanupErr := m.hybrid.Cleanup()
-		detachErr := m.vhci.Detach(session.Port)
+		var detachErr error
+		if !session.remote {
+			detachErr = m.vhci.Detach(session.Port)
+		}
 		cleanupResult := errors.Join(restoreErr, closeErr, cleanupErr, detachErr)
 		if cleanupResult == nil {
 			cleanupResult = clearRecoveryState()

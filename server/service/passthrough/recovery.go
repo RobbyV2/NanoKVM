@@ -23,6 +23,7 @@ type recoveryState struct {
 	Port    uint32 `json:"port"`
 	Reclaim bool   `json:"reclaim"`
 	Mode    string `json:"mode,omitempty"`
+	Source  string `json:"source,omitempty"`
 }
 
 func saveRecoveryState(state recoveryState) error {

@@ -24,6 +24,8 @@ type Kind string
 const (
 	KindCamera     Kind = "camera"
 	KindMicrophone Kind = "microphone"
+	KindUSBDevice  Kind = "usb_device"
+	HybridSinkID        = "ffs.hybrid"
 )
 
 type BindingState string
@@ -64,10 +66,17 @@ type Format struct {
 }
 
 type Stream struct {
-	ID      string   `json:"id"`
-	Kind    Kind     `json:"kind"`
-	Label   string   `json:"label"`
-	Formats []Format `json:"formats,omitempty"`
+	ID      string    `json:"id"`
+	Kind    Kind      `json:"kind"`
+	Label   string    `json:"label"`
+	Formats []Format  `json:"formats,omitempty"`
+	USB     *USBOffer `json:"usb,omitempty"`
+}
+
+type USBOffer struct {
+	Profile       string  `json:"profile"`
+	Configuration uint8   `json:"configuration"`
+	Interfaces    []uint8 `json:"interfaces"`
 }
 
 type Source struct {
@@ -145,6 +154,7 @@ type Hello struct {
 type ClaimResult struct {
 	Binding BindingView `json:"binding"`
 	Token   string      `json:"token"`
+	Stream  Stream      `json:"-"`
 }
 
 var (
@@ -250,7 +260,8 @@ func validateHello(hello Hello) (Hello, error) {
 		if _, exists := seen[stream.ID]; exists {
 			return Hello{}, fmt.Errorf("streams[%d]: duplicate id", i)
 		}
-		if stream.Kind != KindCamera && stream.Kind != KindMicrophone {
+		seen[stream.ID] = struct{}{}
+		if stream.Kind != KindCamera && stream.Kind != KindMicrophone && stream.Kind != KindUSBDevice {
 			return Hello{}, fmt.Errorf("streams[%d]: invalid kind", i)
 		}
 		if err := validateLabel("stream label", stream.Label); err != nil {
@@ -259,12 +270,27 @@ func validateHello(hello Hello) (Hello, error) {
 		if len(stream.Formats) > MaxFormats {
 			return Hello{}, fmt.Errorf("streams[%d]: too many formats", i)
 		}
+		if stream.Kind == KindUSBDevice {
+			if len(stream.Formats) != 0 || stream.USB == nil || !idPattern.MatchString(stream.USB.Profile) || stream.USB.Configuration == 0 || len(stream.USB.Interfaces) == 0 || len(stream.USB.Interfaces) > 16 {
+				return Hello{}, fmt.Errorf("streams[%d]: invalid USB offer", i)
+			}
+			interfaces := make(map[uint8]bool, len(stream.USB.Interfaces))
+			for _, number := range stream.USB.Interfaces {
+				if interfaces[number] {
+					return Hello{}, fmt.Errorf("streams[%d]: duplicate USB interface", i)
+				}
+				interfaces[number] = true
+			}
+			continue
+		}
+		if stream.USB != nil {
+			return Hello{}, fmt.Errorf("streams[%d]: USB metadata on media stream", i)
+		}
 		for j, format := range stream.Formats {
 			if err := format.validate(stream.Kind); err != nil {
 				return Hello{}, fmt.Errorf("streams[%d].formats[%d]: %w", i, j, err)
 			}
 		}
-		seen[stream.ID] = struct{}{}
 	}
 	return hello, nil
 }
@@ -312,6 +338,11 @@ func cloneStreams(streams []Stream) []Stream {
 	for i := range streams {
 		result[i] = streams[i]
 		result[i].Formats = slices.Clone(streams[i].Formats)
+		if streams[i].USB != nil {
+			usb := *streams[i].USB
+			usb.Interfaces = slices.Clone(streams[i].USB.Interfaces)
+			result[i].USB = &usb
+		}
 	}
 	return result
 }
