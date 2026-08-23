@@ -2,10 +2,8 @@ package proto
 
 import "time"
 
-// The imported device as the exporter described it. Isochronous endpoints are
-// out: this raw-gadget exposes no frame number, allows one in-flight request per
-// endpoint and caps a transfer at one page, so webcams and audio devices cannot
-// pass through and the UI says so rather than letting someone find out.
+// The imported device as the exporter described it. Both modes refuse
+// isochronous endpoints.
 type PassthroughDevice struct {
 	BusID     string `json:"busId"`
 	IDVendor  string `json:"idVendor"`
@@ -14,11 +12,10 @@ type PassthroughDevice struct {
 	Class     uint8  `json:"class"`
 }
 
-// HIDSurrendered is the whole cost of a session: udc->driver is a single
-// pointer, so while raw-gadget holds the UDC there is no keyboard, no mouse and
-// no virtual media.
+// HIDSurrendered distinguishes Exact from Hybrid sessions.
 type GetPassthroughRsp struct {
 	Active         bool               `json:"active"`
+	Mode           string             `json:"mode"`
 	Exporter       string             `json:"exporter"`
 	UDC            string             `json:"udc"`
 	Port           uint32             `json:"port"`
@@ -36,4 +33,5 @@ type GetPassthroughRsp struct {
 type StartPassthroughReq struct {
 	Exporter string `validate:"required,hostname_port|hostname|ip"`
 	BusID    string `validate:"required,max=31"`
+	Mode     string `validate:"omitempty,oneof=hybrid exact"`
 }

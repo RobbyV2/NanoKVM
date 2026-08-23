@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Divider, Input, Modal } from 'antd';
+import { Alert, Button, Divider, Input, Modal, Segmented } from 'antd';
 import { CircleStopIcon, LoaderCircleIcon, PlayIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/passthrough.ts';
-import type { PassthroughStatus } from '@/api/passthrough.ts';
+import type { PassthroughMode, PassthroughStatus } from '@/api/passthrough.ts';
 
 import { Instructions } from './instructions.tsx';
 import {
@@ -45,13 +45,22 @@ const InfoRow = ({
 type StartProps = {
   exporter: string;
   busId: string;
+  mode: PassthroughMode;
   setExporter: (exporter: string) => void;
   setBusId: (busId: string) => void;
   disabled: boolean;
   onSuccess: () => void;
 };
 
-const Start = ({ exporter, busId, setExporter, setBusId, disabled, onSuccess }: StartProps) => {
+const Start = ({
+  exporter,
+  busId,
+  mode,
+  setExporter,
+  setBusId,
+  disabled,
+  onSuccess
+}: StartProps) => {
   const { t } = useTranslation();
 
   const [isStarting, setIsStarting] = useState(false);
@@ -60,12 +69,14 @@ const Start = ({ exporter, busId, setExporter, setBusId, disabled, onSuccess }: 
 
   const isReady = isValidExporter(exporter) && isValidBusId(busId);
 
-  // losing the keyboard and the mouse mid-session is not something to discover,
-  // so this one action is confirmed and nothing else on the page is
   function openModal() {
     if (isStarting || disabled || !isReady) return;
     setErrMsg('');
-    setIsModalOpen(true);
+    if (mode === 'hybrid') {
+      start();
+    } else {
+      setIsModalOpen(true);
+    }
   }
 
   function closeModal() {
@@ -79,7 +90,7 @@ const Start = ({ exporter, busId, setExporter, setBusId, disabled, onSuccess }: 
     setErrMsg('');
 
     api
-      .startPassthrough(exporter.trim(), busId.trim())
+      .startPassthrough(exporter.trim(), busId.trim(), mode)
       .then((rsp) => {
         if (rsp.code !== 0) {
           setErrMsg(rsp.msg);
@@ -222,6 +233,7 @@ export const Passthrough = () => {
   const [status, setStatus] = useState<PassthroughStatus>();
   const [exporter, setExporter] = useState(defaultExporter);
   const [busId, setBusId] = useState('');
+  const [mode, setMode] = useState<PassthroughMode>('hybrid');
   const [errMsg, setErrMsg] = useState('');
 
   const getStatus = useCallback(() => {
@@ -273,17 +285,26 @@ export const Passthrough = () => {
         </div>
       ) : (
         <div className="flex flex-col space-y-5">
-          {/* the SoC has one device controller, and the proxy needs all of it */}
-          <Alert
-            type="warning"
-            showIcon
-            message={t('settings.passthrough.hidWarning')}
-            description={
-              <span className="text-xs">{t('settings.passthrough.hidWarningSafeDesc')}</span>
-            }
-          />
+          {(isActive ? status?.mode : mode) === 'exact' ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={t('settings.passthrough.hidWarning')}
+              description={
+                <span className="text-xs">{t('settings.passthrough.hidWarningSafeDesc')}</span>
+              }
+            />
+          ) : (
+            <Alert
+              type="info"
+              showIcon
+              message={t('settings.passthrough.hybridWarning')}
+              description={
+                <span className="text-xs">{t('settings.passthrough.hybridWarningDesc')}</span>
+              }
+            />
+          )}
 
-          {/* raw-gadget exposes no frame number and caps a transfer at one page */}
           <Alert
             type="info"
             showIcon
@@ -292,6 +313,23 @@ export const Passthrough = () => {
               <span className="text-xs">{t('settings.passthrough.isoWarningDesc')}</span>
             }
           />
+
+          {!isActive && (
+            <div className="flex flex-col space-y-2">
+              <span className="text-sm">{t('settings.passthrough.mode')}</span>
+              <Segmented
+                value={mode}
+                options={[
+                  { label: t('settings.passthrough.hybrid'), value: 'hybrid' },
+                  { label: t('settings.passthrough.exact'), value: 'exact' }
+                ]}
+                onChange={(value) => setMode(value as PassthroughMode)}
+              />
+              <span className="text-xs text-neutral-500">
+                {t(`settings.passthrough.${mode}Desc`)}
+              </span>
+            </div>
+          )}
 
           <div className="flex flex-col space-y-4">
             <div className="flex items-start justify-between space-x-4">
@@ -311,6 +349,10 @@ export const Passthrough = () => {
               <>
                 <div className="overflow-hidden rounded-xl bg-neutral-800/50">
                   <InfoRow label={t('settings.passthrough.device')} value={deviceId(device)} />
+                  <InfoRow
+                    label={t('settings.passthrough.mode')}
+                    value={t(`settings.passthrough.${status?.mode || 'hybrid'}`)}
+                  />
                   <InfoRow label={t('settings.passthrough.busId')} value={device?.busId} />
                   <InfoRow label={t('settings.passthrough.speed')} value={device?.speed} />
                   <InfoRow label={t('settings.passthrough.exporter')} value={status?.exporter} />
@@ -322,10 +364,12 @@ export const Passthrough = () => {
                     })}
                   />
                   <InfoRow label={t('settings.passthrough.udc')} value={status?.udc} />
-                  <InfoRow
-                    label={t('settings.passthrough.pid')}
-                    value={String(status?.pid ?? '')}
-                  />
+                  {status?.mode === 'exact' && (
+                    <InfoRow
+                      label={t('settings.passthrough.pid')}
+                      value={String(status?.pid ?? '')}
+                    />
+                  )}
                   <InfoRow
                     label={t('settings.passthrough.startedAt')}
                     value={formatTime(status?.startedAt)}
@@ -344,6 +388,7 @@ export const Passthrough = () => {
               <Start
                 exporter={exporter}
                 busId={busId}
+                mode={mode}
                 setExporter={setExporter}
                 setBusId={setBusId}
                 disabled={isLoading}
