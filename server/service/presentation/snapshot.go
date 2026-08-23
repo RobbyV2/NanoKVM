@@ -24,8 +24,9 @@ type Snapshot struct {
 	// and what is left of it. The compiler already accounts for this to reject
 	// a profile that does not fit; reporting it is what lets a caller see how
 	// close to the ceiling the gadget is before it asks for another function.
-	Endpoints EndpointUse `json:"endpoints"`
-	Headroom  EndpointUse `json:"headroom"`
+	Endpoints EndpointUse    `json:"endpoints"`
+	Headroom  EndpointUse    `json:"headroom"`
+	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
 }
 
 // Linkage is read back through the function's own attribute rather than from a
@@ -36,6 +37,8 @@ var functionProbeAttr = map[FunctionKind]string{
 	FunctionNCM:         "dev_addr",
 	FunctionRNDIS:       "dev_addr",
 	FunctionMassStorage: lunDir + "/file",
+	FunctionUVC:         "streaming_maxpacket",
+	FunctionUAC2:        "p_srate",
 }
 
 func knownFunctions() []Function {

@@ -174,6 +174,17 @@ func (r *RecordOps) Remove(rel string) error {
 	return nil
 }
 
+func (r *RecordOps) RemoveDir(rel string) error {
+	if err := validateRmdir(rel); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.record(Op{Kind: OpRmdir, Path: rel})
+	delete(r.dirs, rel)
+	return nil
+}
+
 func (r *RecordOps) ListUDC() ([]string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

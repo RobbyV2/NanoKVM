@@ -35,6 +35,11 @@ type HIDQuiescer interface {
 	OpenNoLockWithRetry(timeout, delay time.Duration) error
 }
 
+type GadgetObserver interface {
+	Suspend()
+	Applied(context.Context, Profile, Plan) error
+}
+
 type Manager struct {
 	store *Store
 	ops   Ops
@@ -43,6 +48,7 @@ type Manager struct {
 
 	wireMu sync.Mutex
 	hid    HIDQuiescer
+	media  GadgetObserver
 
 	mu sync.Mutex
 }
@@ -85,6 +91,12 @@ func (m *Manager) SetHID(h HIDQuiescer) {
 	m.hid = h
 }
 
+func (m *Manager) SetObserver(observer GadgetObserver) {
+	m.wireMu.Lock()
+	defer m.wireMu.Unlock()
+	m.media = observer
+}
+
 func (m *Manager) Snapshot() (Snapshot, error) {
 	if err := m.ready(); err != nil {
 		return Snapshot{}, err
@@ -117,6 +129,9 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 	}
 	snapshot.Endpoints = endpoints
 	snapshot.Headroom = endpoints.Headroom(m.caps)
+	if fifos, err := SeatFIFOs(functions, m.caps); err == nil {
+		snapshot.FIFOs = fifos
+	}
 	return snapshot, nil
 }
 
@@ -172,7 +187,17 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 	if err != nil {
 		return err
 	}
-	return m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
+	observer := m.observer()
+	if observer != nil {
+		observer.Suspend()
+	}
+	err = m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
+	if err != nil {
+		m.refreshObserver(context.Background())
+		return err
+	}
+	m.notifyObserver(context.Background(), profile, plan)
+	return nil
 }
 
 // The LUN is runtime state rather than profile state: a reapply rewrites
@@ -220,11 +245,16 @@ func (m *Manager) SurrenderUDC() (string, error) {
 		return "", err
 	}
 
+	observer := m.observer()
+	if observer != nil {
+		observer.Suspend()
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	udcs, err := m.ops.ListUDC()
 	if err != nil {
+		m.refreshObserver(context.Background())
 		return "", fmt.Errorf("surrender udc: %w", err)
 	}
 
@@ -238,7 +268,9 @@ func (m *Manager) SurrenderUDC() (string, error) {
 	// gadget still owns the UDC and /dev/hidgN is still there, so leaving the
 	// devices closed would cost a keyboard for a session that never started.
 	if err := m.ops.UnbindUDC(); err != nil {
-		return "", errors.Join(fmt.Errorf("surrender udc: %w", err), reopenHID(h))
+		reopen := reopenHID(h)
+		m.refreshObserver(context.Background())
+		return "", errors.Join(fmt.Errorf("surrender udc: %w", err), reopen)
 	}
 	return udcs[0], nil
 }
@@ -247,7 +279,11 @@ func (m *Manager) ReclaimUDC() error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	return m.withGadgetLock(m.bind)
+	if err := m.withGadgetLock(m.bind); err != nil {
+		return err
+	}
+	m.refreshObserver(context.Background())
+	return nil
 }
 
 func (m *Manager) UDCBound() (bool, error) {
@@ -269,7 +305,15 @@ func (m *Manager) Rebind(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	return m.withGadgetLock(func() error { return m.rebind(ctx) })
+	if observer := m.observer(); observer != nil {
+		observer.Suspend()
+	}
+	if err := m.withGadgetLock(func() error { return m.rebind(ctx) }); err != nil {
+		m.refreshObserver(context.Background())
+		return err
+	}
+	m.refreshObserver(context.Background())
+	return nil
 }
 
 // H5: ResetPHY polls for the controller to come back instead of sleeping a
@@ -278,12 +322,21 @@ func (m *Manager) ResetPHY(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	return m.withGadgetLock(func() error {
+	if observer := m.observer(); observer != nil {
+		observer.Suspend()
+	}
+	err := m.withGadgetLock(func() error {
 		if err := m.ops.ResetPHY(ctx); err != nil {
 			return fmt.Errorf("reset usb phy: %w", err)
 		}
 		return m.bind()
 	})
+	if err != nil {
+		m.refreshObserver(context.Background())
+		return err
+	}
+	m.refreshObserver(context.Background())
+	return nil
 }
 
 // D6: mode resolves in three tiers. The active profile is the truth; an exact
@@ -369,6 +422,46 @@ func (m *Manager) quiescer() HIDQuiescer {
 	m.wireMu.Lock()
 	defer m.wireMu.Unlock()
 	return m.hid
+}
+
+func (m *Manager) observer() GadgetObserver {
+	m.wireMu.Lock()
+	defer m.wireMu.Unlock()
+	return m.media
+}
+
+func (m *Manager) RefreshObserver(ctx context.Context) error {
+	return m.refreshObserver(ctx)
+}
+
+func (m *Manager) refreshObserver(ctx context.Context) error {
+	observer := m.observer()
+	if observer == nil {
+		return nil
+	}
+	active, err := m.store.Active()
+	if err != nil || active == "" {
+		return err
+	}
+	profile, err := m.store.LoadProfile(active)
+	if err != nil {
+		return err
+	}
+	plan, err := Compile(profile, m.caps)
+	if err != nil {
+		return err
+	}
+	return observer.Applied(ctx, profile, plan)
+}
+
+func (m *Manager) notifyObserver(ctx context.Context, profile Profile, plan Plan) {
+	observer := m.observer()
+	if observer == nil {
+		return
+	}
+	if err := observer.Applied(ctx, profile, plan); err != nil {
+		log.Errorf("media gadget reconcile: %s", err)
+	}
 }
 
 func (m *Manager) ready() error {

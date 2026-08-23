@@ -15,6 +15,7 @@ import (
 
 const (
 	SourceStaticV0 = "static-v0"
+	SourceStaticV1 = "static-v1"
 	SourceProbeV1  = "probe-v1"
 )
 
@@ -25,6 +26,7 @@ type CapabilityTable struct {
 	GeneratedAt     time.Time                     `json:"generated_at"`
 	MaxInEndpoints  int                           `json:"max_in_endpoints"`
 	MaxOutEndpoints int                           `json:"max_out_endpoints"`
+	INFifoWords     []int                         `json:"in_fifo_words,omitempty"`
 	Functions       map[FunctionKind]FunctionCaps `json:"functions"`
 }
 
@@ -32,6 +34,7 @@ type FunctionCaps struct {
 	Available  bool            `json:"available"`
 	InEPs      int             `json:"in_eps"`
 	OutEPs     int             `json:"out_eps"`
+	INPackets  []int           `json:"in_packets,omitempty"`
 	Attributes map[string]bool `json:"attributes,omitempty"`
 }
 
@@ -48,8 +51,24 @@ var staticV0 = CapabilityTable{
 	},
 }
 
+var staticV1 = CapabilityTable{
+	Source:          SourceStaticV1,
+	GeneratedAt:     time.Date(2026, time.August, 22, 0, 0, 0, 0, time.UTC),
+	MaxInEndpoints:  6,
+	MaxOutEndpoints: 5,
+	INFifoWords:     []int{768, 512, 512, 384, 128, 128},
+	Functions: map[FunctionKind]FunctionCaps{
+		FunctionHID:         {Available: true, InEPs: 1, OutEPs: 1},
+		FunctionNCM:         {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.ncm": true}},
+		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
+		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1, INPackets: []int{512}},
+		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}},
+		FunctionUAC2:        {Available: true, InEPs: 1, OutEPs: 0, INPackets: []int{96}},
+	},
+}
+
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
-var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage}
+var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionUVC, FunctionUAC2}
 
 func LoadCapabilities() CapabilityTable {
 	capabilityMu.Lock()
@@ -58,18 +77,26 @@ func LoadCapabilities() CapabilityTable {
 	path := capabilityPath()
 	table, err := loadCapabilityTable(path)
 	switch {
-	case err == nil:
+	case err == nil && table.supportsMedia():
 		return table
+	case err == nil:
+		log.Warnf("ignoring pre-media capability table %s", path)
 	case !errors.Is(err, os.ErrNotExist):
 		log.Warnf("ignoring capability table %s: %s", path, err)
 	}
 
 	available, err := probeAvailability()
 	if err != nil {
-		log.Debugf("capability probe unavailable, using %s: %s", staticV0.Source, err)
-		return staticV0.clone()
+		log.Debugf("capability probe unavailable, using %s: %s", staticV1.Source, err)
+		return staticV1.clone()
 	}
-	return staticV0.withAvailability(available)
+	return staticV1.withAvailability(available)
+}
+
+func (t CapabilityTable) supportsMedia() bool {
+	_, video := t.Functions[FunctionUVC]
+	_, audio := t.Functions[FunctionUAC2]
+	return video && audio && len(t.INFifoWords) == t.MaxInEndpoints
 }
 
 func capabilityPath() string {
@@ -98,6 +125,8 @@ func (t CapabilityTable) Validate() error {
 		return errors.New("source is empty")
 	case t.MaxInEndpoints <= 0 || t.MaxOutEndpoints <= 0:
 		return fmt.Errorf("budget %d IN %d OUT is not positive", t.MaxInEndpoints, t.MaxOutEndpoints)
+	case len(t.INFifoWords) != 0 && len(t.INFifoWords) != t.MaxInEndpoints:
+		return fmt.Errorf("%d IN FIFOs for %d endpoints", len(t.INFifoWords), t.MaxInEndpoints)
 	case len(t.Functions) == 0:
 		return errors.New("no functions")
 	}
@@ -122,9 +151,11 @@ func (t CapabilityTable) withAvailability(available map[FunctionKind]bool) Capab
 
 func (t CapabilityTable) clone() CapabilityTable {
 	cloned := t
+	cloned.INFifoWords = append([]int(nil), t.INFifoWords...)
 	cloned.Functions = make(map[FunctionKind]FunctionCaps, len(t.Functions))
 
 	for kind, caps := range t.Functions {
+		caps.INPackets = append([]int(nil), caps.INPackets...)
 		if caps.Attributes != nil {
 			attributes := make(map[string]bool, len(caps.Attributes))
 			maps.Copy(attributes, caps.Attributes)
