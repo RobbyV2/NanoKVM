@@ -77,7 +77,7 @@ func requireOrder(t *testing.T, trace []string, steps ...string) {
 //   - step 13 runs after the disarm.
 func TestEnableStepOrder(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = fakeGadget{nic: GadgetName}
+	h.mgr.gadget = &fakeGadget{nic: GadgetName}
 
 	var killed []int
 	swap(t, &killProcess, func(pid int) error {
@@ -168,7 +168,7 @@ func TestEnableStepOrder(t *testing.T) {
 // black hole for the attached host's frames.
 func TestGadgetIsReleasedIfItCannotBeBroughtUp(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = fakeGadget{nic: GadgetName}
+	h.mgr.gadget = &fakeGadget{nic: GadgetName}
 	h.net.failOn("link set dev usb0 up", errors.New("RTNETLINK answers: No such device"))
 
 	rsp, err := h.mgr.Enable(context.Background())
@@ -192,7 +192,7 @@ func TestGadgetIsReleasedIfItCannotBeBroughtUp(t *testing.T) {
 // simply skips step 13.
 func TestEnableWithNoGadgetNIC(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = fakeGadget{nic: ""}
+	h.mgr.gadget = &fakeGadget{nic: ""}
 
 	rsp, err := h.mgr.Enable(context.Background())
 	if err != nil {
@@ -204,12 +204,97 @@ func TestEnableWithNoGadgetNIC(t *testing.T) {
 	notInTrace(t, h.net.trace(), "usb0")
 }
 
+// A presentation apply unbinds the UDC and binds it again, and the kernel hands
+// back a usb0 that has never heard of br0. Step 13 runs once, inside Enable, so
+// without the rebind hook a two-port transparent bridge silently drops to one
+// port on the first profile change after it was enabled, and stays there.
+func TestAPresentationApplyReEnslavesTheGadget(t *testing.T) {
+	gadget := &fakeGadget{nic: GadgetName}
+	h := newHarness(t, gadget)
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+	if gadget.rebound == nil {
+		t.Fatal("the bridge registered no rebind hook, so nothing tells it usb0 was rebuilt")
+	}
+
+	// What an apply leaves behind: a fresh interface, no master, down.
+	h.net.links[GadgetName].Master = ""
+	h.net.links[GadgetName].Flags = nil
+
+	gadget.rebound(context.Background())
+
+	if master := h.net.links[GadgetName].Master; master != BridgeName {
+		t.Fatalf("usb0 master = %q after a presentation apply, want br0", master)
+	}
+	if !h.net.links[GadgetName].Up() {
+		t.Fatal("usb0 is enslaved but down, which is a black hole for the host's frames")
+	}
+
+	// The uplink half is untouched: re-enslaving a port must never reach the
+	// device carrying the management address.
+	if master := h.net.links[StockUplink].Master; master != BridgeName {
+		t.Fatalf("eth0 master = %q, want br0", master)
+	}
+	if got := ReadUplink(); got != BridgeName {
+		t.Fatalf("uplink = %q, want br0", got)
+	}
+	if got := h.net.links[BridgeName].Address; got != testMAC {
+		t.Fatalf("br0 MAC = %q, want eth0's permanent %q", got, testMAC)
+	}
+	if len(h.net.addrs[BridgeName]) == 0 {
+		t.Fatal("br0 lost its address")
+	}
+}
+
+// Firing twice is what a second apply does, and the second one must be as
+// harmless as the first.
+func TestReattachingTheGadgetIsIdempotent(t *testing.T) {
+	gadget := &fakeGadget{nic: GadgetName}
+	h := newHarness(t, gadget)
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+	h.mgr.ReattachGadget(context.Background())
+	h.mgr.ReattachGadget(context.Background())
+
+	if master := h.net.links[GadgetName].Master; master != BridgeName {
+		t.Fatalf("usb0 master = %q, want br0", master)
+	}
+}
+
+// Bridge disabled, or never enabled, which is every stock device: the hook fires
+// on every apply there too and must not create a port on a bridge that does not
+// exist. Nor must a profile with no network function turn into an enslavement.
+func TestReattachingTheGadgetWithoutABridgeDoesNothing(t *testing.T) {
+	t.Run("no br0", func(t *testing.T) {
+		gadget := &fakeGadget{nic: GadgetName}
+		h := newHarness(t, gadget)
+
+		h.mgr.ReattachGadget(context.Background())
+		notInTrace(t, h.net.trace(), "master br0")
+	})
+
+	t.Run("no gadget NIC", func(t *testing.T) {
+		gadget := &fakeGadget{nic: ""}
+		h := newHarness(t, gadget)
+
+		if _, err := h.mgr.Enable(context.Background()); err != nil {
+			t.Fatalf("Enable: %v", err)
+		}
+		h.mgr.ReattachGadget(context.Background())
+		notInTrace(t, h.net.trace(), "usb0")
+	})
+}
+
 // The presentation manager being unable to say what the gadget NIC is says
 // nothing about the management address, which is already up and verified by the
 // time step 13 asks. The transaction reports the failure and stands.
 func TestEnableSurvivesAGadgetThatCannotReportItsNIC(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = fakeGadget{err: errors.New("usb gadget unavailable")}
+	h.mgr.gadget = &fakeGadget{err: errors.New("usb gadget unavailable")}
 
 	rsp, err := h.mgr.Enable(context.Background())
 	if err != nil {
@@ -736,9 +821,9 @@ func TestStatusReportsTheActiveGadgetProtocol(t *testing.T) {
 		gadget Gadget
 		want   string
 	}{
-		{name: "ncm", gadget: fakeGadget{nic: GadgetName, protocol: "ncm"}, want: "ncm"},
-		{name: "rndis", gadget: fakeGadget{nic: GadgetName, protocol: "rndis"}, want: "rndis"},
-		{name: "no network function", gadget: fakeGadget{}, want: ""},
+		{name: "ncm", gadget: &fakeGadget{nic: GadgetName, protocol: "ncm"}, want: "ncm"},
+		{name: "rndis", gadget: &fakeGadget{nic: GadgetName, protocol: "rndis"}, want: "rndis"},
+		{name: "no network function", gadget: &fakeGadget{}, want: ""},
 		{name: "no gadget at all", gadget: nil, want: ""},
 	}
 

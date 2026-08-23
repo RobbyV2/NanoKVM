@@ -91,6 +91,32 @@ func TestNICPropagatesAnUnreadableGadget(t *testing.T) {
 	}
 }
 
+// NIC alone is not enough. The bridge enslaves usb0 once, and every apply after
+// that unbinds the UDC and binds it again, which destroys and recreates the
+// interface with no memory of br0. Without this notification a two-port
+// transparent bridge quietly drops to one port on the next profile change.
+func TestEveryGadgetRebindNotifiesTheHook(t *testing.T) {
+	manager, _ := newTestManager(t)
+	ctx := context.Background()
+
+	var calls int
+	manager.OnRebind(func(context.Context) { calls++ })
+
+	if err := manager.Apply(ctx, ProfileStandard); err != nil {
+		t.Fatalf("apply standard: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("one apply fired the rebind hook %d times, want 1", calls)
+	}
+
+	if err := manager.Rebind(ctx); err != nil {
+		t.Fatalf("rebind: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("a bare rebind fired the hook %d times in total, want 2", calls)
+	}
+}
+
 func seed(t *testing.T, ops *RecordOps, rel string) {
 	t.Helper()
 	if err := ops.Seed(rel, []byte("48:da:35:6e:11:22\n")); err != nil {

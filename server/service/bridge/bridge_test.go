@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -339,11 +340,17 @@ type fakeGadget struct {
 	nic      string
 	protocol string
 	err      error
+
+	// rebound is the callback the bridge registers, held so a test can fire it
+	// the way a presentation apply does.
+	rebound func(context.Context)
 }
 
-func (g fakeGadget) NIC(context.Context) (string, error) { return g.nic, g.err }
+func (g *fakeGadget) NIC(context.Context) (string, error) { return g.nic, g.err }
 
-func (g fakeGadget) NetworkProtocol(context.Context) (string, error) { return g.protocol, g.err }
+func (g *fakeGadget) NetworkProtocol(context.Context) (string, error) { return g.protocol, g.err }
+
+func (g *fakeGadget) OnRebind(fn func(context.Context)) { g.rebound = fn }
 
 type harness struct {
 	t     *testing.T
@@ -357,7 +364,7 @@ type harness struct {
 
 // newHarness points every path at a temp directory and builds a Manager whose
 // only external contact is the fake.
-func newHarness(t *testing.T) *harness {
+func newHarness(t *testing.T, gadget ...Gadget) *harness {
 	t.Helper()
 
 	root := t.TempDir()
@@ -380,13 +387,17 @@ func newHarness(t *testing.T) *harness {
 		t: t, net: net, live: live, store: store, root: root,
 		clock: time.Date(2026, 8, 22, 12, 0, 0, 0, time.UTC),
 	}
-	h.mgr = New(Config{
+	config := Config{
 		Commander: net,
 		Liveness:  live,
 		Store:     store,
 		Window:    DefaultWindow,
 		Now:       func() time.Time { return h.clock },
-	})
+	}
+	if len(gadget) == 1 {
+		config.Gadget = gadget[0]
+	}
+	h.mgr = New(config)
 	return h
 }
 
@@ -485,7 +496,7 @@ func TestWlan0IsNeverEnslaved(t *testing.T) {
 
 	t.Run("step 13 refuses a profile that names it", func(t *testing.T) {
 		h := newHarness(t)
-		h.mgr.gadget = fakeGadget{nic: RecoveryName}
+		h.mgr.gadget = &fakeGadget{nic: RecoveryName}
 
 		err := h.mgr.enslaveGadget(context.Background())
 		if !errors.Is(err, ErrRecoveryInterface) {
@@ -1089,6 +1100,99 @@ func TestKillUdhcpcRemovesThePidfile(t *testing.T) {
 	}
 	if _, err := os.Stat(udhcpcPidPath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("the pidfile survived killUdhcpc")
+	}
+}
+
+// The boot half of the same durability. S29bridge is the only thing that builds
+// br0 after a reboot, and it runs before S30eth, so a script that enslaves eth0
+// alone brings a two-port transparent bridge up with one port and leaves it
+// there until someone re-applies a profile.
+//
+// The script is run for real under a PATH shim that records ip. Only the two
+// absolute roots it reaches outside its own logic are relocated into a sandbox;
+// every command, argument and branch below is the script's own.
+func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
+	tests := []struct {
+		name   string
+		gadget bool
+		want   []string
+	}{
+		{
+			name:   "gadget NIC present",
+			gadget: true,
+			want: []string{
+				"link add name br0 type bridge stp_state 0 forward_delay 0",
+				"link set dev br0 address " + testMAC,
+				"link set dev eth0 master br0",
+				"link set dev eth0 up",
+				"link set dev br0 up",
+				"link set dev usb0 master br0",
+				"link set dev usb0 up",
+			},
+		},
+		// A profile with no network function leaves no usb0 to enslave, and a
+		// bridge with one port is the legitimate state there rather than a
+		// failed boot.
+		{
+			name:   "no gadget NIC",
+			gadget: false,
+			want: []string{
+				"link add name br0 type bridge stp_state 0 forward_delay 0",
+				"link set dev eth0 master br0",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFile(t, filepath.Join(root, "sys/class/net/eth0/address"), testMAC+"\n")
+			if test.gadget {
+				writeFile(t, filepath.Join(root, "sys/class/net/usb0/address"), "48:da:35:6e:11:22\n")
+			}
+			writeFile(t, filepath.Join(root, "etc/kvm/presentation/network/last-known-good.json"),
+				`{"state":"enabled","enabled":true}`)
+
+			trace := filepath.Join(root, "ip.trace")
+			shim := filepath.Join(root, "bin", "ip")
+			writeFile(t, shim, "#!/bin/sh\necho \"$@\" >> "+trace+"\n")
+			if err := os.Chmod(shim, 0o755); err != nil {
+				t.Fatalf("chmod ip shim: %v", err)
+			}
+
+			source, err := os.ReadFile(filepath.Join("..", "..", "..", "kvmapp", "system", "init.d", "S29bridge"))
+			if err != nil {
+				t.Fatalf("read S29bridge: %v", err)
+			}
+			body := strings.ReplaceAll(string(source), "/etc/kvm", filepath.Join(root, "etc/kvm"))
+			body = strings.ReplaceAll(body, "/sys/class/net", filepath.Join(root, "sys/class/net"))
+			script := filepath.Join(root, "S29bridge")
+			writeFile(t, script, body)
+
+			cmd := exec.Command("/bin/sh", script, "start")
+			cmd.Env = append(os.Environ(),
+				"PATH="+filepath.Dir(shim)+string(os.PathListSeparator)+os.Getenv("PATH"))
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("S29bridge start: %v\n%s", err, out)
+			}
+
+			recorded, err := os.ReadFile(trace)
+			if err != nil {
+				t.Fatalf("read ip trace: %v", err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(recorded)), "\n")
+			requireOrder(t, lines, test.want...)
+			if !test.gadget {
+				notInTrace(t, lines, "usb0")
+			}
+
+			// create() returned success, so start never fell through to the
+			// teardown that removes the file, and S30eth will address br0.
+			uplink, err := os.ReadFile(filepath.Join(root, "etc/kvm/network/l2-uplink"))
+			if err != nil || strings.TrimSpace(string(uplink)) != BridgeName {
+				t.Fatalf("l2-uplink = %q, %v, want br0", uplink, err)
+			}
+		})
 	}
 }
 

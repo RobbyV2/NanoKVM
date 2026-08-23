@@ -88,6 +88,22 @@ The link order in `configs/c.1` fixes `bInterfaceNumber` assignment and therefor
 host-side driver binding, so `Profile.Functions` order is the link order and is
 reproduced exactly: net function, then hid.GS0, GS1, GS2, then mass_storage.disk0.
 
+## Every rebind destroys the gadget NIC
+
+Mutating the gadget unbinds the UDC and binds it again, and the kernel destroys and
+recreates `usb0` with no memory of the bridge it was a port of. `OnRebind` is how the
+bridge learns: it registers one callback, and `notifyRebound` fires it from
+`refreshObserver` and `notifyObserver`, the two funnels every mutation path already ends
+in on both success and failure. That is why `Apply`, `ApplyProfile`, `SetMediaSlots`,
+`Start`, `Stop`, `RecoverFunctionFS`, `SetLUN`, `ReclaimUDC`, `Rebind`, `ResetPHY` and
+`SetMode` are all covered by two call sites.
+
+The hook is deliberately over-eager: it also fires on paths where nothing was rebound,
+because re-enslaving a port that is already a port is a no-op and missing a real rebind
+is not. Nothing in this package knows a bridge can exist — the dependency points bridge
+into presentation and never back — and the boot half of the same durability lives in
+`S29bridge`, which enslaves `usb0` when it builds `br0`.
+
 ## bcdDevice is the mode marker
 
 `S03usbdev` never wrote `bcdDevice` in any revision. `service/hid/status.go` worked anyway

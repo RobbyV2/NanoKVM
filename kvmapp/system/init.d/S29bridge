@@ -2,6 +2,7 @@
 
 BRIDGE=br0
 PORT=eth0
+GADGET=usb0
 UPLINK_DIR=/etc/kvm/network
 UPLINK="$UPLINK_DIR/l2-uplink"
 STATE_DIR=/etc/kvm/presentation/network
@@ -10,6 +11,7 @@ RECOVERED="$STATE_DIR/recovered.json"
 LAST_GOOD="$STATE_DIR/last-known-good.json"
 
 teardown() {
+    ip link set dev "$GADGET" nomaster 2>/dev/null
     ip link set dev "$PORT" nomaster 2>/dev/null
     ip link set dev "$BRIDGE" down 2>/dev/null
     ip link del "$BRIDGE" 2>/dev/null
@@ -31,6 +33,17 @@ restore_stock() {
     sync
 }
 
+# The gadget NIC exists only once the gadget is bound with a network function,
+# and a bridge with no gadget port is a legitimate state, so its absence is not
+# a failure. Nor is failing to enslave it: the worst case there is an attached
+# host with no network, where returning non-zero costs the management address.
+enslave_gadget() {
+    [ -e "/sys/class/net/$GADGET" ] || return 0
+    ip link set dev "$GADGET" master "$BRIDGE" || return 0
+    ip link set dev "$GADGET" up || ip link set dev "$GADGET" nomaster
+    return 0
+}
+
 create() {
     mac=$(cat "/sys/class/net/$PORT/address" 2>/dev/null)
     [ -n "$mac" ] || return 1
@@ -39,6 +52,7 @@ create() {
     ip link set dev "$PORT" master "$BRIDGE" || return 1
     ip link set dev "$PORT" up || return 1
     ip link set dev "$BRIDGE" up || return 1
+    enslave_gadget
     mkdir -p "$UPLINK_DIR"
     echo "$BRIDGE" > "$UPLINK"
 }

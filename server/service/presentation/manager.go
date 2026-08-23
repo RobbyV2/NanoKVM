@@ -47,9 +47,10 @@ type Manager struct {
 	caps  CapabilityTable
 	err   error
 
-	wireMu sync.Mutex
-	hid    HIDQuiescer
-	media  GadgetObserver
+	wireMu  sync.Mutex
+	hid     HIDQuiescer
+	media   GadgetObserver
+	rebound func(context.Context)
 
 	mu sync.Mutex
 
@@ -106,6 +107,16 @@ func (m *Manager) SetObserver(observer GadgetObserver) {
 	m.wireMu.Lock()
 	defer m.wireMu.Unlock()
 	m.media = observer
+}
+
+// Every gadget mutation below unbinds the UDC and binds it again, which
+// destroys and recreates the gadget NIC. The bridge registers here so that br0
+// regains the port it just lost; nothing else in this package knows a bridge
+// can exist.
+func (m *Manager) OnRebind(fn func(context.Context)) {
+	m.wireMu.Lock()
+	defer m.wireMu.Unlock()
+	m.rebound = fn
 }
 
 func (m *Manager) Snapshot() (Snapshot, error) {
@@ -674,11 +685,21 @@ func (m *Manager) observer() GadgetObserver {
 	return m.media
 }
 
+func (m *Manager) notifyRebound(ctx context.Context) {
+	m.wireMu.Lock()
+	fn := m.rebound
+	m.wireMu.Unlock()
+	if fn != nil {
+		fn(ctx)
+	}
+}
+
 func (m *Manager) RefreshObserver(ctx context.Context) error {
 	return m.refreshObserver(ctx)
 }
 
 func (m *Manager) refreshObserver(ctx context.Context) error {
+	m.notifyRebound(ctx)
 	observer := m.observer()
 	if observer == nil {
 		return nil
@@ -699,6 +720,7 @@ func (m *Manager) refreshObserver(ctx context.Context) error {
 }
 
 func (m *Manager) notifyObserver(ctx context.Context, profile Profile, plan Plan) {
+	m.notifyRebound(ctx)
 	observer := m.observer()
 	if observer == nil {
 		return

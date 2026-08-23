@@ -31,9 +31,13 @@ const (
 // is a property of the USB profile rather than of the bridge, so the bridge
 // names the active one and offers no control that would duplicate the one under
 // Settings, Device.
+//
+// OnRebind is the durability half. usb0 does not survive a presentation apply,
+// so the bridge hands the presentation manager the callback that puts it back.
 type Gadget interface {
 	NIC(ctx context.Context) (string, error)
 	NetworkProtocol(ctx context.Context) (string, error)
+	OnRebind(func(context.Context))
 }
 
 func (m *Manager) lock() error {
@@ -529,6 +533,34 @@ func (m *Manager) enslaveGadget(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// Registered with the presentation manager, which calls it after every apply.
+// An apply unbinds the UDC and binds it again, and the kernel destroys and
+// recreates usb0 with no memory of br0, so without this a two-port transparent
+// bridge silently becomes one-ported until the next enable.
+//
+// br0's existence is read live rather than from last-known-good, because the
+// membership only makes sense against a bridge that is actually there, and it
+// is absent on every device that has never enabled one. Nothing here touches
+// the uplink or the management address: enslaveGadget reaches only the NIC the
+// presentation manager names, and SetMaster's device set cannot hold eth0's
+// address or wlan0.
+func (m *Manager) ReattachGadget(ctx context.Context) {
+	links, err := m.ip.Links(ctx)
+	if err != nil {
+		log.Warnf("bridge: read links after a gadget rebind: %s", err)
+		return
+	}
+	for _, link := range links {
+		if link.Name != BridgeName {
+			continue
+		}
+		if err := m.enslaveGadget(ctx); err != nil {
+			log.Warnf("bridge: re-enslave the gadget NIC after a rebind: %s", err)
+		}
+		return
+	}
 }
 
 // Reads the live device rather than the record, so an operator comparing the

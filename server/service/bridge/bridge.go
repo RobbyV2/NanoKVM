@@ -587,6 +587,12 @@ func New(cfg Config) *Manager {
 	if m.now == nil {
 		m.now = time.Now
 	}
+
+	// The gadget half of the wiring. Step 13 enslaves usb0 once; this is what
+	// keeps it enslaved across the applies that rebuild it.
+	if m.gadget != nil {
+		m.gadget.OnRebind(m.ReattachGadget)
+	}
 	return m
 }
 

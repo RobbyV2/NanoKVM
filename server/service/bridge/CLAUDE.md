@@ -123,6 +123,26 @@ nothing about whether anyone can reach the management plane.
 so verification would fail on every device and prove nothing about reachability either
 way. Any HTTP status counts: a 401 is still the listener answering.
 
+## The gadget port does not stay put
+
+A presentation apply unbinds the UDC and binds it again, and the kernel destroys and
+recreates `usb0` with no memory of `br0`, so enable's step 13 holds only until the next
+profile change. `S29bridge` builds `br0` from scratch at every boot, so a script that
+enslaves `eth0` alone comes up one-ported. Both halves lose the second port silently.
+
+`bridge.Gadget` gains `OnRebind` for the first half: `New` hands the presentation manager
+`ReattachGadget`, and the manager calls it after every apply, failed ones included, since a
+failed apply rebound the UDC too. `S29bridge` covers the second, enslaving `usb0` inside
+`create` after `eth0` and before the uplink file is written.
+
+Neither path may fail on an absent `usb0`. It exists only when the active profile has a
+network function linked into `configs/c.1`, and bridge-enabled-with-no-NIC is legitimate:
+`NIC` reports empty and `enslaveGadget` does nothing, and the script's `enslave_gadget`
+returns 0 on every failure it can meet, because a non-zero return there drops `start` into
+`teardown` and costs the management address for the sake of the attached host's network.
+`ReattachGadget` reads the live link list first and returns without a `br0`, which is every
+device that has never enabled the bridge.
+
 ## Smaller things that will bite
 
 `UdhcpcPidPath` stays the literal `/run/udhcpc.eth0.pid` under every uplink. It names
