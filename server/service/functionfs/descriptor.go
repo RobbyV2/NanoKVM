@@ -607,6 +607,16 @@ func stringOrder(values map[uint8]string, descriptors []descriptor) map[uint8]ui
 
 func stringBlock(values map[uint8]string, descriptors []descriptor) []byte {
 	order := stringOrder(values, descriptors)
+	// __ffs_data_got_strings rejects a language that carries no strings, so a
+	// source device with every string index zero needs a header with both
+	// counts zero and no language at all. Declaring 0x0409 anyway is EINVAL on
+	// the ep0 write and takes the whole session down with it.
+	if len(order) == 0 {
+		out := make([]byte, 16)
+		binary.LittleEndian.PutUint32(out[0:4], 2)
+		binary.LittleEndian.PutUint32(out[4:8], uint32(len(out)))
+		return out
+	}
 	length := 18
 	for source := range order {
 		length += len(values[source]) + 1
