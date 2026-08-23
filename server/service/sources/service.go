@@ -34,7 +34,12 @@ const (
 type Service struct {
 	registry *Registry
 	ingress  FrameIngress
+	slots    SlotManager
 	mu       sync.Mutex
+}
+
+type SlotManager interface {
+	SetMediaSlots(context.Context, []string, []string) error
 }
 
 type controlMessage struct {
@@ -66,6 +71,10 @@ type frameFailure struct {
 	err   error
 }
 
+type slotsRequest struct {
+	Slots []Slot `json:"slots"`
+}
+
 func (e *frameFailure) Error() string { return e.err.Error() }
 func (e *frameFailure) Unwrap() error { return e.err }
 
@@ -90,10 +99,58 @@ func (s *Service) SetIngress(ingress FrameIngress) {
 	s.ingress = ingress
 }
 
+func (s *Service) SetSlotManager(manager SlotManager) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.slots = manager
+}
+
 func (s *Service) Registry() *Registry { return s.registry }
 
 func (s *Service) Get(c *gin.Context) {
 	var response proto.Response
+	snapshot := s.registry.Snapshot()
+	response.OkRspWithData(c, &snapshot)
+}
+
+func (s *Service) SetSinks(c *gin.Context) {
+	var response proto.Response
+	actor, ok := actorFrom(c)
+	if !ok || !actor.Admin {
+		response.ErrRsp(c, -1, ErrForbidden.Error())
+		return
+	}
+	var request slotsRequest
+	if err := decodeHTTPRequest(c, &request); err != nil {
+		response.ErrRsp(c, -1, "invalid arguments")
+		return
+	}
+	slots, err := validateSlots(request.Slots)
+	if err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
+	var cameras, microphones []string
+	for _, slot := range slots {
+		if slot.Kind == KindCamera {
+			cameras = append(cameras, slot.Label)
+		} else {
+			microphones = append(microphones, slot.Label)
+		}
+	}
+	s.mu.Lock()
+	manager := s.slots
+	s.mu.Unlock()
+	if manager == nil {
+		response.ErrRsp(c, -2, "media profile manager is unavailable")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), 30*time.Second)
+	defer cancel()
+	if err := manager.SetMediaSlots(ctx, cameras, microphones); err != nil {
+		response.ErrRsp(c, -2, err.Error())
+		return
+	}
 	snapshot := s.registry.Snapshot()
 	response.OkRspWithData(c, &snapshot)
 }
@@ -374,6 +431,16 @@ func actorFrom(c *gin.Context) (Actor, bool) {
 		return Actor{}, false
 	}
 	return Actor{Username: principal.Username, Admin: principal.Role == authn.RoleAdmin}, true
+}
+
+func decodeHTTPRequest(c *gin.Context, destination any) error {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxControlMessage)
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	return requireJSONEnd(decoder)
 }
 
 func requireJSONEnd(decoder *json.Decoder) error {

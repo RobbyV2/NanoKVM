@@ -42,6 +42,7 @@ func server(r *gin.Engine) {
 	mediaManager := media.NewManager(sourceService.Registry())
 	sourceService.SetIngress(mediaManager)
 	presentationManager := presentation.GetManager()
+	sourceService.SetSlotManager(presentationManager)
 	presentationManager.SetObserver(mediaManager)
 	if err := presentationManager.RefreshObserver(context.Background()); err != nil {
 		log.Debugf("media gadget unavailable: %s", err)

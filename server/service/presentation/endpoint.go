@@ -54,7 +54,6 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 				}
 			}
 		}
-		before := used
 		used = used.add(caps)
 		if used.In > table.MaxInEndpoints {
 			return used, fmt.Errorf("%w: %s needs %d IN endpoints, %d of %d in use, rejected by capability table %s",
@@ -63,23 +62,6 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 		if used.Out > table.MaxOutEndpoints {
 			return used, fmt.Errorf("%w: %s needs %d OUT endpoints, %d of %d in use, rejected by capability table %s",
 				ErrEndpointBudget, name, caps.OutEPs, used.Out, table.MaxOutEndpoints, table.Source)
-		}
-		if function.Kind == FunctionFFS && len(table.InFIFOWords) != 0 {
-			in := before.In
-			for _, endpoint := range function.FFS.Endpoints {
-				if endpoint.Address&0x80 == 0 {
-					continue
-				}
-				words := 0
-				if in < len(table.InFIFOWords) {
-					words = table.InFIFOWords[in]
-				}
-				if int(endpoint.MaxPacket) > words {
-					return used, fmt.Errorf("%w: %s endpoint 0x%02x packet %d exceeds IN FIFO %d at slot %d, rejected by capability table %s",
-						ErrEndpointBudget, name, endpoint.Address, endpoint.MaxPacket, words, in+1, table.Source)
-				}
-				in++
-			}
 		}
 	}
 	if _, err := SeatFIFOs(functions, table); err != nil {
@@ -132,6 +114,16 @@ func inPackets(function Function, caps FunctionCaps) []int {
 			channels := bits.OnesCount32(function.Audio.PChannelMask)
 			packet := channels * int(function.Audio.PSampleSize) * int((function.Audio.PSampleRate+999)/1000)
 			return []int{packet}
+		}
+	case FunctionFFS:
+		if function.FFS != nil {
+			packets := make([]int, 0, len(function.FFS.Endpoints))
+			for _, endpoint := range function.FFS.Endpoints {
+				if endpoint.Address&0x80 != 0 {
+					packets = append(packets, int(endpoint.MaxPacket))
+				}
+			}
+			return packets
 		}
 	}
 	return slices.Clone(caps.INPackets)

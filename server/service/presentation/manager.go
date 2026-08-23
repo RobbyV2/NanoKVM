@@ -216,6 +216,65 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 	return nil
 }
 
+func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []string) error {
+	if len(cameras)+len(microphones) > 8 {
+		return fmt.Errorf("media slots exceed 8")
+	}
+	active, err := m.store.Active()
+	if err != nil {
+		return fmt.Errorf("read active profile: %w", err)
+	}
+	profile := standardProfile()
+	if active != "" && active != ProfileHIDOnly && active != ProfileHybrid {
+		loaded, loadErr := m.store.LoadProfile(active)
+		if loadErr != nil {
+			return fmt.Errorf("load active profile %s: %w", active, loadErr)
+		}
+		if loaded.Name != "" {
+			profile = loaded
+		}
+	}
+	if profile.BuiltIn {
+		profile.Name = ProfileCurrent
+		profile.BuiltIn = false
+	}
+	functions := profile.Functions[:0]
+	for _, function := range profile.Functions {
+		if function.Kind != FunctionUVC && function.Kind != FunctionUAC2 {
+			functions = append(functions, function)
+		}
+	}
+	profile.Functions = functions
+	for index, label := range cameras {
+		profile.Functions = append(profile.Functions, defaultCamera(index, label))
+	}
+	for index, label := range microphones {
+		profile.Functions = append(profile.Functions, defaultMicrophone(index, label))
+	}
+	profile.Normalize()
+	return m.ApplyProfile(ctx, profile)
+}
+
+func defaultCamera(index int, label string) Function {
+	frames := []VideoFrame{
+		{Width: 1280, Height: 720, Intervals: []uint32{333333, 666666}},
+		{Width: 640, Height: 480, Intervals: []uint32{333333, 666666}},
+		{Width: 320, Height: 240, Intervals: []uint32{333333, 666666}},
+		{Width: 160, Height: 120, Intervals: []uint32{333333, 666666}},
+	}
+	return Function{Kind: FunctionUVC, Instance: fmt.Sprintf("cam%d", index), Video: &VideoFunction{
+		FunctionName: label, Formats: []VideoFormat{{Codec: "mjpeg", Frames: frames}},
+		StreamingMaxPacket: 768, StreamingInterval: 1,
+	}}
+}
+
+func defaultMicrophone(index int, label string) Function {
+	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("mic%d", index), Audio: &AudioFunction{
+		FunctionName: label, PChannelMask: 1, PSampleRate: 48000, PSampleSize: 2,
+		CChannelMask: 0, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 4,
+	}}
+}
+
 func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Transient, error) {
 	if err := m.ready(); err != nil {
 		return nil, err
@@ -230,9 +289,13 @@ func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Tr
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.transient != nil {
+		m.mu.Unlock()
 		return nil, ErrTransient
+	}
+	observer := m.observer()
+	if observer != nil {
+		observer.Suspend()
 	}
 	var recovery recoveryPlan
 	var udc string
@@ -242,11 +305,15 @@ func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Tr
 		return applyErr
 	})
 	if err != nil {
+		m.mu.Unlock()
+		m.refreshObserver(context.Background())
 		return nil, err
 	}
 	m.nextToken++
 	state := &Transient{Token: m.nextToken, Profile: profile, recovery: recovery, udc: udc}
 	m.transient = state
+	m.mu.Unlock()
+	m.notifyObserver(context.Background(), profile, plan)
 	return state, nil
 }
 
@@ -255,16 +322,25 @@ func (m *Manager) StopFunctionFS(ctx context.Context, token uint64) error {
 		return err
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.transient == nil || m.transient.Token != token {
+		m.mu.Unlock()
 		return ErrTransient
 	}
 	state := m.transient
+	if observer := m.observer(); observer != nil {
+		observer.Suspend()
+	}
 	err := m.withHIDQuiesced(func() error { return m.restoreFunctionFS(ctx, state) })
 	if err == nil {
 		m.transient = nil
 	}
-	return err
+	m.mu.Unlock()
+	if err != nil {
+		m.refreshObserver(context.Background())
+		return err
+	}
+	m.notifyObserver(context.Background(), state.recovery.profile, state.recovery.plan)
+	return nil
 }
 
 func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
@@ -272,11 +348,16 @@ func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
 		return err
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.transient != nil {
+		m.mu.Unlock()
 		return ErrTransient
 	}
-	return m.withHIDQuiesced(func() (result error) {
+	if observer := m.observer(); observer != nil {
+		observer.Suspend()
+	}
+	var recovered Profile
+	var recoveredPlan Plan
+	err := m.withHIDQuiesced(func() (result error) {
 		udcs, err := m.ops.ListUDC()
 		if err != nil {
 			return err
@@ -308,9 +389,17 @@ func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		recovered, recoveredPlan = profile, plan
 		_, _, err = m.applyPlan(ctx, profile, plan, true)
 		return err
 	})
+	m.mu.Unlock()
+	if err != nil {
+		m.refreshObserver(context.Background())
+		return err
+	}
+	m.notifyObserver(context.Background(), recovered, recoveredPlan)
+	return nil
 }
 
 func (m *Manager) hybridProfile(function FunctionFS) (Profile, error) {

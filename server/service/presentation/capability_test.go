@@ -162,4 +162,9 @@ func TestMediaCapabilityNeedsFunctionsAndFIFOMap(t *testing.T) {
 	if withoutAudio.supportsMedia() {
 		t.Fatal("capability table without UAC2 was accepted")
 	}
+	withoutFunctionFS := staticV1.clone()
+	delete(withoutFunctionFS.Functions, FunctionFFS)
+	if withoutFunctionFS.supportsMedia() {
+		t.Fatal("capability table without FunctionFS was accepted")
+	}
 }

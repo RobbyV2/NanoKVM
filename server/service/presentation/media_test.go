@@ -10,9 +10,10 @@ import (
 )
 
 type fakeGadgetObserver struct {
-	mu      sync.Mutex
-	suspend int
-	applied int
+	mu       sync.Mutex
+	suspend  int
+	applied  int
+	profiles []string
 }
 
 func (f *fakeGadgetObserver) Suspend() {
@@ -21,10 +22,11 @@ func (f *fakeGadgetObserver) Suspend() {
 	f.suspend++
 }
 
-func (f *fakeGadgetObserver) Applied(context.Context, Profile, Plan) error {
+func (f *fakeGadgetObserver) Applied(_ context.Context, profile Profile, _ Plan) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.applied++
+	f.profiles = append(f.profiles, profile.Name)
 	return nil
 }
 
@@ -285,6 +287,25 @@ func TestMediaInstancesMayBeDeclaredUntilWholeProfileValidation(t *testing.T) {
 	}
 }
 
+func TestFunctionFSAndMediaCannotShareAProfile(t *testing.T) {
+	profile := mediaProfile(testCamera("cam0", 768))
+	profile.Functions = append(profile.Functions[:2], Function{Kind: FunctionFFS, Instance: "hybrid", FFS: pointer(testFunctionFS())}, testCamera("cam0", 768))
+	if err := profile.Validate(); err == nil || !strings.Contains(err.Error(), "cannot coexist") {
+		t.Fatalf("Validate() = %v, want coexistence refusal", err)
+	}
+}
+
+func TestFunctionFSParticipatesInFIFOSeating(t *testing.T) {
+	function := Function{Kind: FunctionFFS, Instance: "hybrid", FFS: pointer(testFunctionFS())}
+	assigned, err := SeatFIFOs([]Function{function}, staticV1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(assigned["ffs.hybrid"], []int{128}) {
+		t.Fatalf("ffs.hybrid fifos = %v, want [128]", assigned["ffs.hybrid"])
+	}
+}
+
 func TestFailedSurrenderRestoresMediaObserver(t *testing.T) {
 	manager, ops := newTestManager(t)
 	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
@@ -301,5 +322,101 @@ func TestFailedSurrenderRestoresMediaObserver(t *testing.T) {
 	defer observer.mu.Unlock()
 	if observer.suspend != 1 || observer.applied != 1 {
 		t.Fatalf("observer suspend/applied = %d/%d, want 1/1", observer.suspend, observer.applied)
+	}
+}
+
+func TestFunctionFSTransitionSuspendsAndRestoresMediaObserver(t *testing.T) {
+	manager, _ := newTestManager(t)
+	manager.caps = staticV1
+	profile := mediaProfile(testCamera("cam0", 768))
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatal(err)
+	}
+	observer := &fakeGadgetObserver{}
+	manager.SetObserver(observer)
+
+	state, err := manager.StartFunctionFS(context.Background(), testFunctionFS())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.StopFunctionFS(context.Background(), state.Token); err != nil {
+		t.Fatal(err)
+	}
+
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	if observer.suspend != 2 || !slices.Equal(observer.profiles, []string{ProfileHybrid, profile.Name}) {
+		t.Fatalf("observer suspend/profiles = %d/%v", observer.suspend, observer.profiles)
+	}
+}
+
+func TestFunctionFSFailureRestoresMediaObserver(t *testing.T) {
+	manager, ops := newTestManager(t)
+	manager.caps = staticV1
+	profile := mediaProfile(testCamera("cam0", 768))
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatal(err)
+	}
+	observer := &fakeGadgetObserver{}
+	manager.SetObserver(observer)
+	ops.SetUDC()
+
+	if _, err := manager.StartFunctionFS(context.Background(), testFunctionFS()); !errors.Is(err, ErrUDCCount) {
+		t.Fatalf("start err = %v, want UDC count error", err)
+	}
+
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	if observer.suspend != 1 || !slices.Equal(observer.profiles, []string{profile.Name}) {
+		t.Fatalf("observer suspend/profiles = %d/%v", observer.suspend, observer.profiles)
+	}
+}
+
+func TestSetMediaSlotsPersistsACompiledProfile(t *testing.T) {
+	manager, ops := newTestManager(t)
+	manager.caps = staticV1
+	observer := &fakeGadgetObserver{}
+	manager.SetObserver(observer)
+
+	if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}); err != nil {
+		t.Fatal(err)
+	}
+	active, err := manager.store.Active()
+	if err != nil || active != ProfileCurrent {
+		t.Fatalf("active = %q, err = %v", active, err)
+	}
+	profile, err := manager.store.LoadProfile(ProfileCurrent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(profile.Functions) != 5 || profile.Functions[3].Video.FunctionName != "Desk Camera" || profile.Functions[4].Audio.FunctionName != "Desk Microphone" {
+		t.Fatalf("media functions = %+v", profile.Functions)
+	}
+	links := ops.Links()
+	if _, ok := links[configPrefix+"/uvc.cam0"]; !ok {
+		t.Fatal("camera is not linked")
+	}
+	if _, ok := links[configPrefix+"/uac2.mic0"]; !ok {
+		t.Fatal("microphone is not linked")
+	}
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	if !slices.Equal(observer.profiles, []string{ProfileCurrent}) {
+		t.Fatalf("observer profiles = %v", observer.profiles)
+	}
+}
+
+func TestSetMediaSlotsRejectsImpossibleProfileWithoutChangingActive(t *testing.T) {
+	manager, _ := newTestManager(t)
+	manager.caps = staticV1
+	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SetMediaSlots(context.Background(), []string{"Camera 1", "Camera 2"}, nil); !errors.Is(err, ErrEndpointBudget) {
+		t.Fatalf("SetMediaSlots() = %v, want endpoint refusal", err)
+	}
+	active, err := manager.store.Active()
+	if err != nil || active != ProfileStandard {
+		t.Fatalf("active = %q, err = %v", active, err)
 	}
 }

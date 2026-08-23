@@ -99,7 +99,8 @@ func LoadCapabilities() CapabilityTable {
 func (t CapabilityTable) supportsMedia() bool {
 	_, video := t.Functions[FunctionUVC]
 	_, audio := t.Functions[FunctionUAC2]
-	return video && audio && len(t.InFIFOWords) == t.MaxInEndpoints
+	_, functionFS := t.Functions[FunctionFFS]
+	return video && audio && functionFS && len(t.InFIFOWords) == t.MaxInEndpoints
 }
 
 func capabilityPath() string {

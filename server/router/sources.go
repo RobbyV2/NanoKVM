@@ -1,6 +1,7 @@
 package router
 
 import (
+	"NanoKVM-Server/authn"
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/service/sources"
 
@@ -14,5 +15,7 @@ func sourcesRouter(r *gin.Engine, service *sources.Service) {
 	api.GET("/sources/ws", service.SourceSocket)
 	api.DELETE("/sources/bindings/:sink", service.Release)
 
-	api.DELETE("/sources/bindings", service.DisconnectAll)
+	admin := r.Group("/api").Use(middleware.CheckToken(), middleware.RequireRole(authn.RoleAdmin))
+	admin.PUT("/sources/sinks", service.SetSinks)
+	admin.DELETE("/sources/bindings", service.DisconnectAll)
 }

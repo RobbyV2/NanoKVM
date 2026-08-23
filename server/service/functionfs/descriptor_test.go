@@ -91,12 +91,13 @@ func TestImportRefusesUnsafeLayouts(t *testing.T) {
 
 func TestImportFIFOBudgetIsLoadBearing(t *testing.T) {
 	raw := vendorFixture(bulkEndpoint(0x81, 512), bulkEndpoint(0x82, 512))
-	if _, err := Import(raw, fixtureFetcher{}, testCapabilities()); !errors.Is(err, presentation.ErrEndpointBudget) {
-		t.Fatalf("got %v, want endpoint budget failure", err)
+	limited := testCapabilities()
+	limited.InFIFOWords = []int{768, 127, 127, 127, 127, 127}
+	if _, err := Import(raw, fixtureFetcher{}, limited); !errors.Is(err, presentation.ErrFIFOBudget) {
+		t.Fatalf("got %v, want FIFO budget failure", err)
 	}
-	mutated := testCapabilities()
-	mutated.InFIFOWords[3] = 512
-	if _, err := Import(raw, fixtureFetcher{}, mutated); err != nil {
+	limited.InFIFOWords[1] = 128
+	if _, err := Import(raw, fixtureFetcher{}, limited); err != nil {
 		t.Fatalf("mutated FIFO should admit the layout: %v", err)
 	}
 }

@@ -436,7 +436,7 @@ func (f *Function) validate() error {
 	case FunctionMassStorage:
 		if f.Storage == nil || f.HID != nil || f.Net != nil || f.FFS != nil || f.Video != nil || f.Audio != nil {
 			return fmt.Errorf("expects exactly a storage payload")
-	}
+		}
 		return f.Storage.validate()
 	case FunctionFFS:
 		if f.Instance != "hybrid" {
