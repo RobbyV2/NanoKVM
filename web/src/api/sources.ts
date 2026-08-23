@@ -1,0 +1,102 @@
+import { http } from '@/lib/http.ts';
+import { getBaseUrl } from '@/lib/service.ts';
+
+export type SourceKind = 'camera' | 'microphone';
+export type BindingState = 'claimed' | 'streaming' | 'orphaned' | 'suspended';
+export type OutputState = 'idle' | 'source' | 'black' | 'silence';
+
+export type SourceFormat = {
+  codec: string;
+  width?: number;
+  height?: number;
+  fps?: number;
+  sample_rate?: number;
+  channels?: number;
+};
+
+export type SourceStream = {
+  id: string;
+  kind: SourceKind;
+  label: string;
+  formats?: SourceFormat[];
+};
+
+export type MediaSource = {
+  id: string;
+  owner: string;
+  agent: string;
+  label: string;
+  streams: SourceStream[];
+  connected_at: string;
+};
+
+export type Demand = {
+  streaming: boolean;
+  width?: number;
+  height?: number;
+  fps?: number;
+  since?: string;
+};
+
+export type Binding = {
+  sink_id: string;
+  source_id: string;
+  stream_id: string;
+  owner: string;
+  source_label: string;
+  stream_label: string;
+  state: BindingState;
+  started_at: string;
+  expires_at?: string;
+};
+
+export type SourceSink = {
+  id: string;
+  kind: SourceKind;
+  label: string;
+  slot: number;
+  demand: Demand;
+  output: OutputState;
+  binding: Binding | null;
+};
+
+export type SourcesSnapshot = {
+  sinks: SourceSink[];
+  sources: MediaSource[];
+  bindings: Binding[];
+};
+
+export type SourcesEvent = {
+  type: string;
+  snapshot?: SourcesSnapshot;
+  sink?: SourceSink;
+  sinks?: SourceSink[];
+  source?: MediaSource;
+  binding?: Binding;
+  sink_id?: string;
+  source_id?: string;
+  reason?: string;
+  demand?: Demand;
+};
+
+export type SourceSlot = Pick<SourceSink, 'id' | 'kind' | 'label'>;
+
+export function getSources() {
+  return http.get('/api/sources');
+}
+
+export function setSourceSlots(slots: SourceSlot[]) {
+  return http.request({ method: 'put', url: '/api/sources/sinks', data: { slots } });
+}
+
+export function releaseSource(sinkID: string) {
+  return http.delete(`/api/sources/bindings/${encodeURIComponent(sinkID)}`);
+}
+
+export function disconnectSources() {
+  return http.delete('/api/sources/bindings');
+}
+
+export function sourcesSocket(path: 'events' | 'ws') {
+  return `${getBaseUrl('ws')}/api/sources/${path}`;
+}

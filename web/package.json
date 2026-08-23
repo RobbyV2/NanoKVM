@@ -12,6 +12,7 @@
     "mocked": "vite --mode mocked",
     "build": "tsc && vite build",
     "test:presentation": "node --experimental-strip-types --test src/pages/desktop/menu/settings/presentation/editor.test.ts",
+    "test:media": "node --experimental-strip-types --test src/pages/desktop/menu/devices/media.test.ts",
     "lint": "eslint . --report-unused-disable-directives",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "preview": "vite preview"
