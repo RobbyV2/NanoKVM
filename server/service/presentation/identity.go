@@ -13,7 +13,6 @@ const (
 	OriginBuiltIn  = "built-in"
 	OriginPreset   = "preset"
 	OriginMigrated = "migrated"
-	OriginImported = "imported"
 	OriginUser     = "user"
 
 	// The vendor ID the board ships with. Anything else is somebody's.
@@ -28,17 +27,26 @@ const (
 	serialDomain = "nanokvm-usb-serial:"
 )
 
-var provenanceOrigins = [...]string{OriginBuiltIn, OriginPreset, OriginMigrated, OriginImported, OriginUser}
+var provenanceOrigins = [...]string{OriginBuiltIn, OriginPreset, OriginMigrated, OriginUser}
 
 // Where the identity in a profile came from, and whether it carries a
 // descriptor tree captured off a real device. Descriptors is not independent
 // state: Normalize derives it from Profile.Descriptors so the two can never
 // disagree, and it rides in an exported manifest, where the assets have been
 // split out of the profile, as the claim ImportPackage checks them against.
+//
+// Origin says where the identity came from, Imported says how this copy
+// arrived, and they are different questions. Nothing here can check a migration
+// claim, so the claim is kept and the fact that it reached us through a file is
+// recorded beside it: only ImportPackage sets Imported, so a manifest can add
+// the fact to itself but cannot take it away. "imported" is deliberately not an
+// Origin, because setting it would erase which preset or migration the identity
+// actually came from.
 type Provenance struct {
 	Origin      string `json:"origin"`
 	Source      string `json:"source,omitempty"`
 	Descriptors bool   `json:"descriptors"`
+	Imported    bool   `json:"imported"`
 }
 
 func (p Provenance) validate() error {

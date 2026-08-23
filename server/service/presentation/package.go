@@ -295,6 +295,7 @@ func ImportPackage(data []byte) (Profile, error) {
 		return Profile{}, fmt.Errorf("package contains unreferenced files: %s", strings.Join(extras, ", "))
 	}
 
+	manifest.Profile.Provenance.Imported = true
 	manifest.Profile.Normalize()
 	if err := manifest.Profile.Validate(); err != nil {
 		return Profile{}, fmt.Errorf("validate profile: %w", err)

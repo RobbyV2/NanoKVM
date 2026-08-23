@@ -73,6 +73,7 @@ func TestAPresetIdentityTakesACapturedTreeAtTheSameSchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
+	profile.Provenance.Imported = true
 	if got.Descriptors == nil || got.Provenance != profile.Provenance {
 		t.Fatalf("captured tree did not survive: descriptors=%v provenance=%+v", got.Descriptors != nil, got.Provenance)
 	}

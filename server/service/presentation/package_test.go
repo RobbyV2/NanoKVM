@@ -37,6 +37,7 @@ func TestPackageRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
+	want.Provenance.Imported = true
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("profile differs after round trip\ngot:  %#v\nwant: %#v", got, want)
 	}

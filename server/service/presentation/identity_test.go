@@ -115,8 +115,34 @@ func TestPackageRoundTripsProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
+	// The import stamps the arrival, so the round trip is no longer the
+	// identity it was: everything the profile claims about itself survives and
+	// the one fact the manifest does not get a say in is added.
+	want.Provenance.Imported = true
 	if got.Provenance != want.Provenance {
 		t.Fatalf("provenance = %+v, want %+v", got.Provenance, want.Provenance)
+	}
+}
+
+func TestImportedPackageCannotPresentItselfAsLocalHistory(t *testing.T) {
+	profile := standardProfile()
+	profile.Name, profile.BuiltIn = "borrowed", false
+	profile.Provenance = Provenance{Origin: OriginMigrated, Source: "/boot"}
+	profile.Normalize()
+
+	var archive bytes.Buffer
+	if err := ExportPackage(&archive, profile); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	got, err := ImportPackage(archive.Bytes())
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if !got.Provenance.Imported {
+		t.Fatalf("provenance = %+v, want the arrival recorded", got.Provenance)
+	}
+	if got.Provenance.Origin != OriginMigrated || got.Provenance.Source != "/boot" {
+		t.Fatalf("provenance = %+v, want the migration it claims kept", got.Provenance)
 	}
 }
 
@@ -149,11 +175,13 @@ func TestImportRejectsAClaimOfDescriptorsThePackageDoesNotShip(t *testing.T) {
 }
 
 func TestValidateRejectsAnUnknownOrigin(t *testing.T) {
-	profile := standardProfile()
-	profile.BuiltIn = false
-	profile.Provenance.Origin = "vendor-said-so"
+	for _, origin := range []string{"vendor-said-so", "imported"} {
+		profile := standardProfile()
+		profile.BuiltIn = false
+		profile.Provenance.Origin = origin
 
-	if err := profile.Validate(); err == nil || !strings.Contains(err.Error(), "unknown origin") {
-		t.Fatalf("validate = %v, want an unknown origin rejection", err)
+		if err := profile.Validate(); err == nil || !strings.Contains(err.Error(), "unknown origin") {
+			t.Fatalf("validate(%q) = %v, want an unknown origin rejection", origin, err)
+		}
 	}
 }
