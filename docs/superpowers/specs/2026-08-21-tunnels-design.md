@@ -46,11 +46,11 @@ Two consequences drive the design. NanoKVM owns the config and renders an argv f
 | `third_party/wstunnel` | `RobbyV2/wstunnel` | v10.6.2 | `NanoKVM` |
 | `third_party/newt` | `RobbyV2/newt` | v1.16.0 | `NanoKVM` |
 
-The repo has no submodules today and no `.gitmodules`.
+Both are submodules now, alongside `third_party/usb-proxy` for the passthrough seed. `third_party/wstunnel` sits at `v10.6.2-2-g9b38f18`: two fork commits past the tag, still the v10.6.2 upstream pin.
 
 **wstunnel branch.** No source patch is required. riscv64 needs only `--no-default-features --features ring`, a configuration upstream already exercises for armv7, armv6, freebsd-x86 and windows-x86, and CI runs the full test suite under it. The branch carries a riscv64 entry in `.github/workflows/release.yaml`, worth offering upstream as a pull request.
 
-Pin to the v10.6.2 tag, not `main`. The rendered README documents unreleased main-branch CLI including `--enable-webtransport`, the `wts://` scheme, `--websocket-ping-frequency <DURATION>` in place of the released `--websocket-ping-frequency-sec <seconds>`, `--remote-to-local-server-idle-timeout` and `--dns-resolver-prefer-ipv4`. Code written against the README produces flags the shipped binary rejects.
+Pin to the v10.6.2 tag, not `main`: the fork branch carries its own commits on top of the tag rather than tracking main, and refreshing the pin means moving those commits, not moving the base. The rendered README documents unreleased main-branch CLI including `--enable-webtransport`, the `wts://` scheme, `--websocket-ping-frequency <DURATION>` in place of the released `--websocket-ping-frequency-sec <seconds>`, `--remote-to-local-server-idle-timeout` and `--dns-resolver-prefer-ipv4`. Code written against the README produces flags the shipped binary rejects.
 
 **newt branch.** Remove the self-update goroutine at `main.go:184-213`. Two minutes after start and every six hours after, it fetches the latest build for `linux_riscv64`, verifies SHA-256, renames over the running binary and re-execs. The platform map includes riscv64, `/usr/bin` and `/kvmapp` are both writable, so left alone it replaces a stripped 12.8 MB build with upstream's 35.5 MB one, unattended, on flash. `NEWT_SYSTEM_SUBSTRATE=CONTAINER` is also set in the generated wrapper, so the two mitigations fail independently.
 

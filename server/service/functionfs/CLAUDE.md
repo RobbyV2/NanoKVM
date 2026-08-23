@@ -10,4 +10,6 @@ USBFS retains URB and buffer pointers after `ioctl`. Pin both until reap or a sy
 
 Cleanup order is unbind, unlink `configs/c.1/ffs.hybrid`, restore the persistent presentation, close and unmount FunctionFS, detach VHCI, then clear the recovery marker. Hardware proof still gates enumeration, resets, stalls, and sustained throughput.
 
+The descriptor block sets `FUNCTIONFS_VIRTUAL_ADDR` (flags bit 4), so the kernel names the endpoint files `ep<addr>` after the addresses the compiler assigned — `ep01`, `ep81` — rather than `ep1`, `ep2` by index. Open them by `functionFSEndpointName(address)`, never by enumeration order, and open them while `ep0` is still held: closing `ep0` destroys the endpoint files.
+
 `kernel_tier2_test.go` holds the ordering contract to a real kernel: `mount -t functionfs hybrid` is `ENODEV` until `functions/ffs.hybrid` exists in configfs, `ENOENT` under a name no instance carries, and `functionfs` is absent from `/proc/filesystems` entirely until the first instance, so a preflight that greps it reads the wrong thing. See `service/presentation/CLAUDE.md` for how the tier runs.
