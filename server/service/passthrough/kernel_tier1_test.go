@@ -4,6 +4,8 @@ package passthrough
 
 import (
 	"context"
+	"encoding/binary"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -40,6 +42,12 @@ func ip(t *testing.T, args ...string) {
 // the import. An empty devlist is the honest answer from a stub that exports
 // nothing, and leaves guardRemote with no matching busID to refuse.
 func kernelExporter(t *testing.T, device Device) string {
+	return kernelExporterListing(t, device, nil)
+}
+
+// interfaces is what the exporter's devlist advertises for the device. Empty
+// lists nothing, which is what most of these tests want.
+func kernelExporterListing(t *testing.T, device Device, interfaces []Interface) string {
 	t.Helper()
 
 	ip(t, "link", "set", "lo", "up")
@@ -58,7 +66,23 @@ func kernelExporter(t *testing.T, device Device) string {
 		t.Fatal(err)
 	}
 	imported := append(OpCommon{Version: ProtocolVersion, Code: CodeRepImport, Status: StatusOK}.Encode(), body...)
-	listed := append(OpCommon{Version: ProtocolVersion, Code: CodeRepDevlist, Status: StatusOK}.Encode(), make([]byte, CountSize)...)
+	listed := OpCommon{Version: ProtocolVersion, Code: CodeRepDevlist, Status: StatusOK}.Encode()
+	if len(interfaces) == 0 {
+		listed = append(listed, make([]byte, CountSize)...)
+	} else {
+		count := make([]byte, CountSize)
+		binary.BigEndian.PutUint32(count, 1)
+		listing := device
+		listing.NumInterfaces = uint8(len(interfaces))
+		entry, err := listing.Encode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		listed = append(append(listed, count...), entry...)
+		for _, iface := range interfaces {
+			listed = append(listed, iface.Encode()...)
+		}
+	}
 
 	go func() {
 		for {
@@ -116,6 +140,59 @@ func kernelPort(t *testing.T, hub Hub, number uint32) PortEntry {
 	return PortEntry{}
 }
 
+// The class guard has to hold against the real vhci ledger, not just a fake:
+// a refusal must leave every port exactly as it found it, and allowing
+// isochronous transfers has to carry the same device through to a real port.
+func TestKernelTier1VHCIIsochronousRefusalTakesNoPort(t *testing.T) {
+	kernelint.RequireTier1VHCI(t)
+
+	device := Device{
+		Path: "/sys/devices/platform/dummy_hcd.0/usb1/1-1", BusID: "1-1",
+		BusNum: 1, DevNum: 2, Speed: SpeedHigh, IDVendor: 0x046d, IDProduct: 0xc31c,
+		ConfigurationValue: 1, NumConfigurations: 1, NumInterfaces: 1,
+	}
+	addr := kernelExporterListing(t, device, []Interface{{Class: 0x01, SubClass: 0x02}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	before := kernelFreePorts(t, HubHigh)
+	_, err := Attach(ctx, addr, "1-1", false)
+	if !errors.Is(err, ErrIsochronous) {
+		t.Fatalf("attach = %v, want %v", err, ErrIsochronous)
+	}
+	if !strings.Contains(err.Error(), "class 01") {
+		t.Fatalf("refusal = %q, want it to name the class", err)
+	}
+	if after := kernelFreePorts(t, HubHigh); after != before {
+		t.Fatalf("free high-speed ports went %d -> %d, want the refusal to take none", before, after)
+	}
+
+	attachment, err := Attach(ctx, addr, "1-1", true)
+	if err != nil {
+		t.Fatalf("attach with isochronous allowed: %s", err)
+	}
+	t.Cleanup(func() { _ = Detach(attachment.Port) })
+
+	if entry := kernelPort(t, HubHigh, attachment.Port); entry.Status == VDevNull {
+		t.Fatalf("port %d is still free after an allowed isochronous attach", attachment.Port)
+	}
+	if after := kernelFreePorts(t, HubHigh); after != before-1 {
+		t.Fatalf("free high-speed ports went %d -> %d, want one taken", before, after)
+	}
+}
+
+func kernelFreePorts(t *testing.T, hub Hub) int {
+	t.Helper()
+	free := 0
+	for _, entry := range kernelStatus(t) {
+		if entry.Hub == hub && entry.Status == VDevNull {
+			free++
+		}
+	}
+	return free
+}
+
 func TestKernelTier1VHCIAttachTakesARealPort(t *testing.T) {
 	kernelint.RequireTier1VHCI(t)
 
@@ -129,7 +206,7 @@ func TestKernelTier1VHCIAttachTakesARealPort(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	attachment, err := Attach(ctx, addr, "1-1")
+	attachment, err := Attach(ctx, addr, "1-1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +266,7 @@ func TestKernelTier1VHCISuperSpeedTakesTheSuperHub(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	attachment, err := Attach(ctx, addr, "2-1")
+	attachment, err := Attach(ctx, addr, "2-1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
