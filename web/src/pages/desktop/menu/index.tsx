@@ -11,6 +11,7 @@ import { useMenuBounds } from '@/hooks/useMenuBounds.ts';
 import { useMenuVisibility } from '@/hooks/useMenuVisibility.ts';
 
 import { KeyboardLedStatus } from '../keyboard-led-status';
+import { Devices } from './devices';
 import { DownloadImage } from './download.tsx';
 import { Fullscreen } from './fullscreen';
 import { Image } from './image';
@@ -105,6 +106,7 @@ export const Menu = () => {
             <Screen />
             <Keyboard />
             <Mouse />
+            <Devices />
             <Divider type="vertical" />
 
             {isAdmin && isEnabled('image') && <Image />}

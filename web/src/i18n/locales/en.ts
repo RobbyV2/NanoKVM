@@ -285,6 +285,32 @@ const en = {
       okBtn: 'Yes',
       cancelBtn: 'No'
     },
+    devices: {
+      title: 'Devices',
+      stale: 'Live device state is unavailable. Reconnecting.',
+      empty: 'No camera or microphone slots are configured.',
+      available: 'Available',
+      waiting: 'The host is waiting for a source',
+      hostOpen: 'Host open',
+      hostIdle: 'Host idle',
+      sending: 'Sending from this browser',
+      black: 'Black video',
+      silence: 'Digital silence',
+      resuming: 'Waiting to resume',
+      stop: 'Stop sharing',
+      disconnect: 'Disconnect',
+      connectedSources_one: '{{count}} connected source',
+      connectedSources_other: '{{count}} connected sources',
+      connection: {
+        connecting: 'Connecting',
+        connected: 'Live',
+        disconnected: 'Reconnecting'
+      },
+      share: {
+        camera: 'Share camera',
+        microphone: 'Share microphone'
+      }
+    },
     settings: {
       title: 'Settings',
       display: {
@@ -614,6 +640,17 @@ const en = {
         networkDesc: 'Mount virtual network card on the remote host',
         networkProtocol: 'Network Protocol',
         networkProtocolDesc: 'NCM for modern hosts, RNDIS for older Windows',
+        media: {
+          title: 'Camera and microphone slots',
+          desc: 'Declare the media devices browsers may fill. The endpoint budget is checked when the USB profile is applied.',
+          cameras: 'Cameras',
+          microphones: 'Microphones',
+          save: 'Save slots',
+          disconnect: 'Disconnect',
+          disconnectAll: 'Disconnect all sources',
+          limit: 'Camera and microphone slots must total eight or fewer.',
+          failed: 'Media slots could not be updated.'
+        },
         reboot: 'Reboot',
         rebootDesc: 'Are you sure you want to reboot NanoKVM?',
         okBtn: 'Yes',
