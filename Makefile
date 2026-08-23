@@ -72,7 +72,7 @@ JSONCPP_BUILD_CMD := cd $(PASSTHROUGH_DIR) && wget -qO jsoncpp.tar.gz $(JSONCPP_
 USB_PROXY_BUILD_CMD := cd /home/build/NanoKVM/third_party/usb-proxy && make clean && PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$(PASSTHROUGH_DEPS)/lib/pkgconfig PKG_CONFIG_SYSROOT_DIR= CXX=riscv64-unknown-linux-musl-g++ CFLAGS="-Wall -Wextra -Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections -I$(PASSTHROUGH_DEPS)/include -I$(PASSTHROUGH_DEPS)/include/libusb-1.0" LDFLAGS="-static -Wl,--gc-sections -L$(PASSTHROUGH_DEPS)/lib" make && riscv64-unknown-linux-musl-strip usb-proxy && cp -f usb-proxy $(PASSTHROUGH_DIR)/usb-proxy
 PASSTHROUGH_BUILD_CMD := rm -rf $(PASSTHROUGH_DEPS) $(PASSTHROUGH_DIR)/libusb-$(LIBUSB_VERSION) $(PASSTHROUGH_DIR)/jsoncpp-$(JSONCPP_VERSION) && mkdir -p $(PASSTHROUGH_DEPS)/include $(PASSTHROUGH_DEPS)/lib && $(LIBUSB_BUILD_CMD) && $(JSONCPP_BUILD_CMD) && $(USB_PROXY_BUILD_CMD)
 
-.PHONY: help check-root builder-image rebuild-image check-image shell app support vision \
+.PHONY: help check-root check-version builder-image rebuild-image check-image shell app support vision \
         web tunnels passthrough edid-profiles release-build package release all clean \
         kernelint kernelint-tier1 kernelint-tier2
 
@@ -98,6 +98,7 @@ help:
 	@echo "  edid-profiles - Regenerate the shipped EDID profile table"
 	@echo "  kernelint-tier1 - Kernel tests needing netns and vhci_hcd"
 	@echo "  kernelint-tier2 - Kernel tests needing a UDC, in a QEMU VM"
+	@echo "  kernelint     - Both kernel test tiers"
 	@echo "  all           - Build both app and support (default)"
 	@echo "  release-build - Build every riscv64 release artifact in one pass"
 	@echo "  package       - Assemble nanokvm_<VERSION>.tar.gz + latest.json"
@@ -107,6 +108,14 @@ help:
 	@echo "Prerequisites:"
 	@echo "  - Docker must be installed and running"
 	@echo "  - Must not run as root user"
+
+# Packaging takes tens of minutes of cross-compilation before it reaches
+# package.sh, so the targets that need VERSION assert it before any of that.
+check-version:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "VERSION is required, e.g. make package VERSION=2.4.4"; \
+		exit 1; \
+	fi
 
 # Security check - prevent running as root
 check-root:
@@ -205,17 +214,14 @@ passthrough: check-root builder-image
 	@gzip -9 -n -c build/passthrough/usb-proxy > kvmapp/passthrough/usb-proxy.gz
 
 # Assemble the release package and its manifest
-package: tunnels passthrough
-	@if [ -z "$(VERSION)" ]; then \
-		echo "VERSION is required, e.g. make package VERSION=2.4.4"; \
-		exit 1; \
-	fi
+package: check-version tunnels passthrough
 	@scripts/package.sh "$(VERSION)"
 
 # Full local release: riscv64 artifacts + frontend + package.
 # Invoked as sub-makes rather than prerequisites: packaging asserts on what the
 # earlier steps produce, so the order matters even under make -j.
 release:
+	@$(MAKE) check-version
 	@$(MAKE) release-build
 	@$(MAKE) web
 	@$(MAKE) package VERSION="$(VERSION)"

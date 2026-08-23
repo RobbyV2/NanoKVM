@@ -209,11 +209,13 @@ EOF
 vm_run() {
     local tier="$1"
     local log="$BUILD/$tier.log"
+    local before
+    before=$(wc -l < "$log" 2>/dev/null || echo 0)
     vm_image
     docker run --rm --platform "linux/$ARCH" \
         -v "$BUILD/$tier:/script/$tier:ro" -v "$BUILD/$tier/run.sh:/script/run.sh:ro" \
         "$VM_IMAGE" 2>&1 | tee -a "$log"
-    tail -n 20 "$log" | grep -q '^RUNSH_EXIT=0' || {
+    tail -n +$((before + 1)) "$log" | grep -q '^RUNSH_EXIT=0' || {
         echo "kernelint: $tier payload exited non-zero" >&2
         exit 1
     }
@@ -238,7 +240,7 @@ run_tier2() {
         write_tier2_payload "$package"
         vm_run tier2
     done
-    assert_ran "$log" 4
+    assert_ran "$log" 6
 }
 
 case "${1:-all}" in

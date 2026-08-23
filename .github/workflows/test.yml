@@ -60,32 +60,47 @@ jobs:
         # time is not reached here.
         run: go vet ./...
 
+      # The ten test files in service/picoclaw and service/ws have never run in
+      # any environment, and the reason deserves more than "cgo".
+      #
+      # They cross-compile: "go test -c" for riscv64 inside the builder image
+      # produces working test binaries. Those binaries also start under
+      # qemu-riscv64 with server/dl_lib and the toolchain's libstdc++, libgomp,
+      # libgcc_s and libatomic on LD_LIBRARY_PATH. What stops them there is
+      # libopencv_video.so.409: libkvm.so lists it in DT_NEEDED and it exists
+      # neither in this repository nor in the builder image, only on the device
+      # rootfs. The one machine these tests can run on is a NanoKVM.
+      #
+      # The alternative is a stub libkvm.so that satisfies the linker, which
+      # stops being honest the day someone writes a test that reaches the video
+      # path. So they stay unrun, and the step below keeps count of exactly
+      # which packages that is.
       - name: Resolve testable packages
         id: packages
         working-directory: server
         run: |
-          # service/picoclaw and service/ws reach common/kvm_vision.go, whose
-          # cgo LDFLAGS are "-L../dl_lib -lkvm". dl_lib/libkvm.so is a riscv64
-          # shared object, so ld on an x86_64 runner skips it as incompatible
-          # and the two test binaries fail to link. Excluded here by name rather
-          # than with continue-on-error, which would hide a real failure in
-          # every other package too.
-          excluded=$(printf '%s\n' \
+          # NanoKVM-Server/common carries "#cgo LDFLAGS: -L../dl_lib -lkvm", and
+          # dl_lib/libkvm.so is a riscv64 shared object, so ld on this runner
+          # skips it as incompatible and any test binary that reaches common
+          # fails to link. Derive that set from the import graph rather than
+          # naming packages: a new package with tests that reaches common would
+          # otherwise turn this job red with no explanation, and a package that
+          # stops reaching it would stay silently excluded.
+          blocked=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{$p := .ImportPath}}{{range .Deps}}{{if eq . "NanoKVM-Server/common"}}{{$p}}{{end}}{{end}}{{end}}' ./... \
+            | grep -v '^$' | LC_ALL=C sort)
+          expected=$(printf '%s\n' \
             NanoKVM-Server/service/picoclaw \
-            NanoKVM-Server/service/ws)
-          all=$(go list ./...)
+            NanoKVM-Server/service/ws | LC_ALL=C sort)
+          if [ "$blocked" != "$expected" ]; then
+            echo "::error::the set of packages the libkvm.so link excludes has changed"
+            echo "blocked now:"
+            printf '%s\n' "$blocked"
+            echo "expected:"
+            printf '%s\n' "$expected"
+            exit 1
+          fi
 
-          # A rename would otherwise silently drop the guard and turn the job
-          # red. Not a while-read over a pipe: that loop is a subshell and its
-          # exit would not fail the step.
-          for pkg in $excluded; do
-            if ! echo "$all" | grep -qxF "$pkg"; then
-              echo "::error::$pkg no longer exists, update the exclusion in this workflow"
-              exit 1
-            fi
-          done
-
-          packages=$(echo "$all" | grep -vxF "$excluded" | tr '\n' ' ')
+          packages=$(go list ./... | grep -vxF "$blocked" | tr '\n' ' ')
           echo "Testing: $packages"
           echo "list=$packages" >> "$GITHUB_OUTPUT"
 
@@ -171,6 +186,12 @@ jobs:
         # react-hooks/exhaustive-deps. Do not add --max-warnings: pinning the
         # count makes an unrelated change to any component fail this job.
         run: pnpm exec eslint src
+
+      - name: Test
+        working-directory: web
+        # node --test over a glob, so a new *.test.ts file is picked up without
+        # anyone remembering to add a script for it.
+        run: pnpm test
 
       - name: Build
         working-directory: web

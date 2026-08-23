@@ -10,6 +10,15 @@ name: Builder Image
 
 on:
   workflow_dispatch:
+  # A release is built inside this image, and nothing else checks that the
+  # Dockerfile still builds. Without a pull request run a broken toolchain change
+  # lands on main and is only discovered by the push build that follows it.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docker/**
+      - .github/workflows/builder-image.yml
   push:
     branches:
       - main
@@ -18,8 +27,10 @@ on:
       - .github/workflows/builder-image.yml
 
 concurrency:
-  group: builder-image
-  cancel-in-progress: false
+  # Keyed so a pull request build never queues behind, or cancels, the main
+  # build that actually publishes.
+  group: builder-image-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -33,6 +44,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # This workflow now runs on pull requests, so the build must not
+          # inherit checkout's token.
+          persist-credentials: false
 
       - name: Free up disk space
         run: |
@@ -56,6 +71,7 @@ jobs:
       # Logging in before the build means a credential or registry problem fails
       # in seconds instead of after a full SDK build.
       - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
         env:
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,6 +113,9 @@ jobs:
           docker run --rm -i "${{ steps.image.outputs.ref }}:latest" patchelf --version
 
       - name: Push image
+        # A pull request build proves the Dockerfile still builds and the
+        # toolchain is still in it. Publishing stays on main.
+        if: github.event_name != 'pull_request'
         env:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
           SHA: ${{ github.sha }}
@@ -121,6 +140,7 @@ jobs:
           done
 
       - name: Summary
+        if: github.event_name != 'pull_request'
         run: |
           {
             echo "### Builder image published"
