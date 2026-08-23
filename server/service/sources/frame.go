@@ -59,6 +59,9 @@ func parseMediaFrame(data []byte) (MediaFrame, error) {
 		return MediaFrame{}, errors.New("media frame identifier length is invalid")
 	}
 	payloadLength := int(binary.BigEndian.Uint32(data[22:26]))
+	if payloadLength == 0 {
+		return MediaFrame{}, errors.New("media frame carries no payload")
+	}
 	if kind == MediaKindMJPEG && payloadLength > maxVideoPayload {
 		return MediaFrame{}, errors.New("mjpeg frame exceeds 2 MiB")
 	}

@@ -52,6 +52,9 @@ func TestParseMediaFrameRejectsUnboundedOrAmbiguousInput(t *testing.T) {
 			binary.BigEndian.PutUint32(data[22:26], 1)
 			return data
 		},
+		"empty payload": func() []byte {
+			return encodedMediaFrame(MediaKindMJPEG, "uvc.cam0", "front", nil)
+		},
 		"video size": func() []byte {
 			data := encodedMediaFrame(MediaKindMJPEG, "uvc.cam0", "front", nil)
 			binary.BigEndian.PutUint32(data[22:26], maxVideoPayload+1)
