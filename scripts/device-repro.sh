@@ -8,6 +8,9 @@
 #
 # Usage: scripts/device-repro.sh <image.img> [NanoKVM-Server]
 #
+# The extracted rootfs is cached under build/repro, so once it exists the image
+# argument may be "-".
+#
 # The second argument replaces the binary inside the extracted rootfs, which is
 # how a candidate build is checked before it is flashed.
 
@@ -18,12 +21,12 @@ WORK="$ROOT/build/repro"
 IMAGE="${1:-}"
 CANDIDATE="${2:-}"
 
-if [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; then
+mkdir -p "$WORK"
+
+if [ ! -f "$WORK/rvroot.tar.gz" ] && { [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; }; then
     echo "usage: $0 <image.img> [NanoKVM-Server]" >&2
     exit 2
 fi
-
-mkdir -p "$WORK"
 
 # Partition 2 is the ext4 rootfs, partition 1 the FAT /boot the init scripts and
 # the presentation migration read their sentinels from.
