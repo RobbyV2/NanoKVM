@@ -67,6 +67,19 @@ type nameRequest struct {
 	Name string `json:"name"`
 }
 
+type hidLayoutRequest struct {
+	Profile Profile     `json:"profile"`
+	Groups  [][]HIDRole `json:"groups"`
+}
+
+// The rewritten profile plus what it costs, in one round trip, so the editor
+// can show the running endpoint total as the operator moves a role between
+// interfaces instead of finding out at apply time.
+type hidLayoutResponse struct {
+	Profile Profile `json:"profile"`
+	Preview Preview `json:"preview"`
+}
+
 func NewService() *Service {
 	manager := GetManager()
 	return &Service{manager: manager, store: manager.store}
@@ -257,6 +270,25 @@ func (s *Service) PreviewProfile(c *gin.Context) {
 		return
 	}
 	s.preview(c, profile)
+}
+
+// Composing a report descriptor is the server's job: the bytes are what the
+// attached host parses, and a browser that assembled them itself would be a
+// second definition of the gadget.
+func (s *Service) PreviewHIDLayout(c *gin.Context) {
+	var req hidLayoutRequest
+	if err := decodeJSONBody(c, &req); err != nil {
+		s.error(c, -1, err.Error())
+		return
+	}
+	profile := req.Profile
+	if err := SetHIDLayout(&profile, req.Groups); err != nil {
+		s.error(c, -1, err.Error())
+		return
+	}
+	result := hidLayoutResponse{Profile: profile, Preview: preview(profile, s.manager)}
+	var rsp proto.Response
+	rsp.OkRspWithData(c, &result)
 }
 
 func (s *Service) ApplyProfile(c *gin.Context) {

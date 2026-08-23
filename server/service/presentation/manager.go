@@ -46,6 +46,14 @@ type HIDQuiescer interface {
 	WriteAbsoluteMouseReport([]byte) error
 }
 
+// Also *hid.Hid, and optional so no fake HIDQuiescer has to grow a method it
+// has nothing to say about. The layout decides which /dev/hidgN each role
+// writes to and whether its reports carry a Report ID prefix, so it has to
+// reach the writers before they reopen after a rebind.
+type HIDRouter interface {
+	SetHIDRoutes([]HIDRoute)
+}
+
 type GadgetObserver interface {
 	Suspend()
 	Applied(context.Context, Profile, Plan) error
@@ -114,8 +122,27 @@ func NewManager(store *Store, ops Ops, caps CapabilityTable) *Manager {
 
 func (m *Manager) SetHID(h HIDQuiescer) {
 	m.wireMu.Lock()
-	defer m.wireMu.Unlock()
 	m.hid = h
+	m.wireMu.Unlock()
+	m.pushHIDRoutes(h)
+}
+
+func (m *Manager) pushHIDRoutes(h HIDQuiescer) {
+	router, ok := h.(HIDRouter)
+	if !ok {
+		return
+	}
+	name, err := m.store.Active()
+	if err != nil || name == "" {
+		return
+	}
+	profile, err := m.store.LoadProfile(name)
+	if err != nil {
+		log.Debugf("hid routes: load active profile %s: %s", name, err)
+		return
+	}
+	profile.Normalize()
+	router.SetHIDRoutes(HIDRoutes(profile.Functions))
 }
 
 func (m *Manager) SetObserver(observer GadgetObserver) {
@@ -323,19 +350,19 @@ func (m *Manager) outcomes(plan Plan) (*Outcome, *Outcome) {
 	return &applied, &rollback
 }
 
-func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []string) error {
-	if len(cameras)+len(microphones) > 8 {
-		return fmt.Errorf("media slots exceed 8")
-	}
+// The active profile with its media functions preserved, which is the base
+// every layout edit and every media edit has to start from so that changing
+// one does not silently drop the other.
+func (m *Manager) currentProfile() (Profile, error) {
 	active, err := m.store.Active()
 	if err != nil {
-		return fmt.Errorf("read active profile: %w", err)
+		return Profile{}, fmt.Errorf("read active profile: %w", err)
 	}
 	profile := standardProfile()
 	if active != "" && active != ProfileHIDOnly && active != ProfileHybrid {
 		loaded, loadErr := m.store.LoadProfile(active)
 		if loadErr != nil {
-			return fmt.Errorf("load active profile %s: %w", active, loadErr)
+			return Profile{}, fmt.Errorf("load active profile %s: %w", active, loadErr)
 		}
 		if loaded.Name != "" {
 			profile = loaded
@@ -344,6 +371,29 @@ func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []stri
 	if profile.BuiltIn {
 		profile.Name = ProfileCurrent
 		profile.BuiltIn = false
+	}
+	profile.Normalize()
+	return profile, nil
+}
+
+func (m *Manager) SetHIDLayout(ctx context.Context, groups [][]HIDRole) error {
+	profile, err := m.currentProfile()
+	if err != nil {
+		return err
+	}
+	if err := SetHIDLayout(&profile, groups); err != nil {
+		return err
+	}
+	return m.ApplyProfile(ctx, profile)
+}
+
+func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []string) error {
+	if len(cameras)+len(microphones) > 8 {
+		return fmt.Errorf("media slots exceed 8")
+	}
+	profile, err := m.currentProfile()
+	if err != nil {
+		return err
 	}
 	functions := profile.Functions[:0]
 	for _, function := range profile.Functions {
@@ -550,7 +600,17 @@ func (m *Manager) hybridProfile(function FunctionFS) (Profile, error) {
 			base = loaded
 		}
 	}
-	hid := standardProfile().Functions[:2]
+	// The operator's own layout, not the built-in one, capped at the two HID
+	// interfaces a hybrid leaves room for.
+	var hid []Function
+	for _, function := range base.Functions {
+		if function.Kind == FunctionHID && len(hid) < 2 {
+			hid = append(hid, function)
+		}
+	}
+	if len(hid) == 0 {
+		hid = standardProfile().Functions[:2]
+	}
 	base.Name, base.BuiltIn, base.OSDesc, base.Descriptors = ProfileHybrid, false, nil, nil
 	base.Functions = append(append([]Function(nil), hid...), Function{Kind: FunctionFFS, Instance: "hybrid", FFS: &function})
 	base.Normalize()
@@ -795,6 +855,7 @@ func (m *Manager) withHIDQuiesced(fn func() error) (err error) {
 	h.Lock()
 	h.CloseNoLock()
 	defer func() {
+		m.pushHIDRoutes(h)
 		reopen := h.OpenNoLockWithRetry(hidQuiesceTimeout, hidQuiesceRetryDelay)
 		h.Unlock()
 		if reopen != nil {

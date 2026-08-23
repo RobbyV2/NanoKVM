@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -191,12 +192,13 @@ type FunctionFSEndpoint struct {
 }
 
 type HIDFunction struct {
-	Protocol      uint8  `json:"protocol"`
-	SubClass      uint8  `json:"subclass"`
-	ReportLength  uint16 `json:"report_length"`
-	WakeupOnWrite bool   `json:"wakeup_on_write"`
-	ReportDesc    []byte `json:"report_desc"`
-	DevNodeIndex  int    `json:"-"`
+	Protocol      uint8     `json:"protocol"`
+	SubClass      uint8     `json:"subclass"`
+	ReportLength  uint16    `json:"report_length"`
+	WakeupOnWrite bool      `json:"wakeup_on_write"`
+	ReportDesc    []byte    `json:"report_desc"`
+	Roles         []HIDRole `json:"roles,omitempty"`
+	DevNodeIndex  int       `json:"-"`
 }
 
 type NetFunction struct {
@@ -217,11 +219,15 @@ type StorageFunction struct {
 }
 
 type VideoFunction struct {
-	FunctionName       string        `json:"function_name"`
-	Formats            []VideoFormat `json:"formats"`
-	StreamingMaxPacket uint16        `json:"streaming_maxpacket"`
-	StreamingMaxBurst  uint8         `json:"streaming_maxburst"`
-	StreamingInterval  uint8         `json:"streaming_interval"`
+	FunctionName string        `json:"function_name"`
+	Formats      []VideoFormat `json:"formats"`
+	// nil = DO NOT WRITE, which leaves f_uvc's own default and the control
+	// interrupt IN endpoint in place. Only a kernel whose uvc function group
+	// carries enable_interrupt_ep can honour false.
+	InterruptEndpoint  *bool  `json:"interrupt_endpoint,omitempty"`
+	StreamingMaxPacket uint16 `json:"streaming_maxpacket"`
+	StreamingMaxBurst  uint8  `json:"streaming_maxburst"`
+	StreamingInterval  uint8  `json:"streaming_interval"`
 }
 
 type VideoFormat struct {
@@ -258,6 +264,9 @@ func (p *Profile) Normalize() {
 			continue
 		}
 		p.Functions[i].HID.DevNodeIndex = index
+		if len(p.Functions[i].HID.Roles) == 0 && index < len(HIDRoles) {
+			p.Functions[i].HID.Roles = []HIDRole{HIDRoles[index]}
+		}
 		index++
 	}
 	p.Provenance.Descriptors = p.Descriptors != nil
@@ -358,12 +367,16 @@ func validateHIDOrder(hid []Function, functionFS bool) error {
 	if len(hid) == 0 {
 		return nil
 	}
+	// A prefix of GS0,GS1,GS2 rather than all three, because the layout
+	// distributes the three roles over one, two or three interfaces. The
+	// prefix itself is not negotiable: f_hid hands out /dev/hidgN in mkdir
+	// order and a gap would move every minor after it.
 	want := len(hidInstances)
 	if functionFS {
 		want = 2
 	}
-	if len(hid) != want {
-		return fmt.Errorf("%d hid functions, want %d", len(hid), want)
+	if len(hid) > want {
+		return fmt.Errorf("%d hid functions, want at most %d", len(hid), want)
 	}
 	for i, f := range hid {
 		if f.Instance != hidInstances[i] {
@@ -434,7 +447,7 @@ func (f *Function) validate() error {
 	}
 	switch f.Kind {
 	case FunctionHID:
-		if f.Instance != "GS0" && f.Instance != "GS1" && f.Instance != "GS2" {
+		if !slices.Contains(hidInstances[:], f.Instance) {
 			return fmt.Errorf("unsupported hid instance %q", f.Instance)
 		}
 		if f.HID == nil || f.Net != nil || f.Storage != nil || f.FFS != nil || f.Video != nil || f.Audio != nil {
@@ -603,11 +616,18 @@ func (a *AudioFunction) validate() error {
 }
 
 func (h *HIDFunction) validate() error {
-	if h.Protocol == 0 {
+	if h.Protocol == 0 && len(h.Roles) < 2 {
 		return fmt.Errorf("protocol is zero")
 	}
 	if h.SubClass > 1 {
 		return fmt.Errorf("subclass %d, want 0 or 1", h.SubClass)
+	}
+	// Empty is a profile stored before roles existed; Normalize backfills it
+	// from the function's position, which is what it has always meant.
+	if len(h.Roles) > 0 {
+		if err := ValidateHIDLayout([][]HIDRole{h.Roles}); err != nil {
+			return err
+		}
 	}
 	length, err := reportLength(h.ReportDesc)
 	if err != nil {
@@ -906,7 +926,8 @@ func usbString(name, value string) error {
 }
 
 func reportLength(desc []byte) (uint16, error) {
-	var size, count, bits int
+	var size, count, bits, id int
+	ids := make(map[int]int)
 	for i := 0; i < len(desc); {
 		prefix := desc[i]
 		if prefix == 0xFE {
@@ -931,10 +952,21 @@ func reportLength(desc []byte) (uint16, error) {
 		case 0x94:
 			count = value
 		case 0x84:
-			return 0, fmt.Errorf("report id at offset %d", i-n-1)
+			if value == 0 {
+				return 0, fmt.Errorf("report id 0 at offset %d", i-n-1)
+			}
+			id = value
 		case 0x80:
+			ids[id] += size * count
 			bits += size * count
 		}
+	}
+	if id != 0 {
+		bits = 0
+		for _, total := range ids {
+			bits = max(bits, total)
+		}
+		bits += 8
 	}
 	if bits == 0 || bits%8 != 0 {
 		return 0, fmt.Errorf("input reports total %d bits", bits)
@@ -1028,6 +1060,7 @@ func hidFunctions(keyboard, mouse, pointer []byte, subClass uint8) []Function {
 				ReportLength:  lengths[i],
 				WakeupOnWrite: true,
 				ReportDesc:    bytes.Clone(descs[i]),
+				Roles:         []HIDRole{HIDRoles[i]},
 				DevNodeIndex:  i,
 			},
 		})

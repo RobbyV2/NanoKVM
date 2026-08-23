@@ -345,12 +345,26 @@ func TestCompileRefusesAnOverBudgetProfile(t *testing.T) {
 	}
 }
 
-func TestCompileRefusesAnInvalidProfile(t *testing.T) {
+// Two HID functions is a layout now. A gap in the instances is not, and never
+// can be: f_hid hands out /dev/hidgN in mkdir order.
+func TestCompileRefusesAGapInTheHIDInstances(t *testing.T) {
 	profile := standardProfile()
-	profile.Functions = profile.Functions[:2]
+	profile.Functions = []Function{profile.Functions[0], profile.Functions[2]}
+	profile.Normalize()
 
-	if _, err := Compile(profile, staticV1); err == nil {
-		t.Fatal("compile accepted a profile with two hid functions")
+	_, err := Compile(profile, staticV1)
+	if err == nil {
+		t.Fatal("compile accepted hid.GS0 followed by hid.GS2")
+	}
+	if !strings.Contains(err.Error(), `hid function 1 is "GS2", want "GS1"`) {
+		t.Fatalf("err = %v, want the instance mismatch named", err)
+	}
+
+	prefix := standardProfile()
+	prefix.Functions = prefix.Functions[:2]
+	prefix.Normalize()
+	if _, err := Compile(prefix, staticV1); err != nil {
+		t.Fatalf("compile refused a two interface layout: %v", err)
 	}
 }
 

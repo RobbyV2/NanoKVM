@@ -1,6 +1,8 @@
 package hid
 
 import (
+	"NanoKVM-Server/service/presentation"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,7 +18,7 @@ func (h *Hid) Keyboard(queue <-chan []byte) {
 }
 
 func (h *Hid) KeyboardReports(queue <-chan QueuedReport) {
-	h.keyboardReports(queue, HID0)
+	h.keyboardReports(queue, h.rolePath(presentation.HIDRoleKeyboard, HID0))
 }
 
 func (h *Hid) keyboardReports(queue <-chan QueuedReport, path string) {

@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"NanoKVM-Server/service/presentation"
+
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -146,11 +148,17 @@ func (h *Hid) readKeyboardLeds() {
 
 		n, err := file.Read(buf)
 		if n > 0 {
-			// Both keyboard gadget descriptors in kvmapp/system/init.d declare
-			// boot-keyboard reports without a Report ID (no 0x85 item). Their LED
-			// output report is one byte: bits 0-4 are the LED bitmap and bits 5-7
-			// are padding. report_length is 8 because it also covers input reports.
-			keyboardLeds.Update(buf[0])
+			// A keyboard that owns its interface declares boot-keyboard reports
+			// with no Report ID, so the LED output report is one byte: bits 0-4
+			// are the LED bitmap and bits 5-7 are padding. Sharing an interface
+			// puts the report ID in front of that byte, and only the keyboard
+			// collection in a composite carries an output report.
+			id, _ := h.route(presentation.HIDRoleKeyboard)
+			if id.ReportID == 0 {
+				keyboardLeds.Update(buf[0])
+			} else if n > 1 && buf[0] == id.ReportID {
+				keyboardLeds.Update(buf[1])
+			}
 		}
 
 		if err == nil && n > 0 {

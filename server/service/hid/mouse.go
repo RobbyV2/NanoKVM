@@ -1,6 +1,8 @@
 package hid
 
 import (
+	"NanoKVM-Server/service/presentation"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,7 +18,9 @@ func (h *Hid) Mouse(queue <-chan []byte) {
 }
 
 func (h *Hid) MouseReports(queue <-chan QueuedReport) {
-	h.mouseReports(queue, HID1, HID2)
+	h.mouseReports(queue,
+		h.rolePath(presentation.HIDRoleRelative, HID1),
+		h.rolePath(presentation.HIDRoleAbsolute, HID2))
 }
 
 func (h *Hid) mouseReports(queue <-chan QueuedReport, relativePath string, absolutePath string) {

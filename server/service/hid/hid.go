@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"NanoKVM-Server/service/presentation"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,6 +26,8 @@ type Hid struct {
 	kbMutex                sync.Mutex
 	mouseMutex             sync.Mutex
 	ledReaderStartOnce     sync.Once
+	routeMutex             sync.RWMutex
+	routes                 map[presentation.HIDRole]presentation.HIDRoute
 }
 
 const (
@@ -43,10 +47,58 @@ type hidWriter interface {
 }
 
 type hidDevice struct {
-	path string
-	mu   *sync.Mutex
-	get  func() *os.File
-	set  func(*os.File)
+	path     string
+	role     presentation.HIDRole
+	reportID uint8
+	absent   bool
+	mu       *sync.Mutex
+	get      func() *os.File
+	set      func(*os.File)
+}
+
+// Until the manager pushes the active profile's layout every role keeps the
+// node and the prefix-free report shape the device has always shipped, so an
+// unwired Hid behaves exactly as it did before roles existed.
+func (h *Hid) SetHIDRoutes(routes []presentation.HIDRoute) {
+	next := make(map[presentation.HIDRole]presentation.HIDRoute, len(routes))
+	for _, route := range routes {
+		next[route.Role] = route
+	}
+	h.routeMutex.Lock()
+	h.routes = next
+	h.routeMutex.Unlock()
+}
+
+// The second result separates "no layout has been pushed yet", where every
+// role keeps its historical node, from "this role is not in the layout".
+func (h *Hid) route(role presentation.HIDRole) (presentation.HIDRoute, bool) {
+	h.routeMutex.RLock()
+	defer h.routeMutex.RUnlock()
+	if h.routes == nil {
+		return presentation.HIDRoute{}, false
+	}
+	route, ok := h.routes[role]
+	if !ok {
+		return presentation.HIDRoute{}, true
+	}
+	return route, true
+}
+
+func (h *Hid) rolePath(role presentation.HIDRole, fallback string) string {
+	if route, wired := h.route(role); wired && route.Path != "" {
+		return route.Path
+	}
+	return fallback
+}
+
+func (h *Hid) roleDevice(role presentation.HIDRole, path string, mu *sync.Mutex, get func() *os.File, set func(*os.File)) hidDevice {
+	device := hidDevice{path: path, role: role, mu: mu, get: get, set: set}
+	route, wired := h.route(role)
+	if wired {
+		device.absent = route.Path == ""
+		device.reportID = route.ReportID
+	}
+	return device
 }
 
 var (
@@ -72,49 +124,28 @@ func (h *Hid) Unlock() {
 }
 
 func (h *Hid) keyboardDevice(path string) hidDevice {
-	return hidDevice{
-		path: path,
-		mu:   &h.kbMutex,
-		get: func() *os.File {
-			return h.g0
-		},
-		set: func(file *os.File) {
-			h.g0 = file
-		},
-	}
+	return h.roleDevice(presentation.HIDRoleKeyboard, path, &h.kbMutex,
+		func() *os.File { return h.g0 },
+		func(file *os.File) { h.g0 = file })
 }
 
 func (h *Hid) relativeMouseDevice(path string) hidDevice {
-	return hidDevice{
-		path: path,
-		mu:   &h.mouseMutex,
-		get: func() *os.File {
-			return h.g1
-		},
-		set: func(file *os.File) {
-			h.g1 = file
-		},
-	}
+	return h.roleDevice(presentation.HIDRoleRelative, path, &h.mouseMutex,
+		func() *os.File { return h.g1 },
+		func(file *os.File) { h.g1 = file })
 }
 
 func (h *Hid) absoluteMouseDevice(path string) hidDevice {
-	return hidDevice{
-		path: path,
-		mu:   &h.mouseMutex,
-		get: func() *os.File {
-			return h.g2
-		},
-		set: func(file *os.File) {
-			h.g2 = file
-		},
-	}
+	return h.roleDevice(presentation.HIDRoleAbsolute, path, &h.mouseMutex,
+		func() *os.File { return h.g2 },
+		func(file *os.File) { h.g2 = file })
 }
 
 func (h *Hid) devices() []hidDevice {
 	return []hidDevice{
-		h.keyboardDevice(HID0),
-		h.relativeMouseDevice(HID1),
-		h.absoluteMouseDevice(HID2),
+		h.keyboardDevice(h.rolePath(presentation.HIDRoleKeyboard, HID0)),
+		h.relativeMouseDevice(h.rolePath(presentation.HIDRoleRelative, HID1)),
+		h.absoluteMouseDevice(h.rolePath(presentation.HIDRoleAbsolute, HID2)),
 	}
 }
 
@@ -123,6 +154,9 @@ func (h *Hid) OpenNoLock() error {
 
 	var errs []error
 	for _, device := range h.devices() {
+		if device.absent {
+			continue
+		}
 		if err := h.openDeviceNoLock(device); err != nil {
 			log.Errorf("open %s failed: %s", device.path, err)
 			errs = append(errs, err)
@@ -221,9 +255,10 @@ func (h *Hid) openKeyboardLedReaderNoLock() error {
 	// Keep this descriptor blocking. The LED reader waits for either an output
 	// report or a lifecycle notification, so an idle host does not cause a
 	// periodic EAGAIN retry loop.
-	file, err := os.OpenFile(HID0, os.O_RDONLY, 0o666)
+	path := h.rolePath(presentation.HIDRoleKeyboard, HID0)
+	file, err := os.OpenFile(path, os.O_RDONLY, 0o666)
 	if err != nil {
-		return fmt.Errorf("%s: %w", HID0, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 
 	h.g0Reader = file
@@ -301,19 +336,19 @@ func (h *Hid) Close() {
 
 func (h *Hid) WriteHid0(data []byte) {
 	if err := h.WriteKeyboardReport(data); err != nil {
-		log.Errorf("write to %s failed: %s", HID0, err)
+		log.Errorf("write keyboard report failed: %s", err)
 	}
 }
 
 func (h *Hid) WriteHid1(data []byte) {
 	if err := h.WriteRelativeMouseReport(data); err != nil {
-		log.Errorf("write to %s failed: %s", HID1, err)
+		log.Errorf("write relative mouse report failed: %s", err)
 	}
 }
 
 func (h *Hid) WriteHid2(data []byte) {
 	if err := h.WriteAbsoluteMouseReport(data); err != nil {
-		log.Errorf("write to %s failed: %s", HID2, err)
+		log.Errorf("write absolute mouse report failed: %s", err)
 	}
 }
 
@@ -321,21 +356,21 @@ func (h *Hid) WriteKeyboardReport(data []byte) error {
 	if len(data) != 8 {
 		return fmt.Errorf("invalid keyboard report length: %d", len(data))
 	}
-	return h.writeHID(h.keyboardDevice(HID0), data)
+	return h.writeHID(h.keyboardDevice(h.rolePath(presentation.HIDRoleKeyboard, HID0)), data)
 }
 
 func (h *Hid) WriteRelativeMouseReport(data []byte) error {
 	if len(data) != 4 {
 		return fmt.Errorf("invalid relative mouse report length: %d", len(data))
 	}
-	return h.writeHID(h.relativeMouseDevice(HID1), data)
+	return h.writeHID(h.relativeMouseDevice(h.rolePath(presentation.HIDRoleRelative, HID1)), data)
 }
 
 func (h *Hid) WriteAbsoluteMouseReport(data []byte) error {
 	if len(data) != 6 {
 		return fmt.Errorf("invalid absolute mouse report length: %d", len(data))
 	}
-	return h.writeHID(h.absoluteMouseDevice(HID2), data)
+	return h.writeHID(h.absoluteMouseDevice(h.rolePath(presentation.HIDRoleAbsolute, HID2)), data)
 }
 
 func (h *Hid) writeHIDReport(device hidDevice, data []byte) bool {
@@ -350,10 +385,19 @@ func (h *Hid) writeHID(device hidDevice, data []byte) error {
 	device.mu.Lock()
 	defer device.mu.Unlock()
 
+	// A role the active layout leaves out has no interface to carry it. That
+	// is the configuration the operator chose, not a failure to write.
+	if device.absent {
+		log.Debugf("drop %s report: role is not in the active hid layout", device.role)
+		return nil
+	}
+	if device.reportID != 0 {
+		data = append([]byte{device.reportID}, data...)
+	}
 	if err := h.openDeviceNoLock(device); err != nil {
 		return err
 	}
-	if device.path == HID0 {
+	if device.role == presentation.HIDRoleKeyboard {
 		if err := h.openKeyboardLedReaderNoLock(); err != nil {
 			log.Debugf("open keyboard LED reader failed: %s", err)
 		} else {
@@ -372,7 +416,7 @@ func (h *Hid) writeHID(device hidDevice, data []byte) error {
 	}
 
 	if err := writeWithTimeout(file, data, hidWriteTimeout); err != nil {
-		if device.path == HID0 {
+		if device.role == presentation.HIDRoleKeyboard {
 			h.closeKeyboardLedReaderNoLock()
 		}
 		h.closeDeviceNoLock(device)
