@@ -11,15 +11,18 @@ const es = {
       login: 'Iniciar sesión',
       placeholderUsername: 'Introduce tu nombre de usuario',
       placeholderPassword: 'Introduce tu contraseña',
+      placeholderCurrentPassword: 'Contraseña actual',
       placeholderPassword2: 'Introduce tu contraseña de nuevo',
       noEmptyUsername: 'El nombre de usuario no puede estar vacío',
       noEmptyPassword: 'La contraseña no puede estar vacía',
+      passwordLength: 'La contraseña debe tener entre 8 y 72 caracteres',
       noAccount:
         'No se ha encontrado la cuenta. Por favor, recarga la página o recupera tu contraseña.',
       invalidUser: 'Nombre de usuario o contraseña incorrectos',
       locked: 'Demasiados inicios de sesión, inténtalo de nuevo más tarde',
       globalLocked: 'Sistema bajo protección, inténtelo nuevamente más tarde',
       error: 'Error inesperado',
+      invalidCurrentPassword: 'La contraseña actual es incorrecta',
       changePassword: 'Cambiar contraseña',
       changePasswordDesc:
         'Para la seguridad de su dispositivo, por favor, modifique la contraseña de inicio de sesión en la web.',
@@ -469,6 +472,14 @@ const es = {
         product: 'Producto',
         serial: 'Número de serie',
         configuration: 'Cadena de configuración',
+        hidLayout: 'Dispositivos HID',
+        hidRoleKeyboard: 'Teclado',
+        hidRoleRelative: 'Ratón (relativo)',
+        hidRoleAbsolute: 'Puntero (absoluto)',
+        hidOff: 'No presente',
+        hidInterface: 'Interfaz {{index}}',
+        hidBootKeyboardShared:
+          'El teclado comparte una interfaz, así que ya no ofrece informe en protocolo boot. Algunas BIOS y UEFI no lo verán.',
         functions: 'Funciones',
         descriptorAssets: 'Descriptores almacenados: {{count}}',
         endpointUse:
@@ -501,14 +512,38 @@ const es = {
       passthrough: {
         title: 'Passthrough USB',
         loading: 'Cargando...',
+        mode: 'Modo',
+        hybrid: 'Híbrido',
+        exact: 'Exacto',
+        hybridDesc: 'Conserva el teclado boot y el ratón relativo, para dispositivos compatibles.',
+        exactDesc: 'Sustituye todas las funciones USB de NanoKVM por el dispositivo importado.',
+        hybridWarning: 'El modo híbrido mantiene el teclado y el ratón relativo',
+        hybridWarningDesc:
+          'El almacenamiento, la red USB y el puntero absoluto se desconectan mientras la función importada está activa.',
         hidWarning: 'Iniciar el passthrough cede el teclado, el ratón y los medios virtuales',
         hidWarningDesc:
           'NanoKVM tiene un único controlador de dispositivo USB y el proxy lo necesita entero, así que mientras haya una sesión el equipo remoto verá el dispositivo redirigido en lugar del teclado, el ratón y los medios virtuales de NanoKVM. Vuelven solos en cuanto se detiene la sesión. Esta interfaz web no se ve afectada, por lo que siempre puede detener la sesión desde esta página.',
+        hidWarningSafeDesc:
+          'NanoKVM tiene un único controlador de dispositivo USB y el proxy lo necesita entero, así que mientras haya una sesión el equipo remoto verá el dispositivo redirigido en lugar del teclado, el ratón y los medios virtuales de NanoKVM. Vuelven cuando se detiene la sesión.',
         isoLabel: 'Permitir transferencias isócronas',
         isoHint:
           'Deja pasar cámaras web, micrófonos y otros dispositivos de flujo. Nadie ha medido qué aguanta este hardware.',
         isoWarning:
           'El flujo isócrono no está probado aquí y puede retener el teclado y el ratón hasta que detengas la sesión',
+        info: {
+          title: 'Información',
+          hybrid:
+            'El modo híbrido mantiene disponibles el teclado y el ratón relativo. El almacenamiento, la red USB y el puntero absoluto se desconectan mientras el dispositivo importado está activo.',
+          exact:
+            'El modo exacto sustituye todas las funciones USB de NanoKVM por el dispositivo importado. El teclado, el ratón y los medios virtuales vuelven solos cuando se detiene la sesión.',
+          udc: 'NanoKVM tiene un único controlador de dispositivo USB y el proxy lo necesita entero: por eso las funciones de arriba desaparecen mientras dura una sesión.',
+          web: 'Esta interfaz web no se ve afectada, por lo que siempre puede detener la sesión desde esta página.',
+          network:
+            'Inicie el passthrough por Ethernet o Wi-Fi. Iniciarlo desde la red USB de NanoKVM se rechaza, porque esa conexión desaparecería.',
+          iso: 'Las cámaras web, los micrófonos y otros dispositivos isócronos se rechazan mientras no permitas las transferencias isócronas. Esa vía funciona, pero nunca se ha medido en este hardware: considera su rendimiento desconocido.',
+          camera:
+            'La cámara y el micrófono del navegador, en Dispositivos, siguen siendo la forma probada de darle uno al equipo remoto.'
+        },
         session: 'Sesión',
         activeDesc: 'Hay un dispositivo importado y el proxy mantiene el controlador USB.',
         inactiveDesc:
@@ -540,6 +575,8 @@ const es = {
           'Las cámaras web y otros dispositivos isócronos necesitan que actives el interruptor isócrono antes de empezar.',
         startWeb:
           'Esta interfaz web sigue funcionando, así que puede detener la sesión desde esta página en cualquier momento.',
+        startNetwork:
+          'Use esta página por Ethernet o Wi-Fi. Iniciarla desde la red USB de NanoKVM se rechaza porque esa conexión desaparecería.',
         okBtn: 'Iniciar',
         cancelBtn: 'Cancelar',
         instructions: 'En su propio equipo',
@@ -717,6 +754,17 @@ const es = {
         networkDesc: 'Montar tarjeta de red virtual en el host remoto',
         networkProtocol: 'Protocolo de red',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antiguos',
+        media: {
+          title: 'Ranuras de cámara y micrófono',
+          desc: 'Declare los dispositivos multimedia que los navegadores pueden ocupar. El presupuesto de endpoints se comprueba al aplicar el perfil USB.',
+          cameras: 'Cámaras',
+          microphones: 'Micrófonos',
+          save: 'Guardar ranuras',
+          disconnect: 'Desconectar',
+          disconnectAll: 'Desconectar todas las fuentes',
+          limit: 'Las ranuras de cámara y micrófono no pueden sumar más de ocho.',
+          failed: 'No se pudieron actualizar las ranuras multimedia.'
+        },
         reboot: 'Reiniciar',
         rebootDesc: '¿Estás seguro de que deseas reiniciar el NanoKVM?',
         okBtn: 'Sí',
@@ -815,6 +863,14 @@ const es = {
           none: 'Ninguno'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Servidor VNC',
+        description:
+          'Permite que cualquier cliente VNC vea la pantalla remota y use el teclado y el ratón, iniciando sesión con su cuenta de NanoKVM',
+        port: 'Puerto',
+        portDescription: 'Conéctese a este puerto en la dirección del NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -873,6 +929,8 @@ const es = {
         running: 'En ejecución',
         connected: 'Conectado',
         error: 'Error',
+        atBoot: 'se inicia al arrancar',
+        notAtBoot: 'no se inicia al arrancar',
         arguments: 'Argumentos',
         argumentsTip: 'Argumentos de línea de comandos que se pasan al servicio al iniciarse.',
         env: 'Variables de entorno',
@@ -900,6 +958,20 @@ const es = {
           'Este servicio no informa de su estado, así que NanoKVM solo sabe que el proceso está en marcha, no si el túnel está conectado.',
         memoryWarning:
           'Ejecutar varios servicios de acceso remoto a la vez puede agotar la memoria',
+        resources: 'Recursos',
+        memory: {
+          title: 'Límite de memoria',
+          description:
+            'Limita el heap de Go de newt a {{limit}} MiB a partir de su próximo reinicio. Su propio límite, no el de Tailscale; desactivado se usa el valor por defecto de Go, con GOGC=50 en ambos casos.',
+          noRuntime:
+            'wstunnel está escrito en Rust: no hay recolector de basura ni límite de heap que fijar, y sus hilos de trabajo ya se ajustan a la única CPU del dispositivo.',
+          notApplicable: 'No aplicable'
+        },
+        swap: {
+          title: 'Archivo de intercambio',
+          description:
+            'Añade un archivo de intercambio de 256 MB en la tarjeta SD. Es de todo el sistema: el mismo intercambio sirve a Tailscale, al servidor KVM y a todo lo demás del dispositivo.'
+        },
         okBtn: 'Sí',
         cancelBtn: 'No'
       },
@@ -949,12 +1021,33 @@ const es = {
       account: {
         title: 'Cuenta',
         webAccount: 'Nombre de la cuenta web',
+        role: 'Rol',
+        roles: {
+          admin: 'Administrador',
+          user: 'Usuario'
+        },
         password: 'Contraseña',
         updateBtn: 'Actualizar',
         logoutBtn: 'Cerrar sesión',
         logoutDesc: '¿Estás seguro de que deseas cerrar sesión?',
         okBtn: 'Sí',
-        cancelBtn: 'No'
+        cancelBtn: 'No',
+        users: {
+          title: 'Usuarios',
+          create: 'Crear usuario',
+          enabled: 'Habilitado',
+          disabled: 'Deshabilitado',
+          deviceOwner: 'Propietario del dispositivo',
+          resetPassword: 'Restablecer contraseña',
+          delete: 'Eliminar',
+          deleteConfirm: '¿Eliminar este usuario y revocar todas sus sesiones?',
+          created: 'Usuario creado',
+          deleted: 'Usuario eliminado',
+          passwordUpdated: 'Contraseña actualizada',
+          loadFailed: 'No se pudieron cargar los usuarios',
+          saveFailed: 'No se pudo guardar el usuario',
+          deleteFailed: 'No se pudo eliminar el usuario'
+        }
       }
     },
     picoclaw: {

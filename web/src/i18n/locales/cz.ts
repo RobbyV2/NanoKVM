@@ -11,15 +11,18 @@ const cz = {
       login: 'Přihlášení',
       placeholderUsername: 'Zadejte prosím uživatelské jméno',
       placeholderPassword: 'Zadejte prosím heslo',
+      placeholderCurrentPassword: 'Současné heslo',
       placeholderPassword2: 'Zadejte prosím heslo znovu',
       noEmptyUsername: 'Uživatelské jméno nesmí být prázdné',
       noEmptyPassword: 'Heslo nesmí být prázdné',
+      passwordLength: 'Heslo musí mít 8 až 72 znaků',
       noAccount:
         'Nepodařilo se získat informace o uživateli, prosím obnovte stránku nebo resetujte heslo',
       invalidUser: 'Neplatné uživatelské jméno nebo heslo',
       locked: 'Příliš mnoho přihlášení, zkuste to znovu později',
       globalLocked: 'Systém je chráněn, zkuste to znovu později',
       error: 'Neočekávaná chyba',
+      invalidCurrentPassword: 'Současné heslo je nesprávné',
       changePassword: 'Změnit heslo',
       changePasswordDesc:
         'Pro bezpečnost vašeho zařízení prosím změňte heslo pro přihlášení na webu.',
@@ -467,6 +470,14 @@ const cz = {
         product: 'Produkt',
         serial: 'Sériové číslo',
         configuration: 'Konfigurační řetězec',
+        hidLayout: 'Zařízení HID',
+        hidRoleKeyboard: 'Klávesnice',
+        hidRoleRelative: 'Myš (relativní)',
+        hidRoleAbsolute: 'Ukazatel (absolutní)',
+        hidOff: 'Není přítomna',
+        hidInterface: 'Rozhraní {{index}}',
+        hidBootKeyboardShared:
+          'Klávesnice sdílí rozhraní, takže už nenabízí hlášení v protokolu boot. Některé BIOSy a UEFI ji neuvidí.',
         functions: 'Funkce',
         descriptorAssets: 'Uložené soubory deskriptorů: {{count}}',
         endpointUse:
@@ -498,14 +509,38 @@ const cz = {
       passthrough: {
         title: 'Průchod USB',
         loading: 'Načítání...',
+        mode: 'Režim',
+        hybrid: 'Hybridní',
+        exact: 'Přesný',
+        hybridDesc: 'Zachovává boot klávesnici a relativní myš, pro kompatibilní zařízení.',
+        exactDesc: 'Nahradí každou funkci USB na NanoKVM importovaným zařízením.',
+        hybridWarning: 'Hybridní režim ponechává klávesnici a relativní myš dostupné',
+        hybridWarningDesc:
+          'Úložiště, síť po USB a absolutní ukazatel se odpojí, dokud je importovaná funkce aktivní.',
         hidWarning: 'Spuštění průchodu odevzdá klávesnici, myš i virtuální média',
         hidWarningDesc:
           'NanoKVM má jediný řadič USB zařízení a proxy jej potřebuje celý. Během relace proto vzdálený hostitel vidí předané zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se samy ve chvíli, kdy relaci zastavíte. Tohoto webového rozhraní se to netýká, takže relaci můžete z této stránky kdykoli ukončit.',
+        hidWarningSafeDesc:
+          'NanoKVM má jediný řadič USB zařízení a proxy jej potřebuje celý. Během relace proto vzdálený hostitel vidí předané zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se, jakmile relaci zastavíte.',
         isoLabel: 'Povolit izochronní přenosy',
         isoHint:
           'Vpustí dovnitř webkamery, mikrofony a další proudová zařízení. Nikdo neměřil, co tento hardware utáhne.',
         isoWarning:
           'Izochronní přenos zde není ověřený a může držet klávesnici a myš, dokud relaci neukončíte',
+        info: {
+          title: 'Informace',
+          hybrid:
+            'Hybridní režim ponechává klávesnici a relativní myš dostupné. Úložiště, síť po USB a absolutní ukazatel se odpojí, dokud je importované zařízení aktivní.',
+          exact:
+            'Přesný režim nahradí každou funkci USB na NanoKVM importovaným zařízením. Klávesnice, myš i virtuální média se vrátí samy, jakmile relaci zastavíte.',
+          udc: 'NanoKVM má jediný řadič USB zařízení a proxy jej potřebuje celý — proto výše uvedené funkce po dobu relace zmizí.',
+          web: 'Tohoto webového rozhraní se to netýká, takže relaci můžete z této stránky kdykoli ukončit.',
+          network:
+            'Průchod spouštějte přes Ethernet nebo Wi-Fi. Spuštění ze sítě USB na NanoKVM je odmítnuto, protože by toto spojení zmizelo.',
+          iso: 'Webkamery, mikrofony a další izochronní zařízení jsou odmítnuta, dokud nepovolíte izochronní přenosy. Tato cesta funguje, ale na tomto hardwaru nebyla nikdy změřena, proto považujte její propustnost za neznámou.',
+          camera:
+            'Kamera a mikrofon prohlížeče v části Zařízení zůstávají ověřeným způsobem, jak je hostiteli poskytnout.'
+        },
         session: 'Relace',
         activeDesc: 'Zařízení je importováno a proxy drží řadič USB.',
         inactiveDesc: 'Neběží žádná relace. Klávesnice, myš i virtuální média fungují normálně.',
@@ -535,6 +570,8 @@ const cz = {
           'Webkamery a další izochronní zařízení vyžadují, abyste před spuštěním zapnuli izochronní přepínač.',
         startWeb:
           'Toto webové rozhraní funguje dál, relaci tedy můžete z této stránky kdykoli zastavit.',
+        startNetwork:
+          'Tuto stránku používejte přes Ethernet nebo Wi-Fi. Spuštění ze sítě USB na NanoKVM je odmítnuto, protože by toto spojení zmizelo.',
         okBtn: 'Spustit',
         cancelBtn: 'Zrušit',
         instructions: 'Na vašem počítači',
@@ -710,6 +747,17 @@ const cz = {
         networkDesc: 'Připojit virtuální síťovou kartu na vzdáleném hostiteli',
         networkProtocol: 'Síťový protokol',
         networkProtocolDesc: 'NCM pro moderní systémy, RNDIS pro starší Windows',
+        media: {
+          title: 'Sloty pro kameru a mikrofon',
+          desc: 'Určete, která mediální zařízení smějí prohlížeče obsadit. Rozpočet koncových bodů se kontroluje při použití profilu USB.',
+          cameras: 'Kamery',
+          microphones: 'Mikrofony',
+          save: 'Uložit sloty',
+          disconnect: 'Odpojit',
+          disconnectAll: 'Odpojit všechny zdroje',
+          limit: 'Sloty pro kameru a mikrofon smí být dohromady nejvýše osm.',
+          failed: 'Mediální sloty se nepodařilo aktualizovat.'
+        },
         reboot: 'Restartujte',
         rebootDesc: 'Opravdu chcete restartovat NanoKVM?',
         okBtn: 'Ano',
@@ -807,6 +855,14 @@ const cz = {
           none: 'Žádné'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Server VNC',
+        description:
+          'Umožní libovolnému klientu VNC vidět vzdálenou obrazovku a používat klávesnici a myš, s přihlášením přes váš účet NanoKVM',
+        port: 'Port',
+        portDescription: 'Připojte se na tento port na adrese NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -864,6 +920,8 @@ const cz = {
         running: 'Běží',
         connected: 'Připojeno',
         error: 'Chyba',
+        atBoot: 'spouští se při startu',
+        notAtBoot: 'nespouští se při startu',
         arguments: 'Argumenty',
         argumentsTip: 'Argumenty příkazové řádky předané službě při spuštění.',
         env: 'Proměnné prostředí',
@@ -890,6 +948,20 @@ const cz = {
         noHealthSignal:
           'Tato služba nehlásí stav, takže NanoKVM ví jen to, že proces běží, nikoli zda je tunel připojen.',
         memoryWarning: 'Souběžný běh více služeb vzdáleného přístupu může vyčerpat paměť',
+        resources: 'Prostředky',
+        memory: {
+          title: 'Limit paměti',
+          description:
+            'Omezí haldu Go služby newt na {{limit}} MiB od jejího příštího restartu. Jde o její vlastní limit, nikoli o limit Tailscale; vypnuto ponechává výchozí hodnotu Go a GOGC=50 se použije tak či tak.',
+          noRuntime:
+            'wstunnel je v Rustu: žádný garbage collector ani halda, kterou by šlo omezit, a jeho pracovní vlákna už respektují jediné CPU zařízení.',
+          notApplicable: 'Nevztahuje se'
+        },
+        swap: {
+          title: 'Odkládací soubor',
+          description:
+            'Přidá na SD kartu odkládací soubor o velikosti 256 MB. Platí pro celý systém: tentýž swap slouží Tailscale, serveru KVM i všemu ostatnímu na zařízení.'
+        },
         okBtn: 'Ano',
         cancelBtn: 'Ne'
       },
@@ -936,12 +1008,33 @@ const cz = {
       account: {
         title: 'Účet',
         webAccount: 'Název webového účtu',
+        role: 'Role',
+        roles: {
+          admin: 'Správce',
+          user: 'Uživatel'
+        },
         password: 'Heslo',
         updateBtn: 'Update',
         logoutBtn: 'Odhlásit',
         logoutDesc: 'Opravdu se chcete odhlásit?',
         okBtn: 'Ano',
-        cancelBtn: 'Ne'
+        cancelBtn: 'Ne',
+        users: {
+          title: 'Uživatelé',
+          create: 'Vytvořit uživatele',
+          enabled: 'Povoleno',
+          disabled: 'Zakázáno',
+          deviceOwner: 'Vlastník zařízení',
+          resetPassword: 'Obnovit heslo',
+          delete: 'Smazat',
+          deleteConfirm: 'Smazat tohoto uživatele a zrušit všechny jeho relace?',
+          created: 'Uživatel vytvořen',
+          deleted: 'Uživatel smazán',
+          passwordUpdated: 'Heslo aktualizováno',
+          loadFailed: 'Nepodařilo se načíst uživatele',
+          saveFailed: 'Nepodařilo se uložit uživatele',
+          deleteFailed: 'Nepodařilo se smazat uživatele'
+        }
       }
     },
     picoclaw: {

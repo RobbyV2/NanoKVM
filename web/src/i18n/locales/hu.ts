@@ -11,15 +11,18 @@ const hu = {
       login: 'Bejelentkezés',
       placeholderUsername: 'Adja meg a felhasználónevet',
       placeholderPassword: 'Adja meg a jelszót',
+      placeholderCurrentPassword: 'Jelenlegi jelszó',
       placeholderPassword2: 'Adja meg újra a jelszót',
       noEmptyUsername: 'A felhasználónév nem lehet üres',
       noEmptyPassword: 'A jelszó nem lehet üres',
+      passwordLength: 'A jelszónak 8 és 72 karakter között kell lennie',
       noAccount:
         'Nem sikerült megszerezni a felhasználói információkat, frissítse az oldalt vagy állítsa vissza a jelszót',
       invalidUser: 'Érvénytelen felhasználónév vagy jelszó',
       locked: 'Túl sok bejelentkezés, kérjük, próbálja újra később',
       globalLocked: 'A rendszer védelem alatt áll, próbálkozzon újra később',
       error: 'Váratlan hiba',
+      invalidCurrentPassword: 'A jelenlegi jelszó helytelen',
       changePassword: 'Jelszó megváltoztatása',
       changePasswordDesc:
         'Az eszköz biztonsága érdekében módosítsa a webes bejelentkezési jelszót.',
@@ -469,6 +472,14 @@ const hu = {
         product: 'Termék',
         serial: 'Sorozatszám',
         configuration: 'Konfigurációs karakterlánc',
+        hidLayout: 'HID-eszközök',
+        hidRoleKeyboard: 'Billentyűzet',
+        hidRoleRelative: 'Egér (relatív)',
+        hidRoleAbsolute: 'Mutató (abszolút)',
+        hidOff: 'Nincs jelen',
+        hidInterface: '{{index}}. interfész',
+        hidBootKeyboardShared:
+          'A billentyűzet osztozik egy interfészen, ezért már nem kínál boot protokollú jelentést. Néhány BIOS és UEFI nem fogja látni.',
         functions: 'Funkciók',
         descriptorAssets: 'Tárolt leírófájlok: {{count}}',
         endpointUse:
@@ -502,15 +513,40 @@ const hu = {
       passthrough: {
         title: 'USB-átjátszás',
         loading: 'Betöltés...',
+        mode: 'Mód',
+        hybrid: 'Hibrid',
+        exact: 'Pontos',
+        hybridDesc:
+          'Megtartja a boot billentyűzetet és a relatív egeret, kompatibilis eszközökhöz.',
+        exactDesc: 'A NanoKVM minden USB-funkcióját az átjátszott eszközre cseréli.',
+        hybridWarning: 'A hibrid mód elérhetően hagyja a billentyűzetet és a relatív egeret',
+        hybridWarningDesc:
+          'A tároló, az USB-hálózat és az abszolút mutató lecsatlakozik, amíg az átjátszott funkció aktív.',
         hidWarning:
           'Az átjátszás indítása átadja a billentyűzetet, az egeret és a virtuális adathordozókat',
         hidWarningDesc:
           'A NanoKVM-nek egyetlen USB-eszközvezérlője van, és a proxynak az egész kell. Amíg fut egy munkamenet, a távoli gép ezért az átjátszott eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek maguktól visszatérnek, amint a munkamenet leáll. Ez a webes felület ettől függetlenül működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
+        hidWarningSafeDesc:
+          'A NanoKVM-nek egyetlen USB-eszközvezérlője van, és a proxynak az egész kell. Amíg fut egy munkamenet, a távoli gép ezért az átjátszott eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek visszatérnek, amint a munkamenet leáll.',
         isoLabel: 'Izokron átvitelek engedélyezése',
         isoHint:
           'Beengedi a webkamerákat, mikrofonokat és más folyamatos eszközöket. Senki sem mérte meg, mit bír ez a hardver.',
         isoWarning:
           'Az izokron átvitel itt kipróbálatlan, és a munkamenet leállításáig foghatja a billentyűzetet és az egeret',
+        info: {
+          title: 'Tudnivalók',
+          hybrid:
+            'A hibrid mód elérhetően hagyja a billentyűzetet és a relatív egeret. A tároló, az USB-hálózat és az abszolút mutató lecsatlakozik, amíg az átjátszott eszköz aktív.',
+          exact:
+            'A pontos mód a NanoKVM minden USB-funkcióját az átjátszott eszközre cseréli. A billentyűzet, az egér és a virtuális adathordozók maguktól visszatérnek, amint a munkamenet leáll.',
+          udc: 'A NanoKVM-nek egyetlen USB-eszközvezérlője van, és a proxynak az egész kell — ezért tűnnek el a fenti funkciók a munkamenet teljes idejére.',
+          web: 'Ez a webes felület ettől függetlenül működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
+          network:
+            'Az átjátszást Etherneten vagy Wi-Fin indítsa. A NanoKVM USB-hálózatáról való indítást elutasítja a rendszer, mert az a kapcsolat eltűnne.',
+          iso: 'A webkamerákat, mikrofonokat és más izokron eszközöket a rendszer elutasítja, amíg nem engedélyezi az izokron átvitelt. Ez az út működik, de ezen a hardveren soha nem mérték meg, ezért tekintse az átviteli sebességét ismeretlennek.',
+          camera:
+            'A böngésző kamerája és mikrofonja az Eszközök alatt továbbra is a bevált módja annak, hogy a távoli gép kapjon egyet.'
+        },
         session: 'Munkamenet',
         activeDesc: 'Egy eszköz be van importálva, és a proxy tartja az USB-vezérlőt.',
         inactiveDesc:
@@ -541,6 +577,8 @@ const hu = {
           'A webkamerákhoz és más izokron eszközökhöz indítás előtt be kell kapcsolni az izokron kapcsolót.',
         startWeb:
           'Ez a webes felület tovább működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
+        startNetwork:
+          'Ezt az oldalt Etherneten vagy Wi-Fin használja. A NanoKVM USB-hálózatáról való indítást elutasítja a rendszer, mert az a kapcsolat eltűnne.',
         okBtn: 'Indítás',
         cancelBtn: 'Mégse',
         instructions: 'A saját gépén',
@@ -717,6 +755,17 @@ const hu = {
         networkDesc: 'Virtuális hálózati kártya csatlakoztatása a távoli gazdagépen',
         networkProtocol: 'Hálózati protokoll',
         networkProtocolDesc: 'NCM modern gazdagépekhez, RNDIS régebbi Windowshoz',
+        media: {
+          title: 'Kamera- és mikrofonhelyek',
+          desc: 'Adja meg, mely médiaeszközöket tölthetik ki a böngészők. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi.',
+          cameras: 'Kamerák',
+          microphones: 'Mikrofonok',
+          save: 'Helyek mentése',
+          disconnect: 'Lecsatlakoztatás',
+          disconnectAll: 'Minden forrás lecsatlakoztatása',
+          limit: 'A kamera- és mikrofonhelyek összesen legfeljebb nyolcan lehetnek.',
+          failed: 'A médiahelyeket nem sikerült frissíteni.'
+        },
         reboot: 'Újraindítás',
         rebootDesc: 'Biztos, hogy újra akarja indítani a NanoKVM-t?',
         okBtn: 'Igen',
@@ -815,6 +864,14 @@ const hu = {
           none: 'Nincs'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC-kiszolgáló',
+        description:
+          'Bármely VNC-kliens láthatja a távoli képernyőt, és használhatja a billentyűzetet és az egeret, a NanoKVM-fiókjával bejelentkezve',
+        port: 'Port',
+        portDescription: 'Csatlakozzon erre a portra a NanoKVM címén'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -872,6 +929,8 @@ const hu = {
         running: 'Fut',
         connected: 'Csatlakozva',
         error: 'Hiba',
+        atBoot: 'indul rendszerindításkor',
+        notAtBoot: 'nem indul rendszerindításkor',
         arguments: 'Argumentumok',
         argumentsTip: 'A szolgáltatásnak indításkor átadott parancssori argumentumok.',
         env: 'Környezeti változók',
@@ -899,6 +958,20 @@ const hu = {
         noHealthSignal:
           'Ez a szolgáltatás nem jelez állapotot, így a NanoKVM csak azt tudja, hogy a folyamat fut, azt nem, hogy az alagút kapcsolódott-e.',
         memoryWarning: 'Több távoli elérési szolgáltatás egyidejű futtatása kimerítheti a memóriát',
+        resources: 'Erőforrások',
+        memory: {
+          title: 'Memóriakorlát',
+          description:
+            'A newt Go-heapjét {{limit}} MiB-ra korlátozza a következő újraindításától. Ez a saját korlátja, nem a Tailscale-é; kikapcsolva a Go alapértelmezése marad, a GOGC=50 pedig mindkét esetben érvényes.',
+          noRuntime:
+            'A wstunnel Rust nyelvű: nincs szemétgyűjtője és nincs beállítható heapkorlátja, a munkaszálai pedig már így is az eszköz egyetlen CPU-jához igazodnak.',
+          notApplicable: 'Nem alkalmazható'
+        },
+        swap: {
+          title: 'Lapozófájl',
+          description:
+            'Egy 256 MB-os lapozófájlt hoz létre az SD-kártyán. Rendszerszintű: ugyanaz a lapozófájl szolgálja ki a Tailscale-t, a KVM-kiszolgálót és mindent mást az eszközön.'
+        },
         okBtn: 'Igen',
         cancelBtn: 'Nem'
       },
@@ -945,12 +1018,33 @@ const hu = {
       account: {
         title: 'Fiók',
         webAccount: 'Webes fiók neve',
+        role: 'Szerepkör',
+        roles: {
+          admin: 'Rendszergazda',
+          user: 'Felhasználó'
+        },
         password: 'Jelszó',
         updateBtn: 'Update',
         logoutBtn: 'Kijelentkezés',
         logoutDesc: 'Biztos, hogy ki szeretne jelentkezni?',
         okBtn: 'Igen',
-        cancelBtn: 'Nem'
+        cancelBtn: 'Nem',
+        users: {
+          title: 'Felhasználók',
+          create: 'Felhasználó létrehozása',
+          enabled: 'Engedélyezve',
+          disabled: 'Letiltva',
+          deviceOwner: 'Az eszköz tulajdonosa',
+          resetPassword: 'Jelszó visszaállítása',
+          delete: 'Törlés',
+          deleteConfirm: 'Törli ezt a felhasználót és visszavonja az összes munkamenetét?',
+          created: 'Felhasználó létrehozva',
+          deleted: 'Felhasználó törölve',
+          passwordUpdated: 'Jelszó frissítve',
+          loadFailed: 'Nem sikerült betölteni a felhasználókat',
+          saveFailed: 'Nem sikerült menteni a felhasználót',
+          deleteFailed: 'Nem sikerült törölni a felhasználót'
+        }
       }
     },
     picoclaw: {

@@ -303,6 +303,7 @@ const en = {
       refused: 'In use by {{owner}} from {{source}}',
       connectedSources_one: '{{count}} connected source',
       connectedSources_other: '{{count}} connected sources',
+      connectedSources: '{{count}} connected sources',
       connection: {
         connecting: 'Connecting',
         connected: 'Live',
@@ -466,6 +467,14 @@ const en = {
         product: 'Product',
         serial: 'Serial number',
         configuration: 'Configuration string',
+        hidLayout: 'HID devices',
+        hidRoleKeyboard: 'Keyboard',
+        hidRoleRelative: 'Mouse (relative)',
+        hidRoleAbsolute: 'Pointer (absolute)',
+        hidOff: 'Not present',
+        hidInterface: 'Interface {{index}}',
+        hidBootKeyboardShared:
+          'The keyboard shares an interface, so it no longer offers a boot-protocol report. Some BIOS and UEFI setups will not see it.',
         functions: 'Functions',
         descriptorAssets: 'Stored descriptor assets: {{count}}',
         endpointUse: 'IN {{inUse}} used, {{inFree}} free; OUT {{outUse}} used, {{outFree}} free',
@@ -522,8 +531,9 @@ const en = {
           web: 'This web interface is unaffected, so you can always stop a session from this page.',
           network:
             'Start passthrough over Ethernet or Wi-Fi. Starting it from NanoKVM’s USB network is refused, because that connection would disappear.',
-          iso:
-            'Webcams, microphones and other isochronous devices are refused unless you allow isochronous transfers. That path works but has never been measured on this hardware, so treat its throughput as unknown; the browser camera and microphone under Devices remain the proven way to give the target one.'
+          iso: 'Webcams, microphones and other isochronous devices are refused unless you allow isochronous transfers. That path works but has never been measured on this hardware, so treat its throughput as unknown.',
+          camera:
+            'The browser camera and microphone under Devices remain the proven way to give the target one.'
         },
         session: 'Session',
         activeDesc: 'A device is imported and the proxy is holding the USB controller.',
@@ -904,6 +914,8 @@ const en = {
         running: 'Running',
         connected: 'Connected',
         error: 'Error',
+        atBoot: 'starts at boot',
+        notAtBoot: 'does not start at boot',
         arguments: 'Arguments',
         argumentsTip: 'Command line arguments passed to the service at startup.',
         env: 'Environment variables',
@@ -931,6 +943,20 @@ const en = {
         noHealthSignal:
           'This service reports no health signal, so NanoKVM can only tell that the process is running, not whether the tunnel is connected.',
         memoryWarning: 'Running several remote access services at once may exhaust memory',
+        resources: 'Resources',
+        memory: {
+          title: 'Memory limit',
+          description:
+            "Caps newt's Go heap at {{limit}} MiB from its next restart. Its own limit, not Tailscale's; off leaves the Go default, with GOGC=50 applied either way.",
+          noRuntime:
+            'wstunnel is Rust: no garbage collector and no heap limit to set, and its worker threads already follow the device’s single CPU.',
+          notApplicable: 'Not applicable'
+        },
+        swap: {
+          title: 'Swap file',
+          description:
+            'Adds a 256 MB swap file on the SD card. System-wide: the same swap serves Tailscale, the KVM server and everything else on the device.'
+        },
         okBtn: 'Yes',
         cancelBtn: 'No'
       },

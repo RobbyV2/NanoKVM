@@ -11,15 +11,18 @@ const id = {
       login: 'Masuk',
       placeholderUsername: 'Silahkan masukkan username',
       placeholderPassword: 'Silahkan masukkan password',
+      placeholderCurrentPassword: 'Kata sandi saat ini',
       placeholderPassword2: 'Silahkan masukkan password again',
       noEmptyUsername: 'nama user tidak boleh kosong',
       noEmptyPassword: 'sandi  tidak boleh kosong',
+      passwordLength: 'Kata sandi harus antara 8 dan 72 karakter',
       noAccount:
         'Gagal mendapatkan informasi user, silahkan segarkan halaman atau atur ulang sandi',
       invalidUser: 'invalid username or password',
       locked: 'Terlalu banyak login, silakan coba lagi nanti',
       globalLocked: 'Sistem dalam perlindungan, silakan coba lagi nanti',
       error: 'terjadi kesalahan tak terduga',
+      invalidCurrentPassword: 'Kata sandi saat ini salah',
       changePassword: 'Ganti Sandi',
       changePasswordDesc: 'Untuk keamanan perangkat Anda, silakan ubah kata sandi masuk web.',
       differentPassword: 'sandi tidak sesuai',
@@ -468,6 +471,14 @@ const id = {
         product: 'Produk',
         serial: 'Nomor seri',
         configuration: 'Untai konfigurasi',
+        hidLayout: 'Perangkat HID',
+        hidRoleKeyboard: 'Papan ketik',
+        hidRoleRelative: 'Tetikus (relatif)',
+        hidRoleAbsolute: 'Penunjuk (absolut)',
+        hidOff: 'Tidak ada',
+        hidInterface: 'Antarmuka {{index}}',
+        hidBootKeyboardShared:
+          'Papan ketik berbagi satu antarmuka, jadi tidak lagi menyediakan laporan protokol boot. Sebagian BIOS dan UEFI tidak akan melihatnya.',
         functions: 'Fungsi',
         descriptorAssets: 'Berkas deskriptor tersimpan: {{count}}',
         endpointUse:
@@ -499,14 +510,39 @@ const id = {
       passthrough: {
         title: 'Passthrough USB',
         loading: 'Memuat...',
+        mode: 'Mode',
+        hybrid: 'Hibrida',
+        exact: 'Persis',
+        hybridDesc:
+          'Mempertahankan papan ketik boot dan tetikus relatif, untuk perangkat yang kompatibel.',
+        exactDesc: 'Mengganti setiap fungsi USB NanoKVM dengan perangkat yang diteruskan.',
+        hybridWarning: 'Mode hibrida menjaga papan ketik dan tetikus relatif tetap tersedia',
+        hybridWarningDesc:
+          'Penyimpanan, jaringan USB, dan penunjuk absolut terputus selama fungsi yang diteruskan aktif.',
         hidWarning: 'Memulai passthrough menyerahkan keyboard, mouse, dan media virtual',
         hidWarningDesc:
           'NanoKVM hanya punya satu pengontrol perangkat USB dan proxy membutuhkannya sepenuhnya, sehingga selama sesi berjalan host jarak jauh melihat perangkat yang diteruskan alih-alih keyboard, mouse, dan media virtual NanoKVM. Semuanya kembali dengan sendirinya begitu sesi dihentikan. Antarmuka web ini tidak terpengaruh, jadi Anda selalu bisa menghentikan sesi dari halaman ini.',
+        hidWarningSafeDesc:
+          'NanoKVM hanya punya satu pengontrol perangkat USB dan proxy membutuhkannya sepenuhnya, sehingga selama sesi berjalan host jarak jauh melihat perangkat yang diteruskan alih-alih keyboard, mouse, dan media virtual NanoKVM. Semuanya kembali saat sesi dihentikan.',
         isoLabel: 'Izinkan transfer isokron',
         isoHint:
           'Memasukkan webcam, mikrofon, dan perangkat aliran lain. Belum ada yang mengukur kemampuan perangkat keras ini.',
         isoWarning:
           'Aliran isokron belum terbukti di sini dan dapat menahan papan ketik serta tetikus sampai Anda menghentikan sesi',
+        info: {
+          title: 'Info',
+          hybrid:
+            'Mode hibrida menjaga papan ketik dan tetikus relatif tetap tersedia. Penyimpanan, jaringan USB, dan penunjuk absolut terputus selama perangkat yang diteruskan aktif.',
+          exact:
+            'Mode persis mengganti setiap fungsi USB NanoKVM dengan perangkat yang diteruskan. Papan ketik, tetikus, dan media virtual kembali dengan sendirinya saat sesi dihentikan.',
+          udc: 'NanoKVM hanya punya satu pengontrol perangkat USB dan proxy membutuhkannya sepenuhnya; itulah sebabnya fungsi di atas menghilang selama sesi berjalan.',
+          web: 'Antarmuka web ini tidak terpengaruh, jadi Anda selalu bisa menghentikan sesi dari halaman ini.',
+          network:
+            'Mulai passthrough lewat Ethernet atau Wi-Fi. Memulainya dari jaringan USB NanoKVM ditolak, karena koneksi itu akan hilang.',
+          iso: 'Webcam, mikrofon, dan perangkat isokron lain ditolak selama Anda tidak mengizinkan transfer isokron. Jalur itu bekerja tetapi belum pernah diukur pada perangkat keras ini, jadi anggap lajunya tidak diketahui.',
+          camera:
+            'Kamera dan mikrofon peramban di bagian Perangkat tetap menjadi cara yang terbukti untuk memberikannya kepada host.'
+        },
         session: 'Sesi',
         activeDesc: 'Sebuah perangkat telah diimpor dan proxy sedang memegang pengontrol USB.',
         inactiveDesc:
@@ -538,6 +574,8 @@ const id = {
           'Webcam dan perangkat isokron lain memerlukan sakelar isokron dinyalakan sebelum Anda mulai.',
         startWeb:
           'Antarmuka web ini tetap berjalan, jadi Anda dapat menghentikan sesi dari halaman ini kapan saja.',
+        startNetwork:
+          'Gunakan halaman ini lewat Ethernet atau Wi-Fi. Memulai dari jaringan USB NanoKVM ditolak karena koneksi itu akan hilang.',
         okBtn: 'Mulai',
         cancelBtn: 'Batal',
         instructions: 'Di komputer Anda sendiri',
@@ -713,6 +751,17 @@ const id = {
         networkDesc: 'Pasang kartu jaringan virtual pada host jarak jauh',
         networkProtocol: 'Protokol jaringan',
         networkProtocolDesc: 'NCM untuk host modern, RNDIS untuk Windows lama',
+        media: {
+          title: 'Slot kamera dan mikrofon',
+          desc: 'Tetapkan perangkat media yang boleh diisi peramban. Anggaran endpoint diperiksa saat profil USB diterapkan.',
+          cameras: 'Kamera',
+          microphones: 'Mikrofon',
+          save: 'Simpan slot',
+          disconnect: 'Putuskan',
+          disconnectAll: 'Putuskan semua sumber',
+          limit: 'Slot kamera dan mikrofon totalnya paling banyak delapan.',
+          failed: 'Slot media tidak dapat diperbarui.'
+        },
         reboot: 'Mulai ulang',
         rebootDesc: 'Apakah Anda yakin ingin me-reboot NanoKVM?',
         okBtn: 'Ya',
@@ -811,6 +860,14 @@ const id = {
           none: 'Tidak ada'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Server VNC',
+        description:
+          'Biarkan klien VNC mana pun melihat layar jarak jauh serta memakai papan ketik dan tetikus, dengan masuk memakai akun NanoKVM Anda',
+        port: 'Port',
+        portDescription: 'Sambungkan ke port ini pada alamat NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -868,6 +925,8 @@ const id = {
         running: 'Berjalan',
         connected: 'Terhubung',
         error: 'Kesalahan',
+        atBoot: 'berjalan saat boot',
+        notAtBoot: 'tidak berjalan saat boot',
         arguments: 'Argumen',
         argumentsTip: 'Argumen baris perintah yang diberikan ke layanan saat dijalankan.',
         env: 'Variabel lingkungan',
@@ -895,6 +954,20 @@ const id = {
           'Layanan ini tidak melaporkan sinyal kesehatan, jadi NanoKVM hanya tahu prosesnya berjalan, bukan apakah terowongannya tersambung.',
         memoryWarning:
           'Menjalankan beberapa layanan akses jarak jauh sekaligus dapat menghabiskan memori',
+        resources: 'Sumber daya',
+        memory: {
+          title: 'Batas memori',
+          description:
+            'Membatasi heap Go milik newt ke {{limit}} MiB mulai dari mulai ulang berikutnya. Ini batasnya sendiri, bukan milik Tailscale; jika mati, bawaan Go yang berlaku, dan GOGC=50 tetap dipakai pada kedua kasus.',
+          noRuntime:
+            'wstunnel ditulis dengan Rust: tidak ada pengumpul sampah dan tidak ada batas heap untuk disetel, dan utas pekerjanya sudah mengikuti satu-satunya CPU perangkat ini.',
+          notApplicable: 'Tidak berlaku'
+        },
+        swap: {
+          title: 'Berkas swap',
+          description:
+            'Menambahkan berkas swap 256 MB di kartu SD. Berlaku untuk seluruh sistem: swap yang sama melayani Tailscale, server KVM, dan semua hal lain di perangkat ini.'
+        },
         okBtn: 'Ya',
         cancelBtn: 'Tidak'
       },
@@ -941,12 +1014,33 @@ const id = {
       account: {
         title: 'Akun',
         webAccount: 'Nama akun web',
+        role: 'Peran',
+        roles: {
+          admin: 'Administrator',
+          user: 'Pengguna'
+        },
         password: 'Kata sandi',
         updateBtn: 'Update',
         logoutBtn: 'Keluar',
         logoutDesc: 'Apakah Anda yakin ingin logout?',
         okBtn: 'Ya',
-        cancelBtn: 'Tidak'
+        cancelBtn: 'Tidak',
+        users: {
+          title: 'Pengguna',
+          create: 'Buat pengguna',
+          enabled: 'Aktif',
+          disabled: 'Nonaktif',
+          deviceOwner: 'Pemilik perangkat',
+          resetPassword: 'Atur ulang kata sandi',
+          delete: 'Hapus',
+          deleteConfirm: 'Hapus pengguna ini dan cabut semua sesinya?',
+          created: 'Pengguna dibuat',
+          deleted: 'Pengguna dihapus',
+          passwordUpdated: 'Kata sandi diperbarui',
+          loadFailed: 'Gagal memuat pengguna',
+          saveFailed: 'Gagal menyimpan pengguna',
+          deleteFailed: 'Gagal menghapus pengguna'
+        }
       }
     },
     picoclaw: {

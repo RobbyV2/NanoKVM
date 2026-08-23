@@ -11,15 +11,18 @@ const pl = {
       login: 'Logowanie',
       placeholderUsername: 'Wprowadź nazwę użykownika',
       placeholderPassword: 'wprowadź hasło',
+      placeholderCurrentPassword: 'Bieżące hasło',
       placeholderPassword2: 'wprowadź hasło ponownie',
       noEmptyUsername: 'nazwa użykownika nie może być pusta',
       noEmptyPassword: 'hasło nie może być puste',
+      passwordLength: 'Hasło musi mieć od 8 do 72 znaków',
       noAccount:
         'Nie udało się uzyskać informacji o użytkowniku, odśwież stronę lub zresetuj hasło',
       invalidUser: 'Błędne hasło lub nazwa użykownika',
       locked: 'Zbyt wiele loginów, spróbuj ponownie później',
       globalLocked: 'System chroniony, spróbuj ponownie później',
       error: 'niespodziewany błąd',
+      invalidCurrentPassword: 'Bieżące hasło jest nieprawidłowe',
       changePassword: 'Zmień Hasło',
       changePasswordDesc:
         'Dla bezpieczeństwa Twojego urządzenia, proszę zmień hasło do logowania w sieci.',
@@ -469,6 +472,14 @@ const pl = {
         product: 'Produkt',
         serial: 'Numer seryjny',
         configuration: 'Ciąg konfiguracji',
+        hidLayout: 'Urządzenia HID',
+        hidRoleKeyboard: 'Klawiatura',
+        hidRoleRelative: 'Mysz (względna)',
+        hidRoleAbsolute: 'Wskaźnik (bezwzględny)',
+        hidOff: 'Brak',
+        hidInterface: 'Interfejs {{index}}',
+        hidBootKeyboardShared:
+          'Klawiatura współdzieli interfejs, więc nie udostępnia już raportu w protokole boot. Część BIOS-ów i UEFI jej nie zobaczy.',
         functions: 'Funkcje',
         descriptorAssets: 'Zapisane pliki deskryptorów: {{count}}',
         endpointUse:
@@ -500,14 +511,38 @@ const pl = {
       passthrough: {
         title: 'Przekazywanie USB',
         loading: 'Wczytywanie...',
+        mode: 'Tryb',
+        hybrid: 'Hybrydowy',
+        exact: 'Dokładny',
+        hybridDesc: 'Zachowuje klawiaturę boot i mysz względną, dla zgodnych urządzeń.',
+        exactDesc: 'Zastępuje każdą funkcję USB NanoKVM przekazanym urządzeniem.',
+        hybridWarning: 'Tryb hybrydowy pozostawia klawiaturę i mysz względną dostępne',
+        hybridWarningDesc:
+          'Pamięć masowa, sieć po USB i wskaźnik bezwzględny rozłączają się na czas działania przekazanej funkcji.',
         hidWarning: 'Uruchomienie przekazywania oddaje klawiaturę, mysz i nośniki wirtualne',
         hidWarningDesc:
           'NanoKVM ma tylko jeden kontroler urządzenia USB, a proxy potrzebuje go w całości. Dlatego w trakcie sesji zdalny host widzi przekazane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają samoczynnie w chwili zatrzymania sesji. Ten interfejs webowy działa niezależnie, więc sesję zawsze można zatrzymać z tej strony.',
+        hidWarningSafeDesc:
+          'NanoKVM ma tylko jeden kontroler urządzenia USB, a proxy potrzebuje go w całości. Dlatego w trakcie sesji zdalny host widzi przekazane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają po zatrzymaniu sesji.',
         isoLabel: 'Zezwól na transfery izochroniczne',
         isoHint:
           'Przepuszcza kamery internetowe, mikrofony i inne urządzenia strumieniowe. Nikt nie zmierzył, ile ten sprzęt udźwignie.',
         isoWarning:
           'Strumień izochroniczny nie jest tu sprawdzony i może zatrzymać klawiaturę i mysz do czasu zakończenia sesji',
+        info: {
+          title: 'Informacje',
+          hybrid:
+            'Tryb hybrydowy pozostawia klawiaturę i mysz względną dostępne. Pamięć masowa, sieć po USB i wskaźnik bezwzględny rozłączają się na czas działania przekazanego urządzenia.',
+          exact:
+            'Tryb dokładny zastępuje każdą funkcję USB NanoKVM przekazanym urządzeniem. Klawiatura, mysz i nośniki wirtualne wracają samoczynnie po zatrzymaniu sesji.',
+          udc: 'NanoKVM ma tylko jeden kontroler urządzenia USB, a proxy potrzebuje go w całości — dlatego powyższe funkcje znikają na czas trwania sesji.',
+          web: 'Ten interfejs webowy działa niezależnie, więc sesję zawsze można zatrzymać z tej strony.',
+          network:
+            'Przekazywanie uruchamiaj przez Ethernet lub Wi-Fi. Uruchomienie z sieci USB NanoKVM jest odrzucane, bo to połączenie by zniknęło.',
+          iso: 'Kamery internetowe, mikrofony i inne urządzenia izochroniczne są odrzucane, dopóki nie zezwolisz na transfery izochroniczne. Ta ścieżka działa, ale nigdy nie zmierzono jej na tym sprzęcie, więc traktuj przepustowość jako nieznaną.',
+          camera:
+            'Kamera i mikrofon przeglądarki w sekcji Urządzenia pozostają sprawdzonym sposobem udostępnienia ich hostowi.'
+        },
         session: 'Sesja',
         activeDesc: 'Urządzenie jest zaimportowane, a proxy trzyma kontroler USB.',
         inactiveDesc:
@@ -538,6 +573,8 @@ const pl = {
           'Kamery internetowe i inne urządzenia izochroniczne wymagają włączenia przełącznika izochronicznego przed startem.',
         startWeb:
           'Ten interfejs webowy działa dalej, więc sesję można zatrzymać z tej strony w dowolnym momencie.',
+        startNetwork:
+          'Korzystaj z tej strony przez Ethernet lub Wi-Fi. Uruchomienie z sieci USB NanoKVM jest odrzucane, bo to połączenie by zniknęło.',
         okBtn: 'Uruchom',
         cancelBtn: 'Anuluj',
         instructions: 'Na Twoim komputerze',
@@ -715,6 +752,17 @@ const pl = {
         networkDesc: 'Zamontuj wirtualną kartę sieciową na zdalnym hoście',
         networkProtocol: 'Protokół sieciowy',
         networkProtocolDesc: 'NCM dla nowoczesnych hostów, RNDIS dla starszych systemów Windows',
+        media: {
+          title: 'Gniazda kamery i mikrofonu',
+          desc: 'Zadeklaruj urządzenia multimedialne, które przeglądarki mogą zająć. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB.',
+          cameras: 'Kamery',
+          microphones: 'Mikrofony',
+          save: 'Zapisz gniazda',
+          disconnect: 'Rozłącz',
+          disconnectAll: 'Rozłącz wszystkie źródła',
+          limit: 'Gniazda kamery i mikrofonu mogą łącznie wynosić najwyżej osiem.',
+          failed: 'Nie udało się zaktualizować gniazd multimedialnych.'
+        },
         reboot: 'Uruchom ponownie',
         rebootDesc: 'Czy na pewno chcesz ponownie uruchomić NanoKVM?',
         okBtn: 'Tak',
@@ -814,6 +862,14 @@ const pl = {
           none: 'Brak'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Serwer VNC',
+        description:
+          'Pozwala dowolnemu klientowi VNC oglądać zdalny ekran oraz korzystać z klawiatury i myszy, po zalogowaniu kontem NanoKVM',
+        port: 'Port',
+        portDescription: 'Połącz się z tym portem pod adresem NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -871,6 +927,8 @@ const pl = {
         running: 'Działa',
         connected: 'Połączono',
         error: 'Błąd',
+        atBoot: 'uruchamia się przy starcie',
+        notAtBoot: 'nie uruchamia się przy starcie',
         arguments: 'Argumenty',
         argumentsTip: 'Argumenty wiersza poleceń przekazywane usłudze przy uruchomieniu.',
         env: 'Zmienne środowiskowe',
@@ -898,6 +956,20 @@ const pl = {
         noHealthSignal:
           'Ta usługa nie zgłasza stanu, więc NanoKVM wie tylko, że proces działa, a nie czy tunel jest połączony.',
         memoryWarning: 'Uruchomienie kilku usług zdalnego dostępu naraz może wyczerpać pamięć',
+        resources: 'Zasoby',
+        memory: {
+          title: 'Limit pamięci',
+          description:
+            'Ogranicza stertę Go usługi newt do {{limit}} MiB od jej najbliższego restartu. To jej własny limit, nie limit Tailscale; wyłączony pozostawia domyślną wartość Go, a GOGC=50 działa tak czy owak.',
+          noRuntime:
+            'wstunnel jest w Rust: nie ma odśmiecacza ani sterty do ograniczenia, a jego wątki robocze już podążają za jedynym CPU urządzenia.',
+          notApplicable: 'Nie dotyczy'
+        },
+        swap: {
+          title: 'Plik wymiany',
+          description:
+            'Dodaje plik wymiany 256 MB na karcie SD. Działa dla całego systemu: ta sama wymiana służy Tailscale, serwerowi KVM i wszystkiemu innemu na urządzeniu.'
+        },
         okBtn: 'Tak',
         cancelBtn: 'Nie'
       },
@@ -944,12 +1016,33 @@ const pl = {
       account: {
         title: 'Konto',
         webAccount: 'Nazwa konta web',
+        role: 'Rola',
+        roles: {
+          admin: 'Administrator',
+          user: 'Użytkownik'
+        },
         password: 'Hasło',
         updateBtn: 'Update',
         logoutBtn: 'Wyloguj',
         logoutDesc: 'Czy na pewno chcesz się wylogować?',
         okBtn: 'Tak',
-        cancelBtn: 'Nie'
+        cancelBtn: 'Nie',
+        users: {
+          title: 'Użytkownicy',
+          create: 'Utwórz użytkownika',
+          enabled: 'Włączony',
+          disabled: 'Wyłączony',
+          deviceOwner: 'Właściciel urządzenia',
+          resetPassword: 'Zresetuj hasło',
+          delete: 'Usuń',
+          deleteConfirm: 'Usunąć tego użytkownika i unieważnić wszystkie jego sesje?',
+          created: 'Użytkownik utworzony',
+          deleted: 'Użytkownik usunięty',
+          passwordUpdated: 'Hasło zaktualizowane',
+          loadFailed: 'Nie udało się wczytać użytkowników',
+          saveFailed: 'Nie udało się zapisać użytkownika',
+          deleteFailed: 'Nie udało się usunąć użytkownika'
+        }
       }
     },
     picoclaw: {

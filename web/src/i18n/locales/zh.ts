@@ -452,6 +452,14 @@ const zh = {
         product: '产品',
         serial: '序列号',
         configuration: '配置字符串',
+        hidLayout: 'HID 设备',
+        hidRoleKeyboard: '键盘',
+        hidRoleRelative: '鼠标（相对）',
+        hidRoleAbsolute: '指针（绝对）',
+        hidOff: '不存在',
+        hidInterface: '接口 {{index}}',
+        hidBootKeyboardShared:
+          '键盘与其他功能共用一个接口，因此不再提供 boot 协议报告。部分 BIOS 和 UEFI 将无法识别它。',
         functions: '功能',
         descriptorAssets: '已存储的描述符文件：{{count}}',
         endpointUse: 'IN 已用 {{inUse}}，空闲 {{inFree}}；OUT 已用 {{outUse}}，空闲 {{outFree}}',
@@ -478,12 +486,34 @@ const zh = {
       passthrough: {
         title: 'USB 透传',
         loading: '加载中...',
+        mode: '模式',
+        hybrid: '混合',
+        exact: '完全',
+        hybridDesc: '为兼容设备保留 boot 键盘和相对鼠标。',
+        exactDesc: '用透传设备替换 NanoKVM 的每一项 USB 功能。',
+        hybridWarning: '混合模式仍可使用键盘和相对鼠标',
+        hybridWarningDesc: '透传功能启用期间，存储、USB 网络和绝对指针会断开。',
         hidWarning: '启动透传会让出键盘、鼠标和虚拟媒体',
         hidWarningDesc:
           'NanoKVM 只有一个 USB 设备控制器，而代理需要独占它。因此会话运行期间，远程主机看到的是被透传的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话一停止，它们会自动恢复。此网页界面不受影响，您随时可以在本页停止会话。',
+        hidWarningSafeDesc:
+          'NanoKVM 只有一个 USB 设备控制器，而代理需要独占它。因此会话运行期间，远程主机看到的是被透传的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话停止后它们会恢复。',
         isoLabel: '允许同步传输',
         isoHint: '放行摄像头、麦克风等流式设备。没有人测过该硬件能跑到多少。',
         isoWarning: '同步传输在此尚未验证，可能占住键盘和鼠标直到你停止会话',
+        info: {
+          title: '说明',
+          hybrid:
+            '混合模式仍可使用键盘和相对鼠标。透传设备启用期间，存储、USB 网络和绝对指针会断开。',
+          exact:
+            '完全模式用透传设备替换 NanoKVM 的每一项 USB 功能。会话停止后，键盘、鼠标和虚拟媒体会自动恢复。',
+          udc: 'NanoKVM 只有一个 USB 设备控制器，而代理需要独占它，所以会话运行期间上述功能都会消失。',
+          web: '此网页界面不受影响，您随时可以在本页停止会话。',
+          network:
+            '请通过以太网或 Wi-Fi 启动透传。从 NanoKVM 的 USB 网络启动会被拒绝，因为该连接届时会消失。',
+          iso: '在允许同步传输之前，摄像头、麦克风等同步传输设备会被拒绝。该通路可用，但从未在此硬件上测量过，因此其吞吐量应视为未知。',
+          camera: '设备菜单中浏览器的摄像头和麦克风，仍是给远程主机提供它们的成熟方式。'
+        },
         session: '会话',
         activeDesc: '已导入一台设备，代理正占用 USB 控制器。',
         inactiveDesc: '当前没有会话。键盘、鼠标和虚拟媒体工作正常。',
@@ -508,6 +538,8 @@ const zh = {
         startHid: '会话运行期间，USB 键盘、鼠标和虚拟媒体将停止工作；停止会话后会自动恢复。',
         startIso: '摄像头等同步传输设备需要在启动前打开同步传输开关。',
         startWeb: '此网页界面仍可使用，您随时可以在本页停止会话。',
+        startNetwork:
+          '请通过以太网或 Wi-Fi 使用本页。从 NanoKVM 的 USB 网络启动会被拒绝，因为该连接届时会消失。',
         okBtn: '启动',
         cancelBtn: '取消',
         instructions: '在您自己的电脑上',
@@ -680,6 +712,17 @@ const zh = {
         networkDesc: '在远程主机中挂载虚拟网卡',
         networkProtocol: '网络协议',
         networkProtocolDesc: '新主机使用 NCM，旧版 Windows 使用 RNDIS',
+        media: {
+          title: '摄像头与麦克风插槽',
+          desc: '声明浏览器可以占用的媒体设备。端点预算会在应用 USB 配置文件时检查。',
+          cameras: '摄像头',
+          microphones: '麦克风',
+          save: '保存插槽',
+          disconnect: '断开',
+          disconnectAll: '断开所有来源',
+          limit: '摄像头与麦克风插槽合计不得超过八个。',
+          failed: '无法更新媒体插槽。'
+        },
         reboot: '重新启动',
         rebootDesc: '您确定要重新启动 NanoKVM 吗？',
         okBtn: '是',
@@ -772,6 +815,14 @@ const zh = {
           none: '无'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC 服务器',
+        description:
+          '使用您的 NanoKVM 帐号登录后，任意 VNC 客户端都可以查看远程画面并使用键盘和鼠标',
+        port: '端口',
+        portDescription: '连接 NanoKVM 地址上的该端口'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -828,6 +879,8 @@ const zh = {
         running: '运行中',
         connected: '已连接',
         error: '错误',
+        atBoot: '开机启动',
+        notAtBoot: '不开机启动',
         arguments: '启动参数',
         argumentsTip: '启动服务时传入的命令行参数。',
         env: '环境变量',
@@ -854,6 +907,20 @@ const zh = {
         noHealthSignal:
           '该服务不提供健康状态信号，因此 NanoKVM 只能确认进程正在运行，无法确认隧道是否已连接。',
         memoryWarning: '同时运行多个远程访问服务可能会耗尽内存',
+        resources: '资源',
+        memory: {
+          title: '内存上限',
+          description:
+            '从下次重启起将 newt 的 Go 堆限制为 {{limit}} MiB。这是它自己的上限，而非 Tailscale 的；关闭时保留 Go 默认值，两种情况下都会应用 GOGC=50。',
+          noRuntime:
+            'wstunnel 使用 Rust 编写：没有垃圾回收器，也没有可设置的堆上限，其工作线程本就跟随设备的单个 CPU。',
+          notApplicable: '不适用'
+        },
+        swap: {
+          title: '交换文件',
+          description:
+            '在 SD 卡上添加 256 MB 交换文件。作用于整个系统：同一份交换空间供 Tailscale、KVM 服务以及设备上的其他一切使用。'
+        },
         okBtn: '确定',
         cancelBtn: '取消'
       },

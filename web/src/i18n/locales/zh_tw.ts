@@ -11,14 +11,17 @@ const zh_tw = {
       login: '登入',
       placeholderUsername: '使用者名稱',
       placeholderPassword: '密碼',
+      placeholderCurrentPassword: '目前密碼',
       placeholderPassword2: '請再次輸入密碼',
       noEmptyUsername: '使用者名稱不能為空',
       noEmptyPassword: '密碼不能為空',
+      passwordLength: '密碼長度必須介於 8 到 72 個字元之間',
       noAccount: '找不到使用者，請重新整理網頁或重設密碼',
       invalidUser: '使用者名稱或密碼錯誤',
       locked: '登入次數過多，請稍後重試',
       globalLocked: '系統受保護，請稍後重試',
       error: '非預期性錯誤',
+      invalidCurrentPassword: '目前密碼不正確',
       changePassword: '更改密碼',
       changePasswordDesc: '為了您的裝置安全，請修改登入密碼。',
       differentPassword: '密碼不一致',
@@ -449,6 +452,14 @@ const zh_tw = {
         product: '產品',
         serial: '序號',
         configuration: '設定字串',
+        hidLayout: 'HID 裝置',
+        hidRoleKeyboard: '鍵盤',
+        hidRoleRelative: '滑鼠（相對）',
+        hidRoleAbsolute: '指標（絕對）',
+        hidOff: '不存在',
+        hidInterface: '介面 {{index}}',
+        hidBootKeyboardShared:
+          '鍵盤與其他功能共用一個介面，因此不再提供 boot 通訊協定回報。部分 BIOS 與 UEFI 將無法辨識它。',
         functions: '功能',
         descriptorAssets: '已儲存的描述元檔案：{{count}}',
         endpointUse: 'IN 已用 {{inUse}}、閒置 {{inFree}}；OUT 已用 {{outUse}}、閒置 {{outFree}}',
@@ -475,12 +486,34 @@ const zh_tw = {
       passthrough: {
         title: 'USB 直通',
         loading: '載入中...',
+        mode: '模式',
+        hybrid: '混合',
+        exact: '完全',
+        hybridDesc: '為相容裝置保留 boot 鍵盤與相對滑鼠。',
+        exactDesc: '以直通裝置取代 NanoKVM 的每一項 USB 功能。',
+        hybridWarning: '混合模式仍可使用鍵盤與相對滑鼠',
+        hybridWarningDesc: '直通功能啟用期間，儲存、USB 網路與絕對指標會中斷。',
         hidWarning: '啟動直通會讓出鍵盤、滑鼠與虛擬媒體',
         hidWarningDesc:
           'NanoKVM 只有一個 USB 裝置控制器，而代理需要獨佔它。因此工作階段執行期間，遠端主機看到的是被直通的裝置，而不是 NanoKVM 的鍵盤、滑鼠與虛擬媒體。工作階段一停止，它們就會自動恢復。此網頁介面不受影響，您隨時可以在本頁停止工作階段。',
+        hidWarningSafeDesc:
+          'NanoKVM 只有一個 USB 裝置控制器，而代理需要獨佔它。因此工作階段執行期間，遠端主機看到的是被直通的裝置，而不是 NanoKVM 的鍵盤、滑鼠與虛擬媒體。工作階段停止後它們就會恢復。',
         isoLabel: '允許等時傳輸',
         isoHint: '放行網路攝影機、麥克風等串流裝置。沒有人測過此硬體能跑到多少。',
         isoWarning: '等時傳輸在此尚未驗證，可能占住鍵盤與滑鼠直到你停止工作階段',
+        info: {
+          title: '說明',
+          hybrid:
+            '混合模式仍可使用鍵盤與相對滑鼠。直通裝置啟用期間，儲存、USB 網路與絕對指標會中斷。',
+          exact:
+            '完全模式以直通裝置取代 NanoKVM 的每一項 USB 功能。工作階段停止後，鍵盤、滑鼠與虛擬媒體會自動恢復。',
+          udc: 'NanoKVM 只有一個 USB 裝置控制器，而代理需要獨佔它，所以工作階段執行期間上述功能都會消失。',
+          web: '此網頁介面不受影響，您隨時可以在本頁停止工作階段。',
+          network:
+            '請透過乙太網路或 Wi-Fi 啟動直通。從 NanoKVM 的 USB 網路啟動會被拒絕，因為該連線屆時會消失。',
+          iso: '在允許等時傳輸之前，網路攝影機、麥克風等等時傳輸裝置會被拒絕。該路徑可用，但從未在此硬體上測量過，因此其吞吐量應視為未知。',
+          camera: '設備選單中瀏覽器的攝影機與麥克風，仍是給遠端主機提供它們的成熟方式。'
+        },
         session: '工作階段',
         activeDesc: '已匯入一台裝置，代理正占用 USB 控制器。',
         inactiveDesc: '目前沒有工作階段。鍵盤、滑鼠與虛擬媒體運作正常。',
@@ -505,6 +538,8 @@ const zh_tw = {
         startHid: '工作階段執行期間，USB 鍵盤、滑鼠與虛擬媒體會停止運作；停止後會自動恢復。',
         startIso: '網路攝影機等等時傳輸裝置需要在啟動前開啟等時傳輸開關。',
         startWeb: '此網頁介面仍可使用，您隨時可以在本頁停止工作階段。',
+        startNetwork:
+          '請透過乙太網路或 Wi-Fi 使用本頁。從 NanoKVM 的 USB 網路啟動會被拒絕，因為該連線屆時會消失。',
         okBtn: '啟動',
         cancelBtn: '取消',
         instructions: '在您自己的電腦上',
@@ -677,6 +712,17 @@ const zh_tw = {
         networkDesc: '在遠端主機上新增虛擬網卡',
         networkProtocol: '網路通訊協定',
         networkProtocolDesc: '新式主機使用 NCM，較舊的 Windows 使用 RNDIS',
+        media: {
+          title: '攝影機與麥克風插槽',
+          desc: '宣告瀏覽器可以佔用的媒體裝置。端點預算會在套用 USB 設定檔時檢查。',
+          cameras: '攝影機',
+          microphones: '麥克風',
+          save: '儲存插槽',
+          disconnect: '中斷連線',
+          disconnectAll: '中斷所有來源',
+          limit: '攝影機與麥克風插槽合計不得超過八個。',
+          failed: '無法更新媒體插槽。'
+        },
         reboot: '重新啟動',
         rebootDesc: '您確定要重新啟動 NanoKVM?',
         okBtn: '確定',
@@ -769,6 +815,14 @@ const zh_tw = {
           none: '無'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC 伺服器',
+        description:
+          '使用您的 NanoKVM 帳號登入後，任何 VNC 用戶端都可以檢視遠端畫面並使用鍵盤與滑鼠',
+        port: '連接埠',
+        portDescription: '連線至 NanoKVM 位址上的這個連接埠'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -825,6 +879,8 @@ const zh_tw = {
         running: '執行中',
         connected: '已連線',
         error: '錯誤',
+        atBoot: '開機時啟動',
+        notAtBoot: '開機時不啟動',
         arguments: '啟動參數',
         argumentsTip: '啟動服務時傳入的命令列參數。',
         env: '環境變數',
@@ -851,6 +907,20 @@ const zh_tw = {
         noHealthSignal:
           '此服務不提供健康狀態訊號，因此 NanoKVM 只能確認行程正在執行，無法確認通道是否已連線。',
         memoryWarning: '同時執行多個遠端存取服務可能會耗盡記憶體',
+        resources: '資源',
+        memory: {
+          title: '記憶體上限',
+          description:
+            '自下次重新啟動起將 newt 的 Go 堆積限制為 {{limit}} MiB。這是它自己的上限，而非 Tailscale 的；關閉時保留 Go 預設值，兩種情況都會套用 GOGC=50。',
+          noRuntime:
+            'wstunnel 以 Rust 撰寫：沒有垃圾回收器，也沒有可設定的堆積上限，其工作執行緒本來就跟隨裝置的單一 CPU。',
+          notApplicable: '不適用'
+        },
+        swap: {
+          title: '交換檔',
+          description:
+            '在 SD 卡上新增 256 MB 的交換檔。作用於整個系統：同一份交換空間供 Tailscale、KVM 伺服器以及裝置上的其他一切使用。'
+        },
         okBtn: '確定',
         cancelBtn: '取消'
       },
@@ -895,12 +965,33 @@ const zh_tw = {
       account: {
         title: '帳號',
         webAccount: '網頁帳號',
+        role: '角色',
+        roles: {
+          admin: '管理員',
+          user: '使用者'
+        },
         password: '密碼',
         updateBtn: '修改',
         logoutBtn: '登出',
         logoutDesc: '您確定要登出嗎?',
         okBtn: '確定',
-        cancelBtn: '取消'
+        cancelBtn: '取消',
+        users: {
+          title: '使用者',
+          create: '建立使用者',
+          enabled: '已啟用',
+          disabled: '已停用',
+          deviceOwner: '裝置擁有者',
+          resetPassword: '重設密碼',
+          delete: '刪除',
+          deleteConfirm: '刪除此使用者並撤銷其所有工作階段？',
+          created: '已建立使用者',
+          deleted: '已刪除使用者',
+          passwordUpdated: '已更新密碼',
+          loadFailed: '無法載入使用者',
+          saveFailed: '無法儲存使用者',
+          deleteFailed: '無法刪除使用者'
+        }
       }
     },
     picoclaw: {

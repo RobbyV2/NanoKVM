@@ -11,15 +11,18 @@ const tr = {
       login: 'Giriş',
       placeholderUsername: 'Kullanıcı Adı',
       placeholderPassword: 'Şifre',
+      placeholderCurrentPassword: 'Mevcut şifre',
       placeholderPassword2: 'Şifrenizi tekrar deneyiniz',
       noEmptyUsername: 'Kullanıcı adı gereklidir',
       noEmptyPassword: 'Şifre gereklidir',
+      passwordLength: 'Şifre 8 ile 72 karakter arasında olmalıdır',
       noAccount:
         'Kullanıcı verileri alınırken hata yaşandı, lütfen sayfayı yenileyiniz ya da şifrenizi sıfırlayınız',
       invalidUser: 'Yanlış kullanıcı adı ya da şifre',
       locked: 'Çok fazla giriş yapıldı, lütfen daha sonra tekrar deneyin',
       globalLocked: 'Sistem koruma altında, lütfen daha sonra tekrar deneyin',
       error: 'Beklenmedik bir hata',
+      invalidCurrentPassword: 'Mevcut şifre yanlış',
       changePassword: 'Şifrenizi değiştiriniz',
       changePasswordDesc: 'Güvenlik sebebiyle lütfen şifrenizi değiştiriniz!',
       differentPassword: 'Şifreler eşleşmemektedir',
@@ -466,6 +469,14 @@ const tr = {
         product: 'Ürün',
         serial: 'Seri numarası',
         configuration: 'Yapılandırma dizesi',
+        hidLayout: 'HID aygıtları',
+        hidRoleKeyboard: 'Klavye',
+        hidRoleRelative: 'Fare (göreli)',
+        hidRoleAbsolute: 'İşaretçi (mutlak)',
+        hidOff: 'Mevcut değil',
+        hidInterface: 'Arayüz {{index}}',
+        hidBootKeyboardShared:
+          'Klavye bir arayüzü paylaşıyor, bu yüzden artık boot protokolü raporu sunmuyor. Bazı BIOS ve UEFI kurulumları onu göremez.',
         functions: 'İşlevler',
         descriptorAssets: 'Saklanan tanımlayıcı dosyaları: {{count}}',
         endpointUse:
@@ -497,14 +508,38 @@ const tr = {
       passthrough: {
         title: 'USB Geçişi',
         loading: 'Yükleniyor...',
+        mode: 'Mod',
+        hybrid: 'Melez',
+        exact: 'Birebir',
+        hybridDesc: 'Uyumlu aygıtlar için boot klavyesini ve göreli fareyi korur.',
+        exactDesc: 'NanoKVM’in her USB işlevini aktarılan aygıtla değiştirir.',
+        hybridWarning: 'Melez mod klavyeyi ve göreli fareyi kullanılabilir tutar',
+        hybridWarningDesc:
+          'Aktarılan işlev etkinken depolama, USB ağı ve mutlak işaretçi bağlantısı kesilir.',
         hidWarning: 'Geçişi başlatmak klavyeyi, fareyi ve sanal medyayı devreder',
         hidWarningDesc:
           'NanoKVM’de tek bir USB aygıt denetleyicisi var ve vekil onun tamamına ihtiyaç duyuyor. Bu yüzden bir oturum sürerken uzak makine, NanoKVM’in klavyesi, faresi ve sanal medyası yerine aktarılan aygıtı görür. Oturum durdurulduğu anda kendiliğinden geri gelirler. Bu web arayüzü etkilenmez, dolayısıyla oturumu her zaman bu sayfadan durdurabilirsiniz.',
+        hidWarningSafeDesc:
+          'NanoKVM’de tek bir USB aygıt denetleyicisi var ve vekil onun tamamına ihtiyaç duyuyor. Bu yüzden bir oturum sürerken uzak makine, NanoKVM’in klavyesi, faresi ve sanal medyası yerine aktarılan aygıtı görür. Oturum durdurulunca geri gelirler.',
         isoLabel: 'Eşzamanlı aktarımlara izin ver',
         isoHint:
           'Web kameralarını, mikrofonları ve diğer akış aygıtlarını geçirir. Bu donanımın neyi kaldırdığını kimse ölçmedi.',
         isoWarning:
           'Eşzamanlı akış burada denenmemiştir ve oturumu durdurana kadar klavye ile fareyi tutabilir',
+        info: {
+          title: 'Bilgi',
+          hybrid:
+            'Melez mod klavyeyi ve göreli fareyi kullanılabilir tutar. Aktarılan aygıt etkinken depolama, USB ağı ve mutlak işaretçi bağlantısı kesilir.',
+          exact:
+            'Birebir mod NanoKVM’in her USB işlevini aktarılan aygıtla değiştirir. Klavye, fare ve sanal medya oturum durdurulunca kendiliğinden geri gelir.',
+          udc: 'NanoKVM’de tek bir USB aygıt denetleyicisi var ve vekil onun tamamına ihtiyaç duyuyor; yukarıdaki işlevlerin oturum boyunca kaybolmasının nedeni budur.',
+          web: 'Bu web arayüzü etkilenmez, dolayısıyla oturumu her zaman bu sayfadan durdurabilirsiniz.',
+          network:
+            'Geçişi Ethernet veya Wi-Fi üzerinden başlatın. NanoKVM’in USB ağından başlatmak reddedilir, çünkü o bağlantı ortadan kalkardı.',
+          iso: 'Web kameraları, mikrofonlar ve diğer eşzamanlı aygıtlar, eşzamanlı aktarımlara izin vermediğiniz sürece reddedilir. Bu yol çalışır ama bu donanımda hiç ölçülmedi, bu yüzden veri hızını bilinmiyor sayın.',
+          camera:
+            'Aygıtlar altındaki tarayıcı kamerası ve mikrofonu, uzak makineye bir tane vermenin denenmiş yolu olmayı sürdürüyor.'
+        },
         session: 'Oturum',
         activeDesc: 'Bir aygıt içe aktarıldı ve vekil USB denetleyicisini tutuyor.',
         inactiveDesc: 'Çalışan bir oturum yok. Klavye, fare ve sanal medya normal çalışıyor.',
@@ -534,6 +569,8 @@ const tr = {
           'Web kameraları ve diğer eşzamanlı aygıtlar için başlamadan önce eşzamanlı aktarım anahtarını açmanız gerekir.',
         startWeb:
           'Bu web arayüzü çalışmaya devam eder, oturumu istediğiniz an bu sayfadan durdurabilirsiniz.',
+        startNetwork:
+          'Bu sayfayı Ethernet veya Wi-Fi üzerinden kullanın. NanoKVM’in USB ağından başlatmak reddedilir, çünkü o bağlantı ortadan kalkardı.',
         okBtn: 'Başlat',
         cancelBtn: 'İptal',
         instructions: 'Kendi makinenizde',
@@ -712,6 +749,17 @@ const tr = {
         networkDesc: 'Sanal ağ kartını uzak ana bilgisayara bağla',
         networkProtocol: 'Ağ protokolü',
         networkProtocolDesc: 'Modern ana bilgisayarlar için NCM, eski Windows için RNDIS',
+        media: {
+          title: 'Kamera ve mikrofon yuvaları',
+          desc: 'Tarayıcıların doldurabileceği medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir.',
+          cameras: 'Kameralar',
+          microphones: 'Mikrofonlar',
+          save: 'Yuvaları kaydet',
+          disconnect: 'Bağlantıyı kes',
+          disconnectAll: 'Tüm kaynakların bağlantısını kes',
+          limit: 'Kamera ve mikrofon yuvaları toplamda en fazla sekiz olabilir.',
+          failed: 'Medya yuvaları güncellenemedi.'
+        },
         reboot: 'Yeniden Başlat',
         rebootDesc: "NanoKVM'i yeniden başlatmak istediğinizden emin misiniz?",
         okBtn: 'Evet',
@@ -808,6 +856,14 @@ const tr = {
           none: 'Yok'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC Sunucusu',
+        description:
+          'Herhangi bir VNC istemcisinin uzak ekranı görmesini, klavye ve fareyi kullanmasını sağlar; giriş NanoKVM hesabınızla yapılır',
+        port: 'Bağlantı noktası',
+        portDescription: 'NanoKVM adresinde bu bağlantı noktasına bağlanın'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -864,6 +920,8 @@ const tr = {
         running: 'Çalışıyor',
         connected: 'Bağlandı',
         error: 'Hata',
+        atBoot: 'açılışta başlar',
+        notAtBoot: 'açılışta başlamaz',
         arguments: 'Argümanlar',
         argumentsTip: 'Başlatılırken hizmete aktarılan komut satırı argümanları.',
         env: 'Ortam değişkenleri',
@@ -892,6 +950,20 @@ const tr = {
           'Bu hizmet sağlık bilgisi bildirmiyor, bu yüzden NanoKVM yalnızca sürecin çalıştığını bilir, tünelin bağlı olup olmadığını bilmez.',
         memoryWarning:
           'Aynı anda birden fazla uzaktan erişim hizmeti çalıştırmak belleği tüketebilir',
+        resources: 'Kaynaklar',
+        memory: {
+          title: 'Bellek sınırı',
+          description:
+            'newt’in Go yığınını bir sonraki yeniden başlatmadan itibaren {{limit}} MiB ile sınırlar. Bu onun kendi sınırıdır, Tailscale’inki değil; kapalıyken Go varsayılanı geçerlidir ve GOGC=50 her iki durumda da uygulanır.',
+          noRuntime:
+            'wstunnel Rust ile yazılmıştır: çöp toplayıcı da ayarlanacak bir yığın sınırı da yoktur, iş parçacıkları da zaten aygıtın tek CPU’suna göre davranır.',
+          notApplicable: 'Uygulanamaz'
+        },
+        swap: {
+          title: 'Takas dosyası',
+          description:
+            'SD karta 256 MB’lık bir takas dosyası ekler. Sistem geneline yayılır: aynı takas Tailscale’e, KVM sunucusuna ve aygıttaki her şeye hizmet eder.'
+        },
         okBtn: 'Evet',
         cancelBtn: 'Hayır'
       },
@@ -938,12 +1010,33 @@ const tr = {
       account: {
         title: 'Hesap',
         webAccount: 'Web Hesap Adı',
+        role: 'Rol',
+        roles: {
+          admin: 'Yönetici',
+          user: 'Kullanıcı'
+        },
         password: 'Şifre',
         updateBtn: 'Değiştir',
         logoutBtn: 'Çıkış  yap',
         logoutDesc: 'Çıkış yapmak istediğinizden emin misiniz?',
         okBtn: 'Evet',
-        cancelBtn: 'Hayır'
+        cancelBtn: 'Hayır',
+        users: {
+          title: 'Kullanıcılar',
+          create: 'Kullanıcı oluştur',
+          enabled: 'Etkin',
+          disabled: 'Devre dışı',
+          deviceOwner: 'Aygıt sahibi',
+          resetPassword: 'Şifreyi sıfırla',
+          delete: 'Sil',
+          deleteConfirm: 'Bu kullanıcı silinsin ve tüm oturumları iptal edilsin mi?',
+          created: 'Kullanıcı oluşturuldu',
+          deleted: 'Kullanıcı silindi',
+          passwordUpdated: 'Şifre güncellendi',
+          loadFailed: 'Kullanıcılar yüklenemedi',
+          saveFailed: 'Kullanıcı kaydedilemedi',
+          deleteFailed: 'Kullanıcı silinemedi'
+        }
       }
     },
     picoclaw: {

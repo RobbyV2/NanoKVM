@@ -11,15 +11,18 @@ const nl = {
       login: 'Inloggen',
       placeholderUsername: 'Voer gebruikersnaam in',
       placeholderPassword: 'Voer wachtwoord in',
+      placeholderCurrentPassword: 'Huidig wachtwoord',
       placeholderPassword2: 'Voer wachtwoord nogmaals in',
       noEmptyUsername: 'Gebruikersnaam mag niet leeg zijn',
       noEmptyPassword: 'Wachtwoord mag niet leeg zijn',
+      passwordLength: 'Het wachtwoord moet tussen 8 en 72 tekens lang zijn',
       noAccount:
         'Ophalen van gebruikersinformatie mislukt, vernieuw de webpagina of reset het wachtwoord',
       invalidUser: 'Ongeldige gebruikersnaam of wachtwoord',
       locked: 'Te veel aanmeldingen, probeer het later opnieuw',
       globalLocked: 'Systeem wordt beveiligd. Probeer het later opnieuw',
       error: 'Onverwachte fout',
+      invalidCurrentPassword: 'Het huidige wachtwoord is onjuist',
       changePassword: 'Wachtwoord wijzigen',
       changePasswordDesc:
         'Voor de veiligheid van uw apparaat, wijzig alstublieft het webaanmeldingswachtwoord.',
@@ -471,6 +474,14 @@ const nl = {
         product: 'Product',
         serial: 'Serienummer',
         configuration: 'Configuratiereeks',
+        hidLayout: 'HID-apparaten',
+        hidRoleKeyboard: 'Toetsenbord',
+        hidRoleRelative: 'Muis (relatief)',
+        hidRoleAbsolute: 'Aanwijzer (absoluut)',
+        hidOff: 'Niet aanwezig',
+        hidInterface: 'Interface {{index}}',
+        hidBootKeyboardShared:
+          'Het toetsenbord deelt een interface en biedt daarom geen rapport in bootprotocol meer. Sommige BIOS- en UEFI-installaties zien het dan niet.',
         functions: 'Functies',
         descriptorAssets: 'Opgeslagen descriptors: {{count}}',
         endpointUse:
@@ -502,14 +513,38 @@ const nl = {
       passthrough: {
         title: 'USB-passthrough',
         loading: 'Laden...',
+        mode: 'Modus',
+        hybrid: 'Hybride',
+        exact: 'Exact',
+        hybridDesc: 'Behoudt het boottoetsenbord en de relatieve muis, voor compatibele apparaten.',
+        exactDesc: 'Vervangt elke USB-functie van NanoKVM door het geïmporteerde apparaat.',
+        hybridWarning: 'Hybride houdt het toetsenbord en de relatieve muis beschikbaar',
+        hybridWarningDesc:
+          'Opslag, USB-netwerk en de absolute aanwijzer vallen weg zolang de geïmporteerde functie actief is.',
         hidWarning: 'Passthrough starten geeft het toetsenbord, de muis en virtuele media op',
         hidWarningDesc:
           'NanoKVM heeft maar één USB-apparaatcontroller en de proxy heeft die helemaal nodig. Zolang een sessie loopt ziet de externe host daarom het doorgegeven apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen vanzelf terug zodra de sessie stopt. Deze webinterface merkt er niets van, dus u kunt een sessie altijd vanaf deze pagina stoppen.',
+        hidWarningSafeDesc:
+          'NanoKVM heeft maar één USB-apparaatcontroller en de proxy heeft die helemaal nodig. Zolang een sessie loopt ziet de externe host daarom het doorgegeven apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen terug zodra de sessie stopt.',
         isoLabel: 'Isochrone overdrachten toestaan',
         isoHint:
           'Laat webcams, microfoons en andere streamende apparaten door. Niemand heeft gemeten wat deze hardware aankan.',
         isoWarning:
           'Isochroon streamen is hier onbeproefd en kan het toetsenbord en de muis vasthouden tot je de sessie stopt',
+        info: {
+          title: 'Info',
+          hybrid:
+            'De hybride modus houdt het toetsenbord en de relatieve muis beschikbaar. Opslag, USB-netwerk en de absolute aanwijzer vallen weg zolang het geïmporteerde apparaat actief is.',
+          exact:
+            'De exacte modus vervangt elke USB-functie van NanoKVM door het geïmporteerde apparaat. Het toetsenbord, de muis en de virtuele media komen vanzelf terug zodra de sessie stopt.',
+          udc: 'NanoKVM heeft maar één USB-apparaatcontroller en de proxy heeft die helemaal nodig; daarom verdwijnen de functies hierboven zolang een sessie loopt.',
+          web: 'Deze webinterface merkt er niets van, dus u kunt een sessie altijd vanaf deze pagina stoppen.',
+          network:
+            'Start passthrough via ethernet of wifi. Starten vanaf het USB-netwerk van NanoKVM wordt geweigerd, omdat die verbinding zou verdwijnen.',
+          iso: 'Webcams, microfoons en andere isochrone apparaten worden geweigerd zolang u isochrone overdrachten niet toestaat. Die weg werkt, maar is nooit gemeten op deze hardware: beschouw de doorvoer als onbekend.',
+          camera:
+            'De camera en microfoon van de browser, onder Apparaten, blijven de beproefde manier om de host er een te geven.'
+        },
         session: 'Sessie',
         activeDesc: 'Er is een apparaat geïmporteerd en de proxy houdt de USB-controller vast.',
         inactiveDesc:
@@ -540,6 +575,8 @@ const nl = {
           'Webcams en andere isochrone apparaten vereisen dat je de isochrone schakelaar aanzet voordat je start.',
         startWeb:
           'Deze webinterface blijft werken, dus u kunt de sessie op elk moment vanaf deze pagina stoppen.',
+        startNetwork:
+          'Gebruik deze pagina via ethernet of wifi. Starten vanaf het USB-netwerk van NanoKVM wordt geweigerd omdat die verbinding zou verdwijnen.',
         okBtn: 'Starten',
         cancelBtn: 'Annuleren',
         instructions: 'Op uw eigen machine',
@@ -718,6 +755,17 @@ const nl = {
         networkDesc: 'Koppel virtueel netwerk kaart aan de externe host',
         networkProtocol: 'Netwerkprotocol',
         networkProtocolDesc: 'NCM voor moderne hosts, RNDIS voor oudere Windows',
+        media: {
+          title: 'Camera- en microfoonplaatsen',
+          desc: 'Geef aan welke media-apparaten browsers mogen invullen. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast.',
+          cameras: "Camera's",
+          microphones: 'Microfoons',
+          save: 'Plaatsen opslaan',
+          disconnect: 'Verbreken',
+          disconnectAll: 'Alle bronnen verbreken',
+          limit: 'Camera- en microfoonplaatsen mogen samen niet meer dan acht zijn.',
+          failed: 'De mediaplaatsen konden niet worden bijgewerkt.'
+        },
         reboot: 'Opnieuw opstarten',
         rebootDesc: 'Weet u zeker dat u NanoKVM opnieuw wilt opstarten?',
         okBtn: 'Ja',
@@ -817,6 +865,14 @@ const nl = {
           none: 'Geen'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC-server',
+        description:
+          'Laat elke VNC-client het externe scherm bekijken en het toetsenbord en de muis gebruiken, met uw NanoKVM-account als aanmelding',
+        port: 'Poort',
+        portDescription: 'Maak verbinding met deze poort op het NanoKVM-adres'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -874,6 +930,8 @@ const nl = {
         running: 'Actief',
         connected: 'Verbonden',
         error: 'Fout',
+        atBoot: 'start bij opstarten',
+        notAtBoot: 'start niet bij opstarten',
         arguments: 'Argumenten',
         argumentsTip:
           'Opdrachtregelargumenten die bij het starten aan de service worden meegegeven.',
@@ -902,6 +960,20 @@ const nl = {
         noHealthSignal:
           'Deze dienst meldt geen gezondheidsstatus, dus NanoKVM weet alleen dat het proces draait, niet of de tunnel verbonden is.',
         memoryWarning: 'Meerdere toegangsdiensten tegelijk uitvoeren kan het geheugen uitputten',
+        resources: 'Bronnen',
+        memory: {
+          title: 'Geheugenlimiet',
+          description:
+            'Beperkt de Go-heap van newt vanaf de volgende herstart tot {{limit}} MiB. Zijn eigen limiet, niet die van Tailscale; uit betekent de standaard van Go, met GOGC=50 in beide gevallen.',
+          noRuntime:
+            'wstunnel is Rust: geen garbagecollector en geen heaplimiet om in te stellen, en zijn werkthreads volgen al de enige CPU van het apparaat.',
+          notApplicable: 'Niet van toepassing'
+        },
+        swap: {
+          title: 'Wisselbestand',
+          description:
+            'Zet een wisselbestand van 256 MB op de SD-kaart. Systeembreed: dezelfde swap bedient Tailscale, de KVM-server en al het andere op het apparaat.'
+        },
         okBtn: 'Ja',
         cancelBtn: 'Nee'
       },
@@ -948,12 +1020,33 @@ const nl = {
       account: {
         title: 'Account',
         webAccount: 'Web Account Naam',
+        role: 'Rol',
+        roles: {
+          admin: 'Beheerder',
+          user: 'Gebruiker'
+        },
         password: 'Wachtwoord',
         updateBtn: 'Update',
         logoutBtn: 'Afmelden',
         logoutDesc: 'Weet u zeker dat u wilt uitloggen?',
         okBtn: 'Ja',
-        cancelBtn: 'Nee'
+        cancelBtn: 'Nee',
+        users: {
+          title: 'Gebruikers',
+          create: 'Gebruiker aanmaken',
+          enabled: 'Ingeschakeld',
+          disabled: 'Uitgeschakeld',
+          deviceOwner: 'Eigenaar van het apparaat',
+          resetPassword: 'Wachtwoord opnieuw instellen',
+          delete: 'Verwijderen',
+          deleteConfirm: 'Deze gebruiker verwijderen en al zijn sessies intrekken?',
+          created: 'Gebruiker aangemaakt',
+          deleted: 'Gebruiker verwijderd',
+          passwordUpdated: 'Wachtwoord bijgewerkt',
+          loadFailed: 'Gebruikers laden mislukt',
+          saveFailed: 'Gebruiker opslaan mislukt',
+          deleteFailed: 'Gebruiker verwijderen mislukt'
+        }
       }
     },
     picoclaw: {

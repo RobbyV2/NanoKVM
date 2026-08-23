@@ -11,14 +11,17 @@ const se = {
       login: 'Logga in',
       placeholderUsername: 'Användarnamn',
       placeholderPassword: 'Lösenord',
+      placeholderCurrentPassword: 'Nuvarande lösenord',
       placeholderPassword2: 'Vänligen ange lösenordet igen',
       noEmptyUsername: 'Användarnamn krävs',
       noEmptyPassword: 'Lösenord krävs',
+      passwordLength: 'Lösenordet måste vara mellan 8 och 72 tecken',
       noAccount: 'Kunde inte hämta användarinformation, uppdatera sidan eller återställ lösenordet',
       invalidUser: 'Ogiltigt användarnamn eller lösenord',
       locked: 'För många inloggningar, försök igen senare',
       globalLocked: 'System under skydd, försök igen senare',
       error: 'Oväntat fel',
+      invalidCurrentPassword: 'Det nuvarande lösenordet är fel',
       changePassword: 'Byt lösenord',
       changePasswordDesc: 'För din enhets säkerhet, byt lösenord!',
       differentPassword: 'Lösenorden matchar inte',
@@ -465,6 +468,14 @@ const se = {
         product: 'Produkt',
         serial: 'Serienummer',
         configuration: 'Konfigurationssträng',
+        hidLayout: 'HID-enheter',
+        hidRoleKeyboard: 'Tangentbord',
+        hidRoleRelative: 'Mus (relativ)',
+        hidRoleAbsolute: 'Pekare (absolut)',
+        hidOff: 'Finns inte',
+        hidInterface: 'Gränssnitt {{index}}',
+        hidBootKeyboardShared:
+          'Tangentbordet delar ett gränssnitt och erbjuder därför inte längre någon rapport i boot-protokoll. Vissa BIOS- och UEFI-uppsättningar kommer inte att se det.',
         functions: 'Funktioner',
         descriptorAssets: 'Sparade deskriptorfiler: {{count}}',
         endpointUse:
@@ -497,15 +508,39 @@ const se = {
       passthrough: {
         title: 'USB-genomsläpp',
         loading: 'Laddar...',
+        mode: 'Läge',
+        hybrid: 'Hybrid',
+        exact: 'Exakt',
+        hybridDesc: 'Behåller boot-tangentbordet och den relativa musen, för kompatibla enheter.',
+        exactDesc: 'Ersätter varje USB-funktion i NanoKVM med den importerade enheten.',
+        hybridWarning: 'Hybrid håller tangentbordet och den relativa musen kvar',
+        hybridWarningDesc:
+          'Lagring, USB-nätverk och den absoluta pekaren kopplas bort medan den importerade funktionen är aktiv.',
         hidWarning:
           'Att starta genomsläpp lämnar ifrån sig tangentbordet, musen och virtuella media',
         hidWarningDesc:
           'NanoKVM har bara en USB-enhetsstyrenhet och proxyn behöver hela den. Medan en session pågår ser därför fjärrvärden den vidarekopplade enheten i stället för NanoKVM:s tangentbord, mus och virtuella media. De kommer tillbaka av sig själva i samma stund som sessionen stoppas. Detta webbgränssnitt påverkas inte, så du kan alltid stoppa en session från den här sidan.',
+        hidWarningSafeDesc:
+          'NanoKVM har bara en USB-enhetsstyrenhet och proxyn behöver hela den. Medan en session pågår ser därför fjärrvärden den vidarekopplade enheten i stället för NanoKVM:s tangentbord, mus och virtuella media. De kommer tillbaka när sessionen stoppas.',
         isoLabel: 'Tillåt isokrona överföringar',
         isoHint:
           'Släpper igenom webbkameror, mikrofoner och andra strömmande enheter. Ingen har mätt vad den här maskinvaran orkar.',
         isoWarning:
           'Isokron strömning är oprövad här och kan hålla kvar tangentbordet och musen tills du stoppar sessionen',
+        info: {
+          title: 'Info',
+          hybrid:
+            'Hybridläget håller tangentbordet och den relativa musen kvar. Lagring, USB-nätverk och den absoluta pekaren kopplas bort medan den importerade enheten är aktiv.',
+          exact:
+            'Exakt läge ersätter varje USB-funktion i NanoKVM med den importerade enheten. Tangentbordet, musen och de virtuella medierna kommer tillbaka av sig själva när sessionen stoppas.',
+          udc: 'NanoKVM har bara en USB-enhetsstyrenhet och proxyn behöver hela den — det är därför funktionerna ovan försvinner så länge en session pågår.',
+          web: 'Detta webbgränssnitt påverkas inte, så du kan alltid stoppa en session från den här sidan.',
+          network:
+            'Starta genomsläpp över Ethernet eller Wi-Fi. Att starta det från NanoKVM:s USB-nätverk avvisas, eftersom den anslutningen skulle försvinna.',
+          iso: 'Webbkameror, mikrofoner och andra isokrona enheter avvisas tills du tillåter isokrona överföringar. Den vägen fungerar men har aldrig mätts på den här maskinvaran, så betrakta genomströmningen som okänd.',
+          camera:
+            'Webbläsarens kamera och mikrofon under Enheter är fortfarande det beprövade sättet att ge värden en.'
+        },
         session: 'Session',
         activeDesc: 'En enhet är importerad och proxyn håller USB-styrenheten.',
         inactiveDesc:
@@ -536,6 +571,8 @@ const se = {
           'Webbkameror och andra isokrona enheter kräver att du slår på den isokrona brytaren innan du startar.',
         startWeb:
           'Detta webbgränssnitt fortsätter att fungera, så du kan stoppa sessionen från den här sidan när som helst.',
+        startNetwork:
+          'Använd den här sidan över Ethernet eller Wi-Fi. Att starta från NanoKVM:s USB-nätverk avvisas eftersom den anslutningen skulle försvinna.',
         okBtn: 'Starta',
         cancelBtn: 'Avbryt',
         instructions: 'På din egen dator',
@@ -712,6 +749,17 @@ const se = {
         networkDesc: 'Montera virtuell nätverkskort på fjärrvärden',
         networkProtocol: 'Nätverksprotokoll',
         networkProtocolDesc: 'NCM för moderna värdar, RNDIS för äldre Windows',
+        media: {
+          title: 'Platser för kamera och mikrofon',
+          desc: 'Ange vilka medieenheter webbläsare får fylla. Endpoint-budgeten kontrolleras när USB-profilen tillämpas.',
+          cameras: 'Kameror',
+          microphones: 'Mikrofoner',
+          save: 'Spara platser',
+          disconnect: 'Koppla från',
+          disconnectAll: 'Koppla från alla källor',
+          limit: 'Platser för kamera och mikrofon får sammanlagt vara högst åtta.',
+          failed: 'Medieplatserna kunde inte uppdateras.'
+        },
         reboot: 'Starta om',
         rebootDesc: 'Är du säker på att du vill starta om NanoKVM?',
         okBtn: 'Ja',
@@ -811,6 +859,14 @@ const se = {
           none: 'Ingen'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC-server',
+        description:
+          'Låt vilken VNC-klient som helst se fjärrskärmen och använda tangentbord och mus, med inloggning via ditt NanoKVM-konto',
+        port: 'Port',
+        portDescription: 'Anslut till den här porten på NanoKVM-adressen'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -867,6 +923,8 @@ const se = {
         running: 'Körs',
         connected: 'Ansluten',
         error: 'Fel',
+        atBoot: 'startar vid uppstart',
+        notAtBoot: 'startar inte vid uppstart',
         arguments: 'Argument',
         argumentsTip: 'Kommandoradsargument som skickas till tjänsten vid start.',
         env: 'Miljövariabler',
@@ -894,6 +952,20 @@ const se = {
         noHealthSignal:
           'Tjänsten rapporterar ingen hälsostatus, så NanoKVM vet bara att processen körs, inte om tunneln är ansluten.',
         memoryWarning: 'Att köra flera fjärråtkomsttjänster samtidigt kan ta slut på minnet',
+        resources: 'Resurser',
+        memory: {
+          title: 'Minnesgräns',
+          description:
+            'Begränsar newts Go-heap till {{limit}} MiB från nästa omstart. Dess egen gräns, inte Tailscales; avstängd gäller Gos standardvärde, och GOGC=50 tillämpas i båda fallen.',
+          noRuntime:
+            'wstunnel är Rust: ingen skräpsamlare och ingen heap-gräns att sätta, och dess arbetstrådar följer redan enhetens enda CPU.',
+          notApplicable: 'Ej tillämpligt'
+        },
+        swap: {
+          title: 'Växlingsfil',
+          description:
+            'Lägger till en växlingsfil på 256 MB på SD-kortet. Den gäller hela systemet: samma växling betjänar Tailscale, KVM-servern och allt annat på enheten.'
+        },
         okBtn: 'Ja',
         cancelBtn: 'Nej'
       },
@@ -940,12 +1012,33 @@ const se = {
       account: {
         title: 'Konto',
         webAccount: 'Webbkonto-namn',
+        role: 'Roll',
+        roles: {
+          admin: 'Administratör',
+          user: 'Användare'
+        },
         password: 'Lösenord',
         updateBtn: 'Byt',
         logoutBtn: 'Logga ut',
         logoutDesc: 'Är du säker på att du vill logga ut?',
         okBtn: 'Ja',
-        cancelBtn: 'Nej'
+        cancelBtn: 'Nej',
+        users: {
+          title: 'Användare',
+          create: 'Skapa användare',
+          enabled: 'Aktiverad',
+          disabled: 'Inaktiverad',
+          deviceOwner: 'Enhetens ägare',
+          resetPassword: 'Återställ lösenord',
+          delete: 'Ta bort',
+          deleteConfirm: 'Ta bort den här användaren och återkalla alla dennes sessioner?',
+          created: 'Användare skapad',
+          deleted: 'Användare borttagen',
+          passwordUpdated: 'Lösenord uppdaterat',
+          loadFailed: 'Kunde inte läsa in användare',
+          saveFailed: 'Kunde inte spara användaren',
+          deleteFailed: 'Kunde inte ta bort användaren'
+        }
       }
     },
     picoclaw: {

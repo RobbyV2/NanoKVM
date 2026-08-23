@@ -11,15 +11,18 @@ const ja = {
       login: 'ログイン',
       placeholderUsername: 'ユーザー名を入力してください',
       placeholderPassword: 'パスワードを入力してください',
+      placeholderCurrentPassword: '現在のパスワード',
       placeholderPassword2: 'パスワードをもう一度入力してください',
       noEmptyUsername: 'ユーザー名は空にできません',
       noEmptyPassword: 'パスワードは空にできません',
+      passwordLength: 'パスワードは 8 文字以上 72 文字以下である必要があります',
       noAccount:
         'ユーザー情報の取得に失敗しました。ページを更新してもう一度お試しいただくか、パスワードをリセットしてください。',
       invalidUser: 'ユーザー名またはパスワードが正しくありません',
       locked: 'ログインが多すぎます。後でもう一度お試しください。',
       globalLocked: 'システムは保護されています。後でもう一度試してください。',
       error: '不明なエラー',
+      invalidCurrentPassword: '現在のパスワードが正しくありません',
       changePassword: 'パスワード変更',
       changePasswordDesc: 'デバイスのセキュリティのために、パスワードを変更してください！',
       differentPassword: 'パスワードが一致しません',
@@ -467,6 +470,14 @@ const ja = {
         product: '製品名',
         serial: 'シリアル番号',
         configuration: 'コンフィギュレーション文字列',
+        hidLayout: 'HID デバイス',
+        hidRoleKeyboard: 'キーボード',
+        hidRoleRelative: 'マウス（相対）',
+        hidRoleAbsolute: 'ポインター（絶対）',
+        hidOff: 'なし',
+        hidInterface: 'インターフェース {{index}}',
+        hidBootKeyboardShared:
+          'キーボードがインターフェースを共有するため、boot プロトコルのレポートを提供しなくなります。一部の BIOS や UEFI では認識されません。',
         functions: '機能',
         descriptorAssets: '保存済みのディスクリプターファイル: {{count}}',
         endpointUse: 'IN 使用 {{inUse}}、空き {{inFree}}／OUT 使用 {{outUse}}、空き {{outFree}}',
@@ -496,12 +507,38 @@ const ja = {
       passthrough: {
         title: 'USB パススルー',
         loading: '読み込み中...',
+        mode: 'モード',
+        hybrid: 'ハイブリッド',
+        exact: '完全',
+        hybridDesc: '対応デバイス向けに、boot キーボードと相対マウスを残します。',
+        exactDesc: 'NanoKVM のすべての USB 機能をパススルーしたデバイスに置き換えます。',
+        hybridWarning: 'ハイブリッドはキーボードと相対マウスを使えるまま残します',
+        hybridWarningDesc:
+          'パススルーした機能が有効な間、ストレージ、USB ネットワーク、絶対ポインターは切断されます。',
         hidWarning: 'パススルーを開始するとキーボード、マウス、仮想メディアを手放します',
         hidWarningDesc:
           'NanoKVM の USB デバイスコントローラーは 1 つだけで、プロキシがそれを占有します。そのためセッション中、リモートホストには NanoKVM のキーボード・マウス・仮想メディアではなく、パススルーされたデバイスが見えます。セッションを停止すればそれらは自動的に戻ります。この Web 画面は影響を受けないため、いつでもこのページからセッションを停止できます。',
+        hidWarningSafeDesc:
+          'NanoKVM の USB デバイスコントローラーは 1 つだけで、プロキシがそれを占有します。そのためセッション中、リモートホストには NanoKVM のキーボード・マウス・仮想メディアではなく、パススルーされたデバイスが見えます。セッションを停止すれば戻ります。',
         isoLabel: 'アイソクロナス転送を許可',
-        isoHint: 'ウェブカメラ、マイクなどのストリーミングデバイスを通します。このハードウェアで何が出せるかは誰も測定していません。',
-        isoWarning: 'アイソクロナス転送はここでは未検証で、セッションを停止するまでキーボードとマウスを奪う可能性があります',
+        isoHint:
+          'ウェブカメラ、マイクなどのストリーミングデバイスを通します。このハードウェアで何が出せるかは誰も測定していません。',
+        isoWarning:
+          'アイソクロナス転送はここでは未検証で、セッションを停止するまでキーボードとマウスを奪う可能性があります',
+        info: {
+          title: '情報',
+          hybrid:
+            'ハイブリッドモードはキーボードと相対マウスを使えるまま残します。パススルーしたデバイスが有効な間、ストレージ、USB ネットワーク、絶対ポインターは切断されます。',
+          exact:
+            '完全モードは NanoKVM のすべての USB 機能をパススルーしたデバイスに置き換えます。キーボード、マウス、仮想メディアはセッションを停止すると自動的に戻ります。',
+          udc: 'NanoKVM の USB デバイスコントローラーは 1 つだけで、プロキシがそれを占有します。そのためセッション中は上記の機能が使えなくなります。',
+          web: 'この Web 画面は影響を受けないため、いつでもこのページからセッションを停止できます。',
+          network:
+            'パススルーはイーサネットか Wi-Fi 経由で開始してください。NanoKVM の USB ネットワークからの開始は、その接続自体が失われるため拒否されます。',
+          iso: 'ウェブカメラ、マイクなどのアイソクロナスデバイスは、アイソクロナス転送を許可するまで拒否されます。この経路は動作しますが、このハードウェアで測定されたことがないため、スループットは未知として扱ってください。',
+          camera:
+            'デバイスにあるブラウザーのカメラとマイクは、リモートホストにそれらを渡す実績のある方法です。'
+        },
         session: 'セッション',
         activeDesc: 'デバイスがインポートされ、プロキシが USB コントローラーを保持しています。',
         inactiveDesc:
@@ -515,7 +552,8 @@ const ja = {
         udc: 'USB コントローラー',
         pid: 'プロキシ PID',
         startedAt: '開始時刻',
-        isoDevice: 'このデバイスはアイソクロナスエンドポイントでストリーミングします。このハードウェアでは未測定です',
+        isoDevice:
+          'このデバイスはアイソクロナスエンドポイントでストリーミングします。このハードウェアでは未測定です',
         exporterLabel: 'エクスポーターのアドレス',
         exporterHint:
           'NanoKVM が接続するホストとポートです。下のトンネルを使う場合は {{exporter}} になります。',
@@ -527,9 +565,12 @@ const ja = {
         startDevice: 'NanoKVM は {{exporter}} から {{busId}} をインポートします。',
         startHid:
           'セッション中は USB キーボード、マウス、仮想メディアが使えなくなり、停止すると自動的に戻ります。',
-        startIso: 'ウェブカメラなどのアイソクロナス転送デバイスは、開始前にアイソクロナス転送のスイッチを入れる必要があります。',
+        startIso:
+          'ウェブカメラなどのアイソクロナス転送デバイスは、開始前にアイソクロナス転送のスイッチを入れる必要があります。',
         startWeb:
           'この Web 画面は動作し続けるため、いつでもこのページからセッションを停止できます。',
+        startNetwork:
+          'このページはイーサネットか Wi-Fi 経由で使用してください。NanoKVM の USB ネットワークからの開始は、その接続自体が失われるため拒否されます。',
         okBtn: '開始',
         cancelBtn: 'キャンセル',
         instructions: 'お使いのマシンでの操作',
@@ -707,6 +748,17 @@ const ja = {
         networkDesc: 'リモートホストに仮想ネットワークカードをマウントする',
         networkProtocol: 'ネットワークプロトコル',
         networkProtocolDesc: '最新のホストには NCM、古い Windows には RNDIS',
+        media: {
+          title: 'カメラとマイクのスロット',
+          desc: 'ブラウザーが使えるメディアデバイスを宣言します。エンドポイントの余裕は USB プロファイルの適用時に確認されます。',
+          cameras: 'カメラ',
+          microphones: 'マイク',
+          save: 'スロットを保存',
+          disconnect: '切断',
+          disconnectAll: 'すべてのソースを切断',
+          limit: 'カメラとマイクのスロットは合計 8 個以下にしてください。',
+          failed: 'メディアスロットを更新できませんでした。'
+        },
         reboot: '再起動',
         rebootDesc: 'NanoKVM を再起動してもよろしいですか?',
         okBtn: 'はい',
@@ -802,6 +854,14 @@ const ja = {
           none: 'なし'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC サーバー',
+        description:
+          'NanoKVM のアカウントでログインすれば、任意の VNC クライアントからリモート画面を表示し、キーボードとマウスを使用できます',
+        port: 'ポート',
+        portDescription: 'NanoKVM のアドレスのこのポートに接続します'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -859,6 +919,8 @@ const ja = {
         running: '実行中',
         connected: '接続済み',
         error: 'エラー',
+        atBoot: '起動時に開始',
+        notAtBoot: '起動時に開始しない',
         arguments: '引数',
         argumentsTip: '起動時にサービスへ渡すコマンドライン引数です。',
         env: '環境変数',
@@ -887,6 +949,20 @@ const ja = {
           'このサービスはヘルス情報を出力しないため、NanoKVM はプロセスが動作していることしか確認できず、トンネルが接続済みかどうかは分かりません。',
         memoryWarning:
           '複数のリモートアクセスサービスを同時に実行するとメモリが不足する場合があります',
+        resources: 'リソース',
+        memory: {
+          title: 'メモリ上限',
+          description:
+            '次回の再起動から newt の Go ヒープを {{limit}} MiB に制限します。これは newt 自身の上限であり Tailscale のものではありません。オフの場合は Go の既定値になり、GOGC=50 はどちらでも適用されます。',
+          noRuntime:
+            'wstunnel は Rust 製です。ガベージコレクターも設定できるヒープ上限もなく、ワーカースレッドはすでにこのデバイスの単一 CPU に合わせて動作します。',
+          notApplicable: '対象外'
+        },
+        swap: {
+          title: 'スワップファイル',
+          description:
+            'SD カードに 256 MB のスワップファイルを追加します。システム全体に適用され、同じスワップを Tailscale、KVM サーバー、デバイス上の他のすべてが使用します。'
+        },
         okBtn: 'はい',
         cancelBtn: 'いいえ'
       },
@@ -935,12 +1011,33 @@ const ja = {
       account: {
         title: 'アカウント',
         webAccount: 'ウェブアカウント名',
+        role: 'ロール',
+        roles: {
+          admin: '管理者',
+          user: 'ユーザー'
+        },
         password: 'パスワード',
         updateBtn: '変更',
         logoutBtn: 'ログアウト',
         logoutDesc: 'ログアウトしてもよろしいですか？',
         okBtn: 'はい',
-        cancelBtn: 'いいえ'
+        cancelBtn: 'いいえ',
+        users: {
+          title: 'ユーザー',
+          create: 'ユーザーを作成',
+          enabled: '有効',
+          disabled: '無効',
+          deviceOwner: 'デバイスの所有者',
+          resetPassword: 'パスワードをリセット',
+          delete: '削除',
+          deleteConfirm: 'このユーザーを削除し、そのセッションをすべて無効にしますか？',
+          created: 'ユーザーを作成しました',
+          deleted: 'ユーザーを削除しました',
+          passwordUpdated: 'パスワードを更新しました',
+          loadFailed: 'ユーザーの取得に失敗しました',
+          saveFailed: 'ユーザーの保存に失敗しました',
+          deleteFailed: 'ユーザーの削除に失敗しました'
+        }
       }
     },
     picoclaw: {

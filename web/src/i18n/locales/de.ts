@@ -11,15 +11,18 @@ const de = {
       login: 'Anmelden',
       placeholderUsername: 'Benutzername',
       placeholderPassword: 'Passwort',
+      placeholderCurrentPassword: 'Aktuelles Passwort',
       placeholderPassword2: 'Bitte Passwort erneut eingeben',
       noEmptyUsername: 'Benutzername benötigt',
       noEmptyPassword: 'Passwort benötigt',
+      passwordLength: 'Das Passwort muss zwischen 8 und 72 Zeichen lang sein',
       noAccount:
         'Abfragen der Benutzerdaten fehlgeschlagen, bitte die Seite neu laden oder Passwort zurücksetzen',
       invalidUser: 'Falscher Benutzername oder falsches Passwort',
       locked: 'Zu viele Anmeldungen, bitte versuchen Sie es später noch einmal',
       globalLocked: 'System wird geschützt, bitte versuchen Sie es später erneut',
       error: 'Unerwarteter Fehler',
+      invalidCurrentPassword: 'Das aktuelle Passwort ist falsch',
       changePassword: 'Passwort ändern',
       changePasswordDesc: 'Für die Sicherheit Ihres Geräts ändern Sie bitte das Passwort!',
       differentPassword: 'Passwörter stimmen nicht überein',
@@ -473,6 +476,14 @@ const de = {
         product: 'Produkt',
         serial: 'Seriennummer',
         configuration: 'Konfigurationsstring',
+        hidLayout: 'HID-Geräte',
+        hidRoleKeyboard: 'Tastatur',
+        hidRoleRelative: 'Maus (relativ)',
+        hidRoleAbsolute: 'Zeiger (absolut)',
+        hidOff: 'Nicht vorhanden',
+        hidInterface: 'Schnittstelle {{index}}',
+        hidBootKeyboardShared:
+          'Die Tastatur teilt sich eine Schnittstelle und bietet deshalb keinen Report im Boot-Protokoll mehr an. Manche BIOS- und UEFI-Setups sehen sie dann nicht.',
         functions: 'Funktionen',
         descriptorAssets: 'Gespeicherte Deskriptor-Dateien: {{count}}',
         endpointUse:
@@ -504,14 +515,38 @@ const de = {
       passthrough: {
         title: 'USB-Passthrough',
         loading: 'Wird geladen...',
+        mode: 'Modus',
+        hybrid: 'Hybrid',
+        exact: 'Exakt',
+        hybridDesc: 'Behält Boot-Tastatur und relative Maus, für kompatible Geräte.',
+        exactDesc: 'Ersetzt jede USB-Funktion des NanoKVM durch das importierte Gerät.',
+        hybridWarning: 'Hybrid hält Tastatur und relative Maus verfügbar',
+        hybridWarningDesc:
+          'Speicher, USB-Netzwerk und der absolute Zeiger werden getrennt, solange die importierte Funktion aktiv ist.',
         hidWarning: 'Ein Passthrough gibt Tastatur, Maus und virtuelle Medien ab',
         hidWarningDesc:
           'NanoKVM hat nur einen USB-Device-Controller, und der Proxy braucht ihn ganz. Während einer Sitzung sieht der entfernte Host deshalb das durchgereichte Gerät statt Tastatur, Maus und virtuellen Medien des NanoKVM. Sie kommen von selbst zurück, sobald die Sitzung beendet wird. Diese Weboberfläche ist nicht betroffen, Sie können eine Sitzung also jederzeit auf dieser Seite beenden.',
+        hidWarningSafeDesc:
+          'NanoKVM hat nur einen USB-Device-Controller, und der Proxy braucht ihn ganz. Während einer Sitzung sieht der entfernte Host deshalb das durchgereichte Gerät statt Tastatur, Maus und virtuellen Medien des NanoKVM. Sie kommen zurück, sobald die Sitzung beendet wird.',
         isoLabel: 'Isochrone Transfers erlauben',
         isoHint:
           'Lässt Webcams, Mikrofone und andere Streaming-Geräte durch. Niemand hat gemessen, was diese Hardware trägt.',
         isoWarning:
           'Isochrones Streaming ist hier unerprobt und kann Tastatur und Maus halten, bis Sie die Sitzung beenden',
+        info: {
+          title: 'Hinweise',
+          hybrid:
+            'Der Hybrid-Modus hält Tastatur und relative Maus verfügbar. Speicher, USB-Netzwerk und der absolute Zeiger werden getrennt, solange das importierte Gerät aktiv ist.',
+          exact:
+            'Der exakte Modus ersetzt jede USB-Funktion des NanoKVM durch das importierte Gerät. Tastatur, Maus und virtuelle Medien kommen von selbst zurück, sobald die Sitzung endet.',
+          udc: 'NanoKVM hat nur einen USB-Device-Controller, und der Proxy braucht ihn ganz. Deshalb verschwinden die Funktionen oben für die Dauer einer Sitzung.',
+          web: 'Diese Weboberfläche ist nicht betroffen, Sie können eine Sitzung also jederzeit auf dieser Seite beenden.',
+          network:
+            'Starten Sie den Passthrough über Ethernet oder WLAN. Ein Start aus dem USB-Netzwerk des NanoKVM wird abgelehnt, weil diese Verbindung verschwinden würde.',
+          iso: 'Webcams, Mikrofone und andere isochrone Geräte werden abgelehnt, solange Sie isochrone Übertragungen nicht erlauben. Dieser Weg funktioniert, wurde auf dieser Hardware aber nie gemessen: Behandeln Sie den Durchsatz als unbekannt.',
+          camera:
+            'Kamera und Mikrofon des Browsers unter Geräte bleiben der erprobte Weg, dem Zielrechner eines zu geben.'
+        },
         session: 'Sitzung',
         activeDesc: 'Ein Gerät ist importiert und der Proxy hält den USB-Controller.',
         inactiveDesc:
@@ -542,6 +577,8 @@ const de = {
           'Webcams und andere isochrone Geräte brauchen den isochronen Schalter, bevor Sie starten.',
         startWeb:
           'Diese Weboberfläche läuft weiter, Sie können die Sitzung also jederzeit auf dieser Seite beenden.',
+        startNetwork:
+          'Nutzen Sie diese Seite über Ethernet oder WLAN. Ein Start aus dem USB-Netzwerk des NanoKVM wird abgelehnt, weil diese Verbindung verschwinden würde.',
         okBtn: 'Starten',
         cancelBtn: 'Abbrechen',
         instructions: 'Auf Ihrem eigenen Rechner',
@@ -719,6 +756,17 @@ const de = {
         networkDesc: 'Binde die virtuelle Netzwerkkarte an den entfernten Host',
         networkProtocol: 'Netzwerkprotokoll',
         networkProtocolDesc: 'NCM für moderne Hosts, RNDIS für ältere Windows-Systeme',
+        media: {
+          title: 'Kamera- und Mikrofonplätze',
+          desc: 'Legen Sie fest, welche Mediengeräte Browser belegen dürfen. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft.',
+          cameras: 'Kameras',
+          microphones: 'Mikrofone',
+          save: 'Plätze speichern',
+          disconnect: 'Trennen',
+          disconnectAll: 'Alle Quellen trennen',
+          limit: 'Kamera- und Mikrofonplätze dürfen zusammen höchstens acht ergeben.',
+          failed: 'Die Medienplätze konnten nicht aktualisiert werden.'
+        },
         reboot: 'Neustarten',
         rebootDesc: 'Sind Sie sicher dass Sie NanoKVM neustarten möchten?',
         okBtn: 'Ja',
@@ -819,6 +867,14 @@ const de = {
           none: 'Keine'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC-Server',
+        description:
+          'Erlaubt jedem VNC-Client, den entfernten Bildschirm zu sehen und Tastatur und Maus zu benutzen, mit Anmeldung über Ihr NanoKVM-Konto',
+        port: 'Port',
+        portDescription: 'Verbinden Sie sich mit diesem Port auf der NanoKVM-Adresse'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -876,6 +932,8 @@ const de = {
         running: 'Läuft',
         connected: 'Verbunden',
         error: 'Fehler',
+        atBoot: 'startet beim Hochfahren',
+        notAtBoot: 'startet nicht beim Hochfahren',
         arguments: 'Argumente',
         argumentsTip: 'Kommandozeilenargumente, die dem Dienst beim Start übergeben werden.',
         env: 'Umgebungsvariablen',
@@ -904,6 +962,20 @@ const de = {
           'Dieser Dienst meldet keinen Zustand, daher weiß NanoKVM nur, dass der Prozess läuft, nicht ob der Tunnel verbunden ist.',
         memoryWarning:
           'Mehrere gleichzeitig laufende Fernzugriffsdienste können den Speicher erschöpfen',
+        resources: 'Ressourcen',
+        memory: {
+          title: 'Speichergrenze',
+          description:
+            'Begrenzt den Go-Heap von newt ab dem nächsten Neustart auf {{limit}} MiB. Die eigene Grenze, nicht die von Tailscale; ausgeschaltet gilt der Go-Standard, GOGC=50 wirkt in beiden Fällen.',
+          noRuntime:
+            'wstunnel ist Rust: kein Garbage Collector und keine Heap-Grenze zum Setzen, und seine Worker-Threads richten sich ohnehin nach der einzelnen CPU des Geräts.',
+          notApplicable: 'Nicht anwendbar'
+        },
+        swap: {
+          title: 'Auslagerungsdatei',
+          description:
+            'Legt eine 256-MB-Auslagerungsdatei auf der SD-Karte an. Systemweit: derselbe Swap dient Tailscale, dem KVM-Server und allem anderen auf dem Gerät.'
+        },
         okBtn: 'Ja',
         cancelBtn: 'Nein'
       },
@@ -952,12 +1024,33 @@ const de = {
       account: {
         title: 'Konto',
         webAccount: 'Web Konto Name',
+        role: 'Rolle',
+        roles: {
+          admin: 'Administrator',
+          user: 'Benutzer'
+        },
         password: 'Passwort',
         updateBtn: 'Ändern',
         logoutBtn: 'Abmelden',
         logoutDesc: 'Möchten Sie sich wirklich abmelden?',
         okBtn: 'Ja',
-        cancelBtn: 'Nein'
+        cancelBtn: 'Nein',
+        users: {
+          title: 'Benutzer',
+          create: 'Benutzer anlegen',
+          enabled: 'Aktiviert',
+          disabled: 'Deaktiviert',
+          deviceOwner: 'Gerätebesitzer',
+          resetPassword: 'Passwort zurücksetzen',
+          delete: 'Löschen',
+          deleteConfirm: 'Diesen Benutzer löschen und alle seine Sitzungen beenden?',
+          created: 'Benutzer angelegt',
+          deleted: 'Benutzer gelöscht',
+          passwordUpdated: 'Passwort aktualisiert',
+          loadFailed: 'Benutzer konnten nicht geladen werden',
+          saveFailed: 'Benutzer konnte nicht gespeichert werden',
+          deleteFailed: 'Benutzer konnte nicht gelöscht werden'
+        }
       }
     },
     picoclaw: {

@@ -11,15 +11,18 @@ const ko = {
       login: '로그인',
       placeholderUsername: '사용자 이름을 입력하세요.',
       placeholderPassword: '비밀번호를 입력하세요.',
+      placeholderCurrentPassword: '현재 비밀번호',
       placeholderPassword2: '비밀번호를 다시 입력하세요.',
       noEmptyUsername: '사용자 이름은 비어있을 수 없습니다.',
       noEmptyPassword: '비밀번호는 비어있을 수 없습니다.',
+      passwordLength: '비밀번호는 8자 이상 72자 이하여야 합니다',
       noAccount:
         '사용자 정보를 불러오는 데 실패했습니다. 페이지를 새로고침하거나 비밀번호를 초기화하세요.',
       invalidUser: '사용자 이름이나 비밀번호가 틀렸습니다.',
       locked: '로그인 횟수가 너무 많습니다. 나중에 다시 시도해 주세요.',
       globalLocked: '시스템이 보호 중입니다. 나중에 다시 시도해 주세요.',
       error: '알 수 없는 오류',
+      invalidCurrentPassword: '현재 비밀번호가 올바르지 않습니다',
       changePassword: '비밀번호 변경',
       changePasswordDesc: '보안을 위해 웹 로그인 비밀번호를 변경하세요.',
       differentPassword: '비밀번호가 서로 일치하지 않습니다.',
@@ -462,6 +465,14 @@ const ko = {
         product: '제품명',
         serial: '일련번호',
         configuration: '구성 문자열',
+        hidLayout: 'HID 장치',
+        hidRoleKeyboard: '키보드',
+        hidRoleRelative: '마우스(상대)',
+        hidRoleAbsolute: '포인터(절대)',
+        hidOff: '없음',
+        hidInterface: '인터페이스 {{index}}',
+        hidBootKeyboardShared:
+          '키보드가 인터페이스를 공유하므로 더 이상 boot 프로토콜 리포트를 제공하지 않습니다. 일부 BIOS와 UEFI에서는 인식되지 않습니다.',
         functions: '기능',
         descriptorAssets: '저장된 디스크립터 파일: {{count}}',
         endpointUse:
@@ -491,12 +502,38 @@ const ko = {
       passthrough: {
         title: 'USB 패스스루',
         loading: '불러오는 중...',
+        mode: '모드',
+        hybrid: '하이브리드',
+        exact: '완전',
+        hybridDesc: '호환 장치를 위해 boot 키보드와 상대 마우스를 유지합니다.',
+        exactDesc: 'NanoKVM의 모든 USB 기능을 전달된 장치로 교체합니다.',
+        hybridWarning: '하이브리드는 키보드와 상대 마우스를 계속 사용할 수 있게 둡니다',
+        hybridWarningDesc:
+          '전달된 기능이 활성화된 동안 저장소, USB 네트워크, 절대 포인터의 연결이 끊깁니다.',
         hidWarning: '패스스루를 시작하면 키보드, 마우스, 가상 미디어를 넘겨줍니다',
         hidWarningDesc:
           'NanoKVM에는 USB 장치 컨트롤러가 하나뿐이고 프록시가 그것을 모두 사용합니다. 따라서 세션이 실행되는 동안 원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 전달된 장치가 보입니다. 세션을 중지하면 곧바로 자동으로 돌아옵니다. 이 웹 화면은 영향을 받지 않으므로 언제든지 이 페이지에서 세션을 중지할 수 있습니다.',
+        hidWarningSafeDesc:
+          'NanoKVM에는 USB 장치 컨트롤러가 하나뿐이고 프록시가 그것을 모두 사용합니다. 따라서 세션이 실행되는 동안 원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 전달된 장치가 보입니다. 세션을 중지하면 돌아옵니다.',
         isoLabel: '등시성 전송 허용',
-        isoHint: '웹캠, 마이크 등 스트리밍 장치를 통과시킵니다. 이 하드웨어가 어느 정도를 감당하는지는 아무도 측정하지 않았습니다.',
-        isoWarning: '등시성 스트리밍은 여기서 검증되지 않았으며 세션을 멈출 때까지 키보드와 마우스를 붙잡을 수 있습니다',
+        isoHint:
+          '웹캠, 마이크 등 스트리밍 장치를 통과시킵니다. 이 하드웨어가 어느 정도를 감당하는지는 아무도 측정하지 않았습니다.',
+        isoWarning:
+          '등시성 스트리밍은 여기서 검증되지 않았으며 세션을 멈출 때까지 키보드와 마우스를 붙잡을 수 있습니다',
+        info: {
+          title: '정보',
+          hybrid:
+            '하이브리드 모드는 키보드와 상대 마우스를 계속 사용할 수 있게 둡니다. 전달된 장치가 활성화된 동안 저장소, USB 네트워크, 절대 포인터의 연결이 끊깁니다.',
+          exact:
+            '완전 모드는 NanoKVM의 모든 USB 기능을 전달된 장치로 교체합니다. 키보드, 마우스, 가상 미디어는 세션을 중지하면 자동으로 돌아옵니다.',
+          udc: 'NanoKVM에는 USB 장치 컨트롤러가 하나뿐이고 프록시가 그것을 모두 사용하므로, 세션이 실행되는 동안 위 기능들이 사라집니다.',
+          web: '이 웹 화면은 영향을 받지 않으므로 언제든지 이 페이지에서 세션을 중지할 수 있습니다.',
+          network:
+            '패스스루는 이더넷이나 Wi-Fi로 시작하세요. NanoKVM의 USB 네트워크에서 시작하는 것은 그 연결이 사라지므로 거부됩니다.',
+          iso: '웹캠, 마이크 등 등시성 장치는 등시성 전송을 허용하기 전까지 거부됩니다. 그 경로는 동작하지만 이 하드웨어에서 측정된 적이 없으므로 처리량은 알 수 없는 것으로 보십시오.',
+          camera:
+            '장치 메뉴의 브라우저 카메라와 마이크는 원격 호스트에 이를 제공하는 검증된 방법입니다.'
+        },
         session: '세션',
         activeDesc: '장치를 가져왔고 프록시가 USB 컨트롤러를 사용하고 있습니다.',
         inactiveDesc: '실행 중인 세션이 없습니다. 키보드, 마우스, 가상 미디어가 정상 동작합니다.',
@@ -509,7 +546,8 @@ const ko = {
         udc: 'USB 컨트롤러',
         pid: '프록시 PID',
         startedAt: '시작 시각',
-        isoDevice: '이 장치는 등시성 엔드포인트로 스트리밍하며, 이 하드웨어에서는 측정된 적이 없습니다',
+        isoDevice:
+          '이 장치는 등시성 엔드포인트로 스트리밍하며, 이 하드웨어에서는 측정된 적이 없습니다',
         exporterLabel: '내보내는 쪽 주소',
         exporterHint:
           'NanoKVM이 접속할 호스트와 포트입니다. 아래 터널을 사용하면 {{exporter}}입니다.',
@@ -523,6 +561,8 @@ const ko = {
           '세션이 실행되는 동안 USB 키보드, 마우스, 가상 미디어가 동작하지 않으며 중지하면 자동으로 다시 동작합니다.',
         startIso: '웹캠 등 등시성 장치는 시작하기 전에 등시성 전송 스위치를 켜야 합니다.',
         startWeb: '이 웹 화면은 계속 동작하므로 언제든지 이 페이지에서 세션을 중지할 수 있습니다.',
+        startNetwork:
+          '이 페이지는 이더넷이나 Wi-Fi로 사용하세요. NanoKVM의 USB 네트워크에서 시작하는 것은 그 연결이 사라지므로 거부됩니다.',
         okBtn: '시작',
         cancelBtn: '취소',
         instructions: '내 컴퓨터에서 할 일',
@@ -698,6 +738,17 @@ const ko = {
         networkDesc: '원격 호스트에서 가상 네트워크 카드를 마운트합니다.',
         networkProtocol: '네트워크 프로토콜',
         networkProtocolDesc: '최신 호스트는 NCM, 구형 Windows는 RNDIS',
+        media: {
+          title: '카메라 및 마이크 슬롯',
+          desc: '브라우저가 채울 수 있는 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다.',
+          cameras: '카메라',
+          microphones: '마이크',
+          save: '슬롯 저장',
+          disconnect: '연결 끊기',
+          disconnectAll: '모든 소스 연결 끊기',
+          limit: '카메라와 마이크 슬롯은 합쳐서 여덟 개 이하여야 합니다.',
+          failed: '미디어 슬롯을 업데이트하지 못했습니다.'
+        },
         reboot: '재부팅',
         rebootDesc: 'NanoKVM을 재부팅하시겠습니까?',
         okBtn: '네',
@@ -793,6 +844,14 @@ const ko = {
           none: '없음'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC 서버',
+        description:
+          'NanoKVM 계정으로 로그인하면 어떤 VNC 클라이언트에서도 원격 화면을 보고 키보드와 마우스를 사용할 수 있습니다',
+        port: '포트',
+        portDescription: 'NanoKVM 주소의 이 포트로 접속하세요'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -849,6 +908,8 @@ const ko = {
         running: '실행 중',
         connected: '연결됨',
         error: '오류',
+        atBoot: '부팅 시 시작함',
+        notAtBoot: '부팅 시 시작하지 않음',
         arguments: '인수',
         argumentsTip: '서비스를 시작할 때 전달되는 명령줄 인수입니다.',
         env: '환경 변수',
@@ -875,6 +936,20 @@ const ko = {
         noHealthSignal:
           '이 서비스는 상태 신호를 제공하지 않으므로 NanoKVM은 프로세스가 실행 중인지만 알 수 있고 터널이 연결되었는지는 알 수 없습니다.',
         memoryWarning: '여러 원격 접속 서비스를 동시에 실행하면 메모리가 부족할 수 있습니다',
+        resources: '리소스',
+        memory: {
+          title: '메모리 제한',
+          description:
+            '다음 재시작부터 newt의 Go 힙을 {{limit}} MiB로 제한합니다. Tailscale이 아니라 newt 자신의 제한이며, 끄면 Go 기본값이 적용되고 GOGC=50은 어느 쪽이든 적용됩니다.',
+          noRuntime:
+            'wstunnel은 Rust로 작성되어 가비지 컬렉터도, 설정할 힙 제한도 없으며 작업 스레드도 이미 이 장치의 단일 CPU에 맞춰 동작합니다.',
+          notApplicable: '해당 없음'
+        },
+        swap: {
+          title: '스왑 파일',
+          description:
+            'SD 카드에 256 MB 스왑 파일을 추가합니다. 시스템 전체에 적용되어 같은 스왑을 Tailscale, KVM 서버 및 장치의 나머지 모두가 함께 사용합니다.'
+        },
         okBtn: '네',
         cancelBtn: '아니오'
       },
@@ -920,12 +995,33 @@ const ko = {
       account: {
         title: '계정',
         webAccount: '웹 계정',
+        role: '역할',
+        roles: {
+          admin: '관리자',
+          user: '사용자'
+        },
         password: '비밀번호',
         updateBtn: '업데이트',
         logoutBtn: '로그아웃',
         logoutDesc: '정말로 로그아웃 하시겠습니까?',
         okBtn: '네',
-        cancelBtn: '아니오'
+        cancelBtn: '아니오',
+        users: {
+          title: '사용자',
+          create: '사용자 만들기',
+          enabled: '사용함',
+          disabled: '사용 안 함',
+          deviceOwner: '장치 소유자',
+          resetPassword: '비밀번호 재설정',
+          delete: '삭제',
+          deleteConfirm: '이 사용자를 삭제하고 모든 세션을 취소할까요?',
+          created: '사용자를 만들었습니다',
+          deleted: '사용자를 삭제했습니다',
+          passwordUpdated: '비밀번호를 변경했습니다',
+          loadFailed: '사용자를 불러오지 못했습니다',
+          saveFailed: '사용자를 저장하지 못했습니다',
+          deleteFailed: '사용자를 삭제하지 못했습니다'
+        }
       }
     },
     picoclaw: {

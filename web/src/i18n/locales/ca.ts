@@ -11,15 +11,18 @@ const ca = {
       login: 'Inici de sessió',
       placeholderUsername: "Nom d'usuari",
       placeholderPassword: 'Contrasenya',
+      placeholderCurrentPassword: 'Contrasenya actual',
       placeholderPassword2: 'Torna a introduir la contrasenya',
       noEmptyUsername: "Cal introduir el nom d'usuari",
       noEmptyPassword: 'Cal introduir la contrasenya',
+      passwordLength: 'La contrasenya ha de tenir entre 8 i 72 caràcters',
       noAccount:
         "No s'ha pogut obtenir la informació de l'usuari, actualitza la pàgina web o restableix la contrasenya",
       invalidUser: "Nom d'usuari o contrasenya invàlids",
       locked: 'Massa inicis de sessió, si us plau, torna-ho a provar més tard',
       globalLocked: 'Sistema sota protecció, torneu-ho a provar més tard',
       error: 'Error inesperat',
+      invalidCurrentPassword: 'La contrasenya actual no és correcta',
       changePassword: 'Canviar la contrasenya',
       changePasswordDesc: 'Per a la seguretat del dispositiu, canvia la contrasenya!',
       differentPassword: 'Les contrasenyes no coincideixen',
@@ -466,6 +469,14 @@ const ca = {
         product: 'Producte',
         serial: 'Número de sèrie',
         configuration: 'Cadena de configuració',
+        hidLayout: 'Dispositius HID',
+        hidRoleKeyboard: 'Teclat',
+        hidRoleRelative: 'Ratolí (relatiu)',
+        hidRoleAbsolute: 'Punter (absolut)',
+        hidOff: 'No present',
+        hidInterface: 'Interfície {{index}}',
+        hidBootKeyboardShared:
+          'El teclat comparteix una interfície, de manera que ja no ofereix informe en protocol boot. Alguns BIOS i UEFI no el veuran.',
         functions: 'Funcions',
         descriptorAssets: 'Descriptors emmagatzemats: {{count}}',
         endpointUse:
@@ -498,14 +509,38 @@ const ca = {
       passthrough: {
         title: 'Passthrough USB',
         loading: 'Carregant...',
+        mode: 'Mode',
+        hybrid: 'Híbrid',
+        exact: 'Exacte',
+        hybridDesc: 'Manté el teclat boot i el ratolí relatiu, per a dispositius compatibles.',
+        exactDesc: 'Substitueix totes les funcions USB del NanoKVM pel dispositiu importat.',
+        hybridWarning: 'El mode híbrid manté el teclat i el ratolí relatiu',
+        hybridWarningDesc:
+          'L’emmagatzematge, la xarxa USB i el punter absolut es desconnecten mentre la funció importada està activa.',
         hidWarning: 'Iniciar el passthrough cedeix el teclat, el ratolí i els suports virtuals',
         hidWarningDesc:
           'El NanoKVM només té un controlador de dispositiu USB i el proxy el necessita sencer, així que mentre hi hagi una sessió l’amfitrió remot veurà el dispositiu redirigit en lloc del teclat, el ratolí i els suports virtuals del NanoKVM. Tornen sols en el moment que s’atura la sessió. Aquesta interfície web no es veu afectada, de manera que sempre pots aturar la sessió des d’aquesta pàgina.',
+        hidWarningSafeDesc:
+          'El NanoKVM només té un controlador de dispositiu USB i el proxy el necessita sencer, així que mentre hi ha una sessió l’amfitrió remot veu el dispositiu redirigit en lloc del teclat, el ratolí i els mitjans virtuals del NanoKVM. Tornen quan s’atura la sessió.',
         isoLabel: 'Permet transferències isòcrones',
         isoHint:
           'Deixa passar càmeres web, micròfons i altres dispositius de flux. Ningú no ha mesurat què aguanta aquest maquinari.',
         isoWarning:
           'El flux isòcron no està provat aquí i pot retenir el teclat i el ratolí fins que aturis la sessió',
+        info: {
+          title: 'Informació',
+          hybrid:
+            'El mode híbrid manté disponibles el teclat i el ratolí relatiu. L’emmagatzematge, la xarxa USB i el punter absolut es desconnecten mentre el dispositiu importat és actiu.',
+          exact:
+            'El mode exacte substitueix totes les funcions USB del NanoKVM pel dispositiu importat. El teclat, el ratolí i els mitjans virtuals tornen sols quan s’atura la sessió.',
+          udc: 'El NanoKVM només té un controlador de dispositiu USB i el proxy el necessita sencer: per això les funcions de dalt desapareixen mentre dura una sessió.',
+          web: 'Aquesta interfície web no es veu afectada, així que sempre podeu aturar una sessió des d’aquesta pàgina.',
+          network:
+            'Inicieu el passthrough per Ethernet o Wi-Fi. Iniciar-lo des de la xarxa USB del NanoKVM es rebutja, perquè aquesta connexió desapareixeria.',
+          iso: 'Les càmeres web, els micròfons i altres dispositius isòcrons es rebutgen mentre no permeteu les transferències isòcrones. Aquest camí funciona però mai no s’ha mesurat en aquest maquinari: considereu-ne el rendiment desconegut.',
+          camera:
+            'La càmera i el micròfon del navegador, a Dispositius, continuen sent la manera provada de donar-ne un a la màquina remota.'
+        },
         session: 'Sessió',
         activeDesc: 'Hi ha un dispositiu importat i el proxy manté el controlador USB.',
         inactiveDesc:
@@ -536,6 +571,8 @@ const ca = {
           'Les càmeres web i altres dispositius isòcrons necessiten que activis l’interruptor isòcron abans de començar.',
         startWeb:
           'Aquesta interfície web continua funcionant, així que pots aturar la sessió des d’aquesta pàgina en qualsevol moment.',
+        startNetwork:
+          'Feu servir aquesta pàgina per Ethernet o Wi-Fi. Iniciar-la des de la xarxa USB del NanoKVM es rebutja perquè aquesta connexió desapareixeria.',
         okBtn: 'Inicia',
         cancelBtn: 'Cancel·la',
         instructions: 'A la teva màquina',
@@ -712,6 +749,17 @@ const ca = {
         networkDesc: 'Munta una targeta de xarxa virtual al dispositiu remot',
         networkProtocol: 'Protocol de xarxa',
         networkProtocolDesc: 'NCM per a amfitrions moderns, RNDIS per a Windows antics',
+        media: {
+          title: 'Ranures de càmera i micròfon',
+          desc: 'Declareu els dispositius multimèdia que els navegadors poden omplir. El pressupost de punts finals es comprova en aplicar el perfil USB.',
+          cameras: 'Càmeres',
+          microphones: 'Micròfons',
+          save: 'Desa les ranures',
+          disconnect: 'Desconnecta',
+          disconnectAll: 'Desconnecta totes les fonts',
+          limit: 'Les ranures de càmera i micròfon no poden sumar més de vuit.',
+          failed: 'No s’han pogut actualitzar les ranures multimèdia.'
+        },
         reboot: 'Reinicia',
         rebootDesc: 'Segur que vols reiniciar el NanoKVM?',
         okBtn: 'Sí',
@@ -810,6 +858,14 @@ const ca = {
           none: 'Cap'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Servidor VNC',
+        description:
+          'Permet que qualsevol client VNC vegi la pantalla remota i faci servir el teclat i el ratolí, entrant amb el vostre compte del NanoKVM',
+        port: 'Port',
+        portDescription: 'Connecteu-vos a aquest port de l’adreça del NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -866,6 +922,8 @@ const ca = {
         running: 'En execució',
         connected: 'Connectat',
         error: 'Error',
+        atBoot: 's’inicia en arrencar',
+        notAtBoot: 'no s’inicia en arrencar',
         arguments: 'Arguments',
         argumentsTip: 'Arguments de línia d’ordres que es passen al servei en iniciar-se.',
         env: 'Variables d’entorn',
@@ -892,6 +950,20 @@ const ca = {
         noHealthSignal:
           "Aquest servei no informa de cap senyal d'estat, així que el NanoKVM només sap que el procés s'executa, no si el túnel està connectat.",
         memoryWarning: 'Executar diversos serveis d’accés remot alhora pot esgotar la memòria',
+        resources: 'Recursos',
+        memory: {
+          title: 'Límit de memòria',
+          description:
+            'Limita l’heap de Go del newt a {{limit}} MiB a partir del seu proper reinici. És el seu límit, no el de Tailscale; desactivat s’aplica el valor per defecte de Go, amb GOGC=50 en tots dos casos.',
+          noRuntime:
+            'El wstunnel és Rust: no hi ha recol·lector d’escombraries ni límit d’heap per fixar, i els seus fils de treball ja segueixen l’única CPU del dispositiu.',
+          notApplicable: 'No aplicable'
+        },
+        swap: {
+          title: 'Fitxer d’intercanvi',
+          description:
+            'Afegeix un fitxer d’intercanvi de 256 MB a la targeta SD. És de tot el sistema: el mateix intercanvi serveix el Tailscale, el servidor KVM i tota la resta del dispositiu.'
+        },
         okBtn: 'Sí',
         cancelBtn: 'No'
       },
@@ -939,12 +1011,33 @@ const ca = {
       account: {
         title: 'Compte',
         webAccount: 'Nom del compte web',
+        role: 'Rol',
+        roles: {
+          admin: 'Administrador',
+          user: 'Usuari'
+        },
         password: 'Contrasenya',
         updateBtn: 'Canvia',
         logoutBtn: 'Tanca sessió',
         logoutDesc: 'Segur que vols tancar sessió?',
         okBtn: 'Sí',
-        cancelBtn: 'No'
+        cancelBtn: 'No',
+        users: {
+          title: 'Usuaris',
+          create: 'Crea un usuari',
+          enabled: 'Activat',
+          disabled: 'Desactivat',
+          deviceOwner: 'Propietari del dispositiu',
+          resetPassword: 'Restableix la contrasenya',
+          delete: 'Elimina',
+          deleteConfirm: 'Voleu eliminar aquest usuari i revocar totes les seves sessions?',
+          created: 'Usuari creat',
+          deleted: 'Usuari eliminat',
+          passwordUpdated: 'Contrasenya actualitzada',
+          loadFailed: 'No s’han pogut carregar els usuaris',
+          saveFailed: 'No s’ha pogut desar l’usuari',
+          deleteFailed: 'No s’ha pogut eliminar l’usuari'
+        }
       }
     },
     picoclaw: {

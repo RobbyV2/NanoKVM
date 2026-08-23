@@ -11,15 +11,18 @@ const vi = {
       login: 'Đăng nhập',
       placeholderUsername: 'Vui lòng nhập tên người dùng',
       placeholderPassword: 'vui lòng nhập mật khẩu',
+      placeholderCurrentPassword: 'Mật khẩu hiện tại',
       placeholderPassword2: 'vui lòng nhập lại mật khẩu',
       noEmptyUsername: 'tên người dùng không được để trống',
       noEmptyPassword: 'mật khẩu không được để trống',
+      passwordLength: 'Mật khẩu phải dài từ 8 đến 72 ký tự',
       noAccount:
         'Không thể lấy thông tin người dùng, vui lòng làm mới trang web hoặc đặt lại mật khẩu',
       invalidUser: 'tên người dùng hoặc mật khẩu không hợp lệ',
       locked: 'Đăng nhập quá nhiều, vui lòng thử lại sau',
       globalLocked: 'Hệ thống đang được bảo vệ, vui lòng thử lại sau',
       error: 'lỗi không mong đợi',
+      invalidCurrentPassword: 'Mật khẩu hiện tại không đúng',
       changePassword: 'Đổi mật khẩu',
       changePasswordDesc: 'Để bảo mật thiết bị của bạn, vui lòng thay đổi mật khẩu đăng nhập web.',
       differentPassword: 'mật khẩu không khớp',
@@ -463,6 +466,14 @@ const vi = {
         product: 'Sản phẩm',
         serial: 'Số sê-ri',
         configuration: 'Chuỗi cấu hình',
+        hidLayout: 'Thiết bị HID',
+        hidRoleKeyboard: 'Bàn phím',
+        hidRoleRelative: 'Chuột (tương đối)',
+        hidRoleAbsolute: 'Con trỏ (tuyệt đối)',
+        hidOff: 'Không có',
+        hidInterface: 'Giao diện {{index}}',
+        hidBootKeyboardShared:
+          'Bàn phím dùng chung một giao diện nên không còn cung cấp báo cáo theo giao thức boot. Một số BIOS và UEFI sẽ không thấy nó.',
         functions: 'Chức năng',
         descriptorAssets: 'Tệp bộ mô tả đã lưu: {{count}}',
         endpointUse: 'IN dùng {{inUse}}, còn {{inFree}}; OUT dùng {{outUse}}, còn {{outFree}}',
@@ -493,14 +504,38 @@ const vi = {
       passthrough: {
         title: 'Chuyển tiếp USB',
         loading: 'Đang tải...',
+        mode: 'Chế độ',
+        hybrid: 'Kết hợp',
+        exact: 'Chính xác',
+        hybridDesc: 'Giữ lại bàn phím boot và chuột tương đối, dành cho thiết bị tương thích.',
+        exactDesc: 'Thay thế mọi chức năng USB của NanoKVM bằng thiết bị được chuyển tiếp.',
+        hybridWarning: 'Chế độ kết hợp vẫn giữ bàn phím và chuột tương đối dùng được',
+        hybridWarningDesc:
+          'Bộ nhớ, mạng qua USB và con trỏ tuyệt đối sẽ ngắt trong lúc chức năng được chuyển tiếp hoạt động.',
         hidWarning: 'Bắt đầu chuyển tiếp sẽ nhường bàn phím, chuột và phương tiện ảo',
         hidWarningDesc:
           'NanoKVM chỉ có một bộ điều khiển thiết bị USB và proxy cần trọn bộ điều khiển đó, nên trong lúc phiên chạy máy chủ từ xa sẽ thấy thiết bị được chuyển tiếp thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng tự trở lại ngay khi phiên dừng. Giao diện web này không bị ảnh hưởng, vì vậy bạn luôn có thể dừng phiên từ trang này.',
+        hidWarningSafeDesc:
+          'NanoKVM chỉ có một bộ điều khiển thiết bị USB và proxy cần trọn bộ điều khiển đó, nên trong lúc phiên chạy máy chủ từ xa sẽ thấy thiết bị được chuyển tiếp thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng trở lại khi phiên dừng.',
         isoLabel: 'Cho phép truyền đẳng thời',
         isoHint:
           'Cho webcam, micrô và các thiết bị truyền luồng khác đi qua. Chưa ai đo phần cứng này chịu được bao nhiêu.',
         isoWarning:
           'Truyền luồng đẳng thời chưa được kiểm chứng ở đây và có thể giữ bàn phím lẫn chuột cho đến khi bạn dừng phiên',
+        info: {
+          title: 'Thông tin',
+          hybrid:
+            'Chế độ kết hợp vẫn giữ bàn phím và chuột tương đối dùng được. Bộ nhớ, mạng qua USB và con trỏ tuyệt đối sẽ ngắt trong lúc thiết bị được chuyển tiếp hoạt động.',
+          exact:
+            'Chế độ chính xác thay thế mọi chức năng USB của NanoKVM bằng thiết bị được chuyển tiếp. Bàn phím, chuột và phương tiện ảo tự trở lại khi phiên dừng.',
+          udc: 'NanoKVM chỉ có một bộ điều khiển thiết bị USB và proxy cần trọn bộ điều khiển đó; vì vậy các chức năng ở trên biến mất suốt thời gian phiên chạy.',
+          web: 'Giao diện web này không bị ảnh hưởng, vì vậy bạn luôn có thể dừng phiên từ trang này.',
+          network:
+            'Hãy bắt đầu chuyển tiếp qua Ethernet hoặc Wi-Fi. Bắt đầu từ mạng USB của NanoKVM sẽ bị từ chối, vì kết nối đó sẽ biến mất.',
+          iso: 'Webcam, micrô và các thiết bị đẳng thời khác sẽ bị từ chối cho tới khi bạn cho phép truyền đẳng thời. Hướng đó chạy được nhưng chưa từng được đo trên phần cứng này, nên hãy coi thông lượng của nó là chưa biết.',
+          camera:
+            'Camera và micrô của trình duyệt trong mục Thiết bị vẫn là cách đã được kiểm chứng để cấp một chiếc cho máy chủ.'
+        },
         session: 'Phiên',
         activeDesc: 'Một thiết bị đã được nhập và proxy đang giữ bộ điều khiển USB.',
         inactiveDesc:
@@ -531,6 +566,8 @@ const vi = {
           'Webcam và các thiết bị đẳng thời khác cần bật công tắc đẳng thời trước khi bắt đầu.',
         startWeb:
           'Giao diện web này vẫn hoạt động, nên bạn có thể dừng phiên từ trang này bất cứ lúc nào.',
+        startNetwork:
+          'Hãy dùng trang này qua Ethernet hoặc Wi-Fi. Bắt đầu từ mạng USB của NanoKVM sẽ bị từ chối vì kết nối đó sẽ biến mất.',
         okBtn: 'Bắt đầu',
         cancelBtn: 'Hủy',
         instructions: 'Trên máy của bạn',
@@ -706,6 +743,17 @@ const vi = {
         networkDesc: 'Gắn card mạng ảo trên máy chủ từ xa',
         networkProtocol: 'Giao thức mạng',
         networkProtocolDesc: 'NCM cho máy chủ hiện đại, RNDIS cho Windows cũ',
+        media: {
+          title: 'Khe camera và micrô',
+          desc: 'Khai báo các thiết bị đa phương tiện mà trình duyệt có thể lấp đầy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB.',
+          cameras: 'Camera',
+          microphones: 'Micrô',
+          save: 'Lưu các khe',
+          disconnect: 'Ngắt kết nối',
+          disconnectAll: 'Ngắt tất cả nguồn',
+          limit: 'Tổng số khe camera và micrô không được quá tám.',
+          failed: 'Không thể cập nhật các khe đa phương tiện.'
+        },
         reboot: 'Khởi động lại',
         rebootDesc: 'Bạn có chắc chắn muốn khởi động lại NanoKVM không?',
         okBtn: 'Có',
@@ -805,6 +853,14 @@ const vi = {
           none: 'Không có'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Máy chủ VNC',
+        description:
+          'Cho phép mọi ứng dụng VNC xem màn hình từ xa và dùng bàn phím, chuột, đăng nhập bằng tài khoản NanoKVM của bạn',
+        port: 'Cổng',
+        portDescription: 'Kết nối tới cổng này trên địa chỉ NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -862,6 +918,8 @@ const vi = {
         running: 'Đang chạy',
         connected: 'Đã kết nối',
         error: 'Lỗi',
+        atBoot: 'khởi chạy khi khởi động',
+        notAtBoot: 'không khởi chạy khi khởi động',
         arguments: 'Tham số',
         argumentsTip: 'Các tham số dòng lệnh được truyền cho dịch vụ khi khởi động.',
         env: 'Biến môi trường',
@@ -888,6 +946,20 @@ const vi = {
         noHealthSignal:
           'Dịch vụ này không báo tín hiệu tình trạng, nên NanoKVM chỉ biết tiến trình đang chạy chứ không biết đường hầm đã kết nối hay chưa.',
         memoryWarning: 'Chạy nhiều dịch vụ truy cập từ xa cùng lúc có thể làm cạn bộ nhớ',
+        resources: 'Tài nguyên',
+        memory: {
+          title: 'Giới hạn bộ nhớ',
+          description:
+            'Giới hạn heap Go của newt ở {{limit}} MiB kể từ lần khởi động lại tiếp theo. Đây là giới hạn của riêng nó, không phải của Tailscale; khi tắt thì giữ mặc định của Go, và GOGC=50 vẫn được áp dụng trong cả hai trường hợp.',
+          noRuntime:
+            'wstunnel viết bằng Rust: không có bộ thu gom rác và không có giới hạn heap để đặt, còn các luồng làm việc của nó vốn đã bám theo CPU duy nhất của thiết bị.',
+          notApplicable: 'Không áp dụng'
+        },
+        swap: {
+          title: 'Tệp hoán đổi',
+          description:
+            'Thêm một tệp hoán đổi 256 MB trên thẻ SD. Áp dụng cho toàn hệ thống: cùng vùng hoán đổi đó phục vụ Tailscale, máy chủ KVM và mọi thứ khác trên thiết bị.'
+        },
         okBtn: 'Có',
         cancelBtn: 'Không'
       },
@@ -935,12 +1007,33 @@ const vi = {
       account: {
         title: 'Tài khoản',
         webAccount: 'Tên tài khoản web',
+        role: 'Vai trò',
+        roles: {
+          admin: 'Quản trị viên',
+          user: 'Người dùng'
+        },
         password: 'Mật khẩu',
         updateBtn: 'Update',
         logoutBtn: 'Đăng xuất',
         logoutDesc: 'Bạn có chắc chắn muốn đăng xuất không?',
         okBtn: 'Có',
-        cancelBtn: 'Không'
+        cancelBtn: 'Không',
+        users: {
+          title: 'Người dùng',
+          create: 'Tạo người dùng',
+          enabled: 'Đã bật',
+          disabled: 'Đã tắt',
+          deviceOwner: 'Chủ sở hữu thiết bị',
+          resetPassword: 'Đặt lại mật khẩu',
+          delete: 'Xóa',
+          deleteConfirm: 'Xóa người dùng này và thu hồi mọi phiên của họ?',
+          created: 'Đã tạo người dùng',
+          deleted: 'Đã xóa người dùng',
+          passwordUpdated: 'Đã cập nhật mật khẩu',
+          loadFailed: 'Không tải được danh sách người dùng',
+          saveFailed: 'Không lưu được người dùng',
+          deleteFailed: 'Không xóa được người dùng'
+        }
       }
     },
     picoclaw: {

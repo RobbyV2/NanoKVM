@@ -11,15 +11,18 @@ const pt_br = {
       login: 'Login',
       placeholderUsername: 'Nome de usuário',
       placeholderPassword: 'Senha',
+      placeholderCurrentPassword: 'Senha atual',
       placeholderPassword2: 'Por favor, digite a senha novamente',
       noEmptyUsername: 'Nome de usuário é obrigatório',
       noEmptyPassword: 'Senha é obrigatória',
+      passwordLength: 'A senha deve ter entre 8 e 72 caracteres',
       noAccount:
         'Falha ao obter informações do usuário, por favor atualize a página ou redefina a senha',
       invalidUser: 'Nome de usuário ou senha inválidos',
       locked: 'Muitos logins, tente novamente mais tarde',
       globalLocked: 'Sistema sob proteção, tente novamente mais tarde',
       error: 'Erro inesperado',
+      invalidCurrentPassword: 'A senha atual está incorreta',
       changePassword: 'Mudar Senha',
       changePasswordDesc: 'Para a segurança do seu dispositivo, por favor, mude a senha!',
       differentPassword: 'Senhas não conferem',
@@ -467,6 +470,14 @@ const pt_br = {
         product: 'Produto',
         serial: 'Número de série',
         configuration: 'Cadeia de configuração',
+        hidLayout: 'Dispositivos HID',
+        hidRoleKeyboard: 'Teclado',
+        hidRoleRelative: 'Mouse (relativo)',
+        hidRoleAbsolute: 'Ponteiro (absoluto)',
+        hidOff: 'Ausente',
+        hidInterface: 'Interface {{index}}',
+        hidBootKeyboardShared:
+          'O teclado compartilha uma interface, então não oferece mais relatório em protocolo boot. Algumas BIOS e UEFI não vão enxergá-lo.',
         functions: 'Funções',
         descriptorAssets: 'Descritores armazenados: {{count}}',
         endpointUse:
@@ -498,14 +509,38 @@ const pt_br = {
       passthrough: {
         title: 'Passthrough USB',
         loading: 'Carregando...',
+        mode: 'Modo',
+        hybrid: 'Híbrido',
+        exact: 'Exato',
+        hybridDesc: 'Mantém o teclado boot e o mouse relativo, para dispositivos compatíveis.',
+        exactDesc: 'Substitui todas as funções USB do NanoKVM pelo dispositivo importado.',
+        hybridWarning: 'O modo híbrido mantém o teclado e o mouse relativo',
+        hybridWarningDesc:
+          'O armazenamento, a rede USB e o ponteiro absoluto se desconectam enquanto a função importada está ativa.',
         hidWarning: 'Iniciar o passthrough abre mão do teclado, do mouse e da mídia virtual',
         hidWarningDesc:
           'O NanoKVM tem um único controlador de dispositivo USB e o proxy precisa dele inteiro, então enquanto uma sessão estiver ativa o host remoto verá o dispositivo repassado em vez do teclado, do mouse e da mídia virtual do NanoKVM. Eles voltam sozinhos assim que a sessão é interrompida. Esta interface web não é afetada, portanto você sempre pode parar a sessão por esta página.',
+        hidWarningSafeDesc:
+          'O NanoKVM tem apenas um controlador de dispositivo USB e o proxy precisa dele inteiro, então enquanto a sessão roda o host remoto vê o dispositivo redirecionado no lugar do teclado, do mouse e das mídias virtuais do NanoKVM. Eles voltam quando a sessão para.',
         isoLabel: 'Permitir transferências isócronas',
         isoHint:
           'Deixa passar webcams, microfones e outros dispositivos de fluxo. Ninguém mediu o que este hardware aguenta.',
         isoWarning:
           'O fluxo isócrono não é comprovado aqui e pode segurar o teclado e o mouse até você parar a sessão',
+        info: {
+          title: 'Informações',
+          hybrid:
+            'O modo híbrido mantém o teclado e o mouse relativo disponíveis. O armazenamento, a rede USB e o ponteiro absoluto se desconectam enquanto o dispositivo importado está ativo.',
+          exact:
+            'O modo exato substitui todas as funções USB do NanoKVM pelo dispositivo importado. O teclado, o mouse e as mídias virtuais voltam sozinhos quando a sessão para.',
+          udc: 'O NanoKVM tem apenas um controlador de dispositivo USB e o proxy precisa dele inteiro, e é por isso que as funções acima somem enquanto durar a sessão.',
+          web: 'Esta interface web não é afetada, então você sempre pode parar a sessão por esta página.',
+          network:
+            'Inicie o passthrough por Ethernet ou Wi-Fi. Iniciá-lo pela rede USB do NanoKVM é recusado, porque essa conexão desapareceria.',
+          iso: 'Webcams, microfones e outros dispositivos isócronos são recusados enquanto você não permitir transferências isócronas. Esse caminho funciona, mas nunca foi medido neste hardware: trate a vazão como desconhecida.',
+          camera:
+            'A câmera e o microfone do navegador, em Dispositivos, continuam sendo a forma comprovada de dar um ao host remoto.'
+        },
         session: 'Sessão',
         activeDesc: 'Um dispositivo foi importado e o proxy está com o controlador USB.',
         inactiveDesc:
@@ -537,6 +572,8 @@ const pt_br = {
           'Webcams e outros dispositivos isócronos exigem ligar a chave isócrona antes de iniciar.',
         startWeb:
           'Esta interface web continua funcionando, então você pode parar a sessão por esta página a qualquer momento.',
+        startNetwork:
+          'Use esta página por Ethernet ou Wi-Fi. Iniciar pela rede USB do NanoKVM é recusado porque essa conexão desapareceria.',
         okBtn: 'Iniciar',
         cancelBtn: 'Cancelar',
         instructions: 'Na sua própria máquina',
@@ -713,6 +750,17 @@ const pt_br = {
         networkDesc: 'Montar placa de rede virtual no host remoto',
         networkProtocol: 'Protocolo de rede',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antigos',
+        media: {
+          title: 'Slots de câmera e microfone',
+          desc: 'Declare os dispositivos de mídia que os navegadores podem ocupar. O orçamento de endpoints é verificado ao aplicar o perfil USB.',
+          cameras: 'Câmeras',
+          microphones: 'Microfones',
+          save: 'Salvar slots',
+          disconnect: 'Desconectar',
+          disconnectAll: 'Desconectar todas as fontes',
+          limit: 'Os slots de câmera e microfone devem somar oito ou menos.',
+          failed: 'Não foi possível atualizar os slots de mídia.'
+        },
         reboot: 'Reiniciar',
         rebootDesc: 'Tem certeza de que deseja reiniciar o NanoKVM?',
         okBtn: 'Sim',
@@ -813,6 +861,14 @@ const pt_br = {
           none: 'Nenhum'
         }
       },
+      vnc: {
+        title: 'VNC',
+        server: 'Servidor VNC',
+        description:
+          'Permite que qualquer cliente VNC veja a tela remota e use o teclado e o mouse, entrando com a sua conta do NanoKVM',
+        port: 'Porta',
+        portDescription: 'Conecte-se a esta porta no endereço do NanoKVM'
+      },
       tailscale: {
         title: 'Tailscale',
         memory: {
@@ -870,6 +926,8 @@ const pt_br = {
         running: 'Em execução',
         connected: 'Conectado',
         error: 'Erro',
+        atBoot: 'inicia na inicialização',
+        notAtBoot: 'não inicia na inicialização',
         arguments: 'Argumentos',
         argumentsTip: 'Argumentos de linha de comando passados ao serviço na inicialização.',
         env: 'Variáveis de ambiente',
@@ -897,6 +955,20 @@ const pt_br = {
           'Este serviço não informa estado de saúde, então o NanoKVM só sabe que o processo está em execução, não se o túnel está conectado.',
         memoryWarning:
           'Executar vários serviços de acesso remoto ao mesmo tempo pode esgotar a memória',
+        resources: 'Recursos',
+        memory: {
+          title: 'Limite de memória',
+          description:
+            'Limita o heap Go do newt a {{limit}} MiB a partir do próximo reinício. É o limite dele, não o do Tailscale; desligado vale o padrão do Go, com GOGC=50 nos dois casos.',
+          noRuntime:
+            'O wstunnel é Rust: não há coletor de lixo nem limite de heap a definir, e suas threads de trabalho já acompanham a única CPU do dispositivo.',
+          notApplicable: 'Não se aplica'
+        },
+        swap: {
+          title: 'Arquivo de swap',
+          description:
+            'Adiciona um arquivo de swap de 256 MB no cartão SD. Vale para todo o sistema: o mesmo swap serve o Tailscale, o servidor KVM e tudo o mais no dispositivo.'
+        },
         okBtn: 'Sim',
         cancelBtn: 'Não'
       },
@@ -943,12 +1015,33 @@ const pt_br = {
       account: {
         title: 'Conta',
         webAccount: 'Nome da Conta Web',
+        role: 'Função',
+        roles: {
+          admin: 'Administrador',
+          user: 'Usuário'
+        },
         password: 'Senha',
         updateBtn: 'Alterar',
         logoutBtn: 'Sair',
         logoutDesc: 'Tem certeza de que deseja sair?',
         okBtn: 'Sim',
-        cancelBtn: 'Não'
+        cancelBtn: 'Não',
+        users: {
+          title: 'Usuários',
+          create: 'Criar usuário',
+          enabled: 'Ativado',
+          disabled: 'Desativado',
+          deviceOwner: 'Dono do dispositivo',
+          resetPassword: 'Redefinir senha',
+          delete: 'Excluir',
+          deleteConfirm: 'Excluir este usuário e revogar todas as sessões dele?',
+          created: 'Usuário criado',
+          deleted: 'Usuário excluído',
+          passwordUpdated: 'Senha atualizada',
+          loadFailed: 'Falha ao carregar os usuários',
+          saveFailed: 'Falha ao salvar o usuário',
+          deleteFailed: 'Falha ao excluir o usuário'
+        }
       }
     },
     picoclaw: {
