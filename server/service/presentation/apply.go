@@ -19,17 +19,22 @@ type recoveryPlan struct {
 // /dev/hidgN minor from an ida at mkdir time and hid/hid.go:29-32 hardcodes
 // that mapping (H3, R1.1).
 func (m *Manager) apply(ctx context.Context, profile Profile, plan Plan) error {
+	_, _, err := m.applyPlan(ctx, profile, plan, true)
+	return err
+}
+
+func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, persist bool) (recoveryPlan, string, error) {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return recoveryPlan{}, "", fmt.Errorf("apply %s: %w", profile.Name, err)
 	}
 	recovery, err := m.prepareRecovery()
 	if err != nil {
-		return fmt.Errorf("apply %s: prepare rollback: %w", profile.Name, err)
+		return recoveryPlan{}, "", fmt.Errorf("apply %s: prepare rollback: %w", profile.Name, err)
 	}
 
 	udcs, err := m.ops.ListUDC()
 	if err != nil {
-		return fmt.Errorf("apply %s: %w", profile.Name, err)
+		return recoveryPlan{}, "", fmt.Errorf("apply %s: %w", profile.Name, err)
 	}
 	udc := udcs[0]
 
@@ -37,36 +42,52 @@ func (m *Manager) apply(ctx context.Context, profile Profile, plan Plan) error {
 	if err := m.ops.UnbindUDC(); err != nil {
 		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
 		if bindErr := m.ensureBound(udc); bindErr != nil {
-			return errors.Join(applyErr, fmt.Errorf("restore binding: %w", bindErr))
+			return recoveryPlan{}, udc, errors.Join(applyErr, fmt.Errorf("restore binding: %w", bindErr))
 		}
-		return applyErr
+		return recoveryPlan{}, udc, applyErr
 	}
 	if err := m.unlinkStale(before, plan); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 
 	for i, op := range plan.Ops {
 		if err := m.execute(op, udc); err != nil {
-			return m.rollbackFailure(profile, recovery, udc,
+			return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc,
 				fmt.Errorf("op %d %s %s: %w", i, op.Kind, op.Path, err))
 		}
 	}
 	if err := m.verifyBind(udc); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
+	}
+	if !persist {
+		return recovery, udc, nil
 	}
 	if err := m.store.SaveProfile(profile); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if err := mirrorSentinels(profile); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if err := m.store.SetActive(profile.Name); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 	if err := m.store.SetLastKnownGood(profile.Name); err != nil {
-		return m.rollbackFailure(profile, recovery, udc, err)
+		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
-	return nil
+	return recovery, udc, nil
+}
+
+func (m *Manager) restoreFunctionFS(ctx context.Context, state *Transient) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := m.ops.UnbindUDC(); err != nil {
+		return err
+	}
+	if err := m.ops.Remove(configPrefix + "/ffs.hybrid"); err != nil {
+		return errors.Join(err, m.ensureBound(state.udc))
+	}
+	return m.restore(state.Profile, state.recovery, state.udc)
 }
 
 func (m *Manager) prepareRecovery() (recoveryPlan, error) {
@@ -120,6 +141,14 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 	before := readSnapshot(m.ops, probes)
 	if err := m.ops.UnbindUDC(); err != nil {
 		return fmt.Errorf("unbind: %w", err)
+	}
+	for _, function := range failed.Functions {
+		if function.Kind == FunctionFFS {
+			if err := m.ops.Remove(configPrefix + "/ffs.hybrid"); err != nil {
+				return err
+			}
+			break
+		}
 	}
 	if err := m.unlinkStale(before, recovery.plan); err != nil {
 		return err
@@ -186,19 +215,21 @@ func (m *Manager) execute(op Op, udc string) error {
 	}
 }
 
-// Dropping a function is a symlink removal under configs/c.1 and nothing else.
-// The hid links stay whatever the profile says, since unlinking them is the
-// first half of the teardown that renumbers /dev/hidgN (R1.1).
+// Hybrid unlinks GS2 but retains its function directory, which keeps its minor
+// reserved for rollback. Persistent profile changes keep the original rule.
 func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
 	linked := make(map[string]bool, len(plan.Ops))
+	transient := false
 	for _, op := range plan.Ops {
 		if op.Kind == OpSymlink && strings.HasPrefix(op.Path, configPrefix+"/") {
-			linked[strings.TrimPrefix(op.Path, configPrefix+"/")] = true
+			name := strings.TrimPrefix(op.Path, configPrefix+"/")
+			linked[name] = true
+			transient = transient || name == "ffs.hybrid"
 		}
 	}
 
 	for _, name := range before.Linked {
-		if linked[name] || strings.HasPrefix(name, string(FunctionHID)+".") {
+		if linked[name] || !transient && strings.HasPrefix(name, string(FunctionHID)+".") {
 			continue
 		}
 		if err := m.ops.Remove(configPrefix + "/" + name); err != nil {

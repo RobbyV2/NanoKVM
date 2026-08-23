@@ -24,6 +24,7 @@ var (
 	ErrNoGadget       = errors.New("usb gadget unavailable")
 	ErrUnknownProfile = errors.New("unknown profile")
 	ErrUnknownMode    = errors.New("unknown hid mode")
+	ErrTransient      = errors.New("usb presentation has an active transient mode")
 )
 
 // HIDQuiescer is *hid.Hid. The dependency points from hid into this package,
@@ -45,6 +46,16 @@ type Manager struct {
 	hid    HIDQuiescer
 
 	mu sync.Mutex
+
+	transient *Transient
+	nextToken uint64
+}
+
+type Transient struct {
+	Token    uint64
+	Profile  Profile
+	recovery recoveryPlan
+	udc      string
 }
 
 var (
@@ -167,12 +178,132 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
+	for _, function := range profile.Functions {
+		if function.Kind == FunctionFFS {
+			return ErrTransient
+		}
+	}
 
 	plan, err := Compile(profile, m.caps)
 	if err != nil {
 		return err
 	}
 	return m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
+}
+
+func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Transient, error) {
+	if err := m.ready(); err != nil {
+		return nil, err
+	}
+	profile, err := m.hybridProfile(function)
+	if err != nil {
+		return nil, err
+	}
+	plan, err := Compile(profile, m.caps)
+	if err != nil {
+		return nil, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient != nil {
+		return nil, ErrTransient
+	}
+	var recovery recoveryPlan
+	var udc string
+	err = m.withHIDQuiesced(func() error {
+		var applyErr error
+		recovery, udc, applyErr = m.applyPlan(ctx, profile, plan, false)
+		return applyErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	m.nextToken++
+	state := &Transient{Token: m.nextToken, Profile: profile, recovery: recovery, udc: udc}
+	m.transient = state
+	return state, nil
+}
+
+func (m *Manager) StopFunctionFS(ctx context.Context, token uint64) error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient == nil || m.transient.Token != token {
+		return ErrTransient
+	}
+	state := m.transient
+	err := m.withHIDQuiesced(func() error { return m.restoreFunctionFS(ctx, state) })
+	if err == nil {
+		m.transient = nil
+	}
+	return err
+}
+
+func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient != nil {
+		return ErrTransient
+	}
+	return m.withHIDQuiesced(func() (result error) {
+		udcs, err := m.ops.ListUDC()
+		if err != nil {
+			return err
+		}
+		udc := udcs[0]
+		defer func() {
+			if result != nil {
+				result = errors.Join(result, m.ensureBound(udc))
+			}
+		}()
+		if err := m.ops.UnbindUDC(); err != nil {
+			return err
+		}
+		if err := m.ops.Remove(configPrefix + "/ffs.hybrid"); err != nil {
+			return err
+		}
+		name, err := m.store.Active()
+		if err != nil {
+			return err
+		}
+		if name == "" || name == ProfileHybrid {
+			name = ProfileStandard
+		}
+		profile, err := m.store.LoadProfile(name)
+		if err != nil || profile.Name == "" {
+			profile = standardProfile()
+		}
+		plan, err := Compile(profile, m.caps)
+		if err != nil {
+			return err
+		}
+		_, _, err = m.applyPlan(ctx, profile, plan, true)
+		return err
+	})
+}
+
+func (m *Manager) hybridProfile(function FunctionFS) (Profile, error) {
+	name, err := m.store.Active()
+	if err != nil {
+		return Profile{}, err
+	}
+	base := standardProfile()
+	if name != "" && name != ProfileHIDOnly && name != ProfileHybrid {
+		if loaded, loadErr := m.store.LoadProfile(name); loadErr == nil && loaded.Name != "" {
+			base = loaded
+		}
+	}
+	hid := standardProfile().Functions[:2]
+	base.Name, base.BuiltIn, base.OSDesc, base.Descriptors = ProfileHybrid, false, nil, nil
+	base.Functions = append(append([]Function(nil), hid...), Function{Kind: FunctionFFS, Instance: "hybrid", FFS: &function})
+	base.Normalize()
+	return base, base.Validate()
 }
 
 // The LUN is runtime state rather than profile state: a reapply rewrites
@@ -222,6 +353,9 @@ func (m *Manager) SurrenderUDC() (string, error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.transient != nil {
+		return "", ErrTransient
+	}
 
 	udcs, err := m.ops.ListUDC()
 	if err != nil {
@@ -331,6 +465,9 @@ func (m *Manager) SetMode(ctx context.Context, mode string) error {
 func (m *Manager) withGadgetLock(fn func() error) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.transient != nil {
+		return ErrTransient
+	}
 	return m.withHIDQuiesced(fn)
 }
 

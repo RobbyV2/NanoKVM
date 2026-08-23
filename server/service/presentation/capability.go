@@ -25,6 +25,7 @@ type CapabilityTable struct {
 	GeneratedAt     time.Time                     `json:"generated_at"`
 	MaxInEndpoints  int                           `json:"max_in_endpoints"`
 	MaxOutEndpoints int                           `json:"max_out_endpoints"`
+	InFIFOWords     []int                         `json:"in_fifo_words,omitempty"`
 	Functions       map[FunctionKind]FunctionCaps `json:"functions"`
 }
 
@@ -40,16 +41,18 @@ var staticV0 = CapabilityTable{
 	GeneratedAt:     time.Date(2026, time.August, 22, 0, 0, 0, 0, time.UTC),
 	MaxInEndpoints:  6,
 	MaxOutEndpoints: 5,
+	InFIFOWords:     []int{768, 512, 512, 384, 128, 128},
 	Functions: map[FunctionKind]FunctionCaps{
 		FunctionHID:         {Available: true, InEPs: 1, OutEPs: 1},
 		FunctionNCM:         {Available: true, InEPs: 2, OutEPs: 1, Attributes: map[string]bool{"os_desc/interface.ncm": true}},
 		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
 		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1},
+		FunctionFFS:         {Available: true},
 	},
 }
 
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
-var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage}
+var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS}
 
 func LoadCapabilities() CapabilityTable {
 	capabilityMu.Lock()
@@ -100,6 +103,13 @@ func (t CapabilityTable) Validate() error {
 		return fmt.Errorf("budget %d IN %d OUT is not positive", t.MaxInEndpoints, t.MaxOutEndpoints)
 	case len(t.Functions) == 0:
 		return errors.New("no functions")
+	case len(t.InFIFOWords) != 0 && len(t.InFIFOWords) != t.MaxInEndpoints:
+		return fmt.Errorf("%d IN FIFOs for %d endpoints", len(t.InFIFOWords), t.MaxInEndpoints)
+	}
+	for index, words := range t.InFIFOWords {
+		if words <= 0 {
+			return fmt.Errorf("IN FIFO %d has nonpositive depth %d", index+1, words)
+		}
 	}
 	return nil
 }
@@ -122,6 +132,7 @@ func (t CapabilityTable) withAvailability(available map[FunctionKind]bool) Capab
 
 func (t CapabilityTable) clone() CapabilityTable {
 	cloned := t
+	cloned.InFIFOWords = append([]int(nil), t.InFIFOWords...)
 	cloned.Functions = make(map[FunctionKind]FunctionCaps, len(t.Functions))
 
 	for kind, caps := range t.Functions {
