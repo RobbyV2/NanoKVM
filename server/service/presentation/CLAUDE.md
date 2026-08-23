@@ -209,3 +209,50 @@ allocator. Package imports are ZIP archives with a strict `manifest.json`, SHA-2
 and bounded descriptor assets. Device, configuration, BOS, string, and HID report descriptors
 are validated and preserved. The ConfigFS compiler still applies only fields and functions it
 models, so preserved assets are not evidence that a profile is descriptor-compatible.
+
+## The kernel tests
+
+`//go:build linux && kernelint` marks the tests that mutate a real kernel rather than a
+recorder. Darwin is excluded by the `linux` term, so `go test ./...` on a laptop never
+compiles them and the normal suite stays green with no `t.Skip` anywhere. Inside the tag
+the helpers in `service/kernelint` fail rather than skip. A silent skip is how the fake
+gadget in `passthrough` kept the FunctionFS ordering defect green for weeks, and a
+harness built to catch that defect must not reintroduce the mechanism that hid it.
+
+Two tiers, spelled out in the test names because CI splits on them.
+`TestKernelTier1*` needs a private network namespace and `vhci_hcd`, both of which an
+ubuntu-latest runner has, and the **Kernel tier 1** job in `test.yml` runs them on every
+push. `TestKernelTier2*` needs a bound UDC, which means `dummy_hcd`, and no distro ships
+it: `CONFIG_USB_DUMMY_HCD` is not set on Ubuntu and the module is in neither
+`linux-modules` nor `linux-modules-extra`. `scripts/kernelint.sh` builds it out of tree
+against `linux-headers` in about seven seconds and boots a stock 6.8 kernel under QEMU,
+so tier 2 is `make kernelint-tier2` and takes roughly a minute end to end with no state
+carried between runs. GitHub's `-azure` kernel is built with `CONFIG_USB_GADGET` unset,
+so tier 2 cannot run on a hosted runner at all and the workflow says so rather than
+shipping a job that passes by skipping.
+
+What tier 2 buys that the twenty golden traces do not: the traces assert the compiler
+still emits the recorded byte sequence, and `kernel_tier2_test.go` asserts the kernel
+still accepts it. `dummy_udc.0` rejects writes a recorder accepts, `f_hid` hands back the
+`/dev/hidgN` minors that `hid/hid.go` hardcodes, and `hid-generic` on the host side of
+`dummy_hcd` parses the three report descriptors `hidFunctions` ships. The FunctionFS
+ordering contract is asserted from `service/functionfs` and `service/passthrough`, since
+that is where the two halves live.
+
+### Two things the kernel said that no fake had
+
+`f_hid` takes its `opts->refcnt` at **link** time, not at bind time, and every
+`F_HID_OPT` store returns `-EBUSY` while that refcnt is held. `unlinkStale` keeps a link
+the incoming plan also carries, so a second apply reaches
+`write functions/hid.GS0/protocol` with `hid.GS0` still linked and gets
+`device or resource busy` — with the UDC already unbound, which is why the joined
+rollback then reports `unbind: write UDC: no such device` as well. `S03usbdev:99,114,129`
+links all three at boot, so this is the state every device is in when the server starts.
+The fakes in `apply_test.go` accept the write, and the golden traces record a script that
+only ever runs against a fresh gadget, so neither can see it. `kernelint.BootstrapGadget`
+links a net function rather than HID for exactly this reason; linking HID reproduces the
+failure instead of the boot state.
+
+`applyPlan` also opens with an unconditional unbind, and writing an empty `UDC` on a
+gadget that was never bound is `ENODEV`, not a no-op. On a device `S03usbdev` has always
+bound it first, so the assumption holds there and only there.
