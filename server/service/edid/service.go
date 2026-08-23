@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/audit"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -230,6 +232,15 @@ func (s *Service) flash(c *gin.Context, blob []byte, source string) {
 	ctx := context.WithoutCancel(c.Request.Context())
 
 	outcome, err := s.applier.Apply(ctx, blob, source)
+	// A refused or unverified flash returns no error, so the outcome decides
+	// what the record says. The bytes themselves are never recorded: an EDID
+	// carries the monitor's serial number.
+	failure := err
+	if failure == nil && !outcome.Verified {
+		failure = fmt.Errorf("%s: %s", outcome.State, outcome.Message)
+	}
+	principal, _ := middleware.CurrentPrincipal(c)
+	audit.Record(principal, "edid.flash", source, failure)
 	if err != nil {
 		if errors.Is(err, ErrLocked) {
 			rsp.ErrRsp(c, -3, err.Error())

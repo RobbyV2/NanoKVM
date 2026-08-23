@@ -64,6 +64,43 @@ func TestCheckTokenUsesLiveRoleAndVersion(t *testing.T) {
 	}
 }
 
+func TestDisabledAuthenticationMarksThePrincipalUnauthenticated(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := authn.NewStore(filepath.Join(t.TempDir(), "pwd"))
+	admin, ok, err := store.Authenticate("admin", "admin")
+	if err != nil || !ok {
+		t.Fatalf("default login: ok=%v err=%v", ok, err)
+	}
+	restore := useTestAuthStore(t, store)
+	defer restore()
+	token, err := GenerateJWT(admin.Username, admin.TokenVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var seen Principal
+	router := gin.New()
+	router.GET("/admin", CheckToken(), func(c *gin.Context) {
+		seen, _ = CurrentPrincipal(c)
+		c.Status(http.StatusNoContent)
+	})
+
+	if status := requestWithToken(router, "/admin", token); status != http.StatusNoContent {
+		t.Fatalf("authenticated status = %d", status)
+	}
+	if seen.Username != "admin" || seen.Unauthenticated {
+		t.Fatalf("authenticated principal = %+v", seen)
+	}
+
+	config.GetInstance().Authentication = "disable"
+	if status := requestWithToken(router, "/admin", ""); status != http.StatusNoContent {
+		t.Fatalf("disabled status = %d", status)
+	}
+	if !seen.Unauthenticated {
+		t.Fatalf("principal = %+v, want unauthenticated: nothing attributable to %q happened", seen, seen.Username)
+	}
+}
+
 func TestParseJWTRejectsOtherHMACMethods(t *testing.T) {
 	conf := config.GetInstance()
 	originalSecret := conf.JWT.SecretKey

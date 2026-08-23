@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/audit"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -145,7 +147,10 @@ func (s *Service) StartPassthrough(c *gin.Context) {
 		return
 	}
 
-	if _, err := s.manager.StartMode(c.Request.Context(), req.Exporter, req.BusID, req.Mode); err != nil {
+	principal, _ := middleware.CurrentPrincipal(c)
+	_, err := s.manager.StartMode(c.Request.Context(), req.Exporter, req.BusID, req.Mode)
+	audit.Record(principal, "passthrough.start", strings.TrimSpace(req.BusID+" "+req.Mode), err)
+	if err != nil {
 		log.Errorf("passthrough: start failed: %s", err)
 		rsp.ErrRsp(c, -2, err.Error())
 		return
@@ -159,7 +164,10 @@ func (s *Service) StartPassthrough(c *gin.Context) {
 func (s *Service) StopPassthrough(c *gin.Context) {
 	var rsp proto.Response
 
-	if err := s.manager.Stop(); err != nil {
+	principal, _ := middleware.CurrentPrincipal(c)
+	err := s.manager.Stop()
+	audit.Record(principal, "passthrough.stop", "", err)
+	if err != nil {
 		log.Errorf("passthrough: stop failed: %s", err)
 		rsp.ErrRsp(c, -1, err.Error())
 		return

@@ -2,12 +2,15 @@ package bridge
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"sync"
 
 	"NanoKVM-Server/config"
+	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/audit"
 	"NanoKVM-Server/service/presentation"
 
 	"github.com/gin-gonic/gin"
@@ -111,12 +114,20 @@ func (s *Service) SetBridge(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), s.manager.window)
 	defer cancel()
 
-	apply := s.manager.Disable
+	apply, action := s.manager.Disable, "bridge.disable"
 	if req.Enabled {
-		apply = s.manager.Enable
+		apply, action = s.manager.Enable, "bridge.enable"
 	}
 
 	result, err := apply(ctx)
+	// A rolled-back or failed apply comes back without an error, because the
+	// caller is told what the device settled on rather than that a call failed.
+	outcome := err
+	if outcome == nil && result.State != proto.BridgeEnabled && result.State != proto.BridgeDisabled {
+		outcome = errors.New(result.Message)
+	}
+	principal, _ := middleware.CurrentPrincipal(c)
+	audit.Record(principal, action, string(result.State), outcome)
 	if err != nil {
 		log.Errorf("bridge: apply failed: %s", err)
 		rsp.ErrRsp(c, -2, result.Message)
@@ -133,7 +144,10 @@ func (s *Service) RevertBridge(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), restoreWindow)
 	defer cancel()
 
-	if err := s.manager.Revert(ctx); err != nil {
+	principal, _ := middleware.CurrentPrincipal(c)
+	err := s.manager.Revert(ctx)
+	audit.Record(principal, "bridge.revert", "", err)
+	if err != nil {
 		log.Errorf("bridge: revert failed: %s", err)
 		rsp.ErrRsp(c, -1, err.Error())
 		return

@@ -24,6 +24,9 @@ const (
 type Principal struct {
 	Username string
 	Role     authn.Role
+	// Set when authentication is disabled: every caller is the synthetic admin,
+	// so the name attributes nothing.
+	Unauthenticated bool
 }
 
 type Token struct {
@@ -138,7 +141,7 @@ func CheckTokenOrLoopbackInternalToken() gin.HandlerFunc {
 func authenticate(c *gin.Context) (Principal, *Token, bool) {
 	conf := config.GetInstance()
 	if conf.Authentication == "disable" {
-		return Principal{Username: "admin", Role: authn.RoleAdmin}, nil, true
+		return Principal{Username: "admin", Role: authn.RoleAdmin, Unauthenticated: true}, nil, true
 	}
 
 	cookie, err := c.Cookie(CookieName)
