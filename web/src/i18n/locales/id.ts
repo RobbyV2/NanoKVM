@@ -284,6 +284,41 @@ const id = {
       okBtn: 'Ya',
       cancelBtn: 'Tidak'
     },
+    devices: {
+      takeover: 'Ambil alih',
+      refused: 'Sedang dipakai oleh {{owner}} dari {{source}}',
+      share: {
+        usbDevice: 'Bagikan USB'
+      },
+      permission: {
+        denied: 'Diblokir di pengaturan situs peramban Anda',
+        prompt: 'Peramban akan meminta izin akses'
+      },
+      mic: {
+        mute: 'Bisukan',
+        unmute: 'Bunyikan'
+      },
+      revoked: {
+        released: 'Berbagi dihentikan',
+        lease_expired: 'Masa sewa habis sebelum peramban ini kembali',
+        admin_disconnect: 'Seorang administrator memutuskan semua sumber',
+        slot_removed: 'Slot dihapus',
+        slot_changed: 'Slot dikonfigurasi ulang',
+        taken_over: 'Seorang administrator mengambil alih slot ini'
+      },
+      usb: {
+        surrendered: 'Passthrough USB sedang memegang papan ketik dan tetikus',
+        surrenderedDesc:
+          'Host jarak jauh melihat perangkat yang diimpor, bukan papan ketik, tetikus, dan media virtual NanoKVM. Semuanya kembali begitu sesi berhenti.',
+        unsupported: 'WebUSB memerlukan peramban berbasis Chromium melalui HTTPS',
+        session: 'Meneruskan {{device}} ({{mode}})',
+        idle: 'Tidak ada sesi passthrough',
+        mode: {
+          hybrid: 'hibrida',
+          exact: 'persis'
+        }
+      }
+    },
     settings: {
       title: 'Pengaturan',
       display: {
@@ -315,6 +350,8 @@ const id = {
           'Pengambilan video berhenti selama EDID ditulis dan berjalan lagi dengan sendirinya setelah selesai.',
         powerCycleNotice:
           'Perangkat ini harus dicabut dari listrik lalu dicolokkan kembali agar EDID baru berlaku.',
+        powerCycleUnverified:
+          'Penulisan tidak terverifikasi, jadi cip video menyimpan apa pun yang ada di dalamnya sekarang sampai perangkat ini dicabut dari daya secara fisik lalu dipasang kembali.',
         applied: 'EDID diterapkan dan terverifikasi.',
         applyFailed: 'Gagal menerapkan EDID.',
         busy: 'Chip video sedang sibuk. Coba lagi.',
@@ -349,6 +386,45 @@ const id = {
         confirmPrompt: 'Ketik {{word}} untuk mengaktifkan tombol terapkan.',
         okBtn: 'Terapkan',
         cancelBtn: 'Batal'
+      },
+      presentation: {
+        noProfile: 'Tidak ada profil yang diterapkan',
+        linked: 'Fungsi yang tertaut',
+        hostState: 'USB host',
+        hostUnbound: 'Pengendali tidak terikat',
+        hdmiState: 'Masukan HDMI',
+        hdmiSignal: 'Ada sinyal',
+        hdmiUnreported: 'Belum ada laporan penangkapan',
+        endpoints: 'Endpoint',
+        fifos: 'Slot FIFO',
+        pending: 'Perubahan tertunda',
+        pendingEdits: 'Suntingan identitas yang belum disimpan',
+        pendingProfile: '{{profile}} dipilih tetapi belum diterapkan',
+        pendingNone: 'Tidak ada',
+        lastApply: 'Penerapan terakhir',
+        applyFailed: 'Gagal pada {{profile}} pukul {{time}}',
+        applyClean: 'Tidak ada kegagalan tercatat',
+        lastKnownGood: 'Kondisi baik terakhir',
+        rollbackTarget: 'Target pengembalian',
+        rollbackNone: 'Tidak ada',
+        powerCyclePending:
+          'Pengendali diambil dari host. Matikan lalu nyalakan kembali komputer yang terhubung untuk mendapatkan perangkatnya lagi.',
+        rollback: 'Kembalikan',
+        rollbackTitle: 'Kembalikan ke {{profile}}?',
+        rollbackDesc: 'Gadget dienumerasi ulang; fungsi USB terputus sesaat.',
+        descriptors: 'deskriptor',
+        applyLinks: 'Menautkan: {{functions}}',
+        applyRemoves: 'Menghapus: {{functions}}',
+        applyNoHid:
+          'Tidak ada fungsi HID yang tersisa setelah penerapan ini. Papan ketik dan tetikus akan berhenti bekerja.',
+        applyRollback: 'Penerapan yang gagal akan kembali ke {{profile}}.',
+        recoveryPowerCycle:
+          'Tidak ada HID yang bertahan dari penerapan ini, jadi host yang berhenti merespons hanya bisa dipulihkan dengan mematikan dan menyalakan dayanya.',
+        recoveryReboot:
+          'Sebuah antarmuka hilang dari perangkat komposit; host mungkin perlu di-boot ulang agar sisanya terikat kembali.',
+        recoveryHdmiReset:
+          'Sebuah fungsi video dibangun ulang, sehingga alur penangkapan di belakangnya ikut direset.',
+        recoveryReconnect: 'Host mengenumerasi ulang perangkat; fungsi USB terputus sesaat.'
       },
       passthrough: {
         title: 'Passthrough USB',
@@ -609,6 +685,7 @@ const id = {
           protocol: 'Protokol perangkat',
           up: 'aktif',
           down: 'nonaktif',
+          noLink: 'tanpa link',
           enableTitle: 'Aktifkan jembatan jaringan?',
           disableTitle: 'Nonaktifkan jembatan jaringan?',
           reconnect:
@@ -631,6 +708,9 @@ const id = {
           },
           inboundWeak:
             'Pemeriksaan masuk lolos hanya karena NanoKVM menghubungi dirinya sendiri. Itu membuktikan layanan web sedang mendengarkan dan dapat dijangkau secara lokal, bukan bahwa permintaan dari jaringan sampai kepadanya.',
+          noCarrier:
+            'Tidak ada link di {{port}}. Jembatan tidak punya jalur ke jaringan sampai sebuah kabel terpasang.',
+          loop: 'Router juga dipelajari di {{port}}, jadi port itu adalah jalur kedua ke jaringan yang sama. Spanning tree mati, sehingga tidak ada yang akan memutus loop ini: cabut salah satu dari dua jalur tersebut.',
           failedNotice:
             'Perubahan terakhir tidak dapat dibatalkan. NanoKVM mungkin hanya dapat dijangkau melalui AP Wi-Fi atau konsol serial.'
         },

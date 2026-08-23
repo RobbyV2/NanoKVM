@@ -282,6 +282,41 @@ const ca = {
       okBtn: 'Sí',
       cancelBtn: 'No'
     },
+    devices: {
+      takeover: 'Pren el control',
+      refused: 'En ús per {{owner}} des de {{source}}',
+      share: {
+        usbDevice: 'Comparteix USB'
+      },
+      permission: {
+        denied: 'Bloquejat a la configuració del lloc del navegador',
+        prompt: 'El navegador us demanarà permís'
+      },
+      mic: {
+        mute: 'Silencia',
+        unmute: 'Deixa de silenciar'
+      },
+      revoked: {
+        released: 'S’ha aturat la compartició',
+        lease_expired: 'La concessió ha caducat abans que aquest navegador tornés',
+        admin_disconnect: 'Un administrador ha desconnectat totes les fonts',
+        slot_removed: 'S’ha eliminat la ranura',
+        slot_changed: 'S’ha reconfigurat la ranura',
+        taken_over: 'Un administrador ha pres aquesta ranura'
+      },
+      usb: {
+        surrendered: 'El passthrough USB reté el teclat i el ratolí',
+        surrenderedDesc:
+          'L’amfitrió remot veu el dispositiu importat en lloc del teclat, el ratolí i els mitjans virtuals del NanoKVM. Tornen quan s’atura la sessió.',
+        unsupported: 'WebUSB necessita un navegador Chromium sobre HTTPS',
+        session: 'S’està reenviant {{device}} ({{mode}})',
+        idle: 'Cap sessió de passthrough',
+        mode: {
+          hybrid: 'híbrid',
+          exact: 'exacte'
+        }
+      }
+    },
     settings: {
       title: 'Configuració',
       display: {
@@ -313,6 +348,8 @@ const ca = {
           "La captura de vídeo s'atura mentre s'escriu l'EDID i es reprèn tota sola en acabar.",
         powerCycleNotice:
           'Cal desconnectar físicament aquest dispositiu del corrent i tornar-lo a connectar perquè el nou EDID tingui efecte.',
+        powerCycleUnverified:
+          'L’escriptura no s’ha verificat, de manera que el xip de vídeo conserva el que té ara fins que aquest dispositiu es desconnecti físicament del corrent i es torni a connectar.',
         applied: 'EDID aplicat i verificat.',
         applyFailed: "No s'ha pogut aplicar l'EDID.",
         busy: 'El xip de vídeo estava ocupat. Torneu-ho a provar.',
@@ -347,6 +384,46 @@ const ca = {
         confirmPrompt: "Escriu {{word}} per activar el botó d'aplicar.",
         okBtn: 'Aplica',
         cancelBtn: 'Cancel·la'
+      },
+      presentation: {
+        noProfile: 'Cap perfil aplicat',
+        linked: 'Funcions enllaçades',
+        hostState: 'USB de l’amfitrió',
+        hostUnbound: 'Controlador no vinculat',
+        hdmiState: 'Entrada HDMI',
+        hdmiSignal: 'Hi ha senyal',
+        hdmiUnreported: 'Encara no hi ha cap informe de captura',
+        endpoints: 'Endpoints',
+        fifos: 'Ranures FIFO',
+        pending: 'Canvis pendents',
+        pendingEdits: 'Canvis d’identitat sense desar',
+        pendingProfile: '{{profile}} està seleccionat però no aplicat',
+        pendingNone: 'Cap',
+        lastApply: 'Darrera aplicació',
+        applyFailed: 'Ha fallat a {{profile}} el {{time}}',
+        applyClean: 'Cap error registrat',
+        lastKnownGood: 'Darrer estat correcte conegut',
+        rollbackTarget: 'Objectiu de reversió',
+        rollbackNone: 'Cap',
+        powerCyclePending:
+          'S’ha pres el controlador a l’amfitrió. Apagueu i torneu a engegar l’ordinador connectat per recuperar el dispositiu.',
+        rollback: 'Reverteix',
+        rollbackTitle: 'Voleu revertir a {{profile}}?',
+        rollbackDesc: 'El gadget es torna a enumerar; les funcions USB cauen breument.',
+        descriptors: 'descriptors',
+        applyLinks: 'Enllaça: {{functions}}',
+        applyRemoves: 'Elimina: {{functions}}',
+        applyNoHid:
+          'Després d’aplicar-ho no queda cap funció HID. El teclat i el ratolí deixaran de funcionar.',
+        applyRollback: 'Si l’aplicació falla, es torna a {{profile}}.',
+        recoveryPowerCycle:
+          'Cap HID no sobreviu a aquesta aplicació, així que un amfitrió que deixi de respondre només es pot recuperar apagant-lo i tornant-lo a engegar.',
+        recoveryReboot:
+          'Una interfície desapareix del dispositiu compost; pot ser que l’amfitrió s’hagi de reiniciar per tornar a vincular la resta.',
+        recoveryHdmiReset:
+          'Es reconstrueix una funció de vídeo, de manera que la cadena de captura que hi ha al darrere es reinicia.',
+        recoveryReconnect:
+          'L’amfitrió torna a enumerar el dispositiu; les funcions USB cauen breument.'
       },
       passthrough: {
         title: 'Passthrough USB',
@@ -608,6 +685,7 @@ const ca = {
           protocol: 'Protocol del dispositiu',
           up: 'actiu',
           down: 'inactiu',
+          noLink: 'sense enllaç',
           enableTitle: 'Vols activar el pont de xarxa?',
           disableTitle: 'Vols desactivar el pont de xarxa?',
           reconnect:
@@ -630,6 +708,9 @@ const ca = {
           },
           inboundWeak:
             "La comprovació d'entrada només ha passat perquè el NanoKVM s'ha connectat a si mateix. Això demostra que el servei web escolta i és accessible localment, no que hi arribi una petició des de la xarxa.",
+          noCarrier:
+            'No hi ha enllaç a {{port}}. El pont no té cap camí cap a la xarxa fins que s’hi connecti un cable.',
+          loop: 'El router també s’està aprenent a {{port}}, de manera que aquest port és un segon camí cap a la mateixa xarxa. L’spanning tree està desactivat, així que res d’aquí no trencarà el bucle: desconnecteu un dels dos camins.',
           failedNotice:
             'No s’ha pogut desfer l’últim canvi. Pot ser que només es pugui accedir al NanoKVM per l’AP Wi-Fi o una consola sèrie.'
         },

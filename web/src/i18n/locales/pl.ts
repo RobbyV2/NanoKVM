@@ -285,6 +285,41 @@ const pl = {
       okBtn: 'Tak',
       cancelBtn: 'Nie'
     },
+    devices: {
+      takeover: 'Przejmij',
+      refused: 'Używane przez {{owner}} ze źródła {{source}}',
+      share: {
+        usbDevice: 'Udostępnij USB'
+      },
+      permission: {
+        denied: 'Zablokowane w ustawieniach witryny w przeglądarce',
+        prompt: 'Przeglądarka poprosi o dostęp'
+      },
+      mic: {
+        mute: 'Wycisz',
+        unmute: 'Wyłącz wyciszenie'
+      },
+      revoked: {
+        released: 'Udostępnianie zostało zatrzymane',
+        lease_expired: 'Dzierżawa wygasła, zanim ta przeglądarka wróciła',
+        admin_disconnect: 'Administrator odłączył wszystkie źródła',
+        slot_removed: 'Slot został usunięty',
+        slot_changed: 'Slot został zmieniony',
+        taken_over: 'Administrator przejął ten slot'
+      },
+      usb: {
+        surrendered: 'Passthrough USB trzyma klawiaturę i mysz',
+        surrenderedDesc:
+          'Zdalny host widzi zaimportowane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają, gdy sesja się kończy.',
+        unsupported: 'WebUSB wymaga przeglądarki opartej na Chromium po HTTPS',
+        session: 'Przekazywanie {{device}} ({{mode}})',
+        idle: 'Brak sesji passthrough',
+        mode: {
+          hybrid: 'hybrydowy',
+          exact: 'dokładny'
+        }
+      }
+    },
     settings: {
       title: 'Ustawienia',
       display: {
@@ -316,6 +351,8 @@ const pl = {
           'Podczas zapisu EDID przechwytywanie obrazu zatrzymuje się i uruchamia ponownie samo.',
         powerCycleNotice:
           'To urządzenie trzeba fizycznie odłączyć od zasilania i podłączyć ponownie, aby nowy EDID zaczął działać.',
+        powerCycleUnverified:
+          'Zapisu nie udało się zweryfikować, więc układ wideo zachowa to, co ma teraz, dopóki tego urządzenia nie odłączysz fizycznie od zasilania i nie podłączysz ponownie.',
         applied: 'EDID zastosowany i zweryfikowany.',
         applyFailed: 'Zastosowanie EDID nie powiodło się.',
         busy: 'Układ wideo był zajęty. Spróbuj ponownie.',
@@ -350,6 +387,45 @@ const pl = {
         confirmPrompt: 'Wpisz {{word}}, aby odblokować przycisk zastosowania.',
         okBtn: 'Zastosuj',
         cancelBtn: 'Anuluj'
+      },
+      presentation: {
+        noProfile: 'Nie zastosowano żadnego profilu',
+        linked: 'Powiązane funkcje',
+        hostState: 'USB hosta',
+        hostUnbound: 'Kontroler niepowiązany',
+        hdmiState: 'Wejście HDMI',
+        hdmiSignal: 'Sygnał obecny',
+        hdmiUnreported: 'Brak jeszcze raportu przechwytywania',
+        endpoints: 'Endpointy',
+        fifos: 'Sloty FIFO',
+        pending: 'Oczekujące zmiany',
+        pendingEdits: 'Niezapisane zmiany tożsamości',
+        pendingProfile: '{{profile}} jest wybrany, ale nie zastosowany',
+        pendingNone: 'Brak',
+        lastApply: 'Ostatnie zastosowanie',
+        applyFailed: 'Niepowodzenie na {{profile}} o {{time}}',
+        applyClean: 'Nie zapisano żadnego błędu',
+        lastKnownGood: 'Ostatni znany działający',
+        rollbackTarget: 'Cel wycofania',
+        rollbackNone: 'Brak',
+        powerCyclePending:
+          'Kontroler został zabrany hostowi. Wyłącz i włącz ponownie podłączony komputer, aby odzyskać urządzenie.',
+        rollback: 'Wycofaj',
+        rollbackTitle: 'Wycofać do {{profile}}?',
+        rollbackDesc: 'Gadżet zostanie ponownie wyliczony; funkcje USB na chwilę znikną.',
+        descriptors: 'deskryptory',
+        applyLinks: 'Powiąże: {{functions}}',
+        applyRemoves: 'Usunie: {{functions}}',
+        applyNoHid:
+          'Po tym zastosowaniu nie zostanie żadna funkcja HID. Klawiatura i mysz przestaną działać.',
+        applyRollback: 'Nieudane zastosowanie wróci do {{profile}}.',
+        recoveryPowerCycle:
+          'Żadne HID nie przetrwa tego zastosowania, więc hosta, który przestanie odpowiadać, da się odzyskać tylko przez wyłączenie i włączenie zasilania.',
+        recoveryReboot:
+          'Z urządzenia złożonego zniknie jeden interfejs; host może potrzebować ponownego uruchomienia, aby powiązać resztę.',
+        recoveryHdmiReset:
+          'Funkcja wideo jest budowana od nowa, więc stojący za nią tor przechwytywania zostaje zresetowany.',
+        recoveryReconnect: 'Host ponownie wylicza urządzenie; funkcje USB na chwilę znikną.'
       },
       passthrough: {
         title: 'Przekazywanie USB',
@@ -612,6 +688,7 @@ const pl = {
           protocol: 'Protokół urządzenia',
           up: 'aktywny',
           down: 'nieaktywny',
+          noLink: 'brak łącza',
           enableTitle: 'Włączyć mostek sieciowy?',
           disableTitle: 'Wyłączyć mostek sieciowy?',
           reconnect:
@@ -635,6 +712,9 @@ const pl = {
           },
           inboundWeak:
             'Kontrola połączenia przychodzącego przeszła tylko dlatego, że NanoKVM połączył się sam ze sobą. Dowodzi to, że usługa sieciowa nasłuchuje i jest osiągalna lokalnie, a nie że żądanie z sieci do niej dociera.',
+          noCarrier:
+            'Brak łącza na porcie {{port}}. Mostek nie ma drogi do sieci, dopóki nie zostanie podłączony kabel.',
+          loop: 'Router jest uczony także na porcie {{port}}, więc ten port jest drugą drogą do tej samej sieci. Spanning tree jest wyłączone, więc nic tutaj nie przerwie pętli: odłącz jedną z dwóch dróg.',
           failedNotice:
             'Nie udało się cofnąć ostatniej zmiany. NanoKVM może być dostępny tylko przez punkt dostępowy Wi-Fi lub konsolę szeregową.'
         },

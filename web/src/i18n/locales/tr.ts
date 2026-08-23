@@ -283,6 +283,41 @@ const tr = {
       okBtn: 'Evet',
       cancelBtn: 'Hayır'
     },
+    devices: {
+      takeover: 'Devral',
+      refused: '{{source}} üzerinden {{owner}} kullanıyor',
+      share: {
+        usbDevice: 'USB paylaş'
+      },
+      permission: {
+        denied: 'Tarayıcınızın site ayarlarında engellendi',
+        prompt: 'Tarayıcınız izin isteyecek'
+      },
+      mic: {
+        mute: 'Sesi kapat',
+        unmute: 'Sesi aç'
+      },
+      revoked: {
+        released: 'Paylaşım durduruldu',
+        lease_expired: 'Bu tarayıcı geri dönmeden önce kiralama süresi doldu',
+        admin_disconnect: 'Bir yönetici tüm kaynakların bağlantısını kesti',
+        slot_removed: 'Yuva kaldırıldı',
+        slot_changed: 'Yuva yeniden yapılandırıldı',
+        taken_over: 'Bir yönetici bu yuvayı devraldı'
+      },
+      usb: {
+        surrendered: 'USB passthrough klavye ve fareyi tutuyor',
+        surrenderedDesc:
+          'Uzak host, NanoKVM’in klavyesi, faresi ve sanal ortamları yerine içe aktarılan cihazı görür. Oturum durduğunda hepsi geri gelir.',
+        unsupported: 'WebUSB, HTTPS üzerinden Chromium tabanlı bir tarayıcı gerektirir',
+        session: '{{device}} aktarılıyor ({{mode}})',
+        idle: 'Passthrough oturumu yok',
+        mode: {
+          hybrid: 'hibrit',
+          exact: 'birebir'
+        }
+      }
+    },
     settings: {
       title: 'Ayarlar',
       display: {
@@ -314,6 +349,8 @@ const tr = {
           'EDID yazılırken video yakalama durur ve işlem bitince kendiliğinden yeniden başlar.',
         powerCycleNotice:
           'Yeni EDID etkili olmadan önce bu cihazın fişi fiziksel olarak çekilip yeniden takılmalıdır.',
+        powerCycleUnverified:
+          'Yazma doğrulanmadı, bu yüzden bu cihazın fişi fiziksel olarak çekilip yeniden takılana kadar video çipi şu anda içinde ne varsa onu tutar.',
         applied: 'EDID uygulandı ve doğrulandı.',
         applyFailed: 'EDID uygulanamadı.',
         busy: 'Video yongası meşguldü. Tekrar deneyin.',
@@ -347,6 +384,45 @@ const tr = {
         confirmPrompt: 'Uygula düğmesini etkinleştirmek için {{word}} yazın.',
         okBtn: 'Uygula',
         cancelBtn: 'İptal'
+      },
+      presentation: {
+        noProfile: 'Uygulanmış profil yok',
+        linked: 'Bağlı işlevler',
+        hostState: 'Host USB',
+        hostUnbound: 'Denetleyici bağlı değil',
+        hdmiState: 'HDMI girişi',
+        hdmiSignal: 'Sinyal var',
+        hdmiUnreported: 'Henüz yakalama bildirimi yok',
+        endpoints: 'Endpoint’ler',
+        fifos: 'FIFO yuvaları',
+        pending: 'Bekleyen değişiklikler',
+        pendingEdits: 'Kaydedilmemiş kimlik düzenlemeleri',
+        pendingProfile: '{{profile}} seçili ama uygulanmadı',
+        pendingNone: 'Yok',
+        lastApply: 'Son uygulama',
+        applyFailed: '{{time}} tarihinde {{profile}} üzerinde başarısız oldu',
+        applyClean: 'Kayıtlı bir hata yok',
+        lastKnownGood: 'Bilinen son çalışan',
+        rollbackTarget: 'Geri alma hedefi',
+        rollbackNone: 'Yok',
+        powerCyclePending:
+          'Denetleyici host’tan alındı. Cihazı geri kazanmak için bağlı bilgisayarı kapatıp yeniden açın.',
+        rollback: 'Geri al',
+        rollbackTitle: '{{profile}} profiline geri dönülsün mü?',
+        rollbackDesc: 'Gadget yeniden numaralandırılır; USB işlevleri kısa süre kesilir.',
+        descriptors: 'tanımlayıcılar',
+        applyLinks: 'Bağlar: {{functions}}',
+        applyRemoves: 'Kaldırır: {{functions}}',
+        applyNoHid:
+          'Bu uygulamadan sonra hiçbir HID işlevi kalmaz. Klavye ve fare çalışmayı bırakır.',
+        applyRollback: 'Başarısız bir uygulama {{profile}} profiline döner.',
+        recoveryPowerCycle:
+          'Bu uygulamadan hiçbir HID sağ çıkmaz, dolayısıyla yanıt vermeyi bırakan bir host ancak elektriği kesilip verilerek kurtarılabilir.',
+        recoveryReboot:
+          'Bileşik cihazdan bir arabirim kaybolur; host’un geri kalanını yeniden bağlamak için yeniden başlatılması gerekebilir.',
+        recoveryHdmiReset:
+          'Bir video işlevi yeniden kurulur, bu yüzden arkasındaki yakalama hattı sıfırlanır.',
+        recoveryReconnect: 'Host cihazı yeniden numaralandırır; USB işlevleri kısa süre kesilir.'
       },
       passthrough: {
         title: 'USB Geçişi',
@@ -607,6 +683,7 @@ const tr = {
           protocol: 'Aygıt protokolü',
           up: 'bağlı',
           down: 'bağlı değil',
+          noLink: 'bağlantı yok',
           enableTitle: 'Ağ köprüsü etkinleştirilsin mi?',
           disableTitle: 'Ağ köprüsü devre dışı bırakılsın mı?',
           reconnect: 'Adres taşınırken yönetim bağlantısı kısa süre kopar ve yeniden kurulur.',
@@ -627,6 +704,9 @@ const tr = {
           },
           inboundWeak:
             'Gelen bağlantı denetimi yalnızca NanoKVM kendine bağlandığı için geçti. Bu, web hizmetinin dinlediğini ve yerel olarak erişilebildiğini gösterir; ağdan gelen bir isteğin ulaştığını göstermez.',
+          noCarrier:
+            '{{port}} üzerinde bağlantı yok. Bir kablo takılana kadar köprünün ağa giden bir yolu olmaz.',
+          loop: 'Yönlendirici {{port}} üzerinde de öğreniliyor, yani o bağlantı noktası aynı ağa giden ikinci bir yol. Spanning tree kapalı, dolayısıyla buradaki döngüyü hiçbir şey kırmayacak: iki yoldan birini çıkarın.',
           failedNotice:
             'Son değişiklik geri alınamadı. NanoKVM yalnızca Wi-Fi AP veya seri konsol üzerinden erişilebilir olabilir.'
         },

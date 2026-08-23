@@ -280,6 +280,41 @@ const ko = {
       okBtn: '네',
       cancelBtn: '아니오'
     },
+    devices: {
+      takeover: '가져오기',
+      refused: '{{source}}의 {{owner}}이(가) 사용 중',
+      share: {
+        usbDevice: 'USB 공유'
+      },
+      permission: {
+        denied: '브라우저의 사이트 설정에서 차단됨',
+        prompt: '브라우저가 권한을 요청합니다'
+      },
+      mic: {
+        mute: '음소거',
+        unmute: '음소거 해제'
+      },
+      revoked: {
+        released: '공유가 중지되었습니다',
+        lease_expired: '이 브라우저가 돌아오기 전에 리스가 만료되었습니다',
+        admin_disconnect: '관리자가 모든 소스를 연결 해제했습니다',
+        slot_removed: '슬롯이 제거되었습니다',
+        slot_changed: '슬롯이 다시 구성되었습니다',
+        taken_over: '관리자가 이 슬롯을 가져갔습니다'
+      },
+      usb: {
+        surrendered: 'USB 패스스루가 키보드와 마우스를 점유하고 있습니다',
+        surrenderedDesc:
+          '원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 가져온 장치가 보입니다. 세션이 끝나면 다시 돌아옵니다.',
+        unsupported: 'WebUSB에는 HTTPS로 접속한 Chromium 계열 브라우저가 필요합니다',
+        session: '{{device}} 전달 중({{mode}})',
+        idle: '패스스루 세션 없음',
+        mode: {
+          hybrid: '하이브리드',
+          exact: '정확히 일치'
+        }
+      }
+    },
     settings: {
       title: '설정',
       display: {
@@ -311,6 +346,8 @@ const ko = {
           'EDID를 기록하는 동안 영상 캡처가 중단되었다가 완료 후 자동으로 다시 시작됩니다.',
         powerCycleNotice:
           '새 EDID를 적용하려면 이 장치의 전원을 물리적으로 뽑았다가 다시 연결해야 합니다.',
+        powerCycleUnverified:
+          '쓰기가 검증되지 않았으므로, 이 장치의 전원을 물리적으로 뽑았다가 다시 꽂을 때까지 비디오 칩은 지금 들어 있는 내용을 그대로 유지합니다.',
         applied: 'EDID를 적용하고 검증했습니다.',
         applyFailed: 'EDID 적용에 실패했습니다.',
         busy: '영상 칩이 사용 중이었습니다. 다시 시도하세요.',
@@ -343,6 +380,44 @@ const ko = {
         confirmPrompt: '적용 버튼을 활성화하려면 {{word}}을(를) 입력하세요.',
         okBtn: '적용',
         cancelBtn: '취소'
+      },
+      presentation: {
+        noProfile: '적용된 프로필 없음',
+        linked: '연결된 기능',
+        hostState: '호스트 USB',
+        hostUnbound: '컨트롤러가 바인딩되지 않음',
+        hdmiState: 'HDMI 입력',
+        hdmiSignal: '신호 있음',
+        hdmiUnreported: '아직 캡처 보고가 없음',
+        endpoints: '엔드포인트',
+        fifos: 'FIFO 슬롯',
+        pending: '대기 중인 변경',
+        pendingEdits: '저장하지 않은 아이덴티티 편집',
+        pendingProfile: '{{profile}}이(가) 선택되었지만 적용되지 않았습니다',
+        pendingNone: '없음',
+        lastApply: '마지막 적용',
+        applyFailed: '{{time}}에 {{profile}}에서 실패',
+        applyClean: '기록된 실패 없음',
+        lastKnownGood: '마지막으로 정상이던 구성',
+        rollbackTarget: '롤백 대상',
+        rollbackNone: '없음',
+        powerCyclePending:
+          '컨트롤러를 호스트에서 회수했습니다. 장치를 되찾으려면 연결된 컴퓨터의 전원을 껐다가 다시 켜세요.',
+        rollback: '롤백',
+        rollbackTitle: '{{profile}}(으)로 롤백할까요?',
+        rollbackDesc: '가젯이 다시 열거되며 USB 기능이 잠시 끊깁니다.',
+        descriptors: '디스크립터',
+        applyLinks: '연결: {{functions}}',
+        applyRemoves: '제거: {{functions}}',
+        applyNoHid: '이 적용 후에는 HID 기능이 남지 않습니다. 키보드와 마우스가 동작을 멈춥니다.',
+        applyRollback: '적용이 실패하면 {{profile}}(으)로 돌아갑니다.',
+        recoveryPowerCycle:
+          '이 적용에서는 HID가 하나도 남지 않으므로, 응답을 멈춘 호스트는 전원을 껐다 켜야만 복구할 수 있습니다.',
+        recoveryReboot:
+          '복합 장치에서 인터페이스 하나가 사라집니다. 나머지를 다시 바인딩하려면 호스트를 재부팅해야 할 수 있습니다.',
+        recoveryHdmiReset:
+          '비디오 기능이 다시 만들어지므로 그 뒤의 캡처 파이프라인도 초기화됩니다.',
+        recoveryReconnect: '호스트가 장치를 다시 열거하며 USB 기능이 잠시 끊깁니다.'
       },
       passthrough: {
         title: 'USB 패스스루',
@@ -599,6 +674,7 @@ const ko = {
           protocol: '장치 프로토콜',
           up: '연결됨',
           down: '연결 끊김',
+          noLink: '링크 없음',
           enableTitle: '네트워크 브리지를 활성화할까요?',
           disableTitle: '네트워크 브리지를 비활성화할까요?',
           reconnect: '주소가 이동하는 동안 관리 연결이 잠시 끊겼다가 다시 연결됩니다.',
@@ -618,6 +694,9 @@ const ko = {
           },
           inboundWeak:
             '인바운드 검사는 NanoKVM이 자기 자신에 연결해서만 통과했습니다. 이는 웹 서비스가 대기 중이고 기기 내부에서 도달 가능하다는 것만 증명할 뿐, 네트워크에서 온 요청이 도달한다는 뜻은 아닙니다.',
+          noCarrier:
+            '{{port}}에 링크가 없습니다. 케이블을 연결하기 전까지 브리지에는 네트워크로 가는 경로가 없습니다.',
+          loop: '라우터가 {{port}}에서도 학습되고 있습니다. 즉 그 포트는 같은 네트워크로 가는 두 번째 경로입니다. 스패닝 트리가 꺼져 있어 여기서 루프를 끊어 줄 것은 없습니다. 두 경로 중 하나를 분리하세요.',
           failedNotice:
             '마지막 변경을 취소하지 못했습니다. NanoKVM에 Wi-Fi AP 또는 시리얼 콘솔로만 접근할 수 있습니다.'
         },

@@ -285,6 +285,41 @@ const cz = {
       okBtn: 'Ano',
       cancelBtn: 'Ne'
     },
+    devices: {
+      takeover: 'Převzít',
+      refused: 'Používá {{owner}} ze zdroje {{source}}',
+      share: {
+        usbDevice: 'Sdílet USB'
+      },
+      permission: {
+        denied: 'Blokováno v nastavení webu ve vašem prohlížeči',
+        prompt: 'Prohlížeč se zeptá na přístup'
+      },
+      mic: {
+        mute: 'Ztlumit',
+        unmute: 'Zrušit ztlumení'
+      },
+      revoked: {
+        released: 'Sdílení bylo ukončeno',
+        lease_expired: 'Zápůjčka vypršela dříve, než se tento prohlížeč vrátil',
+        admin_disconnect: 'Správce odpojil všechny zdroje',
+        slot_removed: 'Slot byl odebrán',
+        slot_changed: 'Slot byl překonfigurován',
+        taken_over: 'Správce tento slot převzal'
+      },
+      usb: {
+        surrendered: 'USB passthrough drží klávesnici a myš',
+        surrenderedDesc:
+          'Vzdálený host vidí importované zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se, jakmile relace skončí.',
+        unsupported: 'WebUSB vyžaduje prohlížeč založený na Chromiu přes HTTPS',
+        session: 'Předává se {{device}} ({{mode}})',
+        idle: 'Žádná relace passthrough',
+        mode: {
+          hybrid: 'hybridní',
+          exact: 'přesný'
+        }
+      }
+    },
     settings: {
       title: 'Nastavení',
       display: {
@@ -315,6 +350,8 @@ const cz = {
         hdmiNotice: 'Během zápisu EDID se snímání obrazu zastaví a poté se samo znovu spustí.',
         powerCycleNotice:
           'Aby se nové EDID projevilo, je nutné zařízení fyzicky odpojit od napájení a znovu připojit.',
+        powerCycleUnverified:
+          'Zápis se nepodařilo ověřit, takže videočip si ponechá to, co v sobě právě má, dokud toto zařízení fyzicky neodpojíte od napájení a znovu nepřipojíte.',
         applied: 'EDID použito a ověřeno.',
         applyFailed: 'Použití EDID selhalo.',
         busy: 'Video čip byl zaneprázdněn. Zkuste to znovu.',
@@ -348,6 +385,45 @@ const cz = {
         confirmPrompt: 'Pro odemknutí tlačítka pro použití napište {{word}}.',
         okBtn: 'Použít',
         cancelBtn: 'Zrušit'
+      },
+      presentation: {
+        noProfile: 'Není použit žádný profil',
+        linked: 'Propojené funkce',
+        hostState: 'USB hostitele',
+        hostUnbound: 'Řadič není navázán',
+        hdmiState: 'Vstup HDMI',
+        hdmiSignal: 'Signál je přítomen',
+        hdmiUnreported: 'Zatím žádné hlášení o zachytávání',
+        endpoints: 'Endpointy',
+        fifos: 'Sloty FIFO',
+        pending: 'Nevyřízené změny',
+        pendingEdits: 'Neuložené úpravy identity',
+        pendingProfile: '{{profile}} je vybrán, ale není použit',
+        pendingNone: 'Žádné',
+        lastApply: 'Poslední použití',
+        applyFailed: 'Selhalo u {{profile}} v {{time}}',
+        applyClean: 'Není zaznamenáno žádné selhání',
+        lastKnownGood: 'Poslední známý funkční',
+        rollbackTarget: 'Cíl návratu',
+        rollbackNone: 'Žádný',
+        powerCyclePending:
+          'Řadič byl hostiteli odebrán. Chcete-li zařízení získat zpět, vypněte a znovu zapněte připojený počítač.',
+        rollback: 'Vrátit zpět',
+        rollbackTitle: 'Vrátit se k profilu {{profile}}?',
+        rollbackDesc: 'Gadget se znovu vyčíslí; USB funkce na okamžik vypadnou.',
+        descriptors: 'deskriptory',
+        applyLinks: 'Propojí: {{functions}}',
+        applyRemoves: 'Odebere: {{functions}}',
+        applyNoHid:
+          'Po tomto použití nezůstane žádná funkce HID. Klávesnice a myš přestanou fungovat.',
+        applyRollback: 'Neúspěšné použití se vrátí k profilu {{profile}}.',
+        recoveryPowerCycle:
+          'Toto použití nepřežije žádné HID, takže hostitele, který přestane reagovat, lze obnovit jen vypnutím a zapnutím napájení.',
+        recoveryReboot:
+          'Ze složeného zařízení zmizí jedno rozhraní; hostitel může potřebovat restart, aby zbytek znovu navázal.',
+        recoveryHdmiReset:
+          'Videofunkce se vytvoří znovu, takže se resetuje i řetězec zachytávání za ní.',
+        recoveryReconnect: 'Hostitel zařízení znovu vyčíslí; USB funkce na okamžik vypadnou.'
       },
       passthrough: {
         title: 'Průchod USB',
@@ -606,6 +682,7 @@ const cz = {
           protocol: 'Protokol zařízení',
           up: 'aktivní',
           down: 'neaktivní',
+          noLink: 'bez linky',
           enableTitle: 'Zapnout síťový most?',
           disableTitle: 'Vypnout síťový most?',
           reconnect:
@@ -627,6 +704,9 @@ const cz = {
           },
           inboundWeak:
             'Kontrola příchozího spojení prošla jen proto, že se NanoKVM připojil sám k sobě. To dokazuje, že webová služba naslouchá a je dostupná lokálně, nikoli že k ní dorazí požadavek ze sítě.',
+          noCarrier:
+            'Na portu {{port}} není linka. Most nemá cestu do sítě, dokud se nepřipojí kabel.',
+          loop: 'Router se učí i na portu {{port}}, takže tento port je druhou cestou do stejné sítě. Spanning tree je vypnutý, takže smyčku zde nic nepřeruší: odpojte jednu ze dvou cest.',
           failedNotice:
             'Poslední změnu se nepodařilo vrátit zpět. NanoKVM může být dostupné jen přes Wi-Fi AP nebo sériovou konzoli.'
         },

@@ -285,6 +285,41 @@ const es = {
       okBtn: 'Sí',
       cancelBtn: 'No'
     },
+    devices: {
+      takeover: 'Tomar el control',
+      refused: 'En uso por {{owner}} desde {{source}}',
+      share: {
+        usbDevice: 'Compartir USB'
+      },
+      permission: {
+        denied: 'Bloqueado en la configuración del sitio de tu navegador',
+        prompt: 'El navegador pedirá permiso'
+      },
+      mic: {
+        mute: 'Silenciar',
+        unmute: 'Dejar de silenciar'
+      },
+      revoked: {
+        released: 'Se detuvo la compartición',
+        lease_expired: 'La concesión caducó antes de que este navegador volviera',
+        admin_disconnect: 'Un administrador desconectó todas las fuentes',
+        slot_removed: 'Se eliminó la ranura',
+        slot_changed: 'Se reconfiguró la ranura',
+        taken_over: 'Un administrador tomó esta ranura'
+      },
+      usb: {
+        surrendered: 'El passthrough USB retiene el teclado y el ratón',
+        surrenderedDesc:
+          'El host remoto ve el dispositivo importado en lugar del teclado, el ratón y los medios virtuales del NanoKVM. Vuelven cuando la sesión termina.',
+        unsupported: 'WebUSB necesita un navegador Chromium sobre HTTPS',
+        session: 'Reenviando {{device}} ({{mode}})',
+        idle: 'Ninguna sesión de passthrough',
+        mode: {
+          hybrid: 'híbrido',
+          exact: 'exacto'
+        }
+      }
+    },
     settings: {
       title: 'Ajustes',
       display: {
@@ -316,6 +351,8 @@ const es = {
           'La captura de vídeo se detiene mientras se escribe el EDID y se reanuda sola al terminar.',
         powerCycleNotice:
           'Este dispositivo debe desconectarse físicamente de la corriente y volver a conectarse para que el nuevo EDID surta efecto.',
+        powerCycleUnverified:
+          'La escritura no se verificó, así que el chip de vídeo conserva lo que tiene ahora hasta que este dispositivo se desconecte físicamente de la corriente y se vuelva a conectar.',
         applied: 'EDID aplicado y verificado.',
         applyFailed: 'No se pudo aplicar el EDID.',
         busy: 'El chip de vídeo estaba ocupado. Inténtalo de nuevo.',
@@ -350,6 +387,46 @@ const es = {
         confirmPrompt: 'Escribe {{word}} para habilitar el botón de aplicar.',
         okBtn: 'Aplicar',
         cancelBtn: 'Cancelar'
+      },
+      presentation: {
+        noProfile: 'Ningún perfil aplicado',
+        linked: 'Funciones enlazadas',
+        hostState: 'USB del host',
+        hostUnbound: 'Controlador sin vincular',
+        hdmiState: 'Entrada HDMI',
+        hdmiSignal: 'Hay señal',
+        hdmiUnreported: 'Todavía no hay informe de captura',
+        endpoints: 'Endpoints',
+        fifos: 'Ranuras FIFO',
+        pending: 'Cambios pendientes',
+        pendingEdits: 'Cambios de identidad sin guardar',
+        pendingProfile: '{{profile}} está seleccionado pero no aplicado',
+        pendingNone: 'Ninguno',
+        lastApply: 'Última aplicación',
+        applyFailed: 'Falló en {{profile}} el {{time}}',
+        applyClean: 'Ningún fallo registrado',
+        lastKnownGood: 'Último estado correcto conocido',
+        rollbackTarget: 'Destino de la reversión',
+        rollbackNone: 'Ninguno',
+        powerCyclePending:
+          'Se le quitó el controlador al host. Apaga y vuelve a encender el ordenador conectado para recuperar el dispositivo.',
+        rollback: 'Revertir',
+        rollbackTitle: '¿Revertir a {{profile}}?',
+        rollbackDesc: 'El gadget se vuelve a enumerar; las funciones USB se caen brevemente.',
+        descriptors: 'descriptores',
+        applyLinks: 'Enlaza: {{functions}}',
+        applyRemoves: 'Elimina: {{functions}}',
+        applyNoHid:
+          'Tras esta aplicación no queda ninguna función HID. El teclado y el ratón dejarán de funcionar.',
+        applyRollback: 'Si la aplicación falla, se vuelve a {{profile}}.',
+        recoveryPowerCycle:
+          'Ningún HID sobrevive a esta aplicación, así que un host que deje de responder solo se puede recuperar apagándolo y encendiéndolo.',
+        recoveryReboot:
+          'Una interfaz desaparece del dispositivo compuesto; puede que el host necesite reiniciarse para volver a vincular el resto.',
+        recoveryHdmiReset:
+          'Se reconstruye una función de vídeo, así que la cadena de captura que hay detrás se reinicia.',
+        recoveryReconnect:
+          'El host vuelve a enumerar el dispositivo; las funciones USB se caen brevemente.'
       },
       passthrough: {
         title: 'Passthrough USB',
@@ -613,6 +690,7 @@ const es = {
           protocol: 'Protocolo del dispositivo',
           up: 'activo',
           down: 'inactivo',
+          noLink: 'sin enlace',
           enableTitle: '¿Activar el puente de red?',
           disableTitle: '¿Desactivar el puente de red?',
           reconnect:
@@ -635,6 +713,9 @@ const es = {
           },
           inboundWeak:
             'La comprobación entrante solo pasó porque NanoKVM se conectó a sí mismo. Eso demuestra que el servicio web está escuchando y es accesible localmente, no que llegue una petición desde la red.',
+          noCarrier:
+            'No hay enlace en {{port}}. El puente no tiene ningún camino hacia la red hasta que se conecte un cable.',
+          loop: 'El router también se está aprendiendo en {{port}}, así que ese puerto es un segundo camino hacia la misma red. El spanning tree está desactivado, de modo que nada de aquí romperá el bucle: desconecta uno de los dos caminos.',
           failedNotice:
             'No se pudo deshacer el último cambio. Puede que solo se pueda acceder a NanoKVM por el AP Wi-Fi o una consola serie.'
         },

@@ -286,6 +286,41 @@ const hu = {
       okBtn: 'Igen',
       cancelBtn: 'Nem'
     },
+    devices: {
+      takeover: 'Átvétel',
+      refused: 'Használatban: {{owner}}, forrás: {{source}}',
+      share: {
+        usbDevice: 'USB megosztása'
+      },
+      permission: {
+        denied: 'Letiltva a böngésző webhelybeállításaiban',
+        prompt: 'A böngésző engedélyt fog kérni'
+      },
+      mic: {
+        mute: 'Némítás',
+        unmute: 'Némítás feloldása'
+      },
+      revoked: {
+        released: 'A megosztás leállt',
+        lease_expired: 'A bérlet lejárt, mielőtt ez a böngésző visszatért volna',
+        admin_disconnect: 'Egy rendszergazda minden forrást lecsatlakoztatott',
+        slot_removed: 'A helyet eltávolították',
+        slot_changed: 'A helyet újrakonfigurálták',
+        taken_over: 'Egy rendszergazda átvette ezt a helyet'
+      },
+      usb: {
+        surrendered: 'Az USB-passthrough tartja a billentyűzetet és az egeret',
+        surrenderedDesc:
+          'A távoli gazdagép az importált eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek a munkamenet leállásakor visszatérnek.',
+        unsupported: 'A WebUSB Chromium alapú böngészőt igényel HTTPS felett',
+        session: '{{device}} átadása ({{mode}})',
+        idle: 'Nincs passthrough munkamenet',
+        mode: {
+          hybrid: 'hibrid',
+          exact: 'pontos'
+        }
+      }
+    },
     settings: {
       title: 'Beállítások',
       display: {
@@ -316,6 +351,8 @@ const hu = {
         hdmiNotice: 'A képrögzítés az EDID írása alatt leáll, majd magától újraindul.',
         powerCycleNotice:
           'Az új EDID csak azután lép életbe, hogy az eszközt fizikailag áramtalanítja, majd újra bedugja.',
+        powerCycleUnverified:
+          'Az írás nem lett ellenőrizve, így a videochip megtartja azt, ami most benne van, amíg az eszközt fizikailag ki nem húzza a tápból, majd vissza nem dugja.',
         applied: 'Az EDID alkalmazva és ellenőrizve.',
         applyFailed: 'Az EDID alkalmazása nem sikerült.',
         busy: 'A videochip foglalt volt. Próbálja újra.',
@@ -350,6 +387,46 @@ const hu = {
         confirmPrompt: 'Írja be: {{word}}, hogy az alkalmazás gomb aktívvá váljon.',
         okBtn: 'Alkalmaz',
         cancelBtn: 'Mégse'
+      },
+      presentation: {
+        noProfile: 'Nincs alkalmazott profil',
+        linked: 'Összekapcsolt funkciók',
+        hostState: 'A gazdagép USB-je',
+        hostUnbound: 'A vezérlő nincs hozzákötve',
+        hdmiState: 'HDMI-bemenet',
+        hdmiSignal: 'Van jel',
+        hdmiUnreported: 'Még nincs jelentés a rögzítésről',
+        endpoints: 'Endpointok',
+        fifos: 'FIFO-helyek',
+        pending: 'Függőben lévő változtatások',
+        pendingEdits: 'Nem mentett identitásmódosítások',
+        pendingProfile: '{{profile}} ki van választva, de nincs alkalmazva',
+        pendingNone: 'Nincs',
+        lastApply: 'Utolsó alkalmazás',
+        applyFailed: 'Sikertelen: {{profile}}, ekkor: {{time}}',
+        applyClean: 'Nincs rögzített hiba',
+        lastKnownGood: 'Utolsó ismert jó állapot',
+        rollbackTarget: 'Visszaállítás célja',
+        rollbackNone: 'Nincs',
+        powerCyclePending:
+          'A vezérlőt elvették a gazdagéptől. Kapcsolja ki, majd be a csatlakoztatott számítógépet, hogy az eszköz visszatérjen.',
+        rollback: 'Visszaállítás',
+        rollbackTitle: 'Visszaáll erre: {{profile}}?',
+        rollbackDesc: 'A gadget újra felsorolódik; az USB-funkciók rövid időre kiesnek.',
+        descriptors: 'leírók',
+        applyLinks: 'Összekapcsolja: {{functions}}',
+        applyRemoves: 'Eltávolítja: {{functions}}',
+        applyNoHid:
+          'Ezután az alkalmazás után nem marad HID-funkció. A billentyűzet és az egér működése megszűnik.',
+        applyRollback: 'A sikertelen alkalmazás visszatér ehhez: {{profile}}.',
+        recoveryPowerCycle:
+          'Ezt az alkalmazást egyetlen HID sem éli túl, így a válaszolást abbahagyó gazdagép csak ki- és bekapcsolással állítható helyre.',
+        recoveryReboot:
+          'Egy interfész eltűnik az összetett eszközből; a gazdagépnek újraindításra lehet szüksége, hogy a többit újra hozzákösse.',
+        recoveryHdmiReset:
+          'Egy videofunkció újraépül, ezért a mögötte lévő rögzítési lánc alaphelyzetbe áll.',
+        recoveryReconnect:
+          'A gazdagép újra felsorolja az eszközt; az USB-funkciók rövid időre kiesnek.'
       },
       passthrough: {
         title: 'USB-átjátszás',
@@ -611,6 +688,7 @@ const hu = {
           protocol: 'Eszközprotokoll',
           up: 'aktív',
           down: 'inaktív',
+          noLink: 'nincs link',
           enableTitle: 'Bekapcsolja a hálózati hidat?',
           disableTitle: 'Kikapcsolja a hálózati hidat?',
           reconnect:
@@ -633,6 +711,9 @@ const hu = {
           },
           inboundWeak:
             'A bejövő ellenőrzés csak azért sikerült, mert a NanoKVM önmagához kapcsolódott. Ez azt bizonyítja, hogy a webszolgáltatás figyel és helyben elérhető, nem azt, hogy a hálózat felől érkező kérés eljut hozzá.',
+          noCarrier:
+            'Nincs link a(z) {{port}} porton. A hídnak nincs útja a hálózat felé, amíg nem csatlakozik kábel.',
+          loop: 'A router a(z) {{port}} porton is tanulódik, tehát az a port egy második út ugyanahhoz a hálózathoz. A spanning tree ki van kapcsolva, így itt semmi nem bontja meg a hurkot: bontsa a két út egyikét.',
           failedNotice:
             'A legutóbbi módosítást nem sikerült visszavonni. A NanoKVM lehet, hogy csak a Wi-Fi AP-n vagy soros konzolon érhető el.'
         },

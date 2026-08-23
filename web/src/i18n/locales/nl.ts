@@ -286,6 +286,41 @@ const nl = {
       okBtn: 'Ja',
       cancelBtn: 'Nee'
     },
+    devices: {
+      takeover: 'Overnemen',
+      refused: 'In gebruik door {{owner}} vanaf {{source}}',
+      share: {
+        usbDevice: 'USB delen'
+      },
+      permission: {
+        denied: 'Geblokkeerd in de site-instellingen van je browser',
+        prompt: 'Je browser vraagt om toegang'
+      },
+      mic: {
+        mute: 'Dempen',
+        unmute: 'Dempen opheffen'
+      },
+      revoked: {
+        released: 'Het delen is gestopt',
+        lease_expired: 'De lease verliep voordat deze browser terugkwam',
+        admin_disconnect: 'Een beheerder heeft alle bronnen losgekoppeld',
+        slot_removed: 'De plek is verwijderd',
+        slot_changed: 'De plek is opnieuw geconfigureerd',
+        taken_over: 'Een beheerder heeft deze plek overgenomen'
+      },
+      usb: {
+        surrendered: 'USB-passthrough houdt het toetsenbord en de muis vast',
+        surrenderedDesc:
+          'De externe host ziet het geïmporteerde apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen terug zodra de sessie stopt.',
+        unsupported: 'WebUSB vereist een Chromium-browser via HTTPS',
+        session: '{{device}} wordt doorgegeven ({{mode}})',
+        idle: 'Geen passthrough-sessie',
+        mode: {
+          hybrid: 'hybride',
+          exact: 'exact'
+        }
+      }
+    },
     settings: {
       title: 'Instellingen',
       display: {
@@ -317,6 +352,8 @@ const nl = {
           'De videoregistratie stopt tijdens het schrijven van de EDID en start daarna vanzelf weer.',
         powerCycleNotice:
           'Dit apparaat moet fysiek van de stroom worden losgekoppeld en opnieuw aangesloten voordat de nieuwe EDID werkt.',
+        powerCycleUnverified:
+          'De schrijfactie is niet geverifieerd, dus de videochip houdt wat er nu in staat totdat dit apparaat fysiek van de stroom wordt losgekoppeld en weer aangesloten.',
         applied: 'EDID toegepast en geverifieerd.',
         applyFailed: 'Het toepassen van de EDID is mislukt.',
         busy: 'De videochip was bezet. Probeer het opnieuw.',
@@ -352,6 +389,45 @@ const nl = {
         confirmPrompt: 'Typ {{word}} om de knop Toepassen in te schakelen.',
         okBtn: 'Toepassen',
         cancelBtn: 'Annuleren'
+      },
+      presentation: {
+        noProfile: 'Geen profiel toegepast',
+        linked: 'Gekoppelde functies',
+        hostState: 'USB van de host',
+        hostUnbound: 'Controller niet gebonden',
+        hdmiState: 'HDMI-ingang',
+        hdmiSignal: 'Signaal aanwezig',
+        hdmiUnreported: 'Nog geen melding van de opname',
+        endpoints: 'Endpoints',
+        fifos: 'FIFO-plekken',
+        pending: 'Openstaande wijzigingen',
+        pendingEdits: 'Niet-opgeslagen identiteitswijzigingen',
+        pendingProfile: '{{profile}} is geselecteerd maar niet toegepast',
+        pendingNone: 'Geen',
+        lastApply: 'Laatste toepassing',
+        applyFailed: 'Mislukt op {{profile}} om {{time}}',
+        applyClean: 'Geen fout geregistreerd',
+        lastKnownGood: 'Laatst bekende werkende stand',
+        rollbackTarget: 'Doel van terugdraaien',
+        rollbackNone: 'Geen',
+        powerCyclePending:
+          'De controller is aan de host onttrokken. Zet de aangesloten computer uit en weer aan om het apparaat terug te krijgen.',
+        rollback: 'Terugdraaien',
+        rollbackTitle: 'Terugdraaien naar {{profile}}?',
+        rollbackDesc: 'De gadget wordt opnieuw geënumereerd; USB-functies vallen even weg.',
+        descriptors: 'descriptors',
+        applyLinks: 'Koppelt: {{functions}}',
+        applyRemoves: 'Verwijdert: {{functions}}',
+        applyNoHid:
+          'Na deze toepassing blijft er geen HID-functie over. Toetsenbord en muis werken dan niet meer.',
+        applyRollback: 'Een mislukte toepassing keert terug naar {{profile}}.',
+        recoveryPowerCycle:
+          'Geen enkele HID overleeft deze toepassing, dus een host die niet meer reageert is alleen te herstellen door hem uit en weer aan te zetten.',
+        recoveryReboot:
+          'Er verdwijnt een interface uit het samengestelde apparaat; de host heeft mogelijk een herstart nodig om de rest opnieuw te binden.',
+        recoveryHdmiReset:
+          'Een videofunctie wordt opnieuw opgebouwd, waardoor de opnameketen erachter reset.',
+        recoveryReconnect: 'De host enumereert het apparaat opnieuw; USB-functies vallen even weg.'
       },
       passthrough: {
         title: 'USB-passthrough',
@@ -614,6 +690,7 @@ const nl = {
           protocol: 'Apparaatprotocol',
           up: 'actief',
           down: 'inactief',
+          noLink: 'geen link',
           enableTitle: 'Netwerkbrug inschakelen?',
           disableTitle: 'Netwerkbrug uitschakelen?',
           reconnect:
@@ -637,6 +714,9 @@ const nl = {
           },
           inboundWeak:
             'De inkomende controle slaagde alleen doordat NanoKVM verbinding met zichzelf maakte. Dat bewijst dat de webdienst luistert en lokaal bereikbaar is, niet dat een verzoek vanaf het netwerk aankomt.',
+          noCarrier:
+            'Geen link op {{port}}. De brug heeft geen pad naar het netwerk zolang er geen kabel is aangesloten.',
+          loop: 'De router wordt ook op {{port}} geleerd, dus die poort is een tweede pad naar hetzelfde netwerk. Spanning tree staat uit, dus niets hier verbreekt de lus: koppel een van de twee paden los.',
           failedNotice:
             'De laatste wijziging kon niet ongedaan worden gemaakt. NanoKVM is mogelijk alleen bereikbaar via het wifi-toegangspunt of een seriële console.'
         },

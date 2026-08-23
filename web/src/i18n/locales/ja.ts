@@ -285,6 +285,41 @@ const ja = {
       okBtn: 'はい',
       cancelBtn: 'いいえ'
     },
+    devices: {
+      takeover: '引き継ぐ',
+      refused: '{{source}} の {{owner}} が使用中',
+      share: {
+        usbDevice: 'USB を共有'
+      },
+      permission: {
+        denied: 'ブラウザーのサイト設定でブロックされています',
+        prompt: 'ブラウザーが許可を求めます'
+      },
+      mic: {
+        mute: 'ミュート',
+        unmute: 'ミュート解除'
+      },
+      revoked: {
+        released: '共有が停止されました',
+        lease_expired: 'このブラウザーが戻る前にリースが期限切れになりました',
+        admin_disconnect: '管理者がすべてのソースを切断しました',
+        slot_removed: 'スロットが削除されました',
+        slot_changed: 'スロットが再設定されました',
+        taken_over: '管理者がこのスロットを引き継ぎました'
+      },
+      usb: {
+        surrendered: 'USB パススルーがキーボードとマウスを保持しています',
+        surrenderedDesc:
+          'リモートホストには NanoKVM のキーボード、マウス、仮想メディアではなくインポートされたデバイスが見えます。セッションが終了すると元に戻ります。',
+        unsupported: 'WebUSB には HTTPS 経由の Chromium 系ブラウザーが必要です',
+        session: '{{device}} を転送中（{{mode}}）',
+        idle: 'パススルーセッションはありません',
+        mode: {
+          hybrid: 'ハイブリッド',
+          exact: '完全一致'
+        }
+      }
+    },
     settings: {
       title: '設定',
       display: {
@@ -315,6 +350,8 @@ const ja = {
         hdmiNotice: 'EDID の書き込み中は映像キャプチャが停止し、完了後に自動で再開します。',
         powerCycleNotice:
           '新しい EDID を有効にするには、本体の電源ケーブルを物理的に抜き差しする必要があります。',
+        powerCycleUnverified:
+          '書き込みを検証できなかったため、この装置の電源を物理的に抜き差しするまで、ビデオチップは今保持している内容をそのまま持ち続けます。',
         applied: 'EDID を適用し、検証しました。',
         applyFailed: 'EDID の適用に失敗しました。',
         busy: '映像チップがビジー状態でした。もう一度お試しください。',
@@ -348,6 +385,44 @@ const ja = {
         confirmPrompt: '適用ボタンを有効にするには {{word}} と入力してください。',
         okBtn: '適用',
         cancelBtn: 'キャンセル'
+      },
+      presentation: {
+        noProfile: '適用されたプロファイルはありません',
+        linked: 'リンクされた機能',
+        hostState: 'ホスト側 USB',
+        hostUnbound: 'コントローラーは未バインド',
+        hdmiState: 'HDMI 入力',
+        hdmiSignal: '信号あり',
+        hdmiUnreported: 'キャプチャの報告はまだありません',
+        endpoints: 'エンドポイント',
+        fifos: 'FIFO スロット',
+        pending: '保留中の変更',
+        pendingEdits: '未保存のアイデンティティ編集',
+        pendingProfile: '{{profile}} は選択されていますが適用されていません',
+        pendingNone: 'なし',
+        lastApply: '最後の適用',
+        applyFailed: '{{time}} に {{profile}} で失敗',
+        applyClean: '記録された失敗はありません',
+        lastKnownGood: '最後に正常だった構成',
+        rollbackTarget: 'ロールバック先',
+        rollbackNone: 'なし',
+        powerCyclePending:
+          'コントローラーがホストから取り上げられました。デバイスを取り戻すには、接続したコンピューターの電源を入れ直してください。',
+        rollback: 'ロールバック',
+        rollbackTitle: '{{profile}} にロールバックしますか？',
+        rollbackDesc: 'ガジェットが再列挙され、USB 機能が一時的に切断されます。',
+        descriptors: 'ディスクリプター',
+        applyLinks: 'リンクする機能: {{functions}}',
+        applyRemoves: '削除する機能: {{functions}}',
+        applyNoHid: 'この適用の後に HID 機能は残りません。キーボードとマウスは動作しなくなります。',
+        applyRollback: '適用に失敗した場合は {{profile}} に戻ります。',
+        recoveryPowerCycle:
+          'この適用では HID がひとつも残らないため、応答しなくなったホストは電源の入れ直しでしか復旧できません。',
+        recoveryReboot:
+          '複合デバイスからインターフェイスがひとつ消えるため、残りを再バインドするにはホストの再起動が必要になる場合があります。',
+        recoveryHdmiReset:
+          'ビデオ機能が作り直されるため、その背後にあるキャプチャ経路もリセットされます。',
+        recoveryReconnect: 'ホストがデバイスを再列挙し、USB 機能が一時的に切断されます。'
       },
       passthrough: {
         title: 'USB パススルー',
@@ -609,6 +684,7 @@ const ja = {
           protocol: 'デバイスのプロトコル',
           up: 'リンクアップ',
           down: 'リンクダウン',
+          noLink: 'リンクなし',
           enableTitle: 'ネットワークブリッジを有効にしますか？',
           disableTitle: 'ネットワークブリッジを無効にしますか？',
           reconnect: 'アドレスの移動中、管理接続は一時的に切断されてから再接続します。',
@@ -628,6 +704,9 @@ const ja = {
           },
           inboundWeak:
             '受信確認は NanoKVM が自分自身に接続することでのみ成立しました。これは Web サービスが待ち受けていて本体から到達できることを示すだけで、ネットワークからの要求が届くことを示すものではありません。',
+          noCarrier:
+            '{{port}} にリンクがありません。ケーブルを接続するまで、ブリッジからネットワークへの経路はありません。',
+          loop: 'ルーターが {{port}} でも学習されています。つまりそのポートは同じネットワークへの二つ目の経路です。スパニングツリーは無効なので、ここでループを断ち切るものはありません。どちらか一方の経路を外してください。',
           failedNotice:
             '前回の変更を取り消せませんでした。NanoKVM には Wi-Fi AP またはシリアルコンソール経由でしかアクセスできない可能性があります。'
         },

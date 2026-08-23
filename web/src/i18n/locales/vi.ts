@@ -282,6 +282,41 @@ const vi = {
       okBtn: 'Có',
       cancelBtn: 'Không'
     },
+    devices: {
+      takeover: 'Tiếp quản',
+      refused: 'Đang được {{owner}} dùng từ {{source}}',
+      share: {
+        usbDevice: 'Chia sẻ USB'
+      },
+      permission: {
+        denied: 'Bị chặn trong cài đặt trang web của trình duyệt',
+        prompt: 'Trình duyệt sẽ hỏi quyền truy cập'
+      },
+      mic: {
+        mute: 'Tắt tiếng',
+        unmute: 'Bật tiếng'
+      },
+      revoked: {
+        released: 'Việc chia sẻ đã dừng',
+        lease_expired: 'Thời hạn thuê đã hết trước khi trình duyệt này quay lại',
+        admin_disconnect: 'Một quản trị viên đã ngắt kết nối mọi nguồn',
+        slot_removed: 'Khe đã bị gỡ bỏ',
+        slot_changed: 'Khe đã được cấu hình lại',
+        taken_over: 'Một quản trị viên đã tiếp quản khe này'
+      },
+      usb: {
+        surrendered: 'USB passthrough đang giữ bàn phím và chuột',
+        surrenderedDesc:
+          'Máy chủ từ xa thấy thiết bị đã nhập thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng sẽ quay lại khi phiên dừng.',
+        unsupported: 'WebUSB cần trình duyệt nhân Chromium chạy qua HTTPS',
+        session: 'Đang chuyển tiếp {{device}} ({{mode}})',
+        idle: 'Không có phiên passthrough',
+        mode: {
+          hybrid: 'lai',
+          exact: 'chính xác'
+        }
+      }
+    },
     settings: {
       title: 'Cài đặt',
       display: {
@@ -311,6 +346,8 @@ const vi = {
         after: 'Mới',
         hdmiNotice: 'Việc thu hình sẽ dừng trong lúc ghi EDID và tự chạy lại sau đó.',
         powerCycleNotice: 'Phải rút điện thiết bị này rồi cắm lại thì EDID mới có hiệu lực.',
+        powerCycleUnverified:
+          'Việc ghi chưa được xác minh, nên chip video vẫn giữ nội dung hiện có cho tới khi thiết bị này được rút điện rồi cắm lại.',
         applied: 'Đã áp dụng và xác minh EDID.',
         applyFailed: 'Áp dụng EDID thất bại.',
         busy: 'Chip video đang bận. Hãy thử lại.',
@@ -344,6 +381,45 @@ const vi = {
         confirmPrompt: 'Nhập {{word}} để bật nút áp dụng.',
         okBtn: 'Áp dụng',
         cancelBtn: 'Hủy'
+      },
+      presentation: {
+        noProfile: 'Chưa áp dụng hồ sơ nào',
+        linked: 'Chức năng đã liên kết',
+        hostState: 'USB của máy chủ',
+        hostUnbound: 'Bộ điều khiển chưa được gắn',
+        hdmiState: 'Đầu vào HDMI',
+        hdmiSignal: 'Có tín hiệu',
+        hdmiUnreported: 'Chưa có báo cáo thu hình',
+        endpoints: 'Endpoint',
+        fifos: 'Khe FIFO',
+        pending: 'Thay đổi đang chờ',
+        pendingEdits: 'Chỉnh sửa danh tính chưa lưu',
+        pendingProfile: '{{profile}} đã được chọn nhưng chưa áp dụng',
+        pendingNone: 'Không có',
+        lastApply: 'Lần áp dụng gần nhất',
+        applyFailed: 'Thất bại trên {{profile}} lúc {{time}}',
+        applyClean: 'Không ghi nhận lỗi nào',
+        lastKnownGood: 'Cấu hình tốt gần nhất',
+        rollbackTarget: 'Đích quay lui',
+        rollbackNone: 'Không có',
+        powerCyclePending:
+          'Bộ điều khiển đã bị lấy khỏi máy chủ. Hãy tắt rồi bật lại máy tính đang kết nối để lấy lại thiết bị.',
+        rollback: 'Quay lui',
+        rollbackTitle: 'Quay lui về {{profile}}?',
+        rollbackDesc: 'Gadget sẽ được liệt kê lại; các chức năng USB mất trong giây lát.',
+        descriptors: 'bộ mô tả',
+        applyLinks: 'Liên kết: {{functions}}',
+        applyRemoves: 'Gỡ bỏ: {{functions}}',
+        applyNoHid:
+          'Sau lần áp dụng này không còn chức năng HID nào. Bàn phím và chuột sẽ ngừng hoạt động.',
+        applyRollback: 'Nếu áp dụng thất bại sẽ quay về {{profile}}.',
+        recoveryPowerCycle:
+          'Không HID nào sống sót qua lần áp dụng này, nên một máy chủ ngừng phản hồi chỉ có thể khôi phục bằng cách tắt rồi bật nguồn.',
+        recoveryReboot:
+          'Một giao diện biến mất khỏi thiết bị ghép; máy chủ có thể cần khởi động lại để gắn lại phần còn lại.',
+        recoveryHdmiReset:
+          'Một chức năng video được dựng lại, nên chuỗi thu hình phía sau nó cũng được đặt lại.',
+        recoveryReconnect: 'Máy chủ liệt kê lại thiết bị; các chức năng USB mất trong giây lát.'
       },
       passthrough: {
         title: 'Chuyển tiếp USB',
@@ -603,6 +679,7 @@ const vi = {
           protocol: 'Giao thức thiết bị',
           up: 'hoạt động',
           down: 'không hoạt động',
+          noLink: 'không có liên kết',
           enableTitle: 'Bật cầu nối mạng?',
           disableTitle: 'Tắt cầu nối mạng?',
           reconnect:
@@ -626,6 +703,9 @@ const vi = {
           },
           inboundWeak:
             'Kiểm tra kết nối đến chỉ đạt vì NanoKVM tự kết nối tới chính nó. Điều đó chứng tỏ dịch vụ web đang lắng nghe và truy cập được tại chỗ, chứ không chứng tỏ một yêu cầu từ mạng đến được nó.',
+          noCarrier:
+            'Không có liên kết trên {{port}}. Cầu nối không có đường ra mạng cho tới khi cắm cáp.',
+          loop: 'Bộ định tuyến cũng đang được học trên {{port}}, nghĩa là cổng đó là đường thứ hai tới cùng một mạng. Spanning tree đang tắt nên không có gì ở đây cắt được vòng lặp: hãy rút một trong hai đường.',
           failedNotice:
             'Không thể hoàn tác thay đổi gần nhất. Có thể chỉ truy cập được NanoKVM qua điểm phát Wi-Fi hoặc cổng serial.'
         },

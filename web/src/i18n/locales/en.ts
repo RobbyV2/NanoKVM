@@ -299,6 +299,8 @@ const en = {
       resuming: 'Waiting to resume',
       stop: 'Stop sharing',
       disconnect: 'Disconnect',
+      takeover: 'Take over',
+      refused: 'In use by {{owner}} from {{source}}',
       connectedSources_one: '{{count}} connected source',
       connectedSources_other: '{{count}} connected sources',
       connection: {
@@ -308,7 +310,36 @@ const en = {
       },
       share: {
         camera: 'Share camera',
-        microphone: 'Share microphone'
+        microphone: 'Share microphone',
+        usbDevice: 'Share USB'
+      },
+      permission: {
+        denied: "Blocked in your browser's site settings",
+        prompt: 'Your browser will ask for access'
+      },
+      mic: {
+        mute: 'Mute',
+        unmute: 'Unmute'
+      },
+      revoked: {
+        released: 'Sharing was stopped',
+        lease_expired: 'The lease expired before this browser came back',
+        admin_disconnect: 'An administrator disconnected every source',
+        slot_removed: 'The slot was removed',
+        slot_changed: 'The slot was reconfigured',
+        taken_over: 'An administrator took this slot over'
+      },
+      usb: {
+        surrendered: 'USB passthrough holds the keyboard and mouse',
+        surrenderedDesc:
+          'The remote host sees the imported device instead of NanoKVM’s keyboard, mouse and virtual media. They come back when the session stops.',
+        unsupported: 'WebUSB needs a Chromium browser over HTTPS',
+        session: 'Passing through {{device}} ({{mode}})',
+        idle: 'No passthrough session',
+        mode: {
+          hybrid: 'hybrid',
+          exact: 'exact'
+        }
       }
     },
     settings: {
@@ -342,6 +373,8 @@ const en = {
           'Video capture stops while the EDID is written and starts again on its own afterwards.',
         powerCycleNotice:
           'This device must be physically unplugged from power and plugged back in before the new EDID takes effect.',
+        powerCycleUnverified:
+          'The write did not verify, so the video chip keeps whatever it now holds until this device is physically unplugged from power and plugged back in.',
         applied: 'EDID applied and verified.',
         applyFailed: 'Applying the EDID failed.',
         busy: 'The video chip was busy. Try again.',
@@ -380,8 +413,33 @@ const en = {
         title: 'Presentation',
         loading: 'Loading...',
         current: 'Current USB presentation',
+        noProfile: 'No profile applied',
+        linked: 'Linked functions',
+        hostState: 'Host USB',
+        hostUnbound: 'Controller not bound',
+        hdmiState: 'HDMI input',
+        hdmiSignal: 'Signal present',
+        hdmiUnreported: 'No capture report yet',
+        endpoints: 'Endpoints',
+        fifos: 'FIFO slots',
+        pending: 'Pending changes',
+        pendingEdits: 'Unsaved identity edits',
+        pendingProfile: '{{profile}} is selected but not applied',
+        pendingNone: 'None',
+        lastApply: 'Last apply',
+        applyFailed: 'Failed on {{profile}} at {{time}}',
+        applyClean: 'No failure recorded',
+        lastKnownGood: 'Last known good',
+        rollbackTarget: 'Rollback target',
+        rollbackNone: 'None',
+        powerCyclePending:
+          'The controller was taken from the host. Power-cycle the connected computer to get the device back.',
+        rollback: 'Roll back',
+        rollbackTitle: 'Roll back to {{profile}}?',
+        rollbackDesc: 'The gadget re-enumerates; USB functions drop briefly.',
         profile: 'USB profile',
         builtIn: 'built-in',
+        descriptors: 'descriptors',
         clone: 'Clone',
         cloneTitle: 'Clone this profile',
         cloneToEdit: 'Built-in profiles stay read-only. Clone this profile to edit its identity.',
@@ -411,6 +469,16 @@ const en = {
         applyDesc: 'NanoKVM will present {{profile}} to the connected computer.',
         reconnect:
           'Keyboard, mouse and other USB functions disconnect briefly while the gadget is rebound.',
+        applyLinks: 'Links: {{functions}}',
+        applyRemoves: 'Removes: {{functions}}',
+        applyNoHid: 'No HID function remains after this apply. Keyboard and mouse stop working.',
+        applyRollback: 'A failed apply returns to {{profile}}.',
+        recoveryPowerCycle:
+          'No HID survives this apply, so a host that stops responding can only be recovered by a power cycle.',
+        recoveryReboot:
+          'An interface disappears from the composite device; the host may need a reboot to rebind the rest.',
+        recoveryHdmiReset: 'A video function is rebuilt, so the capture pipeline behind it resets.',
+        recoveryReconnect: 'The host re-enumerates the device; USB functions drop briefly.',
         cancel: 'Cancel',
         noFunctions: 'No linked functions',
         loadFailed: 'Failed to load presentation profiles',
@@ -695,6 +763,7 @@ const en = {
           protocol: 'Gadget protocol',
           up: 'up',
           down: 'down',
+          noLink: 'no link',
           enableTitle: 'Enable the network bridge?',
           disableTitle: 'Disable the network bridge?',
           reconnect: 'Management will briefly disconnect and reconnect while the address moves.',
@@ -717,6 +786,9 @@ const en = {
           },
           inboundWeak:
             'The inbound check passed only because NanoKVM connected to itself. That proves the web service is listening and reachable on this device, not that a request from the network reaches it.',
+          noCarrier:
+            'No link on {{port}}. The bridge has no path to the network until a cable is connected.',
+          loop: 'The router is also being learned on {{port}}, so that port is a second path to the same network. Spanning tree is off, so nothing here will break the loop: disconnect one of the two paths.',
           failedNotice:
             'The last change could not be undone. NanoKVM may only be reachable over the Wi-Fi AP or a serial console.'
         },

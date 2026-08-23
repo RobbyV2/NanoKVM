@@ -281,6 +281,41 @@ const se = {
       okBtn: 'Ja',
       cancelBtn: 'Nej'
     },
+    devices: {
+      takeover: 'Ta över',
+      refused: 'Används av {{owner}} från {{source}}',
+      share: {
+        usbDevice: 'Dela USB'
+      },
+      permission: {
+        denied: 'Blockerat i webbläsarens webbplatsinställningar',
+        prompt: 'Webbläsaren kommer att fråga om åtkomst'
+      },
+      mic: {
+        mute: 'Stäng av ljudet',
+        unmute: 'Slå på ljudet'
+      },
+      revoked: {
+        released: 'Delningen stoppades',
+        lease_expired: 'Leaset gick ut innan den här webbläsaren kom tillbaka',
+        admin_disconnect: 'En administratör kopplade från alla källor',
+        slot_removed: 'Platsen togs bort',
+        slot_changed: 'Platsen konfigurerades om',
+        taken_over: 'En administratör tog över den här platsen'
+      },
+      usb: {
+        surrendered: 'USB-passthrough håller tangentbordet och musen',
+        surrenderedDesc:
+          'Fjärrvärden ser den importerade enheten i stället för NanoKVM:s tangentbord, mus och virtuella media. De kommer tillbaka när sessionen stoppas.',
+        unsupported: 'WebUSB kräver en Chromium-webbläsare över HTTPS',
+        session: 'Vidarebefordrar {{device}} ({{mode}})',
+        idle: 'Ingen passthrough-session',
+        mode: {
+          hybrid: 'hybrid',
+          exact: 'exakt'
+        }
+      }
+    },
     settings: {
       title: 'Inställningar',
       display: {
@@ -312,6 +347,8 @@ const se = {
           'Videoinspelningen stannar medan EDID skrivs och startar sedan av sig själv igen.',
         powerCycleNotice:
           'Enheten måste kopplas bort fysiskt från strömmen och anslutas igen innan den nya EDID:n börjar gälla.',
+        powerCycleUnverified:
+          'Skrivningen verifierades inte, så videochippet behåller det som ligger i det nu tills enheten kopplas bort fysiskt från strömmen och ansluts igen.',
         applied: 'EDID tillämpad och verifierad.',
         applyFailed: 'Det gick inte att tillämpa EDID.',
         busy: 'Videokretsen var upptagen. Försök igen.',
@@ -346,6 +383,46 @@ const se = {
         confirmPrompt: 'Skriv {{word}} för att aktivera tillämpa-knappen.',
         okBtn: 'Tillämpa',
         cancelBtn: 'Avbryt'
+      },
+      presentation: {
+        noProfile: 'Ingen profil tillämpad',
+        linked: 'Länkade funktioner',
+        hostState: 'Värdens USB',
+        hostUnbound: 'Styrkretsen är inte bunden',
+        hdmiState: 'HDMI-ingång',
+        hdmiSignal: 'Signal finns',
+        hdmiUnreported: 'Ingen rapport om inspelning ännu',
+        endpoints: 'Endpoints',
+        fifos: 'FIFO-platser',
+        pending: 'Väntande ändringar',
+        pendingEdits: 'Osparade identitetsändringar',
+        pendingProfile: '{{profile}} är vald men inte tillämpad',
+        pendingNone: 'Inga',
+        lastApply: 'Senaste tillämpning',
+        applyFailed: 'Misslyckades på {{profile}} den {{time}}',
+        applyClean: 'Inget fel registrerat',
+        lastKnownGood: 'Senast kända fungerande',
+        rollbackTarget: 'Mål för återställning',
+        rollbackNone: 'Inget',
+        powerCyclePending:
+          'Styrkretsen togs från värden. Stäng av och slå på den anslutna datorn igen för att få tillbaka enheten.',
+        rollback: 'Återställ',
+        rollbackTitle: 'Återställa till {{profile}}?',
+        rollbackDesc: 'Gadgeten räknas upp på nytt; USB-funktioner faller bort en kort stund.',
+        descriptors: 'deskriptorer',
+        applyLinks: 'Länkar: {{functions}}',
+        applyRemoves: 'Tar bort: {{functions}}',
+        applyNoHid:
+          'Ingen HID-funktion återstår efter den här tillämpningen. Tangentbord och mus slutar fungera.',
+        applyRollback: 'En misslyckad tillämpning går tillbaka till {{profile}}.',
+        recoveryPowerCycle:
+          'Ingen HID överlever den här tillämpningen, så en värd som slutar svara går bara att rädda genom att stänga av och slå på strömmen.',
+        recoveryReboot:
+          'Ett gränssnitt försvinner från den sammansatta enheten; värden kan behöva startas om för att binda resten på nytt.',
+        recoveryHdmiReset:
+          'En videofunktion byggs upp på nytt, så inspelningskedjan bakom den nollställs.',
+        recoveryReconnect:
+          'Värden räknar upp enheten på nytt; USB-funktioner faller bort en kort stund.'
       },
       passthrough: {
         title: 'USB-genomsläpp',
@@ -607,6 +684,7 @@ const se = {
           protocol: 'Enhetens protokoll',
           up: 'aktiv',
           down: 'inaktiv',
+          noLink: 'ingen länk',
           enableTitle: 'Aktivera nätverksbryggan?',
           disableTitle: 'Inaktivera nätverksbryggan?',
           reconnect: 'Hanteringsanslutningen bryts kort och återansluter medan adressen flyttas.',
@@ -630,6 +708,9 @@ const se = {
           },
           inboundWeak:
             'Kontrollen av inkommande trafik gick igenom bara för att NanoKVM anslöt till sig själv. Det visar att webbtjänsten lyssnar och nås lokalt, inte att en begäran från nätverket kommer fram.',
+          noCarrier:
+            'Ingen länk på {{port}}. Bryggan har ingen väg ut på nätverket förrän en kabel ansluts.',
+          loop: 'Routern lärs in även på {{port}}, så den porten är en andra väg till samma nätverk. Spanning tree är avstängt, så inget här bryter slingan: koppla bort en av de två vägarna.',
           failedNotice:
             'Den senaste ändringen kunde inte ångras. NanoKVM kanske bara går att nå via Wi-Fi-accesspunkten eller en seriell konsol.'
         },

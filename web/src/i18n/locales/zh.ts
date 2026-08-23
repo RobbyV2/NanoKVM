@@ -277,6 +277,41 @@ const zh = {
       okBtn: '确认',
       cancelBtn: '取消'
     },
+    devices: {
+      takeover: '接管',
+      refused: '{{owner}} 正通过 {{source}} 使用',
+      share: {
+        usbDevice: '共享 USB'
+      },
+      permission: {
+        denied: '已在浏览器的网站设置中被阻止',
+        prompt: '浏览器将请求访问权限'
+      },
+      mic: {
+        mute: '静音',
+        unmute: '取消静音'
+      },
+      revoked: {
+        released: '共享已停止',
+        lease_expired: '租约在本浏览器返回之前已过期',
+        admin_disconnect: '管理员断开了所有来源',
+        slot_removed: '该插槽已被移除',
+        slot_changed: '该插槽已被重新配置',
+        taken_over: '管理员接管了该插槽'
+      },
+      usb: {
+        surrendered: 'USB 直通正占用键盘和鼠标',
+        surrenderedDesc:
+          '远程主机看到的是导入的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话停止后它们会自动恢复。',
+        unsupported: 'WebUSB 需要通过 HTTPS 使用 Chromium 内核浏览器',
+        session: '正在直通 {{device}}（{{mode}}）',
+        idle: '没有直通会话',
+        mode: {
+          hybrid: '混合',
+          exact: '精确'
+        }
+      }
+    },
     settings: {
       title: '设置',
       display: {
@@ -305,6 +340,8 @@ const zh = {
         after: '新的',
         hdmiNotice: '写入 EDID 期间视频采集会中断，完成后会自动恢复。',
         powerCycleNotice: '必须将本设备断开电源并重新接通，新的 EDID 才会生效。',
+        powerCycleUnverified:
+          '写入未通过校验，因此在将本设备断开电源并重新接通之前，视频芯片会一直保留它现在的内容。',
         applied: 'EDID 已应用并校验通过。',
         applyFailed: 'EDID 应用失败。',
         busy: '视频芯片正忙，请重试。',
@@ -336,6 +373,41 @@ const zh = {
         confirmPrompt: '输入 {{word}} 以启用应用按钮。',
         okBtn: '应用',
         cancelBtn: '取消'
+      },
+      presentation: {
+        noProfile: '未应用任何配置文件',
+        linked: '已链接的功能',
+        hostState: '主机 USB',
+        hostUnbound: '控制器未绑定',
+        hdmiState: 'HDMI 输入',
+        hdmiSignal: '有信号',
+        hdmiUnreported: '尚无采集报告',
+        endpoints: '端点',
+        fifos: 'FIFO 槽位',
+        pending: '待处理的更改',
+        pendingEdits: '未保存的身份修改',
+        pendingProfile: '已选择 {{profile}}，但尚未应用',
+        pendingNone: '无',
+        lastApply: '上次应用',
+        applyFailed: '{{time}} 在 {{profile}} 上失败',
+        applyClean: '没有失败记录',
+        lastKnownGood: '上次已知可用',
+        rollbackTarget: '回滚目标',
+        rollbackNone: '无',
+        powerCyclePending: '控制器已从主机上收回。请将所连接的计算机断电并重新开机，以取回该设备。',
+        rollback: '回滚',
+        rollbackTitle: '回滚到 {{profile}}？',
+        rollbackDesc: '小工具将重新枚举，USB 功能会短暂中断。',
+        descriptors: '描述符',
+        applyLinks: '链接：{{functions}}',
+        applyRemoves: '移除：{{functions}}',
+        applyNoHid: '本次应用后不会保留任何 HID 功能，键盘和鼠标将停止工作。',
+        applyRollback: '应用失败将回到 {{profile}}。',
+        recoveryPowerCycle:
+          '本次应用不会保留任何 HID，因此若主机失去响应，只能通过断电重启来恢复。',
+        recoveryReboot: '复合设备中会少掉一个接口，主机可能需要重启才能重新绑定其余接口。',
+        recoveryHdmiReset: '视频功能会被重新创建，因此其背后的采集流水线也会复位。',
+        recoveryReconnect: '主机将重新枚举该设备，USB 功能会短暂中断。'
       },
       passthrough: {
         title: 'USB 透传',
@@ -585,6 +657,7 @@ const zh = {
           protocol: '设备协议',
           up: '已连接',
           down: '未连接',
+          noLink: '无链路',
           enableTitle: '启用网络桥接？',
           disableTitle: '禁用网络桥接？',
           reconnect: '地址迁移期间，管理连接会短暂断开并重新连接。',
@@ -604,6 +677,8 @@ const zh = {
           },
           inboundWeak:
             '入站检查仅通过 NanoKVM 自连接完成。这只能证明 Web 服务正在监听且本机可达，并不能证明来自网络的请求可以到达。',
+          noCarrier: '{{port}} 上没有链路。在接上网线之前，桥接没有通往网络的路径。',
+          loop: '路由器同时也在 {{port}} 上被学习到，说明该端口是通往同一网络的第二条路径。生成树已关闭，这里不会有任何机制打断环路：请断开其中一条路径。',
           failedNotice: '上次变更未能撤销。可能只能通过 Wi-Fi AP 或串口控制台访问 NanoKVM。'
         },
         dns: {

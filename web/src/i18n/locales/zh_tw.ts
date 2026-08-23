@@ -274,6 +274,41 @@ const zh_tw = {
       okBtn: '確認',
       cancelBtn: '取消'
     },
+    devices: {
+      takeover: '接管',
+      refused: '{{owner}} 正透過 {{source}} 使用',
+      share: {
+        usbDevice: '分享 USB'
+      },
+      permission: {
+        denied: '已在瀏覽器的網站設定中被封鎖',
+        prompt: '瀏覽器將要求存取權限'
+      },
+      mic: {
+        mute: '靜音',
+        unmute: '取消靜音'
+      },
+      revoked: {
+        released: '分享已停止',
+        lease_expired: '租約在本瀏覽器回來之前就已到期',
+        admin_disconnect: '管理員中斷了所有來源',
+        slot_removed: '此插槽已被移除',
+        slot_changed: '此插槽已重新設定',
+        taken_over: '管理員接管了此插槽'
+      },
+      usb: {
+        surrendered: 'USB 直通正佔用鍵盤與滑鼠',
+        surrenderedDesc:
+          '遠端主機看到的是匯入的裝置，而不是 NanoKVM 的鍵盤、滑鼠與虛擬媒體。工作階段結束後它們會自行恢復。',
+        unsupported: 'WebUSB 需要透過 HTTPS 使用 Chromium 核心瀏覽器',
+        session: '正在直通 {{device}}（{{mode}}）',
+        idle: '沒有直通工作階段',
+        mode: {
+          hybrid: '混合',
+          exact: '精確'
+        }
+      }
+    },
     settings: {
       title: '設定',
       display: {
@@ -302,6 +337,8 @@ const zh_tw = {
         after: '新的',
         hdmiNotice: '寫入 EDID 期間視訊擷取會中斷，完成後會自行恢復。',
         powerCycleNotice: '必須將本裝置實體斷電後重新接上電源，新的 EDID 才會生效。',
+        powerCycleUnverified:
+          '寫入未通過驗證，因此在將本裝置實體斷電並重新接上電源之前，視訊晶片會一直保留它目前的內容。',
         applied: 'EDID 已套用並驗證通過。',
         applyFailed: 'EDID 套用失敗。',
         busy: '視訊晶片忙碌中，請重試。',
@@ -333,6 +370,41 @@ const zh_tw = {
         confirmPrompt: '輸入 {{word}} 以啟用套用按鈕。',
         okBtn: '套用',
         cancelBtn: '取消'
+      },
+      presentation: {
+        noProfile: '未套用任何設定檔',
+        linked: '已連結的功能',
+        hostState: '主機 USB',
+        hostUnbound: '控制器未繫結',
+        hdmiState: 'HDMI 輸入',
+        hdmiSignal: '有訊號',
+        hdmiUnreported: '尚無擷取回報',
+        endpoints: '端點',
+        fifos: 'FIFO 插槽',
+        pending: '待處理的變更',
+        pendingEdits: '未儲存的識別資訊修改',
+        pendingProfile: '已選取 {{profile}}，但尚未套用',
+        pendingNone: '無',
+        lastApply: '上次套用',
+        applyFailed: '{{time}} 在 {{profile}} 上失敗',
+        applyClean: '沒有失敗紀錄',
+        lastKnownGood: '上次已知可用',
+        rollbackTarget: '回復目標',
+        rollbackNone: '無',
+        powerCyclePending: '控制器已從主機收回。請將所連接的電腦斷電後重新開機，以取回該裝置。',
+        rollback: '回復',
+        rollbackTitle: '回復到 {{profile}}？',
+        rollbackDesc: '小工具將重新列舉，USB 功能會短暫中斷。',
+        descriptors: '描述元',
+        applyLinks: '連結：{{functions}}',
+        applyRemoves: '移除：{{functions}}',
+        applyNoHid: '本次套用後不會保留任何 HID 功能，鍵盤與滑鼠將停止運作。',
+        applyRollback: '套用失敗會回到 {{profile}}。',
+        recoveryPowerCycle:
+          '本次套用不會保留任何 HID，因此主機若失去回應，只能以斷電重開的方式復原。',
+        recoveryReboot: '複合裝置中會少掉一個介面，主機可能需要重新開機才能重新繫結其餘介面。',
+        recoveryHdmiReset: '視訊功能會被重新建立，因此其背後的擷取流程也會重設。',
+        recoveryReconnect: '主機將重新列舉此裝置，USB 功能會短暫中斷。'
       },
       passthrough: {
         title: 'USB 直通',
@@ -582,6 +654,7 @@ const zh_tw = {
           protocol: '裝置通訊協定',
           up: '已連線',
           down: '未連線',
+          noLink: '無連線',
           enableTitle: '啟用網路橋接？',
           disableTitle: '停用網路橋接？',
           reconnect: '位址移轉期間，管理連線會短暫中斷並重新連線。',
@@ -601,6 +674,8 @@ const zh_tw = {
           },
           inboundWeak:
             '入站檢查僅透過 NanoKVM 自我連線完成。這只能證明 Web 服務正在接聽且本機可達，並不能證明來自網路的請求可以抵達。',
+          noCarrier: '{{port}} 上沒有連線。在接上網路線之前，橋接沒有通往網路的路徑。',
+          loop: '路由器同時也在 {{port}} 上被學習到，代表該連接埠是通往同一網路的第二條路徑。生成樹已關閉，這裡不會有任何機制打斷迴圈：請拔除其中一條路徑。',
           failedNotice: '上次變更無法復原。可能只能透過 Wi-Fi AP 或序列主控台存取 NanoKVM。'
         },
         dns: {
