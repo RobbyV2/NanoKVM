@@ -2,12 +2,15 @@ package auth
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"NanoKVM-Server/authn"
@@ -304,4 +307,59 @@ func useTestStore(store *authn.Store) func() {
 		conf.JWT.RefreshTokenDuration = originalDuration
 		conf.JWT.RevokeTokensOnLogout = originalRevokeOnLogout
 	}
+}
+
+func TestLoginRejectsMalformedCiphertextConcurrently(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := authn.NewStore(filepath.Join(t.TempDir(), "pwd"))
+	restore := useTestStore(store)
+	defer restore()
+
+	service := NewService()
+	router := gin.New()
+	router.POST("/login", service.Login)
+
+	payloads := []string{
+		encryptForRequest("admin"),
+		encryptForRequest("wrong-password"),
+		saltedCiphertext(16),
+		saltedCiphertext(20),
+		saltedCiphertext(32),
+		saltedCiphertext(48),
+		"not-base64-%%%",
+	}
+
+	var group sync.WaitGroup
+	for worker := range 28 {
+		group.Add(1)
+		go func(worker int) {
+			defer group.Done()
+			password := payloads[worker%len(payloads)]
+			recorder := httptest.NewRecorder()
+			request := jsonRequest(http.MethodPost, "/login", map[string]any{
+				"username": "admin",
+				"password": password,
+			})
+			request.RemoteAddr = fmt.Sprintf("10.0.0.%d:4000", worker%3)
+			router.ServeHTTP(recorder, request)
+			if recorder.Code != http.StatusOK {
+				t.Errorf("worker %d: status = %d, body = %q", worker, recorder.Code, recorder.Body.String())
+				return
+			}
+			var response proto.Response
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Errorf("worker %d: decode response %q: %v", worker, recorder.Body.String(), err)
+			}
+		}(worker)
+	}
+	group.Wait()
+}
+
+func saltedCiphertext(length int) string {
+	raw := make([]byte, length)
+	copy(raw, "Salted__")
+	for index := 8; index < length; index++ {
+		raw[index] = byte(index)
+	}
+	return url.QueryEscape(base64.StdEncoding.EncodeToString(raw))
 }
