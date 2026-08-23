@@ -1,5 +1,6 @@
 import type {
   FIFOAssignment,
+  HIDRole,
   PresentationProfile,
   Preset,
   ProfileSummary
@@ -121,4 +122,64 @@ export function recoveryKey(action: string) {
     default:
       return 'settings.presentation.recoveryReconnect';
   }
+}
+
+export const HID_ROLES: HIDRole[] = ['keyboard', 'relative', 'absolute'];
+
+// Slot index per role, or null when the role is not present at all. Two roles
+// sharing a slot share one HID interface and therefore one IN endpoint.
+export type HIDAssignment = Record<HIDRole, number | null>;
+
+export function hidAssignment(profile: PresentationProfile): HIDAssignment {
+  const assignment: HIDAssignment = { keyboard: null, relative: null, absolute: null };
+  let slot = 0;
+  for (const item of profile.functions) {
+    if (item.kind !== 'hid') continue;
+    for (const role of item.hid?.roles || []) assignment[role] = slot;
+    slot += 1;
+  }
+  return assignment;
+}
+
+export function hidGroups(assignment: HIDAssignment): HIDRole[][] {
+  const slots = [...new Set(HID_ROLES.map((role) => assignment[role]).filter((s) => s !== null))];
+  slots.sort((a, b) => a - b);
+  return slots.map((slot) => HID_ROLES.filter((role) => assignment[role] === slot));
+}
+
+export function hidSlotCount(assignment: HIDAssignment) {
+  return hidGroups(assignment).length;
+}
+
+// Renumbering after every edit keeps the slots contiguous, which is what makes
+// them a prefix of hid.GS0,GS1,GS2 on the server.
+export function setHidSlot(
+  assignment: HIDAssignment,
+  role: HIDRole,
+  slot: number | null
+): HIDAssignment {
+  const next = { ...assignment, [role]: slot };
+  const used = [...new Set(HID_ROLES.map((item) => next[item]).filter((s) => s !== null))];
+  used.sort((a, b) => a - b);
+  for (const item of HID_ROLES) {
+    if (next[item] !== null) next[item] = used.indexOf(next[item]);
+  }
+  return next;
+}
+
+export function hidRoleKey(role: HIDRole) {
+  switch (role) {
+    case 'keyboard':
+      return 'settings.presentation.hidRoleKeyboard';
+    case 'relative':
+      return 'settings.presentation.hidRoleRelative';
+    default:
+      return 'settings.presentation.hidRoleAbsolute';
+  }
+}
+
+export function hidKeyboardShares(assignment: HIDAssignment) {
+  const slot = assignment.keyboard;
+  if (slot === null) return false;
+  return HID_ROLES.some((role) => role !== 'keyboard' && assignment[role] === slot);
 }

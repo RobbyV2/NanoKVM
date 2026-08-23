@@ -59,6 +59,8 @@ export type USBDevice = {
   product: string;
 };
 
+export type HIDRole = 'keyboard' | 'relative' | 'absolute';
+
 export type USBFunction = {
   kind: string;
   instance: string;
@@ -68,6 +70,7 @@ export type USBFunction = {
     report_length: number;
     wakeup_on_write: boolean;
     report_desc: string;
+    roles?: HIDRole[];
   };
   net?: Record<string, unknown>;
   storage?: Record<string, unknown>;
@@ -182,6 +185,14 @@ export function validateProfile(name: string) {
 
 export function previewProfile(profile: PresentationProfile) {
   return http.request({ method: 'put', url: '/api/presentation/config/preview', data: profile });
+}
+
+export function previewHIDLayout(profile: PresentationProfile, groups: HIDRole[][]) {
+  return http.request({
+    method: 'put',
+    url: '/api/presentation/config/hid-layout',
+    data: { profile, groups }
+  });
 }
 
 export function applyProfile(name: string) {

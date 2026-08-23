@@ -354,6 +354,44 @@ export const handlers = [
       }
     });
   }),
+  http.put('/api/presentation/config/hid-layout', async ({ request }) => {
+    const body = (await request.json()) as {
+      profile: typeof standardProfile;
+      groups: string[][];
+    };
+    const functions = [
+      ...body.profile.functions.filter((item) => item.kind !== 'hid'),
+      ...body.groups.map((roles, index) => ({
+        kind: 'hid',
+        instance: `GS${index}`,
+        hid: {
+          protocol: roles.length > 1 ? 0 : 1,
+          subclass: 0,
+          report_length: roles.length > 1 ? 9 : 8,
+          wakeup_on_write: true,
+          report_desc: 'AA==',
+          roles
+        }
+      }))
+    ];
+    const profile = { ...body.profile, functions };
+    return HttpResponse.json({
+      code: 0,
+      data: {
+        profile,
+        preview: {
+          valid: true,
+          errors: [],
+          warnings: [],
+          profile: profile.name,
+          functions: functions.map((item) => `${item.kind}.${item.instance}`),
+          endpoints: { in: 3 + body.groups.length, out: body.groups.length },
+          headroom: { in: 3 - body.groups.length, out: 5 - body.groups.length },
+          operations: 24
+        }
+      }
+    });
+  }),
   http.put('/api/presentation/config/apply', async ({ request }) => {
     const body = (await request.json()) as { name: string };
     activeProfile = body.name;

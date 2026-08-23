@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/presentation.ts';
 import type {
+  HIDRole,
   PresentationPreview,
   PresentationProfile,
   PresentationStatus,
@@ -35,14 +36,24 @@ import {
   descriptorCount,
   editIdentity,
   formatFIFOs,
+  HID_ROLES,
+  hidAssignment,
+  hidGroups,
+  hidKeyboardShares,
+  hidRoleKey,
+  hidSlotCount,
   identityChanged,
   identityFields,
   isProfileName,
   matchPreset,
   provenanceTags,
   recoveryKey,
+  setHidSlot,
+  type HIDAssignment,
   type IdentityFields
 } from './editor.ts';
+
+const HID_ROLE_OFF = -1;
 
 type PresentationProps = {
   setIsLocked: (locked: boolean) => void;
@@ -58,6 +69,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   const [selected, setSelected] = useState('');
   const [profile, setProfile] = useState<PresentationProfile>();
   const [fields, setFields] = useState<IdentityFields>();
+  const [layout, setLayout] = useState<HIDAssignment>();
   const [preview, setPreview] = useState<PresentationPreview>();
   const [cloneName, setCloneName] = useState('');
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -75,6 +87,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
     const next = rsp.data as PresentationProfile;
     setProfile(next);
     setFields(identityFields(next));
+    setLayout(hidAssignment(next));
     const previewRsp = await api.previewProfile(next);
     if (previewRsp.code === 0) setPreview(previewRsp.data as PresentationPreview);
   }, []);
@@ -134,6 +147,24 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
     });
   }
 
+  async function editLayout(role: HIDRole, slot: number | null) {
+    const base = candidate();
+    if (!base || !layout) return;
+    const next = setHidSlot(layout, role, slot);
+    const groups = hidGroups(next);
+    if (groups.length === 0) return;
+    setLayout(next);
+    await act(async () => {
+      const rsp = await api.previewHIDLayout(base, groups);
+      if (rsp.code !== 0) throw new Error(rsp.msg);
+      const data = rsp.data as { profile: PresentationProfile; preview: PresentationPreview };
+      setProfile(data.profile);
+      setFields(identityFields(data.profile));
+      setLayout(hidAssignment(data.profile));
+      setPreview(data.preview);
+    });
+  }
+
   async function save() {
     const next = candidate();
     if (!next || next.built_in) return;
@@ -142,6 +173,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
       if (rsp.code !== 0) throw new Error(rsp.msg);
       setProfile(rsp.data as PresentationProfile);
       setFields(identityFields(rsp.data as PresentationProfile));
+      setLayout(hidAssignment(rsp.data as PresentationProfile));
       await refresh(next.name);
     });
   }
@@ -539,6 +571,47 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                   onChange={(configuration) => setFields({ ...fields, configuration })}
                 />
               </div>
+
+              {layout && (
+                <div className="space-y-2">
+                  <div className="text-xs text-neutral-400">
+                    {t('settings.presentation.hidLayout')}
+                  </div>
+                  {HID_ROLES.map((role) => (
+                    <div key={role} className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-neutral-300">{t(hidRoleKey(role))}</span>
+                      <Select
+                        size="small"
+                        className="w-44"
+                        disabled={working}
+                        value={layout[role] ?? HID_ROLE_OFF}
+                        onChange={(slot) => editLayout(role, slot === HID_ROLE_OFF ? null : slot)}
+                        options={[
+                          {
+                            value: HID_ROLE_OFF,
+                            label: t('settings.presentation.hidOff'),
+                            disabled: hidGroups(setHidSlot(layout, role, null)).length === 0
+                          },
+                          ...Array.from(
+                            {
+                              length: Math.min(3, hidSlotCount(setHidSlot(layout, role, null)) + 1)
+                            },
+                            (_, index) => ({
+                              value: index,
+                              label: t('settings.presentation.hidInterface', { index: index + 1 })
+                            })
+                          )
+                        ]}
+                      />
+                    </div>
+                  ))}
+                  {hidKeyboardShares(layout) && (
+                    <div className="text-xs text-amber-500">
+                      {t('settings.presentation.hidBootKeyboardShared')}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-1 text-xs text-neutral-500">
                 <div>

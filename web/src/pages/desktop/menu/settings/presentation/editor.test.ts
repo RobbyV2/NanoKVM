@@ -7,12 +7,17 @@ import {
   descriptorCount,
   editIdentity,
   formatFIFOs,
+  hidAssignment,
+  hidGroups,
+  hidKeyboardShares,
+  hidSlotCount,
   identityChanged,
   identityFields,
   isProfileName,
   matchPreset,
   provenanceTags,
-  recoveryKey
+  recoveryKey,
+  setHidSlot
 } from './editor.ts';
 
 const profile: PresentationProfile = {
@@ -134,4 +139,59 @@ test('provenance tags surface an imported profile', () => {
     'settings.presentation.descriptors',
     'settings.presentation.imported'
   ]);
+});
+
+test('a stored layout reads back as one slot per interface', () => {
+  const shared: PresentationProfile = {
+    ...profile,
+    functions: [
+      { kind: 'ncm', instance: 'usb0' },
+      {
+        kind: 'hid',
+        instance: 'GS0',
+        hid: {
+          protocol: 1,
+          subclass: 0,
+          report_length: 8,
+          wakeup_on_write: true,
+          report_desc: 'AA==',
+          roles: ['keyboard']
+        }
+      },
+      {
+        kind: 'hid',
+        instance: 'GS1',
+        hid: {
+          protocol: 0,
+          subclass: 0,
+          report_length: 7,
+          wakeup_on_write: true,
+          report_desc: 'AA==',
+          roles: ['relative', 'absolute']
+        }
+      }
+    ]
+  };
+  assert.deepEqual(hidAssignment(shared), { keyboard: 0, relative: 1, absolute: 1 });
+  assert.deepEqual(hidGroups(hidAssignment(shared)), [['keyboard'], ['relative', 'absolute']]);
+  assert.equal(hidSlotCount(hidAssignment(shared)), 2);
+  assert.equal(hidKeyboardShares(hidAssignment(shared)), false);
+});
+
+// Slots have to stay contiguous, because the server maps slot i onto hid.GSi
+// and f_hid hands out /dev/hidgN in creation order.
+test('removing a role renumbers the interfaces it leaves behind', () => {
+  const three = { keyboard: 0, relative: 1, absolute: 2 } as const;
+  assert.deepEqual(setHidSlot(three, 'relative', null), {
+    keyboard: 0,
+    relative: null,
+    absolute: 1
+  });
+  assert.deepEqual(setHidSlot(three, 'keyboard', 2), { keyboard: 1, relative: 0, absolute: 1 });
+  assert.equal(hidKeyboardShares(setHidSlot(three, 'keyboard', 2)), true);
+});
+
+test('a layout with no interfaces left produces no groups', () => {
+  const none = { keyboard: null, relative: null, absolute: null };
+  assert.deepEqual(hidGroups(none), []);
 });
