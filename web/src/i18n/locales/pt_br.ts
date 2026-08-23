@@ -501,9 +501,11 @@ const pt_br = {
         hidWarning: 'Iniciar o passthrough abre mão do teclado, do mouse e da mídia virtual',
         hidWarningDesc:
           'O NanoKVM tem um único controlador de dispositivo USB e o proxy precisa dele inteiro, então enquanto uma sessão estiver ativa o host remoto verá o dispositivo repassado em vez do teclado, do mouse e da mídia virtual do NanoKVM. Eles voltam sozinhos assim que a sessão é interrompida. Esta interface web não é afetada, portanto você sempre pode parar a sessão por esta página.',
-        isoWarning: 'Webcams, microfones e outros dispositivos isócronos não podem ser repassados',
-        isoWarningDesc:
-          'Este hardware transporta apenas transferências de controle, bulk e de interrupção. Dispositivos de áudio e vídeo não vão funcionar, não importa como sejam vinculados.',
+        isoLabel: 'Permitir transferências isócronas',
+        isoHint:
+          'Deixa passar webcams, microfones e outros dispositivos de fluxo. Ninguém mediu o que este hardware aguenta.',
+        isoWarning:
+          'O fluxo isócrono não é comprovado aqui e pode segurar o teclado e o mouse até você parar a sessão',
         session: 'Sessão',
         activeDesc: 'Um dispositivo foi importado e o proxy está com o controlador USB.',
         inactiveDesc:
@@ -518,7 +520,7 @@ const pt_br = {
         pid: 'PID do proxy',
         startedAt: 'Iniciada',
         isoDevice:
-          'Este dispositivo declara classe de áudio ou vídeo, que exige transferências isócronas. Ele não vai funcionar.',
+          'Este dispositivo transmite por endpoints isócronos, o que nunca foi medido neste hardware',
         exporterLabel: 'Endereço do exportador',
         exporterHint:
           'O host e a porta que o NanoKVM disca. Pelo túnel abaixo isso é {{exporter}}.',
@@ -532,7 +534,7 @@ const pt_br = {
         startHid:
           'O teclado USB, o mouse e a mídia virtual param de funcionar enquanto a sessão durar e voltam sozinhos quando você a interrompe.',
         startIso:
-          'Webcams, microfones e outros dispositivos isócronos não vão funcionar neste hardware.',
+          'Webcams e outros dispositivos isócronos exigem ligar a chave isócrona antes de iniciar.',
         startWeb:
           'Esta interface web continua funcionando, então você pode parar a sessão por esta página a qualquer momento.',
         okBtn: 'Iniciar',

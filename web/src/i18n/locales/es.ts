@@ -504,10 +504,11 @@ const es = {
         hidWarning: 'Iniciar el passthrough cede el teclado, el ratón y los medios virtuales',
         hidWarningDesc:
           'NanoKVM tiene un único controlador de dispositivo USB y el proxy lo necesita entero, así que mientras haya una sesión el equipo remoto verá el dispositivo redirigido en lugar del teclado, el ratón y los medios virtuales de NanoKVM. Vuelven solos en cuanto se detiene la sesión. Esta interfaz web no se ve afectada, por lo que siempre puede detener la sesión desde esta página.',
+        isoLabel: 'Permitir transferencias isócronas',
+        isoHint:
+          'Deja pasar cámaras web, micrófonos y otros dispositivos de flujo. Nadie ha medido qué aguanta este hardware.',
         isoWarning:
-          'Las cámaras web, los micrófonos y otros dispositivos isócronos no se pueden redirigir',
-        isoWarningDesc:
-          'Este hardware solo transporta transferencias de control, masivas y de interrupción. Los dispositivos de audio y vídeo no funcionarán, se enlacen como se enlacen.',
+          'El flujo isócrono no está probado aquí y puede retener el teclado y el ratón hasta que detengas la sesión',
         session: 'Sesión',
         activeDesc: 'Hay un dispositivo importado y el proxy mantiene el controlador USB.',
         inactiveDesc:
@@ -522,7 +523,7 @@ const es = {
         pid: 'PID del proxy',
         startedAt: 'Iniciada',
         isoDevice:
-          'Este dispositivo declara una clase de audio o de vídeo, que necesita transferencias isócronas. No va a funcionar.',
+          'Este dispositivo transmite por puntos finales isócronos, algo que nunca se ha medido en este hardware',
         exporterLabel: 'Dirección del exportador',
         exporterHint:
           'El host y el puerto a los que llama NanoKVM. Con el túnel de abajo es {{exporter}}.',
@@ -536,7 +537,7 @@ const es = {
         startHid:
           'El teclado USB, el ratón y los medios virtuales dejan de funcionar mientras dure la sesión y vuelven solos cuando la detenga.',
         startIso:
-          'Las cámaras web, los micrófonos y otros dispositivos isócronos no funcionarán en este hardware.',
+          'Las cámaras web y otros dispositivos isócronos necesitan que actives el interruptor isócrono antes de empezar.',
         startWeb:
           'Esta interfaz web sigue funcionando, así que puede detener la sesión desde esta página en cualquier momento.',
         okBtn: 'Iniciar',

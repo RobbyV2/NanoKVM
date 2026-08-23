@@ -506,10 +506,11 @@ const fr = {
         hidWarning: 'Démarrer le passthrough cède le clavier, la souris et les médias virtuels',
         hidWarningDesc:
           'Le NanoKVM ne possède qu’un seul contrôleur de périphérique USB et le proxy le monopolise. Pendant une session, l’hôte distant voit donc le périphérique redirigé à la place du clavier, de la souris et des médias virtuels du NanoKVM. Ils reviennent d’eux-mêmes dès que la session s’arrête. Cette interface web n’est pas concernée : vous pouvez toujours arrêter une session depuis cette page.',
+        isoLabel: 'Autoriser les transferts isochrones',
+        isoHint:
+          'Laisse passer webcams, micros et autres périphériques en flux. Personne n’a mesuré ce que ce matériel encaisse.',
         isoWarning:
-          'Les webcams, micros et autres périphériques isochrones ne peuvent pas être redirigés',
-        isoWarningDesc:
-          'Ce matériel ne transporte que les transferts de contrôle, bulk et interruption. Les périphériques audio et vidéo ne fonctionneront pas, quelle que soit la manière de les attacher.',
+          'Le flux isochrone n’est pas éprouvé ici et peut retenir le clavier et la souris jusqu’à l’arrêt de la session',
         session: 'Session',
         activeDesc: 'Un périphérique est importé et le proxy occupe le contrôleur USB.',
         inactiveDesc:
@@ -524,7 +525,7 @@ const fr = {
         pid: 'PID du proxy',
         startedAt: 'Démarré',
         isoDevice:
-          'Ce périphérique se déclare de classe audio ou vidéo, ce qui exige des transferts isochrones. Il ne fonctionnera pas.',
+          'Ce périphérique diffuse sur des points de terminaison isochrones, ce qui n’a jamais été mesuré sur ce matériel',
         exporterLabel: 'Adresse de l’exportateur',
         exporterHint:
           'L’hôte et le port que le NanoKVM appelle. Via le tunnel ci-dessous, c’est {{exporter}}.',
@@ -538,7 +539,7 @@ const fr = {
         startHid:
           'Le clavier USB, la souris et les médias virtuels cessent de fonctionner pendant toute la session et repartent d’eux-mêmes dès que vous l’arrêtez.',
         startIso:
-          'Les webcams, micros et autres périphériques isochrones ne fonctionneront pas sur ce matériel.',
+          'Les webcams et autres périphériques isochrones exigent d’activer l’interrupteur isochrone avant de démarrer.',
         startWeb:
           'Cette interface web continue de fonctionner : vous pouvez arrêter la session depuis cette page à tout moment.',
         okBtn: 'Démarrer',

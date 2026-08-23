@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Divider, Input, Modal, Segmented } from 'antd';
+import { Alert, Button, Divider, Input, Modal, Segmented, Switch } from 'antd';
 import { CircleStopIcon, LoaderCircleIcon, PlayIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -65,6 +65,7 @@ const Start = ({
 
   const [isStarting, setIsStarting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allowIso, setAllowIso] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
   const isReady = isValidExporter(exporter) && isValidBusId(busId);
@@ -90,7 +91,7 @@ const Start = ({
     setErrMsg('');
 
     api
-      .startPassthrough(exporter.trim(), busId.trim(), mode)
+      .startPassthrough(exporter.trim(), busId.trim(), mode, mode === 'exact' && allowIso)
       .then((rsp) => {
         if (rsp.code !== 0) {
           setErrMsg(rsp.msg);
@@ -134,6 +135,26 @@ const Start = ({
             {t('settings.passthrough.busIdHint', { example: busIdExample })}
           </span>
         </div>
+
+        {mode === 'exact' && (
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center justify-between space-x-4">
+              <span className="text-sm">{t('settings.passthrough.isoLabel')}</span>
+              <Switch
+                checked={allowIso}
+                disabled={isStarting || disabled}
+                onChange={(checked) => setAllowIso(checked)}
+              />
+            </div>
+            <span className="text-xs text-neutral-500">{t('settings.passthrough.isoHint')}</span>
+            {allowIso && (
+              <div className="flex items-start space-x-1 text-xs text-amber-500">
+                <TriangleAlertIcon size={13} className="mt-[2px] shrink-0" />
+                <span>{t('settings.passthrough.isoWarning')}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center space-x-3">
           <Button

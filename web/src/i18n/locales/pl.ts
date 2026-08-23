@@ -503,10 +503,11 @@ const pl = {
         hidWarning: 'Uruchomienie przekazywania oddaje klawiaturę, mysz i nośniki wirtualne',
         hidWarningDesc:
           'NanoKVM ma tylko jeden kontroler urządzenia USB, a proxy potrzebuje go w całości. Dlatego w trakcie sesji zdalny host widzi przekazane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają samoczynnie w chwili zatrzymania sesji. Ten interfejs webowy działa niezależnie, więc sesję zawsze można zatrzymać z tej strony.',
+        isoLabel: 'Zezwól na transfery izochroniczne',
+        isoHint:
+          'Przepuszcza kamery internetowe, mikrofony i inne urządzenia strumieniowe. Nikt nie zmierzył, ile ten sprzęt udźwignie.',
         isoWarning:
-          'Kamer internetowych, mikrofonów i innych urządzeń izochronicznych nie da się przekazać',
-        isoWarningDesc:
-          'Ten sprzęt obsługuje wyłącznie transfery sterujące, masowe i przerwaniowe. Urządzenia audio i wideo nie będą działać, niezależnie od sposobu podpięcia.',
+          'Strumień izochroniczny nie jest tu sprawdzony i może zatrzymać klawiaturę i mysz do czasu zakończenia sesji',
         session: 'Sesja',
         activeDesc: 'Urządzenie jest zaimportowane, a proxy trzyma kontroler USB.',
         inactiveDesc:
@@ -521,7 +522,7 @@ const pl = {
         pid: 'PID proxy',
         startedAt: 'Rozpoczęto',
         isoDevice:
-          'To urządzenie zgłasza klasę audio lub wideo, która wymaga transferów izochronicznych. Nie będzie działać.',
+          'To urządzenie nadaje przez izochroniczne punkty końcowe, czego na tym sprzęcie nigdy nie zmierzono',
         exporterLabel: 'Adres eksportera',
         exporterHint:
           'Host i port, z którymi łączy się NanoKVM. Przez tunel poniżej jest to {{exporter}}.',
@@ -534,7 +535,7 @@ const pl = {
         startHid:
           'Klawiatura USB, mysz i nośniki wirtualne przestają działać na czas trwania sesji i wracają samoczynnie po jej zatrzymaniu.',
         startIso:
-          'Kamery internetowe, mikrofony i inne urządzenia izochroniczne nie będą działać na tym sprzęcie.',
+          'Kamery internetowe i inne urządzenia izochroniczne wymagają włączenia przełącznika izochronicznego przed startem.',
         startWeb:
           'Ten interfejs webowy działa dalej, więc sesję można zatrzymać z tej strony w dowolnym momencie.',
         okBtn: 'Uruchom',

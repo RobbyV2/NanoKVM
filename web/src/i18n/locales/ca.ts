@@ -501,10 +501,11 @@ const ca = {
         hidWarning: 'Iniciar el passthrough cedeix el teclat, el ratolí i els suports virtuals',
         hidWarningDesc:
           'El NanoKVM només té un controlador de dispositiu USB i el proxy el necessita sencer, així que mentre hi hagi una sessió l’amfitrió remot veurà el dispositiu redirigit en lloc del teclat, el ratolí i els suports virtuals del NanoKVM. Tornen sols en el moment que s’atura la sessió. Aquesta interfície web no es veu afectada, de manera que sempre pots aturar la sessió des d’aquesta pàgina.',
+        isoLabel: 'Permet transferències isòcrones',
+        isoHint:
+          'Deixa passar càmeres web, micròfons i altres dispositius de flux. Ningú no ha mesurat què aguanta aquest maquinari.',
         isoWarning:
-          'Les càmeres web, els micròfons i altres dispositius isòcrons no es poden redirigir',
-        isoWarningDesc:
-          'Aquest maquinari només transporta transferències de control, massives i d’interrupció. Els dispositius d’àudio i vídeo no funcionaran de cap manera.',
+          'El flux isòcron no està provat aquí i pot retenir el teclat i el ratolí fins que aturis la sessió',
         session: 'Sessió',
         activeDesc: 'Hi ha un dispositiu importat i el proxy manté el controlador USB.',
         inactiveDesc:
@@ -519,7 +520,7 @@ const ca = {
         pid: 'PID del proxy',
         startedAt: 'Iniciada',
         isoDevice:
-          'Aquest dispositiu declara una classe d’àudio o de vídeo, que necessita transferències isòcrones. No funcionarà.',
+          'Aquest dispositiu transmet per punts finals isòcrons, cosa que mai s’ha mesurat en aquest maquinari',
         exporterLabel: 'Adreça de l’exportador',
         exporterHint:
           'L’amfitrió i el port que marca el NanoKVM. Amb el túnel de sota és {{exporter}}.',
@@ -532,7 +533,7 @@ const ca = {
         startHid:
           'El teclat USB, el ratolí i els suports virtuals deixen de funcionar mentre duri la sessió i tornen sols quan l’aturis.',
         startIso:
-          'Les càmeres web, els micròfons i altres dispositius isòcrons no funcionaran en aquest maquinari.',
+          'Les càmeres web i altres dispositius isòcrons necessiten que activis l’interruptor isòcron abans de començar.',
         startWeb:
           'Aquesta interfície web continua funcionant, així que pots aturar la sessió des d’aquesta pàgina en qualsevol moment.',
         okBtn: 'Inicia',

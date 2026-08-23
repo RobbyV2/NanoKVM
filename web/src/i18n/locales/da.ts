@@ -500,9 +500,11 @@ const da = {
         hidWarning: 'At starte passthrough afgiver tastaturet, musen og virtuelle medier',
         hidWarningDesc:
           'NanoKVM har kun én USB-enhedscontroller, og proxyen skal bruge den hele. Mens en session kører, ser den fjerne vært derfor den videregivne enhed i stedet for NanoKVM’s tastatur, mus og virtuelle medier. De kommer af sig selv tilbage i samme øjeblik sessionen stoppes. Denne webgrænseflade er ikke berørt, så du kan altid stoppe en session fra denne side.',
-        isoWarning: 'Webkameraer, mikrofoner og andre isokrone enheder kan ikke videregives',
-        isoWarningDesc:
-          'Denne hardware kan kun bære control-, bulk- og interrupt-overførsler. Lyd- og videoenheder virker ikke, uanset hvordan de bindes.',
+        isoLabel: 'Tillad isokrone overførsler',
+        isoHint:
+          'Lukker webkameraer, mikrofoner og andre streamende enheder ind. Ingen har målt, hvad denne hardware kan klare.',
+        isoWarning:
+          'Isokron streaming er uafprøvet her og kan holde på tastatur og mus, indtil du stopper sessionen',
         session: 'Session',
         activeDesc: 'En enhed er importeret, og proxyen holder USB-controlleren.',
         inactiveDesc: 'Ingen session kører. Tastatur, mus og virtuelle medier fungerer normalt.',
@@ -516,7 +518,7 @@ const da = {
         pid: 'Proxy-PID',
         startedAt: 'Startet',
         isoDevice:
-          'Denne enhed melder en lyd- eller videoklasse, som kræver isokrone overførsler. Den kommer ikke til at virke.',
+          'Denne enhed streamer over isokrone endepunkter, hvilket aldrig er målt på denne hardware',
         exporterLabel: 'Eksportørens adresse',
         exporterHint:
           'Værten og porten, som NanoKVM ringer op til. Gennem tunnelen nedenfor er det {{exporter}}.',
@@ -529,7 +531,7 @@ const da = {
         startHid:
           'USB-tastaturet, musen og virtuelle medier holder op med at virke, så længe sessionen kører, og starter af sig selv igen, når du stopper den.',
         startIso:
-          'Webkameraer, mikrofoner og andre isokrone enheder virker ikke på denne hardware.',
+          'Webkameraer og andre isokrone enheder kræver, at du slår den isokrone kontakt til, før du starter.',
         startWeb:
           'Denne webgrænseflade bliver ved med at virke, så du kan stoppe sessionen fra denne side når som helst.',
         okBtn: 'Start',

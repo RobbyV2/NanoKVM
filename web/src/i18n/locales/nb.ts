@@ -503,9 +503,11 @@ const nb = {
         hidWarning: 'Å starte gjennomgang gir fra seg tastaturet, musen og virtuelle medier',
         hidWarningDesc:
           'NanoKVM har bare én USB-enhetskontroller, og proxyen trenger hele. Mens en økt kjører, ser derfor den eksterne verten den videresendte enheten i stedet for NanoKVMs tastatur, mus og virtuelle medier. De kommer tilbake av seg selv i det øyeblikket økten stoppes. Dette nettgrensesnittet påvirkes ikke, så du kan alltid stoppe en økt fra denne siden.',
-        isoWarning: 'Nettkameraer, mikrofoner og andre isokrone enheter kan ikke sendes videre',
-        isoWarningDesc:
-          'Denne maskinvaren bærer bare kontroll-, bulk- og avbruddsoverføringer. Lyd- og videoenheter vil ikke virke, uansett hvordan de bindes.',
+        isoLabel: 'Tillat isokrone overføringer',
+        isoHint:
+          'Slipper gjennom nettkameraer, mikrofoner og andre strømmeenheter. Ingen har målt hva denne maskinvaren klarer.',
+        isoWarning:
+          'Isokron strømming er uprøvd her og kan holde på tastaturet og musen til du stopper økten',
         session: 'Økt',
         activeDesc: 'En enhet er importert, og proxyen holder USB-kontrolleren.',
         inactiveDesc: 'Ingen økt kjører. Tastatur, mus og virtuelle medier fungerer som normalt.',
@@ -519,7 +521,7 @@ const nb = {
         pid: 'Proxy-PID',
         startedAt: 'Startet',
         isoDevice:
-          'Denne enheten melder en lyd- eller videoklasse som krever isokrone overføringer. Den vil ikke virke.',
+          'Denne enheten strømmer over isokrone endepunkter, noe som aldri er målt på denne maskinvaren',
         exporterLabel: 'Adressen til eksportøren',
         exporterHint:
           'Verten og porten NanoKVM ringer opp. Gjennom tunnelen nedenfor er det {{exporter}}.',
@@ -532,7 +534,7 @@ const nb = {
         startHid:
           'USB-tastaturet, musen og virtuelle medier slutter å virke så lenge økten varer, og starter av seg selv igjen når du stopper den.',
         startIso:
-          'Nettkameraer, mikrofoner og andre isokrone enheter vil ikke virke på denne maskinvaren.',
+          'Nettkameraer og andre isokrone enheter krever at du slår på den isokrone bryteren før du starter.',
         startWeb:
           'Dette nettgrensesnittet fortsetter å virke, så du kan stoppe økten fra denne siden når som helst.',
         okBtn: 'Start',

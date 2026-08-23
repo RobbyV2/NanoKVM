@@ -502,9 +502,11 @@ const id = {
         hidWarning: 'Memulai passthrough menyerahkan keyboard, mouse, dan media virtual',
         hidWarningDesc:
           'NanoKVM hanya punya satu pengontrol perangkat USB dan proxy membutuhkannya sepenuhnya, sehingga selama sesi berjalan host jarak jauh melihat perangkat yang diteruskan alih-alih keyboard, mouse, dan media virtual NanoKVM. Semuanya kembali dengan sendirinya begitu sesi dihentikan. Antarmuka web ini tidak terpengaruh, jadi Anda selalu bisa menghentikan sesi dari halaman ini.',
-        isoWarning: 'Webcam, mikrofon, dan perangkat isokron lain tidak dapat diteruskan',
-        isoWarningDesc:
-          'Perangkat keras ini hanya membawa transfer control, bulk, dan interrupt. Perangkat audio dan video tidak akan bekerja dengan cara pengikatan apa pun.',
+        isoLabel: 'Izinkan transfer isokron',
+        isoHint:
+          'Memasukkan webcam, mikrofon, dan perangkat aliran lain. Belum ada yang mengukur kemampuan perangkat keras ini.',
+        isoWarning:
+          'Aliran isokron belum terbukti di sini dan dapat menahan papan ketik serta tetikus sampai Anda menghentikan sesi',
         session: 'Sesi',
         activeDesc: 'Sebuah perangkat telah diimpor dan proxy sedang memegang pengontrol USB.',
         inactiveDesc:
@@ -519,7 +521,7 @@ const id = {
         pid: 'PID proxy',
         startedAt: 'Dimulai',
         isoDevice:
-          'Perangkat ini melaporkan kelas audio atau video yang membutuhkan transfer isokron. Perangkat ini tidak akan bekerja.',
+          'Perangkat ini mengalirkan data lewat endpoint isokron, yang belum pernah diukur pada perangkat keras ini',
         exporterLabel: 'Alamat pengekspor',
         exporterHint:
           'Host dan porta yang dihubungi NanoKVM. Melalui terowongan di bawah, itu adalah {{exporter}}.',
@@ -533,7 +535,7 @@ const id = {
         startHid:
           'Keyboard USB, mouse, dan media virtual berhenti bekerja selama sesi berjalan, dan kembali dengan sendirinya saat Anda menghentikannya.',
         startIso:
-          'Webcam, mikrofon, dan perangkat isokron lain tidak akan bekerja di perangkat keras ini.',
+          'Webcam dan perangkat isokron lain memerlukan sakelar isokron dinyalakan sebelum Anda mulai.',
         startWeb:
           'Antarmuka web ini tetap berjalan, jadi Anda dapat menghentikan sesi dari halaman ini kapan saja.',
         okBtn: 'Mulai',

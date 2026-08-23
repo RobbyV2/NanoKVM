@@ -506,9 +506,11 @@ const hu = {
           'Az átjátszás indítása átadja a billentyűzetet, az egeret és a virtuális adathordozókat',
         hidWarningDesc:
           'A NanoKVM-nek egyetlen USB-eszközvezérlője van, és a proxynak az egész kell. Amíg fut egy munkamenet, a távoli gép ezért az átjátszott eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek maguktól visszatérnek, amint a munkamenet leáll. Ez a webes felület ettől függetlenül működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
-        isoWarning: 'Webkamerák, mikrofonok és más izokron eszközök nem játszhatók át',
-        isoWarningDesc:
-          'Ez a hardver csak vezérlő, tömeges és megszakításos átviteleket visz. A hang- és videoeszközök semmilyen módon nem fognak működni.',
+        isoLabel: 'Izokron átvitelek engedélyezése',
+        isoHint:
+          'Beengedi a webkamerákat, mikrofonokat és más folyamatos eszközöket. Senki sem mérte meg, mit bír ez a hardver.',
+        isoWarning:
+          'Az izokron átvitel itt kipróbálatlan, és a munkamenet leállításáig foghatja a billentyűzetet és az egeret',
         session: 'Munkamenet',
         activeDesc: 'Egy eszköz be van importálva, és a proxy tartja az USB-vezérlőt.',
         inactiveDesc:
@@ -523,7 +525,7 @@ const hu = {
         pid: 'Proxy PID',
         startedAt: 'Indítva',
         isoDevice:
-          'Ez az eszköz hang- vagy videoosztályt jelez, amely izokron átvitelt igényel. Nem fog működni.',
+          'Ez az eszköz izokron végpontokon sugároz, amit ezen a hardveren még soha nem mértek',
         exporterLabel: 'Az exportáló címe',
         exporterHint:
           'A gép és a port, amelyet a NanoKVM felhív. Az alábbi alagúton át ez {{exporter}}.',
@@ -536,7 +538,7 @@ const hu = {
         startHid:
           'Az USB-billentyűzet, az egér és a virtuális adathordozók a munkamenet teljes ideje alatt nem működnek, és maguktól újraindulnak, amint leállítja.',
         startIso:
-          'Webkamerák, mikrofonok és más izokron eszközök ezen a hardveren nem fognak működni.',
+          'A webkamerákhoz és más izokron eszközökhöz indítás előtt be kell kapcsolni az izokron kapcsolót.',
         startWeb:
           'Ez a webes felület tovább működik, így a munkamenetet bármikor leállíthatja erről az oldalról.',
         okBtn: 'Indítás',

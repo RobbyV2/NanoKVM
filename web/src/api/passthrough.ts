@@ -30,8 +30,9 @@ export type PassthroughStatus = {
 
 export type PassthroughMode = 'hybrid' | 'exact';
 
-// One entry of the exporter's device list. unsupported carries why the device
-// cannot be relayed and is absent when it can.
+// One entry of the exporter's device list. unsupported names the class that
+// makes the device isochronous, and is absent when nothing about it needs the
+// override.
 export type PassthroughRemoteDevice = {
   busId: string;
   idVendor: string;
@@ -50,11 +51,17 @@ export function getPassthrough() {
   return http.get('/api/vm/passthrough');
 }
 
-// Import busId from exporter and start the selected relay.
-export function startPassthrough(exporter: string, busId: string, mode: PassthroughMode) {
+// Import busId from exporter and start the selected relay. allowIsochronous
+// lifts the refusal that keeps streaming devices out of an Exact session.
+export function startPassthrough(
+  exporter: string,
+  busId: string,
+  mode: PassthroughMode,
+  allowIsochronous = false
+) {
   return http.post(
     '/api/vm/passthrough/start',
-    { exporter, busId, mode },
+    { exporter, busId, mode, allowIsochronous },
     { timeout: startTimeout }
   );
 }

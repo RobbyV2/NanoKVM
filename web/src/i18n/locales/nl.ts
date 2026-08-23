@@ -505,10 +505,11 @@ const nl = {
         hidWarning: 'Passthrough starten geeft het toetsenbord, de muis en virtuele media op',
         hidWarningDesc:
           'NanoKVM heeft maar één USB-apparaatcontroller en de proxy heeft die helemaal nodig. Zolang een sessie loopt ziet de externe host daarom het doorgegeven apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen vanzelf terug zodra de sessie stopt. Deze webinterface merkt er niets van, dus u kunt een sessie altijd vanaf deze pagina stoppen.',
+        isoLabel: 'Isochrone overdrachten toestaan',
+        isoHint:
+          'Laat webcams, microfoons en andere streamende apparaten door. Niemand heeft gemeten wat deze hardware aankan.',
         isoWarning:
-          'Webcams, microfoons en andere isochrone apparaten kunnen niet worden doorgegeven',
-        isoWarningDesc:
-          'Deze hardware draagt alleen control-, bulk- en interruptoverdrachten. Audio- en videoapparaten werken niet, hoe ze ook worden gekoppeld.',
+          'Isochroon streamen is hier onbeproefd en kan het toetsenbord en de muis vasthouden tot je de sessie stopt',
         session: 'Sessie',
         activeDesc: 'Er is een apparaat geïmporteerd en de proxy houdt de USB-controller vast.',
         inactiveDesc:
@@ -523,7 +524,7 @@ const nl = {
         pid: 'Proxy-PID',
         startedAt: 'Gestart',
         isoDevice:
-          'Dit apparaat meldt een audio- of videoklasse en heeft isochrone overdrachten nodig. Het gaat niet werken.',
+          'Dit apparaat streamt over isochrone eindpunten, wat op deze hardware nooit is gemeten',
         exporterLabel: 'Adres van de exporter',
         exporterHint:
           'De host en poort die NanoKVM belt. Via de tunnel hieronder is dat {{exporter}}.',
@@ -535,7 +536,8 @@ const nl = {
         startDevice: 'NanoKVM importeert {{busId}} van {{exporter}}.',
         startHid:
           'Het USB-toetsenbord, de muis en virtuele media werken niet zolang de sessie loopt en werken vanzelf weer zodra u die stopt.',
-        startIso: 'Webcams, microfoons en andere isochrone apparaten werken niet op deze hardware.',
+        startIso:
+          'Webcams en andere isochrone apparaten vereisen dat je de isochrone schakelaar aanzet voordat je start.',
         startWeb:
           'Deze webinterface blijft werken, dus u kunt de sessie op elk moment vanaf deze pagina stoppen.',
         okBtn: 'Starten',

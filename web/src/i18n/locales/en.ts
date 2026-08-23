@@ -507,9 +507,11 @@ const en = {
           'NanoKVM has one USB device controller and the proxy needs all of it, so while a session runs the remote host sees the passed-through device instead of NanoKVM’s keyboard, mouse and virtual media. They come back on their own the moment the session stops. This web interface is unaffected, so you can always stop a session from this page.',
         hidWarningSafeDesc:
           'NanoKVM has one USB device controller and the proxy needs all of it, so while a session runs the remote host sees the passed-through device instead of NanoKVM’s keyboard, mouse and virtual media. They return when the session stops.',
-        isoWarning: 'Audio and video devices are refused today',
-        isoWarningDesc:
-          'Webcams, microphones and other devices that stream over isochronous endpoints are turned away before a session starts. This is a current limitation of this build.',
+        isoLabel: 'Allow isochronous transfers',
+        isoHint:
+          'Lets webcams, microphones and other streaming devices through. Nobody has measured what this hardware sustains.',
+        isoWarning:
+          'Isochronous streaming is unproven here and can hold the keyboard and mouse until you stop the session',
         info: {
           title: 'Info',
           hybrid:
@@ -520,51 +522,8 @@ const en = {
           web: 'This web interface is unaffected, so you can always stop a session from this page.',
           network:
             'Start passthrough over Ethernet or Wi-Fi. Starting it from NanoKVM’s USB network is refused, because that connection would disappear.',
-          iso: 'Audio and video devices are refused before a session starts, because they stream over isochronous endpoints. This is a current limitation of this build, not a property of the hardware.',
-          camera:
-            'To give the target machine a camera or a microphone, use the browser camera and microphone under Devices. They present a USB video or audio device to the target without passthrough.'
-        },
-        session: 'Session',
-        activeDesc: 'A device is imported and the proxy is holding the USB controller.',
-        inactiveDesc:
-          'No session is running. The keyboard, the mouse and virtual media are working normally.',
-        device: 'Device',
-        busId: 'Bus ID',
-        speed: 'Speed',
-        exporter: 'Exporter',
-        local: 'Imported as',
-        localValue: 'Bus {{bus}}, address {{address}}',
-        udc: 'USB controller',
-        pid: 'Proxy PID',
-        startedAt: 'Started',
-        isoDevice:
-          'This device reports an audio or video class, which streams over isochronous endpoints. NanoKVM refuses those devices today.',
-        exporterLabel: 'Exporter address',
-        exporterHint:
-          'The host and port NanoKVM dials. Over the tunnel below that is {{exporter}}.',
-        busIdLabel: 'Bus ID on your machine',
-        busIdHint: 'The busid that usbip list -l prints for the device, for example {{example}}.',
-        start: 'Start passthrough',
-        stop: 'Stop passthrough',
-        startTitle: 'Start USB passthrough?',
-        startDevice: 'NanoKVM will import {{busId}} from {{exporter}}.',
-        startHid:
-          'The USB keyboard, the mouse and virtual media stop working for as long as the session runs, and start again on their own when you stop it.',
-        startIso:
-          'Audio and video devices are refused today, because they stream over isochronous endpoints.',
-        startWeb:
-          'This web interface keeps working, so you can stop the session from this page at any time.',
-        startNetwork:
-          'Use this page over Ethernet or Wi-Fi. Starting from NanoKVM’s USB network is refused because that connection would disappear.',
-        okBtn: 'Start',
-        cancelBtn: 'Cancel',
-        instructions: 'On your own machine',
-        instructionsDesc:
-          'There is no client agent to install, by design. Run these stock usbip commands on the machine that owns the device.',
-        copyFailed: 'Copy failed. Copy the command manually.',
-        directNote:
-          'Without a tunnel, usbipd has to be reachable on your network and the exporter address above has to name it. usbip carries the device unencrypted, so prefer the tunnel.',
-        steps: {
+          iso:
+            'Webcams, microphones and other isochronous devices are refused unless you allow isochronous transfers. That path works but has never been measured on this hardware, so treat its throughput as unknown; the browser camera and microphone under Devices remain the proven way to give the target one.',
           modprobe: {
             title: 'Load the exporter driver',
             desc: 'usbip-host is what lets your kernel hand a local device over. It is not loaded by default.'

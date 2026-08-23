@@ -507,9 +507,11 @@ const de = {
         hidWarning: 'Ein Passthrough gibt Tastatur, Maus und virtuelle Medien ab',
         hidWarningDesc:
           'NanoKVM hat nur einen USB-Device-Controller, und der Proxy braucht ihn ganz. Während einer Sitzung sieht der entfernte Host deshalb das durchgereichte Gerät statt Tastatur, Maus und virtuellen Medien des NanoKVM. Sie kommen von selbst zurück, sobald die Sitzung beendet wird. Diese Weboberfläche ist nicht betroffen, Sie können eine Sitzung also jederzeit auf dieser Seite beenden.',
-        isoWarning: 'Webcams, Mikrofone und andere isochrone Geräte lassen sich nicht durchreichen',
-        isoWarningDesc:
-          'Diese Hardware überträgt nur Control-, Bulk- und Interrupt-Transfers. Audio- und Videogeräte funktionieren nicht, egal wie sie gebunden werden.',
+        isoLabel: 'Isochrone Transfers erlauben',
+        isoHint:
+          'Lässt Webcams, Mikrofone und andere Streaming-Geräte durch. Niemand hat gemessen, was diese Hardware trägt.',
+        isoWarning:
+          'Isochrones Streaming ist hier unerprobt und kann Tastatur und Maus halten, bis Sie die Sitzung beenden',
         session: 'Sitzung',
         activeDesc: 'Ein Gerät ist importiert und der Proxy hält den USB-Controller.',
         inactiveDesc:
@@ -524,7 +526,7 @@ const de = {
         pid: 'Proxy-PID',
         startedAt: 'Gestartet',
         isoDevice:
-          'Dieses Gerät meldet eine Audio- oder Videoklasse und braucht isochrone Transfers. Es wird nicht funktionieren.',
+          'Dieses Gerät streamt über isochrone Endpunkte, was auf dieser Hardware nie gemessen wurde',
         exporterLabel: 'Adresse des Exporters',
         exporterHint:
           'Host und Port, die NanoKVM anwählt. Über den Tunnel unten ist das {{exporter}}.',
@@ -537,7 +539,7 @@ const de = {
         startHid:
           'USB-Tastatur, Maus und virtuelle Medien funktionieren für die Dauer der Sitzung nicht und arbeiten von selbst wieder, sobald Sie sie beenden.',
         startIso:
-          'Webcams, Mikrofone und andere isochrone Geräte funktionieren auf dieser Hardware nicht.',
+          'Webcams und andere isochrone Geräte brauchen den isochronen Schalter, bevor Sie starten.',
         startWeb:
           'Diese Weboberfläche läuft weiter, Sie können die Sitzung also jederzeit auf dieser Seite beenden.',
         okBtn: 'Starten',

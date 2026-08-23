@@ -500,9 +500,11 @@ const tr = {
         hidWarning: 'Geçişi başlatmak klavyeyi, fareyi ve sanal medyayı devreder',
         hidWarningDesc:
           'NanoKVM’de tek bir USB aygıt denetleyicisi var ve vekil onun tamamına ihtiyaç duyuyor. Bu yüzden bir oturum sürerken uzak makine, NanoKVM’in klavyesi, faresi ve sanal medyası yerine aktarılan aygıtı görür. Oturum durdurulduğu anda kendiliğinden geri gelirler. Bu web arayüzü etkilenmez, dolayısıyla oturumu her zaman bu sayfadan durdurabilirsiniz.',
-        isoWarning: 'Web kameraları, mikrofonlar ve diğer eşzamanlı aygıtlar aktarılamaz',
-        isoWarningDesc:
-          'Bu donanım yalnızca denetim, toplu ve kesme aktarımlarını taşır. Ses ve video aygıtları nasıl bağlanırsa bağlansın çalışmaz.',
+        isoLabel: 'Eşzamanlı aktarımlara izin ver',
+        isoHint:
+          'Web kameralarını, mikrofonları ve diğer akış aygıtlarını geçirir. Bu donanımın neyi kaldırdığını kimse ölçmedi.',
+        isoWarning:
+          'Eşzamanlı akış burada denenmemiştir ve oturumu durdurana kadar klavye ile fareyi tutabilir',
         session: 'Oturum',
         activeDesc: 'Bir aygıt içe aktarıldı ve vekil USB denetleyicisini tutuyor.',
         inactiveDesc: 'Çalışan bir oturum yok. Klavye, fare ve sanal medya normal çalışıyor.',
@@ -516,7 +518,7 @@ const tr = {
         pid: 'Vekil PID',
         startedAt: 'Başlangıç',
         isoDevice:
-          'Bu aygıt ses veya video sınıfı bildiriyor; eşzamanlı aktarım gerektirdiği için çalışmayacak.',
+          'Bu aygıt eşzamanlı uç noktalar üzerinden akış yapıyor; bu donanımda hiç ölçülmedi',
         exporterLabel: 'Dışa aktaran adresi',
         exporterHint:
           'NanoKVM’in bağlandığı makine ve bağlantı noktası. Aşağıdaki tünelle bu {{exporter}} olur.',
@@ -528,7 +530,8 @@ const tr = {
         startDevice: 'NanoKVM, {{exporter}} üzerinden {{busId}} aygıtını içe aktaracak.',
         startHid:
           'USB klavye, fare ve sanal medya oturum sürdüğü sürece çalışmaz; oturumu durdurduğunuzda kendiliğinden geri gelir.',
-        startIso: 'Web kameraları, mikrofonlar ve diğer eşzamanlı aygıtlar bu donanımda çalışmaz.',
+        startIso:
+          'Web kameraları ve diğer eşzamanlı aygıtlar için başlamadan önce eşzamanlı aktarım anahtarını açmanız gerekir.',
         startWeb:
           'Bu web arayüzü çalışmaya devam eder, oturumu istediğiniz an bu sayfadan durdurabilirsiniz.',
         okBtn: 'Başlat',

@@ -501,9 +501,11 @@ const se = {
           'Att starta genomsläpp lämnar ifrån sig tangentbordet, musen och virtuella media',
         hidWarningDesc:
           'NanoKVM har bara en USB-enhetsstyrenhet och proxyn behöver hela den. Medan en session pågår ser därför fjärrvärden den vidarekopplade enheten i stället för NanoKVM:s tangentbord, mus och virtuella media. De kommer tillbaka av sig själva i samma stund som sessionen stoppas. Detta webbgränssnitt påverkas inte, så du kan alltid stoppa en session från den här sidan.',
-        isoWarning: 'Webbkameror, mikrofoner och andra isokrona enheter kan inte släppas igenom',
-        isoWarningDesc:
-          'Den här maskinvaran bär bara control-, bulk- och interrupt-överföringar. Ljud- och videoenheter fungerar inte, hur de än binds.',
+        isoLabel: 'Tillåt isokrona överföringar',
+        isoHint:
+          'Släpper igenom webbkameror, mikrofoner och andra strömmande enheter. Ingen har mätt vad den här maskinvaran orkar.',
+        isoWarning:
+          'Isokron strömning är oprövad här och kan hålla kvar tangentbordet och musen tills du stoppar sessionen',
         session: 'Session',
         activeDesc: 'En enhet är importerad och proxyn håller USB-styrenheten.',
         inactiveDesc:
@@ -518,7 +520,7 @@ const se = {
         pid: 'Proxyns PID',
         startedAt: 'Startad',
         isoDevice:
-          'Den här enheten anger ljud- eller videoklass, vilket kräver isokrona överföringar. Den kommer inte att fungera.',
+          'Den här enheten strömmar över isokrona slutpunkter, vilket aldrig har mätts på den här maskinvaran',
         exporterLabel: 'Exportörens adress',
         exporterHint:
           'Värden och porten som NanoKVM ringer upp. Via tunneln nedan är det {{exporter}}.',
@@ -531,7 +533,7 @@ const se = {
         startHid:
           'USB-tangentbordet, musen och virtuella media slutar fungera så länge sessionen pågår och startar av sig själva igen när du stoppar den.',
         startIso:
-          'Webbkameror, mikrofoner och andra isokrona enheter fungerar inte på den här maskinvaran.',
+          'Webbkameror och andra isokrona enheter kräver att du slår på den isokrona brytaren innan du startar.',
         startWeb:
           'Detta webbgränssnitt fortsätter att fungera, så du kan stoppa sessionen från den här sidan när som helst.',
         okBtn: 'Starta',

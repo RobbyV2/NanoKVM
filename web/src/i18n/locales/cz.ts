@@ -501,9 +501,11 @@ const cz = {
         hidWarning: 'Spuštění průchodu odevzdá klávesnici, myš i virtuální média',
         hidWarningDesc:
           'NanoKVM má jediný řadič USB zařízení a proxy jej potřebuje celý. Během relace proto vzdálený hostitel vidí předané zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se samy ve chvíli, kdy relaci zastavíte. Tohoto webového rozhraní se to netýká, takže relaci můžete z této stránky kdykoli ukončit.',
-        isoWarning: 'Webkamery, mikrofony a další izochronní zařízení předat nelze',
-        isoWarningDesc:
-          'Tento hardware přenáší pouze řídicí, hromadné a přerušovací přenosy. Zvuková a obrazová zařízení fungovat nebudou, ať je připojíte jakkoli.',
+        isoLabel: 'Povolit izochronní přenosy',
+        isoHint:
+          'Vpustí dovnitř webkamery, mikrofony a další proudová zařízení. Nikdo neměřil, co tento hardware utáhne.',
+        isoWarning:
+          'Izochronní přenos zde není ověřený a může držet klávesnici a myš, dokud relaci neukončíte',
         session: 'Relace',
         activeDesc: 'Zařízení je importováno a proxy drží řadič USB.',
         inactiveDesc: 'Neběží žádná relace. Klávesnice, myš i virtuální média fungují normálně.',
@@ -517,7 +519,7 @@ const cz = {
         pid: 'PID proxy',
         startedAt: 'Spuštěno',
         isoDevice:
-          'Toto zařízení hlásí třídu zvuku nebo videa, která vyžaduje izochronní přenosy. Fungovat nebude.',
+          'Toto zařízení vysílá přes izochronní koncové body, což na tomto hardwaru nikdo neměřil',
         exporterLabel: 'Adresa exportéra',
         exporterHint:
           'Hostitel a port, na které se NanoKVM připojuje. Přes tunel níže je to {{exporter}}.',
@@ -530,7 +532,7 @@ const cz = {
         startHid:
           'Klávesnice USB, myš i virtuální média přestanou po dobu relace fungovat a samy se rozběhnou, jakmile ji zastavíte.',
         startIso:
-          'Webkamery, mikrofony a další izochronní zařízení na tomto hardwaru fungovat nebudou.',
+          'Webkamery a další izochronní zařízení vyžadují, abyste před spuštěním zapnuli izochronní přepínač.',
         startWeb:
           'Toto webové rozhraní funguje dál, relaci tedy můžete z této stránky kdykoli zastavit.',
         okBtn: 'Spustit',

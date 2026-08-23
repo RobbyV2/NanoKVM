@@ -496,9 +496,11 @@ const vi = {
         hidWarning: 'Bắt đầu chuyển tiếp sẽ nhường bàn phím, chuột và phương tiện ảo',
         hidWarningDesc:
           'NanoKVM chỉ có một bộ điều khiển thiết bị USB và proxy cần trọn bộ điều khiển đó, nên trong lúc phiên chạy máy chủ từ xa sẽ thấy thiết bị được chuyển tiếp thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng tự trở lại ngay khi phiên dừng. Giao diện web này không bị ảnh hưởng, vì vậy bạn luôn có thể dừng phiên từ trang này.',
-        isoWarning: 'Webcam, micrô và các thiết bị đẳng thời khác không thể chuyển tiếp',
-        isoWarningDesc:
-          'Phần cứng này chỉ truyền được các loại truyền điều khiển, khối và ngắt. Thiết bị âm thanh và hình ảnh sẽ không hoạt động dù gắn kết theo cách nào.',
+        isoLabel: 'Cho phép truyền đẳng thời',
+        isoHint:
+          'Cho webcam, micrô và các thiết bị truyền luồng khác đi qua. Chưa ai đo phần cứng này chịu được bao nhiêu.',
+        isoWarning:
+          'Truyền luồng đẳng thời chưa được kiểm chứng ở đây và có thể giữ bàn phím lẫn chuột cho đến khi bạn dừng phiên',
         session: 'Phiên',
         activeDesc: 'Một thiết bị đã được nhập và proxy đang giữ bộ điều khiển USB.',
         inactiveDesc:
@@ -513,7 +515,7 @@ const vi = {
         pid: 'PID của proxy',
         startedAt: 'Bắt đầu lúc',
         isoDevice:
-          'Thiết bị này khai báo lớp âm thanh hoặc hình ảnh, vốn cần truyền đẳng thời. Nó sẽ không hoạt động.',
+          'Thiết bị này truyền luồng qua các đầu cuối đẳng thời, điều chưa từng được đo trên phần cứng này',
         exporterLabel: 'Địa chỉ bên xuất',
         exporterHint:
           'Máy chủ và cổng mà NanoKVM kết nối tới. Qua đường hầm bên dưới thì đó là {{exporter}}.',
@@ -526,7 +528,7 @@ const vi = {
         startHid:
           'Bàn phím USB, chuột và phương tiện ảo sẽ ngừng hoạt động suốt phiên và tự hoạt động lại khi bạn dừng phiên.',
         startIso:
-          'Webcam, micrô và các thiết bị đẳng thời khác sẽ không hoạt động trên phần cứng này.',
+          'Webcam và các thiết bị đẳng thời khác cần bật công tắc đẳng thời trước khi bắt đầu.',
         startWeb:
           'Giao diện web này vẫn hoạt động, nên bạn có thể dừng phiên từ trang này bất cứ lúc nào.',
         okBtn: 'Bắt đầu',

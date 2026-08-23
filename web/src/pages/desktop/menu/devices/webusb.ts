@@ -218,7 +218,7 @@ export class WebUSBRelay {
       await this.device.claimInterface(iface.interfaceNumber);
       for (const endpoint of alternate.endpoints) {
         if (endpoint.type === 'isochronous')
-          throw new Error('Isochronous endpoints are not supported');
+          throw new Error('WebUSB has no isochronous data path');
         const address = endpoint.endpointNumber | (endpoint.direction === 'in' ? 0x80 : 0);
         this.endpoints.set(address, endpoint);
       }
