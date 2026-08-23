@@ -24,6 +24,7 @@ func TestProfileRoundTrip(t *testing.T) {
 	want := Profile{
 		SchemaVersion: 1,
 		Name:          "user",
+		Provenance:    Provenance{Origin: OriginUser},
 		Device: Device{
 			VendorID:     "0x3346",
 			ProductID:    "0x1009",

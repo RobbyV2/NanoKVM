@@ -124,6 +124,7 @@ type Profile struct {
 	SchemaVersion int            `json:"schema_version"`
 	Name          string         `json:"name"`
 	BuiltIn       bool           `json:"built_in"`
+	Provenance    Provenance     `json:"provenance"`
 	Device        Device         `json:"device"`
 	Config        ConfigDesc     `json:"config"`
 	Functions     []Function     `json:"functions"`
@@ -259,6 +260,15 @@ func (p *Profile) Normalize() {
 		p.Functions[i].HID.DevNodeIndex = index
 		index++
 	}
+	p.Provenance.Descriptors = p.Descriptors != nil
+	if p.Provenance.Origin == "" || (p.Provenance.Origin == OriginBuiltIn && !p.BuiltIn) {
+		p.Provenance.Origin, p.Provenance.Source = OriginUser, ""
+	}
+	if p.Provenance.Origin == OriginPreset {
+		if preset, ok := PresetByID(p.Provenance.Source); !ok || !preset.matches(p.Device) {
+			p.Provenance.Origin, p.Provenance.Source = OriginUser, ""
+		}
+	}
 }
 
 func (p *Profile) Validate() error {
@@ -270,6 +280,9 @@ func (p *Profile) Validate() error {
 	}
 	if !profileNamePattern.MatchString(p.Name) {
 		return fmt.Errorf("profile name %q must match %s", p.Name, profileNamePattern)
+	}
+	if err := p.Provenance.validate(); err != nil {
+		return fmt.Errorf("provenance: %w", err)
 	}
 	if err := p.Device.validate(); err != nil {
 		return fmt.Errorf("device: %w", err)
@@ -963,6 +976,7 @@ func standardProfile() Profile {
 		SchemaVersion: SchemaVersion,
 		Name:          ProfileStandard,
 		BuiltIn:       true,
+		Provenance:    Provenance{Origin: OriginBuiltIn},
 		Device: Device{
 			VendorID:     "0x3346",
 			ProductID:    "0x1009",
@@ -970,7 +984,7 @@ func standardProfile() Profile {
 			Class:        ptr[uint8](0xEF),
 			SubClass:     ptr[uint8](0x02),
 			Protocol:     ptr[uint8](0x01),
-			Serial:       ptr("0123456789ABCDEF"),
+			Serial:       ptr(DeviceSerial()),
 			Manufacturer: "sipeed",
 			Product:      "NanoKVM",
 		},
@@ -984,6 +998,7 @@ func hidOnlyProfile() Profile {
 		SchemaVersion: SchemaVersion,
 		Name:          ProfileHIDOnly,
 		BuiltIn:       true,
+		Provenance:    Provenance{Origin: OriginBuiltIn},
 		Device: Device{
 			VendorID:     "0x3346",
 			ProductID:    "0x1009",

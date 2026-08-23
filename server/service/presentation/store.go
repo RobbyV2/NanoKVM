@@ -195,6 +195,30 @@ func (s *Store) Previous() (string, error) {
 	return s.readMarker(previousFile)
 }
 
+// The two built-in inquiry strings track whether a disk is presented as a
+// CD-ROM, so a mount rewrites them. Anything else in the active profile is a
+// mass-storage identity someone chose, and mounting an image is not a request
+// to discard it.
+func (s *Store) ActiveInquiry() string {
+	name, err := s.Active()
+	if err != nil || name == "" {
+		return ""
+	}
+	profile, err := s.LoadProfile(name)
+	if err != nil {
+		return ""
+	}
+	for _, function := range profile.Functions {
+		if function.Kind != FunctionMassStorage || function.Storage == nil {
+			continue
+		}
+		if value := function.Storage.InquiryString; value != InquiryString && value != InquiryStringCDROM {
+			return value
+		}
+	}
+	return ""
+}
+
 func (s *Store) profilePath(name string) (string, error) {
 	if !profileNamePattern.MatchString(name) {
 		return "", fmt.Errorf("invalid profile name %q", name)

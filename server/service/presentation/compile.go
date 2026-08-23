@@ -48,12 +48,13 @@ type Plan struct {
 // profile carries the same fields as optional pointers; these are the values
 // the gadget ends up presenting.
 type DeviceIdentity struct {
-	VendorID     string `json:"vendor_id"`
-	ProductID    string `json:"product_id"`
-	BCDDevice    string `json:"bcd_device,omitempty"`
-	Serial       string `json:"serial,omitempty"`
-	Manufacturer string `json:"manufacturer"`
-	Product      string `json:"product"`
+	VendorID      string `json:"vendor_id"`
+	ProductID     string `json:"product_id"`
+	BCDDevice     string `json:"bcd_device,omitempty"`
+	Serial        string `json:"serial,omitempty"`
+	Manufacturer  string `json:"manufacturer"`
+	Product       string `json:"product"`
+	ForeignVendor bool   `json:"foreign_vendor"`
 }
 
 // The recovery action an apply leaves the operator with, worst first. Every
@@ -139,10 +140,11 @@ func isHID(name string) bool {
 
 func (d Device) identity() DeviceIdentity {
 	identity := DeviceIdentity{
-		VendorID:     d.VendorID,
-		ProductID:    d.ProductID,
-		Manufacturer: d.Manufacturer,
-		Product:      d.Product,
+		VendorID:      d.VendorID,
+		ProductID:     d.ProductID,
+		Manufacturer:  d.Manufacturer,
+		Product:       d.Product,
+		ForeignVendor: ForeignVendor(d.VendorID),
 	}
 	if d.BCDDevice != nil {
 		identity.BCDDevice = *d.BCDDevice

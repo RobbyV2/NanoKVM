@@ -23,6 +23,7 @@ func descriptorProfile() Profile {
 		Strings:    map[string]string{"1": "Example", "2": "Desk Device", "3": "A100"},
 		HIDReports: map[string][]byte{"GS0": append([]byte(nil), descKeyboardStandard...)},
 	}
+	profile.Normalize()
 	return profile
 }
 

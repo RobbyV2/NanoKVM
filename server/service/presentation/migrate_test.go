@@ -1,10 +1,14 @@
 package presentation
 
 import (
+	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+const serialOp = "write\tstrings/0x409/serialnumber\t"
 
 func useTestBootDir(t *testing.T, flags ...string) string {
 	t.Helper()
@@ -57,6 +61,14 @@ func TestMigratedProfileCompilesToTheScriptTrace(t *testing.T) {
 					t.Fatalf("op %d: missing, script has %q", i, want[i])
 				case i >= len(want):
 					t.Fatalf("op %d: migrated %q, script stops here", i, got[i])
+				// The one deliberate divergence from the script: S03usbdev:32
+				// writes the same sixteen characters on every board, and this
+				// serial is per-device. Every other op still has to match.
+				case strings.HasPrefix(want[i], serialOp):
+					derived := serialOp + hex.EncodeToString([]byte(DeviceSerial()+"\n"))
+					if got[i] == want[i] || got[i] != derived {
+						t.Fatalf("op %d: migrated %q, want the per-device serial %q", i, got[i], derived)
+					}
 				case want[i] != got[i]:
 					t.Fatalf("op %d:\n script   %q\n migrated %q", i, want[i], got[i])
 				}

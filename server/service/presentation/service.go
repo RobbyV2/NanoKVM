@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/audit"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -26,13 +28,13 @@ type Service struct {
 }
 
 type ProfileSummary struct {
-	Name           string   `json:"name"`
-	BuiltIn        bool     `json:"built_in"`
-	Active         bool     `json:"active"`
-	Manufacturer   string   `json:"manufacturer"`
-	Product        string   `json:"product"`
-	Functions      []string `json:"functions"`
-	HasDescriptors bool     `json:"has_descriptors"`
+	Name         string     `json:"name"`
+	BuiltIn      bool       `json:"built_in"`
+	Active       bool       `json:"active"`
+	Manufacturer string     `json:"manufacturer"`
+	Product      string     `json:"product"`
+	Functions    []string   `json:"functions"`
+	Provenance   Provenance `json:"provenance"`
 }
 
 type Preview struct {
@@ -124,6 +126,11 @@ func (s *Service) GetProfiles(c *gin.Context) {
 	}
 	var rsp proto.Response
 	rsp.OkRspWithData(c, &gin.H{"profiles": result})
+}
+
+func (s *Service) GetPresets(c *gin.Context) {
+	var rsp proto.Response
+	rsp.OkRspWithData(c, &gin.H{"presets": Presets()})
 }
 
 func (s *Service) GetProfile(c *gin.Context) {
@@ -260,7 +267,10 @@ func (s *Service) ApplyProfile(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), 30*time.Second)
 	defer cancel()
-	if err := s.manager.Apply(ctx, req.Name); err != nil {
+	principal, _ := middleware.CurrentPrincipal(c)
+	err := s.manager.Apply(ctx, req.Name)
+	audit.Record(principal, "presentation.apply", req.Name, err)
+	if err != nil {
 		s.fail(c, -2, "apply profile", err)
 		return
 	}
@@ -296,7 +306,10 @@ func (s *Service) RollbackProfile(c *gin.Context) {
 		}
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), 30*time.Second)
 		defer cancel()
-		if err := s.manager.ApplyProfile(ctx, profile); err != nil {
+		principal, _ := middleware.CurrentPrincipal(c)
+		err := s.manager.ApplyProfile(ctx, profile)
+		audit.Record(principal, "presentation.rollback", name, err)
+		if err != nil {
 			s.fail(c, -3, "roll back to "+name, err)
 			return
 		}
@@ -417,13 +430,13 @@ func descriptorWarnings(profile Profile) []string {
 
 func summarizeProfile(profile Profile, active string) ProfileSummary {
 	return ProfileSummary{
-		Name:           profile.Name,
-		BuiltIn:        profile.BuiltIn,
-		Active:         profile.Name == active,
-		Manufacturer:   profile.Device.Manufacturer,
-		Product:        profile.Device.Product,
-		Functions:      functionNames(profile.Functions),
-		HasDescriptors: profile.Descriptors != nil,
+		Name:         profile.Name,
+		BuiltIn:      profile.BuiltIn,
+		Active:       profile.Name == active,
+		Manufacturer: profile.Device.Manufacturer,
+		Product:      profile.Device.Product,
+		Functions:    functionNames(profile.Functions),
+		Provenance:   profile.Provenance,
 	}
 }
 

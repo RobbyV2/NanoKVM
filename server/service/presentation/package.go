@@ -278,6 +278,12 @@ func ImportPackage(data []byte) (Profile, error) {
 	if len(descriptors.Device) != 0 || len(descriptors.Configurations) != 0 || len(descriptors.BOS) != 0 || len(descriptors.Strings) != 0 || len(descriptors.HIDReports) != 0 {
 		manifest.Profile.Descriptors = descriptors
 	}
+	// Normalize below rederives this from the assets that actually arrived, so
+	// checking first is the only chance to catch a manifest whose provenance
+	// claims a captured descriptor tree it does not ship.
+	if manifest.Profile.Provenance.Descriptors != (manifest.Profile.Descriptors != nil) {
+		return Profile{}, errors.New("manifest provenance disagrees with the descriptor assets in the package")
+	}
 	if len(used) != len(files) {
 		var extras []string
 		for name := range files {

@@ -80,6 +80,7 @@ func derivedProfile() Profile {
 	profile := standardProfile()
 	profile.Name = ProfileCurrent
 	profile.BuiltIn = false
+	profile.Provenance = Provenance{Origin: OriginMigrated, Source: bootDir}
 	profile.Device.VendorID, profile.Device.ProductID = flags.vendorID, flags.productID
 
 	var functions []Function
