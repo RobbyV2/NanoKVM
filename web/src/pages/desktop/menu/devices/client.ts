@@ -1,7 +1,7 @@
 import type { Binding, SourceKind, SourcesSnapshot, SourceStream } from '@/api/sources.ts';
-import { sourcesSocket } from '@/api/sources.ts';
-import { notifyAuthExpired } from '@/lib/auth-events.ts';
 
+import { notifyAuthExpired } from '../../../../lib/auth-events.ts';
+import { getBaseUrl } from '../../../../lib/service.ts';
 import {
   encodeMediaFrame,
   mediaTimestampUS,
@@ -60,9 +60,14 @@ type ClientCallbacks = {
 const maxBufferedBytes = (2 << 20) + 256;
 const frameAckTimeout = 3000;
 
+function sourceSocket() {
+  return `${getBaseUrl('ws')}/api/sources/ws`;
+}
+
 export class BrowserSourceClient {
   private readonly callbacks: ClientCallbacks;
   private readonly leaseKey: string;
+  private readonly openSocket: () => WebSocket;
   private socket?: WebSocket;
   private offers: DeviceOffer[] = [];
   private leases: StoredLease[];
@@ -78,10 +83,15 @@ export class BrowserSourceClient {
   private restarting = false;
   private isReady = false;
 
-  constructor(owner: string, callbacks: ClientCallbacks) {
+  constructor(
+    owner: string,
+    callbacks: ClientCallbacks,
+    openSocket = () => new WebSocket(sourceSocket())
+  ) {
     this.callbacks = callbacks;
     this.leaseKey = `nanokvm-media-leases:${owner}`;
     this.leases = readLeases(this.leaseKey);
+    this.openSocket = openSocket;
   }
 
   selections() {
@@ -180,7 +190,7 @@ export class BrowserSourceClient {
     if (!this.shouldConnect || this.socket) return;
     window.clearTimeout(this.reconnectTimer);
     this.callbacks.onConnection('connecting');
-    const socket = new WebSocket(sourcesSocket('ws'));
+    const socket = this.openSocket();
     this.socket = socket;
     socket.binaryType = 'arraybuffer';
     socket.onopen = () => {
@@ -207,6 +217,7 @@ export class BrowserSourceClient {
     }
     if (response.type === 'source_ready') {
       this.callbacks.onSnapshot(response.snapshot);
+      this.callbacks.onError('connection', '');
       this.reconnectDelay = 1000;
       await this.resumeLeases();
       this.isReady = true;
@@ -270,7 +281,9 @@ export class BrowserSourceClient {
     this.socket = undefined;
     this.isReady = false;
     this.clearFrames();
-    this.rejectRequests(new Error('Media source disconnected'));
+    const error = new Error('Media source unavailable');
+    this.rejectReady(error);
+    this.rejectRequests(error);
     this.owned.clear();
     this.emitOwned();
     if (event.code === 4401) {
@@ -280,6 +293,7 @@ export class BrowserSourceClient {
     }
     if (!this.shouldConnect || this.restarting) return;
     this.callbacks.onConnection('disconnected');
+    this.callbacks.onError('connection', error.message);
     this.reconnectTimer = window.setTimeout(() => this.connect(), this.reconnectDelay);
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, 10000);
   }

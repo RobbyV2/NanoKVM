@@ -98,9 +98,14 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       socket.onerror = () => setEventsConnection('disconnected');
     };
 
-    void api.getSources().then((response) => {
-      if (response.code === 0 && mounted.current) setSnapshot(response.data as SourcesSnapshot);
-    });
+    void api
+      .getSources()
+      .then((response) => {
+        if (response.code === 0 && mounted.current) setSnapshot(response.data as SourcesSnapshot);
+      })
+      .catch(() => {
+        if (mounted.current) setEventsConnection('disconnected');
+      });
     connect();
 
     return () => {

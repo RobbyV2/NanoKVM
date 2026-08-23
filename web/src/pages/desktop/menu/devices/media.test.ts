@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { SourceSink, SourcesSnapshot } from '../../../../api/sources.ts';
+import { BrowserSourceClient } from './client.ts';
 import { PcmPacketizer } from './pcm.ts';
 import { reduceSources } from './state.ts';
 import { encodeMediaFrame } from './transport.ts';
@@ -110,4 +111,65 @@ test('source reconnect replaces its live entry', () => {
   });
   assert.equal(replaced.sources.length, 1);
   assert.equal(replaced.sources[0].label, 'Tablet');
+});
+
+test('source close rejects readiness and reports unavailable', { timeout: 1000 }, async () => {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      clearTimeout,
+      dispatchEvent() {},
+      location: { hostname: 'localhost', port: '80', protocol: 'http:' },
+      setTimeout
+    }
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) || null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value)
+    }
+  });
+
+  class ClosingSocket {
+    static readonly OPEN = 1;
+    bufferedAmount = 0;
+    readyState = 0;
+    binaryType = '';
+    onclose?: (event: { code: number }) => void;
+    onerror?: () => void;
+    onmessage?: (event: MessageEvent) => void;
+    onopen?: () => void;
+
+    constructor() {
+      queueMicrotask(() => this.onclose?.({ code: 1011 }));
+    }
+
+    close() {}
+    send() {}
+  }
+
+  Object.defineProperty(globalThis, 'WebSocket', { configurable: true, value: ClosingSocket });
+  const states: string[] = [];
+  const errors: string[] = [];
+  const client = new BrowserSourceClient(
+    'alice',
+    {
+      onConnection: (state) => states.push(state),
+      onError: (_sink, message) => errors.push(message),
+      onOwned() {},
+      onSnapshot() {}
+    },
+    () => new ClosingSocket() as unknown as WebSocket
+  );
+
+  await assert.rejects(
+    client.setOffers([{ id: 'cam_a', deviceID: 'camera-a', kind: 'camera', label: 'Camera' }]),
+    /Media source unavailable/
+  );
+  client.close();
+  assert.ok(states.includes('disconnected'));
+  assert.ok(errors.includes('Media source unavailable'));
 });
