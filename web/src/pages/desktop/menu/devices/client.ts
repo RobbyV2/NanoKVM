@@ -1,4 +1,11 @@
-import type { Binding, SourceKind, SourcesSnapshot, SourceStream } from '@/api/sources.ts';
+import type {
+  Binding,
+  ClaimRefusal,
+  MediaSource,
+  SourceKind,
+  SourcesSnapshot,
+  SourceStream
+} from '@/api/sources.ts';
 
 import { notifyAuthExpired } from '../../../../lib/auth-events.ts';
 import { getBaseUrl } from '../../../../lib/service.ts';
@@ -23,6 +30,7 @@ export type StoredLease = {
 
 type SourceReady = {
   type: 'source_ready';
+  source: MediaSource;
   snapshot: SourcesSnapshot;
 };
 
@@ -30,15 +38,8 @@ type ControlResponse =
   | SourceReady
   | { type: 'claimed'; binding: Binding; token: string }
   | { type: 'resumed'; binding: Binding }
-  | { type: 'released'; sink_id: string }
-  | {
-      type: 'claim_refused';
-      sink_id: string;
-      owner: string;
-      source_label: string;
-      since: string;
-      message: string;
-    }
+  | { type: 'released'; sink_id: string; reason?: string }
+  | ({ type: 'claim_refused'; message: string } & ClaimRefusal)
   | FrameAck
   | FrameError
   | { type: 'error'; message: string; sink_id?: string };
@@ -54,6 +55,8 @@ type ClientCallbacks = {
   onConnection: (state: SourceConnection) => void;
   onOwned: (sinks: Set<string>) => void;
   onError: (sinkID: string, message: string) => void;
+  onRefused: (refusal: ClaimRefusal) => void;
+  onRevoked: (sinkID: string, reason: string) => void;
   onSnapshot: (snapshot: SourcesSnapshot) => void;
   onBinary?: (data: ArrayBuffer) => Promise<ArrayBuffer | undefined>;
 };
@@ -83,6 +86,7 @@ export class BrowserSourceClient {
   private shouldConnect = false;
   private restarting = false;
   private isReady = false;
+  private sourceID = '';
 
   constructor(
     owner: string,
@@ -97,6 +101,28 @@ export class BrowserSourceClient {
 
   selections() {
     return this.leases.map((lease) => ({ ...lease }));
+  }
+
+  sourceId() {
+    return this.sourceID;
+  }
+
+  adopt(sinkID: string, offer: DeviceOffer, token: string) {
+    this.saveLease({
+      sinkID,
+      streamID: offer.id,
+      token,
+      deviceID: offer.deviceID,
+      kind: offer.kind
+    });
+    this.owned.add(sinkID);
+    this.emitOwned();
+  }
+
+  reconnect() {
+    if (!this.shouldConnect || this.socket) return;
+    this.reconnectDelay = 1000;
+    this.connect();
   }
 
   async setOffers(offers: DeviceOffer[]) {
@@ -235,6 +261,7 @@ export class BrowserSourceClient {
       return;
     }
     if (response.type === 'source_ready') {
+      this.sourceID = response.source?.id || '';
       this.callbacks.onSnapshot(response.snapshot);
       this.callbacks.onError('connection', '');
       this.reconnectDelay = 1000;
@@ -278,15 +305,16 @@ export class BrowserSourceClient {
       return;
     }
     if (response.type === 'released') {
+      const requested = this.requests.has(response.sink_id);
       this.removeLease(response.sink_id);
       this.finishRequest(response.sink_id);
+      if (!requested) this.callbacks.onRevoked(response.sink_id, response.reason || 'released');
       return;
     }
     if (response.type === 'claim_refused') {
-      this.finishRequest(
-        response.sink_id,
-        new Error(`In use by ${response.owner} from ${response.source_label}`)
-      );
+      const { sink_id, owner, source_label, since, takeover } = response;
+      this.callbacks.onRefused({ sink_id, owner, source_label, since, takeover });
+      this.finishRequest(sink_id, new Error(`In use by ${owner} from ${source_label}`));
       return;
     }
     if (response.type === 'error') {
@@ -301,6 +329,7 @@ export class BrowserSourceClient {
     if (this.socket !== socket) return;
     this.socket = undefined;
     this.isReady = false;
+    this.sourceID = '';
     this.clearFrames();
     const error = new Error('Media source unavailable');
     this.rejectReady(error);

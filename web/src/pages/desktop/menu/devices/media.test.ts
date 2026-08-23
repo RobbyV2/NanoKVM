@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { SourceSink, SourcesSnapshot } from '../../../../api/sources.ts';
-import { BrowserSourceClient } from './client.ts';
+import type { ClaimRefusal, SourceSink, SourcesSnapshot } from '../../../../api/sources.ts';
+import { BrowserSourceClient, type DeviceOffer } from './client.ts';
 import { PcmPacketizer } from './pcm.ts';
 import { reduceSources } from './state.ts';
 import { encodeMediaFrame } from './transport.ts';
@@ -160,6 +160,8 @@ test('source close rejects readiness and reports unavailable', { timeout: 1000 }
       onConnection: (state) => states.push(state),
       onError: (_sink, message) => errors.push(message),
       onOwned() {},
+      onRefused() {},
+      onRevoked() {},
       onSnapshot() {}
     },
     () => new ClosingSocket() as unknown as WebSocket
@@ -172,4 +174,162 @@ test('source close rejects readiness and reports unavailable', { timeout: 1000 }
   client.close();
   assert.ok(states.includes('disconnected'));
   assert.ok(errors.includes('Media source unavailable'));
+});
+
+class ControlSocket {
+  static readonly OPEN = 1;
+  bufferedAmount = 0;
+  readyState = 1;
+  binaryType = '';
+  sent: string[] = [];
+  onclose?: (event: { code: number }) => void;
+  onerror?: () => void;
+  onmessage?: (event: MessageEvent) => void;
+  onopen?: () => void;
+
+  close() {}
+
+  send(data: string) {
+    this.sent.push(data);
+  }
+
+  deliver(payload: unknown) {
+    this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent);
+  }
+}
+
+function installBrowserGlobals() {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: { clearTimeout, dispatchEvent() {}, setTimeout }
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) || null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value)
+    }
+  });
+  Object.defineProperty(globalThis, 'WebSocket', { configurable: true, value: ControlSocket });
+}
+
+const cameraOffer: DeviceOffer = {
+  id: 'cam_a',
+  deviceID: 'camera-a',
+  kind: 'camera',
+  label: 'Camera'
+};
+
+type Callbacks = ConstructorParameters<typeof BrowserSourceClient>[1];
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+async function connectedClient(socket: ControlSocket, callbacks: Partial<Callbacks> = {}) {
+  const client = new BrowserSourceClient(
+    'alice',
+    {
+      onConnection() {},
+      onOwned() {},
+      onError() {},
+      onRefused() {},
+      onRevoked() {},
+      onSnapshot() {},
+      ...callbacks
+    },
+    () => socket as unknown as WebSocket
+  );
+  const ready = client.setOffers([cameraOffer]);
+  socket.onopen?.();
+  socket.deliver({
+    type: 'source_ready',
+    source: { id: 'src_browser', owner: 'alice', agent: 'browser', label: 'Browser', streams: [] },
+    snapshot: { sinks: [], sources: [], bindings: [] }
+  });
+  await ready;
+  return client;
+}
+
+test('a revoked binding reaches the browser with its reason', { timeout: 1000 }, async () => {
+  installBrowserGlobals();
+  const socket = new ControlSocket();
+  const owned: string[][] = [];
+  const revocations: Array<[string, string]> = [];
+  const client = await connectedClient(socket, {
+    onOwned: (sinks: Set<string>) => owned.push([...sinks]),
+    onRevoked: (sinkID: string, reason: string) => revocations.push([sinkID, reason])
+  });
+
+  const claiming = client.claim('uvc.cam0', cameraOffer);
+  await flush();
+  socket.deliver({
+    type: 'claimed',
+    binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
+    token: 'lease'
+  });
+  await claiming;
+  assert.deepEqual(owned[owned.length - 1], ['uvc.cam0']);
+  assert.equal(client.sourceId(), 'src_browser');
+
+  socket.deliver({ type: 'released', sink_id: 'uvc.cam0', reason: 'admin_disconnect' });
+  assert.deepEqual(revocations, [['uvc.cam0', 'admin_disconnect']]);
+  assert.deepEqual(owned[owned.length - 1], []);
+  client.close();
+});
+
+test('a refused claim keeps the holder that the server named', { timeout: 1000 }, async () => {
+  installBrowserGlobals();
+  const socket = new ControlSocket();
+  const refusals: ClaimRefusal[] = [];
+  const client = await connectedClient(socket, {
+    onRefused: (refusal: ClaimRefusal) => refusals.push(refusal)
+  });
+
+  const claiming = client.claim('uvc.cam0', cameraOffer);
+  await flush();
+  socket.deliver({
+    type: 'claim_refused',
+    message: 'slot_occupied',
+    sink_id: 'uvc.cam0',
+    owner: 'bob',
+    source_label: 'Pixel',
+    since: '2026-08-23T00:00:00Z',
+    takeover: 'immediate'
+  });
+  await assert.rejects(claiming, /In use by bob from Pixel/);
+  assert.deepEqual(refusals, [
+    {
+      sink_id: 'uvc.cam0',
+      owner: 'bob',
+      source_label: 'Pixel',
+      since: '2026-08-23T00:00:00Z',
+      takeover: 'immediate'
+    }
+  ]);
+  client.close();
+});
+
+test('an owned release is not reported as a revocation', { timeout: 1000 }, async () => {
+  installBrowserGlobals();
+  const socket = new ControlSocket();
+  const revocations: string[] = [];
+  const client = await connectedClient(socket, {
+    onRevoked: (sinkID: string) => revocations.push(sinkID)
+  });
+
+  const claiming = client.claim('uvc.cam0', cameraOffer);
+  await flush();
+  socket.deliver({
+    type: 'claimed',
+    binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
+    token: 'lease'
+  });
+  await claiming;
+  const releasing = client.release('uvc.cam0');
+  await flush();
+  socket.deliver({ type: 'released', sink_id: 'uvc.cam0' });
+  await releasing;
+  assert.deepEqual(revocations, []);
+  client.close();
 });

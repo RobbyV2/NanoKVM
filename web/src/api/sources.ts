@@ -118,6 +118,13 @@ export function setSourceSlots(slots: SourceSlot[]) {
   return http.request({ method: 'put', url: '/api/sources/sinks', data: { slots } });
 }
 
+export function takeoverSource(sinkID: string, sourceID: string, streamID: string) {
+  return http.post(`/api/sources/bindings/${encodeURIComponent(sinkID)}/takeover`, {
+    source_id: sourceID,
+    stream_id: streamID
+  });
+}
+
 export function releaseSource(sinkID: string) {
   return http.delete(`/api/sources/bindings/${encodeURIComponent(sinkID)}`);
 }

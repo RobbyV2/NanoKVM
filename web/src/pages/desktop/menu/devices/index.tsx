@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
-import { Alert, Button, Divider, Select } from 'antd';
+import { Alert, Button, Divider, Select, Tooltip } from 'antd';
 import clsx from 'clsx';
-import { CameraIcon, MicIcon, RadioTowerIcon, UsbIcon } from 'lucide-react';
+import { CameraIcon, MicIcon, MicOffIcon, RadioTowerIcon, UsbIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { SourceSink } from '@/api/sources.ts';
 import { MenuItem } from '@/components/menu-item.tsx';
 
 import { useDevices } from './context.ts';
+import { WebUSBRelay } from './webusb.ts';
 
 export const Devices = () => {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ export const Devices = () => {
   const state = useDevices();
   const [selected, setSelected] = useState<Record<string, string>>({});
   const activeCount = state.snapshot.sinks.filter((sink) => sink.binding).length;
+  const surrendered = !!state.passthrough?.hidSurrendered;
 
   const content = (
     <div className="w-[min(88vw,390px)] space-y-3 p-1">
@@ -31,6 +33,14 @@ export const Devices = () => {
         </div>
       </div>
 
+      {surrendered && (
+        <Alert
+          type="warning"
+          showIcon
+          message={t('devices.usb.surrendered')}
+          description={t('devices.usb.surrenderedDesc')}
+        />
+      )}
       {state.eventsConnection !== 'connected' && (
         <Alert type="warning" showIcon message={t('devices.stale')} />
       )}
@@ -79,12 +89,18 @@ export const Devices = () => {
       icon={
         <div className="relative">
           <RadioTowerIcon size={18} />
-          {activeCount > 0 && (
-            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-emerald-400" />
+          {(surrendered || activeCount > 0) && (
+            <span
+              className={clsx(
+                'absolute -right-1 -top-1 h-2 w-2 rounded-full',
+                surrendered ? 'bg-amber-400' : 'bg-emerald-400'
+              )}
+            />
           )}
         </div>
       }
       content={content}
+      onOpenChange={(open) => open && state.refresh()}
       fresh
     />
   );
@@ -107,6 +123,10 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
   const busy = state.busy.has(sink.id);
   const demand = sink.demand.streaming;
   const active = state.active.has(sink.id);
+  const permission = sink.kind === 'usb_device' ? undefined : state.permissions[sink.kind];
+  const isUSB = sink.kind === 'usb_device';
+  const refusal = state.refusals[sink.id];
+  const revoked = state.revoked[sink.id];
   const selectedID = selected || options[0]?.deviceID;
   const detail = useMemo(() => {
     if (sink.binding) {
@@ -141,6 +161,15 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
             </div>
           </div>
 
+          {isUSB && <UsbDetail />}
+
+          {permission === 'denied' && (
+            <div className="text-xs text-red-400">{t('devices.permission.denied')}</div>
+          )}
+          {permission === 'prompt' && !sink.binding && (
+            <div className="text-xs text-neutral-500">{t('devices.permission.prompt')}</div>
+          )}
+
           {!sink.binding && options.length > 0 && (
             <Select
               size="small"
@@ -163,29 +192,93 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
                       ? t('devices.resuming')
                       : ''}
             </span>
-            {!sink.binding && (sink.kind !== 'usb_device' || isAdmin) ? (
-              <Button
-                size="small"
-                type={demand ? 'primary' : 'default'}
-                loading={busy}
-                onClick={() => state.share(sink, selectedID)}
-              >
-                {sink.kind === 'usb_device'
-                  ? t('devices.share.usbDevice', { defaultValue: 'Share USB' })
-                  : t(`devices.share.${sink.kind}`)}
-              </Button>
-            ) : canRelease ? (
-              <Button danger size="small" loading={busy} onClick={() => state.release(sink.id)}>
-                {sameOwner ? t('devices.stop') : t('devices.disconnect')}
-              </Button>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-2">
+              {sink.kind === 'microphone' && active && (
+                <Tooltip
+                  title={state.muted.has(sink.id) ? t('devices.mic.unmute') : t('devices.mic.mute')}
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={
+                      state.muted.has(sink.id) ? <MicOffIcon size={15} /> : <MicIcon size={15} />
+                    }
+                    className={state.muted.has(sink.id) ? 'text-amber-400' : undefined}
+                    onClick={() => state.setMuted(sink.id, !state.muted.has(sink.id))}
+                  />
+                </Tooltip>
+              )}
+              {!sink.binding && (!isUSB || isAdmin) ? (
+                <Button
+                  size="small"
+                  type={demand ? 'primary' : 'default'}
+                  loading={busy}
+                  disabled={permission === 'denied'}
+                  onClick={() => state.share(sink, selectedID)}
+                >
+                  {isUSB ? t('devices.share.usbDevice') : t(`devices.share.${sink.kind}`)}
+                </Button>
+              ) : canRelease ? (
+                <Button danger size="small" loading={busy} onClick={() => state.release(sink.id)}>
+                  {sameOwner ? t('devices.stop') : t('devices.disconnect')}
+                </Button>
+              ) : null}
+            </div>
           </div>
+
+          {refusal && !sink.binding && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-xs text-amber-400">
+                {t('devices.refused', { owner: refusal.owner, source: refusal.source_label })}
+              </span>
+              {refusal.takeover === 'immediate' && !isUSB && (
+                <Button
+                  size="small"
+                  danger
+                  loading={busy}
+                  onClick={() => state.takeover(sink, selectedID)}
+                >
+                  {t('devices.takeover')}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {revoked && !sink.binding && (
+            <div className="text-xs text-amber-400">
+              {t(`devices.revoked.${revoked}`, { defaultValue: t('devices.revoked.released') })}
+            </div>
+          )}
 
           {state.errors[sink.id] && (
             <div className="text-xs text-red-400">{state.errors[sink.id]}</div>
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+const UsbDetail = () => {
+  const { t } = useTranslation();
+  const state = useDevices();
+  const session = state.passthrough;
+  const device = session?.device;
+  const supported = WebUSBRelay.supported();
+  if (supported && !session) return null;
+
+  return (
+    <div className="space-y-1 text-xs text-neutral-500">
+      {!supported && <div className="text-amber-400">{t('devices.usb.unsupported')}</div>}
+      {session?.active && (
+        <div className="truncate">
+          {t('devices.usb.session', {
+            device: device ? `${device.idVendor}:${device.idProduct}` : session.exporter,
+            mode: t(`devices.usb.mode.${session.mode}`)
+          })}
+        </div>
+      )}
+      {session && !session.active && <div>{t('devices.usb.idle')}</div>}
     </div>
   );
 };

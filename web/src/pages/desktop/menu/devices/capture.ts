@@ -110,7 +110,11 @@ export class MicrophoneCapture {
   private worklet?: AudioWorkletNode;
   private mute?: GainNode;
 
-  async start(deviceID: string, onFrame: FrameHandler) {
+  setMuted(muted: boolean) {
+    this.stream?.getAudioTracks().forEach((track) => (track.enabled = !muted));
+  }
+
+  async start(deviceID: string, onFrame: FrameHandler, muted = false) {
     await this.stop();
     const unsupported = captureSupport('microphone');
     if (unsupported) throw new Error(unsupported);
@@ -140,6 +144,7 @@ export class MicrophoneCapture {
       for (const packet of packetizer.push(data)) onFrame(packet);
     };
     this.source.connect(this.worklet).connect(this.mute).connect(this.context.destination);
+    this.setMuted(muted);
   }
 
   async stop() {

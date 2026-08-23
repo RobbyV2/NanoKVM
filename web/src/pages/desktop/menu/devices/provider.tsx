@@ -1,13 +1,20 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
 
+import { getPassthrough } from '@/api/passthrough.ts';
+import type { PassthroughStatus } from '@/api/passthrough.ts';
 import * as api from '@/api/sources.ts';
-import type { SourceKind, SourceSink, SourcesSnapshot } from '@/api/sources.ts';
+import type { ClaimRefusal, SourceKind, SourceSink, SourcesSnapshot } from '@/api/sources.ts';
 import { notifyAuthExpired } from '@/lib/auth-events.ts';
 
 import { CameraCapture, captureSupport, MicrophoneCapture } from './capture.ts';
 import { BrowserSourceClient, type DeviceOffer, type SourceConnection } from './client.ts';
-import { DevicesContext, type DevicesState, type SourceEventsConnection } from './context.ts';
+import {
+  DevicesContext,
+  type DevicesState,
+  type MediaPermission,
+  type SourceEventsConnection
+} from './context.ts';
 import { emptySnapshot, reduceSources } from './state.ts';
 import { WebUSBRelay } from './webusb.ts';
 
@@ -32,16 +39,52 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     microphone: [],
     usb_device: []
   });
+  const [permissions, setPermissions] = useState<Record<'camera' | 'microphone', MediaPermission>>({
+    camera: 'unknown',
+    microphone: 'unknown'
+  });
+  const [passthrough, setPassthrough] = useState<PassthroughStatus | null>(null);
   const [owned, setOwned] = useState(new Set<string>());
   const [active, setActive] = useState(new Set<string>());
   const [busy, setBusy] = useState(new Set<string>());
+  const [muted, setMuted] = useState(new Set<string>());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [refusals, setRefusals] = useState<Record<string, ClaimRefusal>>({});
+  const [revoked, setRevoked] = useState<Record<string, string>>({});
   const eventsSocket = useRef<WebSocket>();
   const eventsRetry = useRef<number>();
+  const eventsConnect = useRef<() => void>();
   const captures = useRef(new Map<string, RunningCapture>());
   const stopTimers = useRef(new Map<string, number>());
   const mounted = useRef(true);
   const usbRelay = useRef<WebUSBRelay>();
+
+  const stopCapture = useCallback(async (sinkID: string) => {
+    window.clearTimeout(stopTimers.current.get(sinkID));
+    stopTimers.current.delete(sinkID);
+    const running = captures.current.get(sinkID);
+    if (!running) return;
+    captures.current.delete(sinkID);
+    await running.capture.stop();
+    setActive((current) => {
+      const next = new Set(current);
+      next.delete(sinkID);
+      return next;
+    });
+  }, []);
+
+  const closeRelay = useCallback(() => {
+    const relay = usbRelay.current;
+    usbRelay.current = undefined;
+    void relay?.close();
+    setDevices((current) => ({ ...current, usb_device: [] }));
+    setActive((current) => {
+      const next = new Set(current);
+      next.delete('ffs.hybrid');
+      return next;
+    });
+  }, []);
+
   const client = useMemo(
     () =>
       new BrowserSourceClient(account.username, {
@@ -49,21 +92,19 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         onOwned: setOwned,
         onError: (sinkID, message) => {
           setErrors((current) => ({ ...current, [sinkID]: message }));
-          if (sinkID !== 'ffs.hybrid') return;
-          const relay = usbRelay.current;
-          usbRelay.current = undefined;
-          void relay?.close();
-          setDevices((current) => ({ ...current, usb_device: [] }));
-          setActive((current) => {
-            const next = new Set(current);
-            next.delete(sinkID);
-            return next;
-          });
+          if (sinkID === 'ffs.hybrid') closeRelay();
+        },
+        onRefused: (refusal) =>
+          setRefusals((current) => ({ ...current, [refusal.sink_id]: refusal })),
+        onRevoked: (sinkID, reason) => {
+          setRevoked((current) => ({ ...current, [sinkID]: reason }));
+          void stopCapture(sinkID);
+          if (sinkID === 'ffs.hybrid') closeRelay();
         },
         onSnapshot: setSnapshot,
         onBinary: async (data) => usbRelay.current?.handle(data)
       }),
-    [account.username]
+    [account.username, closeRelay, stopCapture]
   );
 
   const setError = useCallback((sinkID: string, message: string) => {
@@ -113,6 +154,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       };
       socket.onerror = () => setEventsConnection('disconnected');
     };
+    eventsConnect.current = connect;
 
     void api
       .getSources()
@@ -155,6 +197,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         kind === 'camera'
           ? [
               { codec: 'mjpeg', width: 1280, height: 720, fps: 30 },
+              { codec: 'mjpeg', width: 1280, height: 720, fps: 15 },
               { codec: 'mjpeg', width: 640, height: 480, fps: 30 },
               { codec: 'mjpeg', width: 320, height: 240, fps: 30 },
               { codec: 'mjpeg', width: 160, height: 120, fps: 30 }
@@ -178,20 +221,6 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         setError('connection', error instanceof Error ? error.message : String(error))
       );
   }, [client, discover, setError]);
-
-  const stopCapture = useCallback(async (sinkID: string) => {
-    window.clearTimeout(stopTimers.current.get(sinkID));
-    stopTimers.current.delete(sinkID);
-    const running = captures.current.get(sinkID);
-    if (!running) return;
-    captures.current.delete(sinkID);
-    await running.capture.stop();
-    setActive((current) => {
-      const next = new Set(current);
-      next.delete(sinkID);
-      return next;
-    });
-  }, []);
 
   const startCapture = useCallback(
     async (sink: SourceSink, lease: ReturnType<BrowserSourceClient['selections']>[number]) => {
@@ -227,8 +256,10 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
             kind: sink.kind,
             demand: demandKey(sink)
           });
-          await capture.start(offer.deviceID, (payload) =>
-            client.sendFrame(sink.id, offer.id, 'pcm_s16le_mono_48k', payload)
+          await capture.start(
+            offer.deviceID,
+            (payload) => client.sendFrame(sink.id, offer.id, 'pcm_s16le_mono_48k', payload),
+            muted.has(sink.id)
           );
         }
         setActive((current) => new Set(current).add(sink.id));
@@ -237,7 +268,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         setError(sink.id, mediaError(error));
       }
     },
-    [clearError, client, devices, setError, stopCapture]
+    [clearError, client, devices, muted, setError, stopCapture]
   );
 
   useEffect(() => {
@@ -262,13 +293,13 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         } else {
           void startCapture(sink, lease);
         }
-      } else if (captures.current.has(sink.id) && !stopTimers.current.has(sink.id)) {
-        const immediate = sourceConnection !== 'connected' || !owned.has(sink.id);
-        const timer = window.setTimeout(
-          () => void stopCapture(sink.id),
-          immediate ? 0 : mediaGrace
-        );
-        stopTimers.current.set(sink.id, timer);
+      } else if (captures.current.has(sink.id)) {
+        if (sourceConnection !== 'connected' || !owned.has(sink.id)) {
+          void stopCapture(sink.id);
+        } else if (!stopTimers.current.has(sink.id)) {
+          const timer = window.setTimeout(() => void stopCapture(sink.id), mediaGrace);
+          stopTimers.current.set(sink.id, timer);
+        }
       }
     }
     for (const sinkID of captures.current.keys()) {
@@ -288,44 +319,89 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     [client, stopCapture]
   );
 
-  const allow = useCallback(
-    async (kind: SourceKind) => {
-      clearError('connection');
-      try {
-        if (kind === 'usb_device') {
-          if (!WebUSBRelay.supported())
-            throw new Error('WebUSB requires a Chromium browser over HTTPS');
-          return;
-        }
-        const discovered = await discover(kind, true);
-        const offers = [...devices.camera, ...devices.microphone, ...devices.usb_device].filter(
-          (offer) => offer.kind !== kind
-        );
-        await client.setOffers([...offers, ...discovered]);
-      } catch (error) {
-        setError('connection', mediaError(error));
-        throw error;
-      }
+  useEffect(() => {
+    const query = navigator.permissions?.query?.bind(navigator.permissions);
+    if (!query) return;
+    const statuses: PermissionStatus[] = [];
+    for (const kind of ['camera', 'microphone'] as const) {
+      void query({ name: kind } as unknown as PermissionDescriptor)
+        .then((status) => {
+          if (!mounted.current) return;
+          statuses.push(status);
+          const apply = () =>
+            setPermissions((current) => ({ ...current, [kind]: status.state as MediaPermission }));
+          apply();
+          status.onchange = apply;
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      for (const status of statuses) status.onchange = null;
+    };
+  }, []);
+
+  const refreshPassthrough = useCallback(() => {
+    if (account.role !== 'admin') return;
+    void getPassthrough()
+      .then((response) => {
+        if (response.code === 0 && mounted.current)
+          setPassthrough(response.data as PassthroughStatus);
+      })
+      .catch(() => undefined);
+  }, [account.role]);
+
+  useEffect(refreshPassthrough, [refreshPassthrough]);
+
+  const refresh = useCallback(() => {
+    refreshPassthrough();
+    client.reconnect();
+    if (!eventsSocket.current) eventsConnect.current?.();
+  }, [client, refreshPassthrough]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refresh]);
+
+  const clearAttempt = useCallback((sinkID: string) => {
+    setRefusals((current) => {
+      const next = { ...current };
+      delete next[sinkID];
+      return next;
+    });
+    setRevoked((current) => {
+      const next = { ...current };
+      delete next[sinkID];
+      return next;
+    });
+  }, []);
+
+  const pickOffer = useCallback(
+    (available: DeviceOffer[], sinkID: string, selectedDeviceID?: string) => {
+      const saved = localStorage.getItem(deviceKey(account.username, sinkID));
+      return (
+        available.find((device) => device.deviceID === selectedDeviceID) ||
+        available.find((device) => device.deviceID === saved) ||
+        available[0]
+      );
     },
-    [clearError, client, devices, discover, setError]
+    [account.username]
   );
 
   const share = useCallback(
     async (sink: SourceSink, selectedDeviceID?: string) => {
       setBusy((current) => new Set(current).add(sink.id));
       clearError(sink.id);
+      clearAttempt(sink.id);
       try {
         if (sink.kind === 'usb_device') {
           if (account.role !== 'admin') throw new Error('Administrator access is required');
           await usbRelay.current?.close();
           const relay = await WebUSBRelay.select(() => {
-            usbRelay.current = undefined;
-            setDevices((current) => ({ ...current, usb_device: [] }));
-            setActive((current) => {
-              const next = new Set(current);
-              next.delete('ffs.hybrid');
-              return next;
-            });
+            closeRelay();
             void client.release('ffs.hybrid').catch(() => client.forget('ffs.hybrid'));
           });
           usbRelay.current = relay;
@@ -337,11 +413,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         }
         let available = devices[sink.kind];
         if (available.length === 0) available = await discover(sink.kind, true);
-        const saved = localStorage.getItem(deviceKey(account.username, sink.id));
-        const offer =
-          available.find((device) => device.deviceID === selectedDeviceID) ||
-          available.find((device) => device.deviceID === saved) ||
-          available[0];
+        const offer = pickOffer(available, sink.id, selectedDeviceID);
         const offers = [...devices.camera, ...devices.microphone, ...devices.usb_device].filter(
           (candidate) => candidate.kind !== sink.kind
         );
@@ -358,24 +430,63 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     },
-    [account.role, account.username, clearError, client, devices, discover, setError]
+    [
+      account.role,
+      account.username,
+      clearAttempt,
+      clearError,
+      client,
+      closeRelay,
+      devices,
+      discover,
+      pickOffer,
+      setError
+    ]
+  );
+
+  const takeover = useCallback(
+    async (sink: SourceSink, selectedDeviceID?: string) => {
+      setBusy((current) => new Set(current).add(sink.id));
+      clearError(sink.id);
+      try {
+        let available = devices[sink.kind];
+        if (available.length === 0) available = await discover(sink.kind, true);
+        const offer = pickOffer(available, sink.id, selectedDeviceID);
+        const offers = [...devices.camera, ...devices.microphone, ...devices.usb_device].filter(
+          (candidate) => candidate.kind !== sink.kind
+        );
+        await client.setOffers([...offers, ...available]);
+        const sourceID = client.sourceId();
+        if (!sourceID) throw new Error('Media source disconnected');
+        const response = await api.takeoverSource(sink.id, sourceID, offer.id);
+        if (response.code === -3 && response.data) {
+          setRefusals((current) => ({ ...current, [sink.id]: response.data as ClaimRefusal }));
+          return;
+        }
+        if (response.code !== 0) throw new Error(response.msg);
+        client.adopt(sink.id, offer, (response.data as api.ClaimGrant).token);
+        localStorage.setItem(deviceKey(account.username, sink.id), offer.deviceID);
+        clearAttempt(sink.id);
+      } catch (error) {
+        setError(sink.id, mediaError(error));
+      } finally {
+        setBusy((current) => {
+          const next = new Set(current);
+          next.delete(sink.id);
+          return next;
+        });
+      }
+    },
+    [account.username, clearAttempt, clearError, client, devices, discover, pickOffer, setError]
   );
 
   const release = useCallback(
     async (sinkID: string) => {
       setBusy((current) => new Set(current).add(sinkID));
       clearError(sinkID);
+      clearAttempt(sinkID);
       await stopCapture(sinkID);
-      if (sinkID === 'ffs.hybrid') {
-        await usbRelay.current?.close();
-        usbRelay.current = undefined;
-        setDevices((current) => ({ ...current, usb_device: [] }));
-        setActive((current) => {
-          const next = new Set(current);
-          next.delete(sinkID);
-          return next;
-        });
-      }
+      if (sinkID === 'ffs.hybrid') closeRelay();
       try {
         if (sourceConnection === 'connected' && owned.has(sinkID)) await client.release(sinkID);
         else {
@@ -393,7 +504,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     },
-    [clearError, client, owned, setError, sourceConnection, stopCapture]
+    [clearAttempt, clearError, client, closeRelay, owned, setError, sourceConnection, stopCapture]
   );
 
   const choose = useCallback(
@@ -421,27 +532,53 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     setSnapshot(response.data as SourcesSnapshot);
   }, []);
 
+  const setSinkMuted = useCallback((sinkID: string, value: boolean) => {
+    setMuted((current) => {
+      const next = new Set(current);
+      if (value) next.add(sinkID);
+      else next.delete(sinkID);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    for (const [sinkID, running] of captures.current) {
+      if (running.kind === 'microphone') {
+        (running.capture as MicrophoneCapture).setMuted(muted.has(sinkID));
+      }
+    }
+  }, [muted]);
+
   const disconnectAll = useCallback(async () => {
     const response = await api.disconnectSources();
     if (response.code !== 0) throw new Error(response.msg);
+    setSnapshot(response.data as SourcesSnapshot);
     for (const sinkID of captures.current.keys()) await stopCapture(sinkID);
-  }, [stopCapture]);
+    closeRelay();
+  }, [closeRelay, stopCapture]);
 
   const value: DevicesState = {
     snapshot,
     eventsConnection,
     sourceConnection,
     devices,
+    permissions,
+    passthrough,
     owned,
     active,
     busy,
+    muted,
     errors,
+    refusals,
+    revoked,
     share,
+    takeover,
     release,
     choose,
-    allow,
+    setMuted: setSinkMuted,
     setCounts,
-    disconnectAll
+    disconnectAll,
+    refresh
   };
 
   return <DevicesContext.Provider value={value}>{children}</DevicesContext.Provider>;
