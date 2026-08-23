@@ -895,6 +895,10 @@ func (m *Manager) notifyObserver(ctx context.Context, profile Profile, plan Plan
 	}
 }
 
+func (m *Manager) Err() error {
+	return m.err
+}
+
 func (m *Manager) ready() error {
 	if m.err != nil {
 		return m.err

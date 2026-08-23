@@ -54,6 +54,10 @@ var staticV1 = CapabilityTable{
 	},
 }
 
+var probeBudget = 10 * time.Second
+
+var probe = probeAvailability
+
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
 var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS, FunctionUVC, FunctionUAC2}
 
@@ -72,12 +76,37 @@ func LoadCapabilities() CapabilityTable {
 		log.Warnf("ignoring capability table %s: %s", path, err)
 	}
 
-	available, err := probeAvailability()
+	available, err := probeWithin(probeBudget)
 	if err != nil {
 		log.Debugf("capability probe unavailable, using %s: %s", staticV1.Source, err)
 		return staticV1.clone()
 	}
 	return staticV1.withAvailability(available)
+}
+
+// Each probed kind is a configfs mkdir that instantiates a real kernel object -
+// an ALSA card for uac2, a FunctionFS instance for ffs - on a device whose
+// gadget is already bound. One of them stalling must not hold the HTTP listener
+// down, so the probe is abandoned to the static table when it overruns.
+func probeWithin(budget time.Duration) (map[FunctionKind]bool, error) {
+	type result struct {
+		available map[FunctionKind]bool
+		err       error
+	}
+
+	run := probe
+	done := make(chan result, 1)
+	go func() {
+		available, err := run()
+		done <- result{available, err}
+	}()
+
+	select {
+	case got := <-done:
+		return got.available, got.err
+	case <-time.After(budget):
+		return nil, fmt.Errorf("capability probe did not finish within %s", budget)
+	}
 }
 
 func (t CapabilityTable) supportsMedia() bool {

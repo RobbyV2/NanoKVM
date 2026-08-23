@@ -17,6 +17,7 @@ import (
 	"NanoKVM-Server/service/controlmode"
 	"NanoKVM-Server/service/passthrough"
 	"NanoKVM-Server/service/picoclaw"
+	"NanoKVM-Server/service/startup"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
 	"NanoKVM-Server/service/vnc"
@@ -33,29 +34,31 @@ func main() {
 	run()
 }
 
+// Nothing here may keep run() from binding: on a device with no console the web
+// UI is the only way back in, so every step below is bounded and isolated and a
+// failure only degrades that one subsystem. startup.Report carries the result.
 func initialize() {
-	if err := config.EnsurePicoclawInternalToken(); err != nil {
-		log.Fatalf("failed to initialize picoclaw internal token: %v", err)
-	}
-
 	logger.Init()
-	if err := passthrough.GetManager().Recover(); err != nil {
-		log.Printf("recover usb passthrough: %v", err)
-	}
 
-	// init screen parameters
-	_ = common.GetScreen()
-
-	// init HDMI
-	vm.DisableHdmiCapture()
-	time.Sleep(10 * time.Millisecond)
-	if !utils.IsHdmiDisabled() {
-		vm.EnableHdmiCapture()
-	}
-	vm.SetHdmiViewerCount(0)
-
-	// run mouse jiggler
-	jiggler.GetJiggler().Run()
+	startup.Run("picoclaw token", 5*time.Second, config.EnsurePicoclawInternalToken)
+	startup.Run("usb passthrough", 15*time.Second, func() error { return passthrough.GetManager().Recover() })
+	startup.Run("screen", 5*time.Second, func() error {
+		_ = common.GetScreen()
+		return nil
+	})
+	startup.Run("hdmi", 15*time.Second, func() error {
+		vm.DisableHdmiCapture()
+		time.Sleep(10 * time.Millisecond)
+		if !utils.IsHdmiDisabled() {
+			vm.EnableHdmiCapture()
+		}
+		vm.SetHdmiViewerCount(0)
+		return nil
+	})
+	startup.Run("mouse jiggler", 5*time.Second, func() error {
+		jiggler.GetJiggler().Run()
+		return nil
+	})
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

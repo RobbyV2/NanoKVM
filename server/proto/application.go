@@ -22,3 +22,12 @@ type SetUpdateServerReq struct {
 	Enabled *bool  `json:"enabled" form:"enabled" validate:"required"`
 	URL     string `json:"url" form:"url"`
 }
+
+type StartupStatus struct {
+	Name  string `json:"name"`
+	Error string `json:"error,omitempty"`
+}
+
+type GetStartupRsp struct {
+	Steps []StartupStatus `json:"steps"`
+}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -224,4 +225,59 @@ func TestKernelTier2ApplyBindsAnUnboundGadget(t *testing.T) {
 	}
 
 	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+}
+
+func gadgetSnapshot(t *testing.T) string {
+	t.Helper()
+
+	var parts []string
+	for _, dir := range []string{"functions", "configs/c.1"} {
+		entries, err := os.ReadDir(filepath.Join(GadgetRoot, dir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		sort.Strings(names)
+		parts = append(parts, dir+"="+strings.Join(names, ","))
+	}
+	bound, err := os.ReadFile(filepath.Join(GadgetRoot, "UDC"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Join(parts, " ") + " UDC=" + strings.TrimSpace(string(bound))
+}
+
+// The device reaches LoadCapabilities with S03usbdev's gadget already built and
+// bound, and the probe then creates a second gadget and instantiates a real
+// kernel object per function kind in it. No fake can say whether that disturbs
+// the live one, and if it did the server would never reach its listener.
+func TestKernelTier2CapabilityProbeSparesTheBoundGadget(t *testing.T) {
+	kernelint.RequireTier2(t)
+
+	previousDir := presentationDir
+	presentationDir = filepath.Join(t.TempDir(), "presentation")
+	t.Cleanup(func() { presentationDir = previousDir })
+
+	kernelint.BootstrapGadget(t, GadgetRoot)
+	before := gadgetSnapshot(t)
+
+	started := time.Now()
+	table := LoadCapabilities()
+	elapsed := time.Since(started)
+
+	if elapsed > probeBudget {
+		t.Fatalf("probe took %s, past its %s budget", elapsed, probeBudget)
+	}
+	if table.Source != SourceProbeV1 {
+		t.Fatalf("got capability source %q, want %q", table.Source, SourceProbeV1)
+	}
+	if _, err := os.Stat(probeGadgetDir); err == nil {
+		t.Fatalf("%s survived the probe", probeGadgetDir)
+	}
+	if after := gadgetSnapshot(t); after != before {
+		t.Fatalf("the probe changed the bound gadget:\n before %s\n after  %s", before, after)
+	}
 }

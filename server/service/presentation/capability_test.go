@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func containsFunctionKind(functions []Function, kind FunctionKind) bool {
@@ -236,4 +237,34 @@ func withoutFunction(kind FunctionKind) CapabilityTable {
 	table := staticV1.clone()
 	delete(table.Functions, kind)
 	return table
+}
+
+// LoadCapabilities runs before the HTTP listener binds, and its probe is a
+// series of configfs mkdirs against a gadget the boot script already bound.
+// A probe that never returns must not take the listener with it.
+func TestLoadCapabilitiesAbandonsAStalledProbe(t *testing.T) {
+	dir := t.TempDir()
+	previousDir, previousProbe, previousBudget := presentationDir, probe, probeBudget
+	t.Cleanup(func() { presentationDir, probe, probeBudget = previousDir, previousProbe, previousBudget })
+
+	presentationDir = dir
+	probeBudget = 50 * time.Millisecond
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	probe = func() (map[FunctionKind]bool, error) {
+		<-release
+		return nil, nil
+	}
+
+	done := make(chan CapabilityTable, 1)
+	go func() { done <- LoadCapabilities() }()
+
+	select {
+	case table := <-done:
+		if table.Source != SourceStaticV1 {
+			t.Fatalf("got source %q, want %q", table.Source, SourceStaticV1)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("LoadCapabilities never returned from a stalled probe")
+	}
 }
