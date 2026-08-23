@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -119,6 +120,67 @@ func isEnabled(name proto.TunnelName) bool {
 	return err == nil
 }
 
+// The init script's presence is what boot reads, but an installer that copies
+// /kvmapp/system/init.d over /etc/init.d writes it without being asked. The
+// config file holds what the user asked for, and that is what wins.
+func intendedEnabled(name proto.TunnelName) bool {
+	cfg, err := loadConfig(name)
+	if err != nil || cfg.Enabled == nil {
+		return isEnabled(name)
+	}
+	return *cfg.Enabled
+}
+
+func setIntendedEnabled(name proto.TunnelName, enabled bool) error {
+	cfg, err := loadConfig(name)
+	if err != nil {
+		return err
+	}
+	cfg.Enabled = &enabled
+	return saveConfig(name, cfg)
+}
+
+// Reconcile runs once at server start, after rcS has already run whatever was
+// in /etc/init.d, and makes the enabled set match the recorded intent.
+func Reconcile(names []proto.TunnelName) {
+	for _, name := range names {
+		cfg, err := loadConfig(name)
+		if err != nil {
+			log.Errorf("failed to read %s config: %s", name, err)
+			continue
+		}
+
+		enabled := isEnabled(name)
+
+		if cfg.Enabled == nil {
+			if !enabled {
+				continue
+			}
+			if err := setIntendedEnabled(name, true); err != nil {
+				log.Errorf("failed to adopt %s boot intent: %s", name, err)
+			}
+			continue
+		}
+
+		if *cfg.Enabled == enabled {
+			continue
+		}
+
+		if *cfg.Enabled {
+			if err := enableInitScript(name); err != nil {
+				log.Errorf("failed to restore %s init script: %s", name, err)
+			}
+			continue
+		}
+
+		_ = runInitScript(name, "stop")
+		if err := os.Remove(initScriptPath(name)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Errorf("failed to remove %s init script: %s", name, err)
+		}
+		log.Debugf("tunnel %s disabled again after it was reinstalled", name)
+	}
+}
+
 func isInstalled(name proto.TunnelName) bool {
 	if _, err := os.Stat(binaryFile(name)); err == nil {
 		return true
@@ -158,7 +220,7 @@ func currentState(name proto.TunnelName) (proto.TunnelState, string) {
 	}
 
 	if _, running := pidOf(name); !running {
-		if !isEnabled(name) {
+		if !intendedEnabled(name) {
 			return proto.TunnelStopped, ""
 		}
 
@@ -190,20 +252,24 @@ func StartWatchdog(names []proto.TunnelName) {
 		defer ticker.Stop()
 
 		for range ticker.C {
-			for _, name := range names {
-				if !isEnabled(name) {
-					continue
-				}
-				if _, running := pidOf(name); running {
-					continue
-				}
-
-				if err := runInitScript(name, "start"); err != nil {
-					log.Errorf("failed to restart tunnel %s: %s", name, err)
-					continue
-				}
-				log.Debugf("tunnel %s restarted", name)
-			}
+			revive(names)
 		}
 	}()
+}
+
+func revive(names []proto.TunnelName) {
+	for _, name := range names {
+		if !intendedEnabled(name) {
+			continue
+		}
+		if _, running := pidOf(name); running {
+			continue
+		}
+
+		if err := runInitScript(name, "start"); err != nil {
+			log.Errorf("failed to restart tunnel %s: %s", name, err)
+			continue
+		}
+		log.Debugf("tunnel %s restarted", name)
+	}
 }

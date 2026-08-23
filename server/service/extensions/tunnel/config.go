@@ -20,6 +20,9 @@ var (
 type Config struct {
 	Args string            `json:"args"`
 	Env  map[string]string `json:"env"`
+	// nil on a device that predates the field: the init script's presence is
+	// then the only record of intent, and Reconcile adopts it.
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 func configPath(name proto.TunnelName) string {

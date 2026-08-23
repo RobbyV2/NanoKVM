@@ -53,7 +53,7 @@ func (s *Service) GetStatus(c *gin.Context) {
 		Message: message,
 		Pid:     pid,
 		Custom:  isCustom(s.name),
-		Enabled: isEnabled(s.name),
+		Enabled: intendedEnabled(s.name),
 	})
 
 	log.Debugf("get %s status successfully", s.name)
@@ -107,10 +107,9 @@ func (s *Service) SetConfig(c *gin.Context) {
 		return
 	}
 
-	cfg := Config{
-		Args: req.Args,
-		Env:  mergeEnv(current.Env, req.Env),
-	}
+	cfg := current
+	cfg.Args = req.Args
+	cfg.Env = mergeEnv(current.Env, req.Env)
 
 	if err := saveConfig(s.name, cfg); err != nil {
 		rsp.ErrRsp(c, -1, "set config failed")
@@ -166,12 +165,23 @@ func (s *Service) lifecycle(c *gin.Context, action string) {
 		return
 	}
 
+	if err := setIntendedEnabled(s.name, true); err != nil {
+		log.Errorf("failed to record %s boot intent: %s", s.name, err)
+	}
+
 	rsp.OkRsp(c)
 	log.Debugf("%s %s successfully", s.name, action)
 }
 
 func (s *Service) Stop(c *gin.Context) {
 	var rsp proto.Response
+
+	// The intent is what the user just asked for, so it is recorded before the
+	// stop can fail. An installer that copies the init script back finds a
+	// service Reconcile knows is meant to be down.
+	if err := setIntendedEnabled(s.name, false); err != nil {
+		log.Errorf("failed to record %s boot intent: %s", s.name, err)
+	}
 
 	stopErr := runInitScript(s.name, "stop")
 

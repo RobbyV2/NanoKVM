@@ -47,5 +47,6 @@ func extensionsRouter(r *gin.Engine) {
 		api.DELETE(group+"/binary", tn.DeleteBinary) // remove the custom tunnel binary
 	}
 
+	tunnel.Reconcile(names)
 	tunnel.StartWatchdog(names)
 }
