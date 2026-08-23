@@ -2,6 +2,8 @@ package passthrough
 
 import (
 	"bytes"
+	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const statusWithFreePorts = `hub port sta spd dev      sockfd local_busid
@@ -385,5 +388,209 @@ func TestWithExporterPortDefaultsTo3240(t *testing.T) {
 		if got := withExporterPort(addr); got != want {
 			t.Fatalf("withExporterPort(%q) = %q, want %q", addr, got, want)
 		}
+	}
+}
+
+func devlistReply(t *testing.T, devices ...RemoteDevice) []byte {
+	t.Helper()
+
+	out := OpCommon{Version: ProtocolVersion, Code: CodeRepDevlist, Status: StatusOK}.Encode()
+	count := make([]byte, CountSize)
+	binary.BigEndian.PutUint32(count, uint32(len(devices)))
+	out = append(out, count...)
+
+	for _, device := range devices {
+		device.NumInterfaces = uint8(len(device.Interfaces))
+		body, err := device.Device.Encode()
+		if err != nil {
+			t.Fatalf("Encode %s: %v", device.BusID, err)
+		}
+		out = append(out, body...)
+		for _, iface := range device.Interfaces {
+			out = append(out, iface.Encode()...)
+		}
+	}
+	return out
+}
+
+func allowAnyRoute(t *testing.T) {
+	t.Helper()
+
+	previous := exporterRoute
+	exporterRoute = func(net.IP) error { return nil }
+	t.Cleanup(func() { exporterRoute = previous })
+}
+
+func stubList(t *testing.T, devices []RemoteDevice, err error) *int {
+	t.Helper()
+
+	calls := 0
+	previous := listExporter
+	listExporter = func(context.Context, string) ([]RemoteDevice, error) {
+		calls++
+		return devices, err
+	}
+	t.Cleanup(func() { listExporter = previous })
+	return &calls
+}
+
+func TestDevlistDecodesDevicesAndInterfaces(t *testing.T) {
+	webcam := RemoteDevice{Device: sampleDevice(), Interfaces: []Interface{
+		{Class: 0x0e, SubClass: 0x01},
+		{Class: 0x0e, SubClass: 0x02},
+	}}
+	webcam.BusID = "1-1"
+	bare := RemoteDevice{Device: sampleDevice()}
+	bare.BusID = "1-2"
+
+	conn := newExchange(devlistReply(t, webcam, bare))
+	devices, err := Devlist(conn)
+	if err != nil {
+		t.Fatalf("Devlist: %v", err)
+	}
+	if !bytes.Equal(conn.sent.Bytes(), EncodeDevlistRequest()) {
+		t.Fatalf("sent % x, want % x", conn.sent.Bytes(), EncodeDevlistRequest())
+	}
+	if len(devices) != 2 {
+		t.Fatalf("decoded %d devices, want 2", len(devices))
+	}
+	if devices[0].BusID != "1-1" || len(devices[0].Interfaces) != 2 {
+		t.Fatalf("device 0 = %+v, want 1-1 with two interfaces", devices[0])
+	}
+	if devices[0].Interfaces[1] != (Interface{Class: 0x0e, SubClass: 0x02}) {
+		t.Fatalf("interface 1 = %+v, want the streaming interface", devices[0].Interfaces[1])
+	}
+	if devices[1].BusID != "1-2" || len(devices[1].Interfaces) != 0 {
+		t.Fatalf("device 1 = %+v, want 1-2 with no interfaces", devices[1])
+	}
+}
+
+func TestDevlistRejectsAnExporterThatDoesNotSpeakIt(t *testing.T) {
+	reply := OpCommon{Version: ProtocolVersion, Code: CodeRepImport, Status: StatusOK}.Encode()
+
+	if _, err := Devlist(newExchange(append(reply, 0, 0, 0, 0))); !errors.Is(err, ErrUnexpectedCode) {
+		t.Fatalf("Devlist = %v, want ErrUnexpectedCode", err)
+	}
+}
+
+func TestDevlistRefusesAnAbsurdDeviceCount(t *testing.T) {
+	reply := OpCommon{Version: ProtocolVersion, Code: CodeRepDevlist, Status: StatusOK}.Encode()
+	count := make([]byte, CountSize)
+	binary.BigEndian.PutUint32(count, maxDevices+1)
+
+	_, err := Devlist(newExchange(append(reply, count...)))
+	if !errors.Is(err, ErrUnexpectedDevice) {
+		t.Fatalf("Devlist = %v, want ErrUnexpectedDevice", err)
+	}
+}
+
+func TestAttachRefusesAnUnrelayableDeviceBeforeTakingAPort(t *testing.T) {
+	root := swapRoot(t)
+	if err := os.WriteFile(filepath.Join(root, statusAttribute), []byte(statusWithFreePorts), 0o644); err != nil {
+		t.Fatalf("write status: %v", err)
+	}
+	touch(t, filepath.Join(root, attachAttribute))
+
+	headset := RemoteDevice{Device: sampleDevice(), Interfaces: []Interface{{Class: 0x01, SubClass: 0x02}}}
+	headset.BusID = "1-1"
+	stubList(t, []RemoteDevice{headset}, nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := Attach(ctx, "10.0.0.5", "1-1")
+	if !errors.Is(err, ErrIsochronous) {
+		t.Fatalf("Attach = %v, want ErrIsochronous", err)
+	}
+	if !strings.Contains(err.Error(), "1-1") || !strings.Contains(err.Error(), "046d:c31c") {
+		t.Fatalf("Attach error %q does not name the device", err)
+	}
+
+	raw, readErr := os.ReadFile(filepath.Join(root, attachAttribute))
+	if readErr != nil {
+		t.Fatalf("read attach: %v", readErr)
+	}
+	if len(raw) != 0 {
+		t.Fatalf("attach = %q, want nothing written for a refused device", raw)
+	}
+}
+
+func TestAttachStillWorksWithAnExporterThatHasNoDevlist(t *testing.T) {
+	swapRoot(t)
+	allowAnyRoute(t)
+	calls := stubList(t, nil, ErrUnexpectedCode)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := Attach(ctx, "192.0.2.7", "1-1")
+	if *calls != 1 {
+		t.Fatalf("devlist attempted %d times, want 1", *calls)
+	}
+	if errors.Is(err, ErrIsochronous) || errors.Is(err, ErrUnexpectedCode) {
+		t.Fatalf("Attach = %v, want the import to be tried anyway", err)
+	}
+}
+
+func TestExporterPolicyAllowsOnlyRoutableUnicastOnTheUsbipPort(t *testing.T) {
+	allowAnyRoute(t)
+
+	for _, addr := range []string{
+		"127.0.0.1",
+		"[::1]",
+		"169.254.169.254",
+		"[fe80::1]",
+		"224.0.0.1",
+		"0.0.0.0",
+		"255.255.255.255",
+		"10.0.0.5:8080",
+		"10.0.0.5:22",
+	} {
+		if _, err := allowedExporter(context.Background(), addr); !errors.Is(err, ErrExporterAddress) {
+			t.Fatalf("allowedExporter(%q) = %v, want ErrExporterAddress", addr, err)
+		}
+	}
+
+	for addr, want := range map[string]string{
+		"10.0.0.5":           "10.0.0.5:3240",
+		"192.168.1.10:3240":  "192.168.1.10:3240",
+		"[2001:db8::1]":      "[2001:db8::1]:3240",
+		"[2001:db8::1]:3240": "[2001:db8::1]:3240",
+	} {
+		got, err := allowedExporter(context.Background(), addr)
+		if err != nil {
+			t.Fatalf("allowedExporter(%q): %v", addr, err)
+		}
+		if got != want {
+			t.Fatalf("allowedExporter(%q) = %q, want %q", addr, got, want)
+		}
+	}
+}
+
+func TestExporterPolicyRefusesATargetWithNoRoute(t *testing.T) {
+	previous := exporterRoute
+	exporterRoute = func(net.IP) error { return errors.New("network is unreachable") }
+	t.Cleanup(func() { exporterRoute = previous })
+
+	if _, err := allowedExporter(context.Background(), "10.0.0.5"); !errors.Is(err, ErrExporterAddress) {
+		t.Fatalf("allowedExporter of an unroutable target = %v, want ErrExporterAddress", err)
+	}
+}
+
+func TestExporterPolicyDialsTheAddressItChecked(t *testing.T) {
+	allowAnyRoute(t)
+
+	previous := lookupExporter
+	lookupExporter = func(context.Context, string) ([]net.IP, error) {
+		return []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("192.0.2.7")}, nil
+	}
+	t.Cleanup(func() { lookupExporter = previous })
+
+	got, err := allowedExporter(context.Background(), "exporter.local")
+	if err != nil {
+		t.Fatalf("allowedExporter: %v", err)
+	}
+	if got != "192.0.2.7:3240" {
+		t.Fatalf("allowedExporter = %q, want the checked address and not the name", got)
 	}
 }

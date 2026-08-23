@@ -1,6 +1,7 @@
 package passthrough
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -16,10 +17,11 @@ import (
 type Service struct {
 	manager *Manager
 	guard   func(*http.Request) error
+	list    func(context.Context, string) ([]RemoteDevice, error)
 }
 
 func NewService() *Service {
-	return &Service{manager: GetManager(), guard: validateManagementPath}
+	return &Service{manager: GetManager(), guard: validateManagementPath, list: List}
 }
 
 var ErrGadgetManagement = errors.New("passthrough: use Ethernet or Wi-Fi before starting; the USB network will disconnect")
@@ -92,6 +94,41 @@ func (s *Service) GetPassthrough(c *gin.Context) {
 
 	status := s.manager.Status()
 	rsp.OkRspWithData(c, &status)
+}
+
+// The operator should not have to know a busid by hand, and a device the
+// backend will refuse is named here rather than after a port is taken.
+func (s *Service) ListPassthroughDevices(c *gin.Context) {
+	var req proto.ListPassthroughReq
+	var rsp proto.Response
+
+	if err := proto.ParseFormRequest(c, &req); err != nil {
+		rsp.ErrRsp(c, -1, "invalid arguments")
+		return
+	}
+
+	devices, err := s.list(c.Request.Context(), req.Exporter)
+	if err != nil {
+		log.Errorf("passthrough: list %s failed: %s", req.Exporter, err)
+		rsp.ErrRsp(c, -2, err.Error())
+		return
+	}
+	rsp.OkRspWithData(c, &proto.ListPassthroughRsp{Devices: remoteDevices(devices)})
+}
+
+func remoteDevices(devices []RemoteDevice) []proto.PassthroughRemoteDevice {
+	out := make([]proto.PassthroughRemoteDevice, 0, len(devices))
+	for _, device := range devices {
+		out = append(out, proto.PassthroughRemoteDevice{
+			BusID:       device.BusID,
+			IDVendor:    hex4(device.IDVendor),
+			IDProduct:   hex4(device.IDProduct),
+			Speed:       device.Speed.String(),
+			Class:       device.DeviceClass,
+			Unsupported: device.Refusal(),
+		})
+	}
+	return out
 }
 
 func (s *Service) StartPassthrough(c *gin.Context) {

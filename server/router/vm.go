@@ -43,9 +43,10 @@ func vmRouter(r *gin.Engine) {
 	admin.GET("/vm/device/virtual", service.GetVirtualDevice)     // get virtual device
 	admin.POST("/vm/device/virtual", service.UpdateVirtualDevice) // update virtual device
 
-	admin.GET("/vm/passthrough", passthroughService.GetPassthrough)          // usb passthrough session
-	admin.POST("/vm/passthrough/start", passthroughService.StartPassthrough) // import a device and take the udc
-	admin.POST("/vm/passthrough/stop", passthroughService.StopPassthrough)   // stop the proxy and restore the gadget
+	admin.GET("/vm/passthrough", passthroughService.GetPassthrough)                  // usb passthrough session
+	admin.POST("/vm/passthrough/devices", passthroughService.ListPassthroughDevices) // list the exporter's devices
+	admin.POST("/vm/passthrough/start", passthroughService.StartPassthrough)         // import a device and take the udc
+	admin.POST("/vm/passthrough/stop", passthroughService.StopPassthrough)           // stop the proxy and restore the gadget
 
 	admin.GET("/vm/memory/limit", service.GetMemoryLimit)  // get memory limit
 	admin.POST("/vm/memory/limit", service.SetMemoryLimit) // set memory limit

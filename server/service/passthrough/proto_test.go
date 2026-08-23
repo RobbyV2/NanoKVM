@@ -3,6 +3,7 @@ package passthrough
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -161,5 +162,62 @@ func TestEncodeRejectsAnOverlongPath(t *testing.T) {
 	device.Path = string(bytes.Repeat([]byte("a"), pathSize))
 	if _, err := device.Encode(); !errors.Is(err, ErrFieldTooLong) {
 		t.Fatalf("Encode of a 256 byte path: %v", err)
+	}
+}
+
+func TestInterfaceRoundTripsThePackedFourBytes(t *testing.T) {
+	want := Interface{Class: 0x0e, SubClass: 0x02, Protocol: 0x01}
+
+	raw := want.Encode()
+	if len(raw) != InterfaceSize {
+		t.Fatalf("Encode is %d bytes, want %d", len(raw), InterfaceSize)
+	}
+	if raw[3] != 0 {
+		t.Fatalf("padding = %d, want 0", raw[3])
+	}
+
+	got, err := DecodeInterface(raw)
+	if err != nil {
+		t.Fatalf("DecodeInterface: %v", err)
+	}
+	if got != want {
+		t.Fatalf("DecodeInterface = %+v, want %+v", got, want)
+	}
+	if _, err := DecodeInterface(raw[:3]); !errors.Is(err, ErrTruncated) {
+		t.Fatalf("DecodeInterface of 3 bytes = %v, want ErrTruncated", err)
+	}
+}
+
+func TestRefusalNamesTheDeviceAndTheReason(t *testing.T) {
+	device := sampleDevice()
+	device.BusID = "3-1.2"
+
+	relayable := []Interface{
+		{Class: 0x03},              // HID
+		{Class: 0x08, SubClass: 6}, // mass storage
+		{Class: 0x09},              // hub
+		{Class: 0xe0, SubClass: 2}, // wireless, not the radio
+	}
+	if refusal := (RemoteDevice{Device: device, Interfaces: relayable}).Refusal(); refusal != "" {
+		t.Fatalf("Refusal of a relayable device = %q, want none", refusal)
+	}
+
+	for name, iface := range map[string]Interface{
+		"audio":     {Class: 0x01, SubClass: 0x02},
+		"video":     {Class: 0x0e, SubClass: 0x02},
+		"bluetooth": {Class: 0xe0, SubClass: 0x01, Protocol: 0x01},
+	} {
+		t.Run(name, func(t *testing.T) {
+			refusal := (RemoteDevice{Device: device, Interfaces: append(relayable, iface)}).Refusal()
+			if refusal == "" {
+				t.Fatalf("Refusal of a %s device = %q, want a reason", name, refusal)
+			}
+			if !strings.Contains(refusal, "3-1.2") || !strings.Contains(refusal, "046d:c31c") {
+				t.Fatalf("Refusal %q does not name the device", refusal)
+			}
+			if !strings.Contains(refusal, "isochronous") {
+				t.Fatalf("Refusal %q does not give the reason", refusal)
+			}
+		})
 	}
 }

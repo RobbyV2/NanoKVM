@@ -12,10 +12,16 @@ const (
 	ProtocolVersion uint16 = 0x0111
 	CodeReqImport   uint16 = 0x8003
 	CodeRepImport   uint16 = 0x0003
+	CodeReqDevlist  uint16 = 0x8005
+	CodeRepDevlist  uint16 = 0x0005
 
 	HeaderSize        = 8
 	DeviceSize        = 312
+	InterfaceSize     = 4
+	CountSize         = 4
 	ImportRequestSize = HeaderSize + busIDSize
+
+	maxDevices = 128
 
 	pathSize  = 256
 	busIDSize = 32
@@ -195,6 +201,68 @@ func DecodeDevice(raw []byte) (Device, error) {
 		NumConfigurations:  trailer[4],
 		NumInterfaces:      trailer[5],
 	}, nil
+}
+
+// usbip_usb_interface, the only description of a remote device's function the
+// exporter offers before it is imported.
+type Interface struct {
+	Class    uint8
+	SubClass uint8
+	Protocol uint8
+}
+
+func (i Interface) Encode() []byte {
+	return []byte{i.Class, i.SubClass, i.Protocol, 0}
+}
+
+func DecodeInterface(raw []byte) (Interface, error) {
+	if len(raw) < InterfaceSize {
+		return Interface{}, fmt.Errorf("%w: usbip_usb_interface is %d of %d bytes", ErrTruncated, len(raw), InterfaceSize)
+	}
+	return Interface{Class: raw[0], SubClass: raw[1], Protocol: raw[2]}, nil
+}
+
+const (
+	classAudio    uint8 = 0x01
+	classVideo    uint8 = 0x0e
+	classWireless uint8 = 0xe0
+	subclassRadio uint8 = 0x01
+)
+
+// Neither backend carries an isochronous endpoint, so a device that streams is
+// refused. An interface class is all the exporter tells us, and these are the
+// classes whose interfaces carry the isochronous endpoints.
+func (i Interface) Unsupported() string {
+	switch {
+	case i.Class == classAudio:
+		return "audio interfaces stream over isochronous endpoints"
+	case i.Class == classVideo:
+		return "video interfaces stream over isochronous endpoints"
+	case i.Class == classWireless && i.SubClass == subclassRadio:
+		return "the Bluetooth SCO channel is isochronous"
+	}
+	return ""
+}
+
+// One entry of an exporter's device list.
+type RemoteDevice struct {
+	Device
+	Interfaces []Interface
+}
+
+// Names the device as well as the reason: a refusal has to read as an account
+// of the device the operator picked, not of the feature.
+func (d RemoteDevice) Refusal() string {
+	for _, iface := range d.Interfaces {
+		if reason := iface.Unsupported(); reason != "" {
+			return fmt.Sprintf("%s %04x:%04x: %s", d.BusID, d.IDVendor, d.IDProduct, reason)
+		}
+	}
+	return ""
+}
+
+func EncodeDevlistRequest() []byte {
+	return OpCommon{Version: ProtocolVersion, Code: CodeReqDevlist, Status: StatusOK}.Encode()
 }
 
 func EncodeImportRequest(busID string) ([]byte, error) {

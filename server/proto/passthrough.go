@@ -28,6 +28,26 @@ type GetPassthroughRsp struct {
 	Device         *PassthroughDevice `json:"device"`
 }
 
+// One entry of the exporter's device list. Unsupported carries why the device
+// cannot be relayed and is empty when it can.
+type PassthroughRemoteDevice struct {
+	BusID       string `json:"busId"`
+	IDVendor    string `json:"idVendor"`
+	IDProduct   string `json:"idProduct"`
+	Speed       string `json:"speed"`
+	Class       uint8  `json:"class"`
+	Unsupported string `json:"unsupported,omitempty"`
+}
+
+type ListPassthroughRsp struct {
+	Devices []PassthroughRemoteDevice `json:"devices"`
+}
+
+// Only addresses the exporter policy allows are dialled.
+type ListPassthroughReq struct {
+	Exporter string `validate:"required,hostname_port|hostname|ip"`
+}
+
 // Exporter is dialled and never spawned; BusID is matched against the usbip
 // busid grammar before it reaches the wire.
 type StartPassthroughReq struct {

@@ -3,6 +3,7 @@ package passthrough
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,7 +26,8 @@ const (
 	attachAttribute = "attach"
 	detachAttribute = "detach"
 
-	keepAlive = 30 * time.Second
+	keepAlive   = 30 * time.Second
+	listTimeout = 10 * time.Second
 )
 
 // var rather than const so the tests point the package at t.TempDir(), the way
@@ -56,9 +60,10 @@ const (
 )
 
 var (
-	ErrNoFreePort = errors.New("passthrough: no free vhci port")
-	ErrMalformed  = errors.New("passthrough: malformed vhci status line")
-	ErrNotTCP     = errors.New("passthrough: exporter connection is not tcp")
+	ErrNoFreePort      = errors.New("passthrough: no free vhci port")
+	ErrMalformed       = errors.New("passthrough: malformed vhci status line")
+	ErrNotTCP          = errors.New("passthrough: exporter connection is not tcp")
+	ErrExporterAddress = errors.New("passthrough: exporter address is not allowed")
 )
 
 type PortEntry struct {
@@ -79,6 +84,10 @@ type Attachment struct {
 }
 
 func Attach(ctx context.Context, addr string, busID string) (Attachment, error) {
+	if err := guardRemote(ctx, addr, busID); err != nil {
+		return Attachment{}, err
+	}
+
 	conn, err := dial(ctx, addr)
 	if err != nil {
 		return Attachment{}, err
@@ -113,6 +122,114 @@ func Attach(ctx context.Context, addr string, busID string) (Attachment, error) 
 
 func Detach(port uint32) error {
 	return writeAttribute(detachAttribute, strconv.FormatUint(uint64(port), 10))
+}
+
+func List(ctx context.Context, addr string) ([]RemoteDevice, error) {
+	ctx, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+
+	conn, err := dial(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	deadline, _ := ctx.Deadline()
+	if err := conn.SetDeadline(deadline); err != nil {
+		return nil, fmt.Errorf("set exchange deadline: %w", err)
+	}
+	return Devlist(conn)
+}
+
+var listExporter = List
+
+// A device the backend cannot relay is refused here, before a vhci port is
+// taken and long before the UDC is surrendered: finding out afterwards costs
+// the operator the keyboard the gadget was serving. An exporter that will not
+// answer a devlist is not itself a refusal — stock usbip exporters that only
+// serve imports keep working, and the endpoint descriptors are checked again
+// once the device is enumerated locally.
+func guardRemote(ctx context.Context, addr string, busID string) error {
+	devices, err := listExporter(ctx, addr)
+	if err != nil {
+		if errors.Is(err, ErrExporterAddress) {
+			return err
+		}
+		log.Debugf("passthrough: %s did not list its devices: %s", addr, err)
+		return nil
+	}
+	for _, device := range devices {
+		if device.BusID != busID {
+			continue
+		}
+		if refusal := device.Refusal(); refusal != "" {
+			return fmt.Errorf("%w: %s", ErrIsochronous, refusal)
+		}
+	}
+	return nil
+}
+
+func Devlist(conn io.ReadWriter) ([]RemoteDevice, error) {
+	if _, err := conn.Write(EncodeDevlistRequest()); err != nil {
+		return nil, fmt.Errorf("send devlist request: %w", err)
+	}
+
+	raw := make([]byte, HeaderSize+CountSize)
+	if _, err := io.ReadFull(conn, raw); err != nil {
+		return nil, fmt.Errorf("read devlist reply header: %w", err)
+	}
+	reply, err := DecodeOpCommon(raw[:HeaderSize])
+	if err != nil {
+		return nil, err
+	}
+	if reply.Version != ProtocolVersion {
+		return nil, fmt.Errorf("%w: 0x%04x", ErrVersion, reply.Version)
+	}
+	if reply.Code != CodeRepDevlist {
+		return nil, fmt.Errorf("%w: 0x%04x", ErrUnexpectedCode, reply.Code)
+	}
+	if reply.Status != StatusOK {
+		return nil, fmt.Errorf("%w: %s", ErrRejected, reply.Status)
+	}
+
+	count := binary.BigEndian.Uint32(raw[HeaderSize:])
+	if count > maxDevices {
+		return nil, fmt.Errorf("%w: exporter listed %d devices", ErrUnexpectedDevice, count)
+	}
+	devices := make([]RemoteDevice, 0, count)
+	for index := uint32(0); index < count; index++ {
+		device, err := readRemoteDevice(conn, index)
+		if err != nil {
+			return nil, err
+		}
+		devices = append(devices, device)
+	}
+	return devices, nil
+}
+
+func readRemoteDevice(conn io.Reader, index uint32) (RemoteDevice, error) {
+	body := make([]byte, DeviceSize)
+	if _, err := io.ReadFull(conn, body); err != nil {
+		return RemoteDevice{}, fmt.Errorf("read usbip_usb_device %d: %w", index, err)
+	}
+	device, err := DecodeDevice(body)
+	if err != nil {
+		return RemoteDevice{}, err
+	}
+
+	interfaces := make([]Interface, 0, device.NumInterfaces)
+	for number := 0; number < int(device.NumInterfaces); number++ {
+		raw := make([]byte, InterfaceSize)
+		if _, err := io.ReadFull(conn, raw); err != nil {
+			return RemoteDevice{}, fmt.Errorf("read usbip_usb_interface %d of %s: %w", number, device.BusID, err)
+		}
+		iface, err := DecodeInterface(raw)
+		if err != nil {
+			return RemoteDevice{}, err
+		}
+		interfaces = append(interfaces, iface)
+	}
+	return RemoteDevice{Device: device, Interfaces: interfaces}, nil
 }
 
 func Import(conn io.ReadWriter, busID string) (Device, error) {
@@ -264,7 +381,10 @@ func writeAttribute(name string, payload string) error {
 }
 
 func dial(ctx context.Context, addr string) (*net.TCPConn, error) {
-	target := withExporterPort(addr)
+	target, err := allowedExporter(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
 
 	conn, err := (&net.Dialer{KeepAlive: keepAlive}).DialContext(ctx, "tcp", target)
 	if err != nil {
@@ -285,6 +405,56 @@ func dial(ctx context.Context, addr string) (*net.TCPConn, error) {
 		return nil, fmt.Errorf("set SO_KEEPALIVE on %s: %w", target, err)
 	}
 	return tcp, nil
+}
+
+// The allowed set, written out rather than left to whatever a request names:
+// the registered usbip port, and a global unicast address this device has a
+// route to. Loopback, the link-local range that holds the cloud metadata
+// address, multicast and every other port are refused before a socket is
+// opened, so an admin request cannot turn the device into a dialler. The
+// resolved address is what gets dialled, not the name, so a second answer
+// cannot arrive between the check and the connection.
+func allowedExporter(ctx context.Context, addr string) (string, error) {
+	host, port, err := net.SplitHostPort(withExporterPort(addr))
+	if err != nil {
+		return "", fmt.Errorf("%w: %q", ErrExporterAddress, addr)
+	}
+	if port != strconv.Itoa(ExporterTCP) {
+		return "", fmt.Errorf("%w: %s port %s, only the usbip port %d is dialled", ErrExporterAddress, host, port, ExporterTCP)
+	}
+
+	ips, err := lookupExporter(ctx, host)
+	if err != nil {
+		return "", fmt.Errorf("%w: resolve %s: %w", ErrExporterAddress, host, err)
+	}
+	for _, ip := range ips {
+		if !ip.IsGlobalUnicast() || ip.IsLinkLocalUnicast() {
+			continue
+		}
+		if err := exporterRoute(ip); err != nil {
+			continue
+		}
+		return net.JoinHostPort(ip.String(), port), nil
+	}
+	return "", fmt.Errorf("%w: %s is not a routable unicast address", ErrExporterAddress, host)
+}
+
+var lookupExporter = func(ctx context.Context, host string) ([]net.IP, error) {
+	if ip := net.ParseIP(strings.Trim(host, "[]")); ip != nil {
+		return []net.IP{ip}, nil
+	}
+	return net.DefaultResolver.LookupIP(ctx, "ip", host)
+}
+
+// A route lookup and nothing more: connecting a UDP socket makes the kernel
+// pick the route it would use without putting a packet on the wire, which is
+// the only honest answer to whether the target is reachable from here.
+var exporterRoute = func(ip net.IP) error {
+	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: ip, Port: ExporterTCP})
+	if err != nil {
+		return err
+	}
+	return conn.Close()
 }
 
 func withExporterPort(addr string) string {
