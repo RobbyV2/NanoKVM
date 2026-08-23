@@ -68,6 +68,16 @@ export type ClaimRefusal = {
   takeover: 'immediate' | 'refused';
 };
 
+// browser-to-gadget skew over the last window. avg_ms and peak_ms are relative
+// to base_ms, the smallest skew yet seen, because the two clocks need not agree.
+export type SinkLatency = {
+  frames: number;
+  avg_ms: number;
+  peak_ms: number;
+  base_ms: number;
+  updated_at: string;
+};
+
 export type SourceSink = {
   id: string;
   kind: SourceKind;
@@ -76,6 +86,7 @@ export type SourceSink = {
   demand: Demand;
   output: OutputState;
   binding: Binding | null;
+  latency?: SinkLatency;
 };
 
 export type SourcesSnapshot = {

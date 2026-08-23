@@ -20,7 +20,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type recordingIngress struct{ frames chan MediaFrame }
+type recordingIngress struct {
+	frames  chan MediaFrame
+	latency map[string]SinkLatency
+}
 
 type recordingSlotManager struct {
 	registry    *Registry
@@ -47,6 +50,8 @@ func (r *recordingIngress) Ingest(_ context.Context, frame MediaFrame) error {
 }
 
 func (*recordingIngress) Detach(string) {}
+
+func (r *recordingIngress) Latency() map[string]SinkLatency { return r.latency }
 
 func TestSetSinksAppliesThePresentationProfileForAdmins(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -607,4 +612,41 @@ func postBinding(t *testing.T, service *Service, principal middleware.Principal,
 		t.Fatalf("%s = %d %s", path, recorder.Code, recorder.Body.String())
 	}
 	return recorder.Body.String()
+}
+
+func TestSinkListCarriesTheMeasuredLatency(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	registry := mustRegistry(t, []Slot{{ID: "uvc.cam0", Kind: KindCamera, Label: "Camera"}}, RegistryOptions{})
+	service := NewServiceWith(registry)
+	service.SetIngress(&recordingIngress{latency: map[string]SinkLatency{
+		"uvc.cam0": {Frames: 30, AvgMS: 42, PeakMS: 91, BaseMS: 7},
+	}})
+	router := gin.New()
+	router.GET("/sources", service.Get)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/sources", nil))
+
+	var response struct {
+		Data struct {
+			Sinks []Sink `json:"sinks"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	var latency *SinkLatency
+	for _, sink := range response.Data.Sinks {
+		if sink.ID == "uvc.cam0" {
+			latency = sink.Latency
+		} else if sink.Latency != nil {
+			t.Fatalf("sink %s reports latency it never measured: %+v", sink.ID, *sink.Latency)
+		}
+	}
+	if latency == nil {
+		t.Fatal("the sink list carries no latency for a measured sink")
+	}
+	if latency.Frames != 30 || latency.AvgMS != 42 || latency.PeakMS != 91 || latency.BaseMS != 7 {
+		t.Fatalf("latency = %+v", *latency)
+	}
 }

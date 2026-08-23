@@ -154,7 +154,25 @@ func (s *Service) Registry() *Registry { return s.registry }
 func (s *Service) Get(c *gin.Context) {
 	var response proto.Response
 	snapshot := s.registry.Snapshot()
+	s.attachLatency(snapshot.Sinks)
 	response.OkRspWithData(c, &snapshot)
+}
+
+// The registry never sees a frame, so the skew is measured in the media worker
+// and joined onto the sinks here, where it is read.
+func (s *Service) attachLatency(sinks []Sink) {
+	s.mu.Lock()
+	ingress := s.ingress
+	s.mu.Unlock()
+	if ingress == nil {
+		return
+	}
+	measured := ingress.Latency()
+	for index := range sinks {
+		if summary, ok := measured[sinks[index].ID]; ok {
+			sinks[index].Latency = &summary
+		}
+	}
 }
 
 func (s *Service) SetSinks(c *gin.Context) {

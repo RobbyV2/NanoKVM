@@ -24,6 +24,8 @@ const (
 	pcmPacketBytes  = 1920
 	stopTimeout     = 2 * time.Second
 	videoFallback   = 500 * time.Millisecond
+	videoPoll       = 25 * time.Millisecond
+	latencyWindow   = time.Second
 )
 
 var (
@@ -97,6 +99,21 @@ type worker struct {
 	demand     sources.Demand
 	rateAt     time.Time
 	rateTokens float64
+	latency    latencyTracker
+}
+
+type pacer struct {
+	period time.Duration
+	next   time.Time
+}
+
+type latencyTracker struct {
+	started time.Time
+	offset  int64
+	frames  int
+	sum     int64
+	peak    int64
+	summary sources.SinkLatency
 }
 
 func NewManager(registry SlotRegistry) *Manager {
@@ -190,7 +207,8 @@ func (m *Manager) Ingest(ctx context.Context, frame sources.MediaFrame) error {
 		w.mu.Unlock()
 		return fmt.Errorf("%w: host requests %dx%d, frame is %dx%d", ErrUnsupportedFrame, demand.Width, demand.Height, width, height)
 	}
-	if !w.allowFrame(time.Now(), demand) {
+	now := time.Now()
+	if !w.allowFrame(now, demand) {
 		w.mu.Unlock()
 		return fmt.Errorf("%w: %s", ErrFrameRate, frame.SinkID)
 	}
@@ -200,6 +218,7 @@ func (m *Manager) Ingest(ctx context.Context, frame sources.MediaFrame) error {
 		return fmt.Errorf("%w: sequence %d follows %d", ErrStaleFrame, frame.Sequence, previous)
 	}
 	w.sequence[key] = frame.Sequence
+	w.latency.observe(now, frame.TimestampUS)
 	packet := Packet{Sequence: frame.Sequence, Generation: w.generation, Data: append([]byte(nil), frame.Payload...)}
 	defer w.mu.Unlock()
 
@@ -232,6 +251,7 @@ func (m *Manager) Detach(sinkID string) {
 	w.generation++
 	w.rateAt = time.Time{}
 	w.rateTokens = 0
+	w.latency = latencyTracker{}
 	generation := w.generation
 	w.mu.Unlock()
 	for {
@@ -266,6 +286,69 @@ func (w *worker) allowFrame(now time.Time, demand sources.Demand) bool {
 	}
 	w.rateTokens--
 	return true
+}
+
+func (t *latencyTracker) observe(now time.Time, stampUS uint64) {
+	if stampUS == 0 {
+		return
+	}
+	skew := now.UnixMicro() - int64(stampUS)
+	if t.started.IsZero() {
+		t.started, t.offset = now, skew
+	}
+	if skew < t.offset {
+		t.offset = skew
+	}
+	sample := skew - t.offset
+	t.frames++
+	t.sum += sample
+	if sample > t.peak {
+		t.peak = sample
+	}
+	if now.Sub(t.started) < latencyWindow {
+		return
+	}
+	t.summary = sources.SinkLatency{
+		Frames:    t.frames,
+		AvgMS:     float64(t.sum) / float64(t.frames) / 1000,
+		PeakMS:    float64(t.peak) / 1000,
+		BaseMS:    float64(t.offset) / 1000,
+		UpdatedAt: now.UTC(),
+	}
+	t.started, t.frames, t.sum, t.peak = now, 0, 0, 0
+}
+
+func (m *Manager) Latency() map[string]sources.SinkLatency {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	summaries := make(map[string]sources.SinkLatency, len(m.workers))
+	for id, w := range m.workers {
+		w.mu.Lock()
+		summary := w.latency.summary
+		w.mu.Unlock()
+		if summary.Frames > 0 {
+			summaries[id] = summary
+		}
+	}
+	return summaries
+}
+
+func (p *pacer) due(now time.Time, fps int) (int, bool) {
+	period := time.Duration(0)
+	if fps > 0 {
+		period = time.Second / time.Duration(fps)
+	}
+	if period != p.period {
+		p.period, p.next = period, now
+	}
+	if period > 0 && now.Before(p.next) {
+		return int((min(p.next.Sub(now), videoPoll) + time.Millisecond - 1) / time.Millisecond), false
+	}
+	p.next = p.next.Add(period)
+	if p.next.Before(now) {
+		p.next = now.Add(period)
+	}
+	return int(videoPoll / time.Millisecond), true
 }
 
 func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
@@ -352,6 +435,7 @@ func validateFrame(spec SlotSpec, frame sources.MediaFrame) (int, int, error) {
 }
 
 func fallbackFor(spec SlotSpec) Fallback {
+	cache := make(map[[2]int][]byte, 1)
 	return func(width, height int) (Packet, error) {
 		if spec.Kind == sources.KindMicrophone {
 			return Packet{Data: make([]byte, pcmPacketBytes)}, nil
@@ -359,6 +443,9 @@ func fallbackFor(spec SlotSpec) Fallback {
 		if width == 0 || height == 0 {
 			frame := spec.Video.Formats[0].Frames[0]
 			width, height = int(frame.Width), int(frame.Height)
+		}
+		if data, cached := cache[[2]int{width, height}]; cached {
+			return Packet{Data: data}, nil
 		}
 		declared := false
 		for _, format := range spec.Video.Formats {
@@ -369,13 +456,25 @@ func fallbackFor(spec SlotSpec) Fallback {
 		if !declared {
 			return Packet{}, fmt.Errorf("fallback %dx%d is not declared", width, height)
 		}
-		black := image.NewGray(image.Rect(0, 0, width, height))
-		var encoded bytes.Buffer
-		if err := jpeg.Encode(&encoded, black, &jpeg.Options{Quality: 70}); err != nil {
+		data, err := encodeBlackFrame(width, height)
+		if err != nil {
 			return Packet{}, err
 		}
-		return Packet{Data: encoded.Bytes()}, nil
+		cache[[2]int{width, height}] = data
+		return Packet{Data: data}, nil
 	}
+}
+
+func encodeBlackFrame(width, height int) ([]byte, error) {
+	black := image.NewYCbCr(image.Rect(0, 0, width, height), image.YCbCrSubsampleRatio420)
+	for i := range black.Cb {
+		black.Cb[i], black.Cr[i] = 128, 128
+	}
+	var encoded bytes.Buffer
+	if err := jpeg.Encode(&encoded, black, &jpeg.Options{Quality: 70}); err != nil {
+		return nil, err
+	}
+	return encoded.Bytes(), nil
 }
 
 func stopWorkers(workers map[string]*worker) {

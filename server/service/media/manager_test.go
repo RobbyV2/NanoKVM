@@ -3,6 +3,7 @@ package media
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"image"
 	"image/jpeg"
@@ -355,5 +356,165 @@ func TestSuspendClosesEverySlot(t *testing.T) {
 		default:
 			t.Fatalf("%s was not closed", id)
 		}
+	}
+}
+
+func TestFallbackBlackFrameIsThreeComponentYCbCrAndCached(t *testing.T) {
+	spec := SlotSpec{ID: "uvc.cam0", Kind: sources.KindCamera, Video: cameraFunction("cam0").Video}
+	fallback := fallbackFor(spec)
+	first, err := fallback(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	components, width, height := jpegFrameHeader(t, first.Data)
+	if components != 3 {
+		t.Fatalf("component count = %d, want 3", components)
+	}
+	if width != 640 || height != 480 {
+		t.Fatalf("frame = %dx%d, want 640x480", width, height)
+	}
+	decoded, err := jpeg.Decode(bytes.NewReader(first.Data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := decoded.(*image.YCbCr); !ok {
+		t.Fatalf("decoded %T, want *image.YCbCr", decoded)
+	}
+	if bounds := decoded.Bounds(); bounds.Dx() != 640 || bounds.Dy() != 480 {
+		t.Fatalf("decoded bounds = %v", bounds)
+	}
+	if r, g, b, _ := decoded.At(320, 240).RGBA(); r > 0x0808 || g > 0x0808 || b > 0x0808 {
+		t.Fatalf("centre pixel = %d %d %d, want black", r, g, b)
+	}
+	second, err := fallback(640, 480)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if &second.Data[0] != &first.Data[0] {
+		t.Fatal("black frame was re-encoded instead of cached")
+	}
+}
+
+func jpegFrameHeader(t *testing.T, data []byte) (int, int, int) {
+	t.Helper()
+	for i := 2; i+9 < len(data); {
+		marker := data[i+1]
+		if data[i] != 0xff {
+			t.Fatalf("offset %d is not a marker", i)
+		}
+		if marker == 0xd8 || marker == 0xd9 || (marker >= 0xd0 && marker <= 0xd7) {
+			i += 2
+			continue
+		}
+		if marker == 0xc0 {
+			return int(data[i+9]), int(binary.BigEndian.Uint16(data[i+7:])), int(binary.BigEndian.Uint16(data[i+5:]))
+		}
+		i += 2 + int(binary.BigEndian.Uint16(data[i+2:]))
+	}
+	t.Fatal("no baseline SOF0 marker")
+	return 0, 0, 0
+}
+
+func TestPacerHoldsSubmissionUntilTheNegotiatedInterval(t *testing.T) {
+	base := time.Unix(1700000000, 0)
+	var pace pacer
+	if timeout, submit := pace.due(base, 0); !submit || timeout != 25 {
+		t.Fatalf("undemanded step = (%d, %v), want (25, true)", timeout, submit)
+	}
+	if _, submit := pace.due(base, 30); !submit {
+		t.Fatal("first 30 fps step did not submit")
+	}
+	if timeout, submit := pace.due(base.Add(time.Millisecond), 30); submit || timeout != 25 {
+		t.Fatalf("step 1 ms in = (%d, %v), want (25, false)", timeout, submit)
+	}
+	if timeout, submit := pace.due(base.Add(20*time.Millisecond), 30); submit || timeout != 14 {
+		t.Fatalf("step 20 ms in = (%d, %v), want (14, false)", timeout, submit)
+	}
+	if _, submit := pace.due(base.Add(34*time.Millisecond), 30); !submit {
+		t.Fatal("step past the 33.3 ms interval did not submit")
+	}
+	if _, submit := pace.due(base.Add(40*time.Millisecond), 30); submit {
+		t.Fatal("second frame submitted 6 ms after the first")
+	}
+	if _, submit := pace.due(base.Add(time.Second), 30); !submit {
+		t.Fatal("late step did not submit")
+	}
+	if _, submit := pace.due(base.Add(time.Second+time.Millisecond), 30); submit {
+		t.Fatal("a late step burst instead of resynchronizing")
+	}
+	if _, submit := pace.due(base.Add(time.Second+2*time.Millisecond), 15); !submit {
+		t.Fatal("renegotiated interval did not submit immediately")
+	}
+	if _, submit := pace.due(base.Add(time.Second+40*time.Millisecond), 15); submit {
+		t.Fatal("15 fps submitted after 38 ms")
+	}
+}
+
+func TestLatencyTrackerSummarizesEachWindow(t *testing.T) {
+	base := time.Unix(1700000000, 0)
+	var tracker latencyTracker
+	observe := func(offset, skew time.Duration) {
+		now := base.Add(offset)
+		tracker.observe(now, uint64(now.Add(-skew).UnixMicro()))
+	}
+	observe(0, 100*time.Millisecond)
+	observe(300*time.Millisecond, 160*time.Millisecond)
+	if tracker.summary.Frames != 0 {
+		t.Fatalf("summary published mid-window: %+v", tracker.summary)
+	}
+	observe(600*time.Millisecond, 130*time.Millisecond)
+	observe(time.Second, 100*time.Millisecond)
+	summary := tracker.summary
+	if summary.Frames != 4 || summary.AvgMS != 22.5 || summary.PeakMS != 60 || summary.BaseMS != 100 {
+		t.Fatalf("summary = %+v, want 4 frames avg 22.5 peak 60 base 100", summary)
+	}
+	if !summary.UpdatedAt.Equal(base.Add(time.Second).UTC()) {
+		t.Fatalf("summary updated at %s", summary.UpdatedAt)
+	}
+	observe(1200*time.Millisecond, 80*time.Millisecond)
+	if tracker.offset != 80000 {
+		t.Fatalf("baseline = %d us, want 80000", tracker.offset)
+	}
+	if tracker.summary != summary {
+		t.Fatal("summary changed mid-window")
+	}
+}
+
+func TestIngestMeasuresFrameLatency(t *testing.T) {
+	registry := &fakeRegistry{}
+	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, &blockedFactory{})
+	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+	waitDemand(t, registry, "uvc.cam0")
+	sent := time.Now().Add(-120 * time.Millisecond)
+	frame := sources.MediaFrame{SourceID: "source", StreamID: "front", SinkID: "uvc.cam0", Kind: sources.MediaKindMJPEG, Sequence: 1, TimestampUS: uint64(sent.UnixMicro()), Payload: jpegFrame(t, 640, 480)}
+	if err := manager.Ingest(context.Background(), frame); err != nil {
+		t.Fatal(err)
+	}
+	worker := manager.workers["uvc.cam0"]
+	worker.mu.Lock()
+	frames, offset := worker.latency.frames, worker.latency.offset
+	started := worker.latency.started
+	worker.mu.Unlock()
+	if frames != 1 {
+		t.Fatalf("recorded %d frames, want 1", frames)
+	}
+	if offset < 120000 {
+		t.Fatalf("baseline = %d us, want at least 120000", offset)
+	}
+	closing := started.Add(time.Second)
+	worker.mu.Lock()
+	worker.latency.observe(closing, uint64(closing.Add(-time.Duration(offset)*time.Microsecond-60*time.Millisecond).UnixMicro()))
+	worker.mu.Unlock()
+	summary, reported := manager.Latency()["uvc.cam0"]
+	if !reported || summary.Frames != 2 || summary.PeakMS != 60 {
+		t.Fatalf("summary = %+v reported = %v, want 2 frames peaking at 60 ms", summary, reported)
+	}
+	manager.Detach("uvc.cam0")
+	if len(manager.Latency()) != 0 {
+		t.Fatalf("latency of a detached source survived: %+v", manager.Latency())
 	}
 }

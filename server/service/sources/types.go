@@ -101,6 +101,18 @@ type Sink struct {
 	Demand     Demand       `json:"demand"`
 	Output     OutputState  `json:"output"`
 	Binding    *BindingView `json:"binding"`
+	Latency    *SinkLatency `json:"latency,omitempty"`
+}
+
+// The browser-to-gadget skew the media worker measured over the last window.
+// AvgMS and PeakMS are relative to BaseMS, the smallest skew yet seen, because
+// the stamp is the browser's wall clock and the two clocks need not agree.
+type SinkLatency struct {
+	Frames    int       `json:"frames"`
+	AvgMS     float64   `json:"avg_ms"`
+	PeakMS    float64   `json:"peak_ms"`
+	BaseMS    float64   `json:"base_ms"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Demand struct {

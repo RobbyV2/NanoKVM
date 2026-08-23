@@ -253,8 +253,8 @@ static int nk_uvc_data(struct nk_uvc *u, const struct uvc_request_data *data) {
 }
 
 static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
-	int timeout_ms, unsigned int *width, unsigned int *height, unsigned int *fps) {
-	struct pollfd descriptor = { .fd = u->fd, .events = POLLPRI | (u->streaming ? POLLOUT : 0) };
+	int timeout_ms, int submit, unsigned int *width, unsigned int *height, unsigned int *fps) {
+	struct pollfd descriptor = { .fd = u->fd, .events = POLLPRI | (u->streaming && submit ? POLLOUT : 0) };
 	int polled = poll(&descriptor, 1, timeout_ms);
 	if (polled < 0) return errno == EINTR ? 0 : -errno;
 	int edge = 0;
@@ -293,7 +293,7 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	*width = u->frames[frame].width;
 	*height = u->frames[frame].height;
 	*fps = u->commit.dwFrameInterval ? 10000000 / u->commit.dwFrameInterval : 0;
-	if (!u->streaming || !(descriptor.revents & POLLOUT)) return edge;
+	if (!u->streaming || !submit || !(descriptor.revents & POLLOUT)) return edge;
 	struct v4l2_buffer buffer;
 	memset(&buffer, 0, sizeof(buffer));
 	buffer.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
@@ -441,6 +441,7 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 	}
 	var width, height, fps C.uint
 	var generation uint64
+	var pace pacer
 	var sourceAt time.Time
 	sourceActive := false
 	for {
@@ -489,12 +490,17 @@ func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 			sourceActive = false
 			source(false)
 		}
+		timeout, submit := pace.due(time.Now(), int(fps))
+		send := C.int(0)
+		if submit {
+			send = 1
+		}
 		o.mu.Lock()
 		if o.handle == nil {
 			o.mu.Unlock()
 			return nil
 		}
-		rc := C.nk_uvc_step(o.handle, unsafe.Pointer(&current.Data[0]), C.size_t(len(current.Data)), 25, &width, &height, &fps)
+		rc := C.nk_uvc_step(o.handle, unsafe.Pointer(&current.Data[0]), C.size_t(len(current.Data)), C.int(timeout), send, &width, &height, &fps)
 		o.mu.Unlock()
 		if rc < 0 {
 			return fmt.Errorf("write UVC: %s", syscallError(rc))

@@ -34,6 +34,7 @@ type MediaFrame struct {
 type FrameIngress interface {
 	Ingest(context.Context, MediaFrame) error
 	Detach(string)
+	Latency() map[string]SinkLatency
 }
 
 func parseMediaFrame(data []byte) (MediaFrame, error) {
