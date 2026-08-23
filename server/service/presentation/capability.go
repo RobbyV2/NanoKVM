@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	SourceStaticV0 = "static-v0"
 	SourceStaticV1 = "static-v1"
 	SourceProbeV1  = "probe-v1"
 )
@@ -36,21 +35,6 @@ type FunctionCaps struct {
 	OutEPs     int             `json:"out_eps"`
 	INPackets  []int           `json:"in_packets,omitempty"`
 	Attributes map[string]bool `json:"attributes,omitempty"`
-}
-
-var staticV0 = CapabilityTable{
-	Source:          SourceStaticV0,
-	GeneratedAt:     time.Date(2026, time.August, 22, 0, 0, 0, 0, time.UTC),
-	MaxInEndpoints:  6,
-	MaxOutEndpoints: 5,
-	InFIFOWords:     []int{768, 512, 512, 384, 128, 128},
-	Functions: map[FunctionKind]FunctionCaps{
-		FunctionHID:         {Available: true, InEPs: 1, OutEPs: 1},
-		FunctionNCM:         {Available: true, InEPs: 2, OutEPs: 1, Attributes: map[string]bool{"os_desc/interface.ncm": true}},
-		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
-		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1},
-		FunctionFFS:         {Available: true},
-	},
 }
 
 var staticV1 = CapabilityTable{

@@ -18,7 +18,7 @@ func TestFunctionFSProfileRetainsBootHID(t *testing.T) {
 	profile.Name = ProfileHybrid
 	profile.BuiltIn = false
 	profile.Functions = append(profile.Functions[:2], Function{Kind: FunctionFFS, Instance: "hybrid", FFS: pointer(testFunctionFS())})
-	plan, err := Compile(profile, staticV0)
+	plan, err := Compile(profile, staticV1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestFunctionFSRollbackRemovesFailedLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovery := recoveryPlan{profile: standardProfile()}
-	recovery.plan, err = Compile(recovery.profile, staticV0)
+	recovery.plan, err = Compile(recovery.profile, staticV1)
 	if err != nil {
 		t.Fatal(err)
 	}

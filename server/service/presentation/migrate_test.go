@@ -45,7 +45,7 @@ func TestMigratedProfileCompilesToTheScriptTrace(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			useTestBootDir(t, fixture...)
 
-			plan, err := Compile(derivedProfile(), staticV0)
+			plan, err := Compile(derivedProfile(), staticV1)
 			if err != nil {
 				t.Fatalf("compile migrated profile: %v", err)
 			}

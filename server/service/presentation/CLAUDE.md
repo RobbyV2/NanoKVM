@@ -107,21 +107,35 @@ an exact match.
 
 ## The capability table is not a hardware measurement
 
-`staticV0` is a plain data literal. Its six IN and five OUT endpoints are what the
-shipping scripts demonstrably achieve at full flag expansion, not a probe result. The
-real `num_dev_ep` lives in the dwc2 `GHWCFG` registers and is not readable from
-`/sys/class/udc/*`, so the budget cannot be probed at runtime at all. Availability can be
-probed, and `LoadCapabilities` merges probe results for availability only, never for the
-budget.
+`staticV1` is a plain data literal and the only table this package ships. Its six IN and
+five OUT endpoints are what the shipping scripts demonstrably achieve at full flag
+expansion, not a probe result. The real `num_dev_ep` lives in the dwc2 `GHWCFG` registers
+and is not readable from `/sys/class/udc/*`, so the budget cannot be probed at runtime at
+all. Availability can be probed, and `LoadCapabilities` merges probe results for
+availability only, never for the budget.
 
-Consequences worth knowing before you touch it. Both built-ins compile against `staticV0`
+The predecessor `staticV0` is gone. It lacked the `uvc` and `uac2` entries and every
+`INPackets` value, so `supportsMedia` rejects a table of that shape on disk and
+`LoadCapabilities` could never return it. Tests that compiled against it were exercising
+a table no device runs, and in particular were seating no FIFOs at all for `ncm`,
+`rndis` and `mass_storage`, whose IN packet sizes live only in `INPackets`. Every test
+compiles against `staticV1`. Do not reintroduce a second table that ships nowhere.
+
+`InFIFOWords` is the six dedicated dwc2 IN FIFOs in words, and `SeatFIFOs` assigns the
+smallest FIFO that holds each IN packet, so a plan is refused when a packet fits no
+remaining FIFO. `inPackets` prefers the profile's own payload where one exists (HID
+report length, UVC `streaming_maxpacket`, the UAC2 playback packet, FunctionFS endpoint
+sizes) and falls back to the table's `INPackets` otherwise.
+
+Consequences worth knowing before you touch it. Both built-ins compile against `staticV1`
 with zero headroom by construction, so neither can be refused by its own table, and
 `capability_test.go` pins that. The allocator only ever refuses a plan and names the
 function it refused for; it never sizes one. `Source` is carried into every error message
-so a rejection reads `rejected by capability table static-v0` and an operator can tell a
+so a rejection reads `rejected by capability table static-v1` and an operator can tell a
 measured refusal from a guessed one. If a real endpoint budget is ever measured, write it
 to `/etc/kvm/presentation/capability.json` rather than editing the literal, which is what
-the precedence order in `LoadCapabilities` is for.
+the precedence order in `LoadCapabilities` is for; a table written there is ignored unless
+it carries the media functions and a FIFO map.
 
 ## Store and sentinels
 

@@ -178,7 +178,7 @@ func readTrace(t *testing.T, name string) []string {
 func compileFlags(t *testing.T, f flags) Plan {
 	t.Helper()
 
-	plan, err := Compile(profileForFlags(f), staticV0)
+	plan, err := Compile(profileForFlags(f), staticV1)
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -333,11 +333,11 @@ func TestCompileRefusesAnOverBudgetProfile(t *testing.T) {
 		DevAddr: &dev, HostAddr: &host, CompatibleID: "RNDIS",
 	}})
 
-	_, err := Compile(profile, staticV0)
+	_, err := Compile(profile, staticV1)
 	if err == nil {
-		t.Fatal("compile accepted a profile over the static-v0 budget")
+		t.Fatal("compile accepted a profile over the static-v1 budget")
 	}
-	if !strings.Contains(err.Error(), "rejected by capability table static-v0") {
+	if !strings.Contains(err.Error(), "rejected by capability table static-v1") {
 		t.Fatalf("err = %v, want the capability source carried", err)
 	}
 }
@@ -346,7 +346,7 @@ func TestCompileRefusesAnInvalidProfile(t *testing.T) {
 	profile := standardProfile()
 	profile.Functions = profile.Functions[:2]
 
-	if _, err := Compile(profile, staticV0); err == nil {
+	if _, err := Compile(profile, staticV1); err == nil {
 		t.Fatal("compile accepted a profile with two hid functions")
 	}
 }
@@ -414,7 +414,7 @@ func TestOSDescIgnoresAStaleProfileField(t *testing.T) {
 	profile := profileForFlags(flags{disk: true})
 	profile.OSDesc = MSOSDesc()
 
-	plan, err := Compile(profile, staticV0)
+	plan, err := Compile(profile, staticV1)
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}

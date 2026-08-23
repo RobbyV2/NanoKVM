@@ -19,7 +19,7 @@ func newTestManager(t *testing.T, flags ...string) (*Manager, *RecordOps) {
 	useTestPresentationDir(t)
 	useTestBootDir(t, flags...)
 	ops := NewRecordOps()
-	return NewManager(NewStore(), ops, staticV0), ops
+	return NewManager(NewStore(), ops, staticV1), ops
 }
 
 type fakeHID struct {
@@ -100,7 +100,7 @@ func TestApplyCycleNeverRemovesAHIDFunction(t *testing.T) {
 func TestUnlinkStaleSparesTheHIDLinks(t *testing.T) {
 	manager, ops := newTestManager(t)
 
-	plan, err := Compile(standardProfile(), staticV0)
+	plan, err := Compile(standardProfile(), staticV1)
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
