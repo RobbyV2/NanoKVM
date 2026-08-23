@@ -83,8 +83,8 @@ type Attachment struct {
 	Device Device
 }
 
-func Attach(ctx context.Context, addr string, busID string) (Attachment, error) {
-	if err := guardRemote(ctx, addr, busID); err != nil {
+func Attach(ctx context.Context, addr string, busID string, allowIso bool) (Attachment, error) {
+	if err := guardRemote(ctx, addr, busID, allowIso); err != nil {
 		return Attachment{}, err
 	}
 
@@ -143,13 +143,14 @@ func List(ctx context.Context, addr string) ([]RemoteDevice, error) {
 
 var listExporter = List
 
-// A device the backend cannot relay is refused here, before a vhci port is
+// A device whose class says it streams is refused here, before a vhci port is
 // taken and long before the UDC is surrendered: finding out afterwards costs
-// the operator the keyboard the gadget was serving. An exporter that will not
-// answer a devlist is not itself a refusal — stock usbip exporters that only
-// serve imports keep working, and the endpoint descriptors are checked again
-// once the device is enumerated locally.
-func guardRemote(ctx context.Context, addr string, busID string) error {
+// the operator the keyboard the gadget was serving. A start that allowed
+// isochronous transfers skips the refusal and pays that cost knowingly. An
+// exporter that will not answer a devlist is not itself a refusal — stock usbip
+// exporters that only serve imports keep working, and the endpoint descriptors
+// are checked again once the device is enumerated locally.
+func guardRemote(ctx context.Context, addr string, busID string, allowIso bool) error {
 	devices, err := listExporter(ctx, addr)
 	if err != nil {
 		if errors.Is(err, ErrExporterAddress) {
@@ -162,7 +163,7 @@ func guardRemote(ctx context.Context, addr string, busID string) error {
 		if device.BusID != busID {
 			continue
 		}
-		if refusal := device.Refusal(); refusal != "" {
+		if refusal := device.Refusal(); refusal != "" && !allowIso {
 			return fmt.Errorf("%w: %s", ErrIsochronous, refusal)
 		}
 	}

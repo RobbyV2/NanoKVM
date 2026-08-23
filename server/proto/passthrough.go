@@ -2,8 +2,9 @@ package proto
 
 import "time"
 
-// The imported device as the exporter described it. Both modes refuse
-// isochronous endpoints.
+// The imported device as the exporter described it. Hybrid has no isochronous
+// data path; Exact relays isochronous endpoints only when the start asked for
+// them.
 type PassthroughDevice struct {
 	BusID     string `json:"busId"`
 	IDVendor  string `json:"idVendor"`
@@ -28,8 +29,9 @@ type GetPassthroughRsp struct {
 	Device         *PassthroughDevice `json:"device"`
 }
 
-// One entry of the exporter's device list. Unsupported carries why the device
-// cannot be relayed and is empty when it can.
+// One entry of the exporter's device list. Unsupported names the class that
+// makes the device isochronous, and is empty when nothing about it needs the
+// override.
 type PassthroughRemoteDevice struct {
 	BusID       string `json:"busId"`
 	IDVendor    string `json:"idVendor"`
@@ -54,4 +56,7 @@ type StartPassthroughReq struct {
 	Exporter string `validate:"required,hostname_port|hostname|ip"`
 	BusID    string `validate:"required,max=31"`
 	Mode     string `validate:"omitempty,oneof=hybrid exact"`
+	// Isochronous relaying is unproven on this UDC, so it is refused unless
+	// the operator asked for it on this attempt.
+	AllowIsochronous bool `json:"allowIsochronous"`
 }

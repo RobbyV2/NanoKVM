@@ -33,6 +33,13 @@ const (
 	livenessStrikes  = 5
 	proxyReasonBytes = 4 << 10
 	proxyReasonLimit = 200
+
+	// One libusb isochronous URB carries a millisecond of stream: eight high
+	// speed microframes, or one full speed frame. The gadget side still drains
+	// it a packet per blocking ioctl, so a smaller batch only multiplies host
+	// round trips on a single core, and a larger one adds latency and buffer
+	// for no extra throughput.
+	isoBatchPackets = 8
 )
 
 var (
@@ -48,7 +55,7 @@ var (
 	ErrNotEnumerated = errors.New("passthrough: the imported device did not enumerate")
 	ErrAmbiguous     = errors.New("passthrough: imported device location is ambiguous")
 	ErrDescriptors   = errors.New("passthrough: cannot validate USB descriptors")
-	ErrIsochronous   = errors.New("passthrough: isochronous devices are not supported")
+	ErrIsochronous   = errors.New("passthrough: isochronous transfers are off unless the start allows them")
 	ErrNoUDCDriver   = errors.New("passthrough: cannot resolve the udc driver")
 )
 
@@ -78,7 +85,7 @@ type HybridFactory interface {
 }
 
 type VHCI interface {
-	Attach(ctx context.Context, exporter string, busID string) (Attachment, error)
+	Attach(ctx context.Context, exporter string, busID string, allowIso bool) (Attachment, error)
 	Detach(port uint32) error
 	Locate(ctx context.Context, attachment Attachment) (Local, error)
 }
@@ -171,15 +178,15 @@ func NewManager(gadget Gadget, vhci VHCI, proxy Spawner, modules ModuleLoader) *
 
 // Start preserves the Exact behavior of the original API.
 func (m *Manager) Start(ctx context.Context, exporter string, busID string) (*Session, error) {
-	return m.StartMode(ctx, exporter, busID, ModeExact)
+	return m.StartMode(ctx, exporter, busID, ModeExact, false)
 }
 
 // A refusal is the operator's only account of what went wrong, so it is kept
 // where the status can report it instead of only being returned once. A start
 // refused because a session is already running says nothing about that session
 // and must not overwrite what it reported.
-func (m *Manager) StartMode(ctx context.Context, exporter string, busID string, mode string) (*Session, error) {
-	session, err := m.startMode(ctx, exporter, busID, mode)
+func (m *Manager) StartMode(ctx context.Context, exporter string, busID string, mode string, allowIso bool) (*Session, error) {
+	session, err := m.startMode(ctx, exporter, busID, mode, allowIso)
 	if err != nil && !errors.Is(err, ErrSessionActive) {
 		m.setReason(err.Error())
 	}
@@ -192,7 +199,7 @@ func (m *Manager) setReason(reason string) {
 	m.reason = reason
 }
 
-func (m *Manager) startMode(ctx context.Context, exporter string, busID string, mode string) (*Session, error) {
+func (m *Manager) startMode(ctx context.Context, exporter string, busID string, mode string, allowIso bool) (*Session, error) {
 	if mode == "" {
 		mode = ModeHybrid
 	}
@@ -202,10 +209,10 @@ func (m *Manager) startMode(ctx context.Context, exporter string, busID string, 
 	if mode != ModeExact {
 		return nil, fmt.Errorf("%w: mode %q", ErrDescriptors, mode)
 	}
-	return m.startExact(ctx, exporter, busID)
+	return m.startExact(ctx, exporter, busID, allowIso)
 }
 
-func (m *Manager) startExact(ctx context.Context, exporter string, busID string) (*Session, error) {
+func (m *Manager) startExact(ctx context.Context, exporter string, busID string, allowIso bool) (*Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -221,7 +228,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 		return nil, err
 	}
 
-	attachment, err := m.vhci.Attach(ctx, exporter, busID)
+	attachment, err := m.vhci.Attach(ctx, exporter, busID, allowIso)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +241,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 	if err != nil {
 		return nil, errors.Join(err, m.detach(state))
 	}
-	if err := validateDescriptors(local.Path); err != nil {
+	if err := validateDescriptors(local.Path, allowIso); err != nil {
 		return nil, errors.Join(err, m.detach(state))
 	}
 
@@ -254,7 +261,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string)
 	}
 
 	offset := proxyLogSize()
-	proc, err := m.proxy.Start(proxyArgv(binary, udc, driver, local))
+	proc, err := m.proxy.Start(proxyArgv(binary, udc, driver, local, allowIso))
 	if err != nil {
 		return nil, errors.Join(err, m.restore(state))
 	}
@@ -299,7 +306,7 @@ func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string
 	if err := m.modules.Load(ModuleUSBIPCore, ModuleVHCI); err != nil {
 		return nil, err
 	}
-	attachment, err := m.vhci.Attach(ctx, exporter, busID)
+	attachment, err := m.vhci.Attach(ctx, exporter, busID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -729,8 +736,12 @@ func (functionFSFactory) Cleanup() error { return functionfs.Cleanup() }
 // a local device carrying the same pair, so the imported device is named by the
 // bus and address vhci gave it. Every element here is a number from the import
 // or a name read out of sysfs; no request string reaches an argv.
-func proxyArgv(binary string, udc string, driver string, local Local) []string {
-	return []string{
+//
+// The isochronous clamp that keeps wMaxPacketSize inside the dwc2 limit rides
+// on --auto_remap_endpoints and is always on. isoBatchPackets is pinned only
+// for an isochronous session so a plain one keeps the argv it always had.
+func proxyArgv(binary string, udc string, driver string, local Local, allowIso bool) []string {
+	argv := []string{
 		binary,
 		"--device", udc,
 		"--driver", driver,
@@ -738,6 +749,10 @@ func proxyArgv(binary string, udc string, driver string, local Local) []string {
 		"--device_addr", strconv.FormatUint(uint64(local.Address), 10),
 		"--auto_remap_endpoints",
 	}
+	if allowIso {
+		argv = append(argv, "--iso_batch_size", strconv.Itoa(isoBatchPackets))
+	}
+	return argv
 }
 
 // raw-gadget is opened against a UDC name and its driver name, and the default
@@ -758,8 +773,8 @@ func udcDriver(udc string) (string, error) {
 
 type kernelVHCI struct{}
 
-func (kernelVHCI) Attach(ctx context.Context, exporter string, busID string) (Attachment, error) {
-	return Attach(ctx, exporter, busID)
+func (kernelVHCI) Attach(ctx context.Context, exporter string, busID string, allowIso bool) (Attachment, error) {
+	return Attach(ctx, exporter, busID, allowIso)
 }
 
 func (kernelVHCI) Detach(port uint32) error {
@@ -837,7 +852,7 @@ func attribute(dir string, name string) string {
 	return strings.TrimSpace(string(data))
 }
 
-func validateDescriptors(devicePath string) error {
+func validateDescriptors(devicePath string, allowIso bool) error {
 	raw, err := os.ReadFile(filepath.Join(devicePath, "descriptors"))
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrDescriptors, err)
@@ -854,8 +869,8 @@ func validateDescriptors(devicePath string) error {
 			if length < 4 {
 				return fmt.Errorf("%w: truncated endpoint at %d", ErrDescriptors, offset)
 			}
-			if raw[offset+3]&0x03 == 0x01 {
-				return ErrIsochronous
+			if raw[offset+3]&0x03 == 0x01 && !allowIso {
+				return fmt.Errorf("%w: endpoint 0x%02x", ErrIsochronous, raw[offset+2])
 			}
 		}
 		offset += length

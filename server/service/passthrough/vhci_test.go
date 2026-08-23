@@ -498,7 +498,7 @@ func TestAttachRefusesAnUnrelayableDeviceBeforeTakingAPort(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err := Attach(ctx, "10.0.0.5", "1-1")
+	_, err := Attach(ctx, "10.0.0.5", "1-1", false)
 	if !errors.Is(err, ErrIsochronous) {
 		t.Fatalf("Attach = %v, want ErrIsochronous", err)
 	}
@@ -523,7 +523,7 @@ func TestAttachStillWorksWithAnExporterThatHasNoDevlist(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err := Attach(ctx, "192.0.2.7", "1-1")
+	_, err := Attach(ctx, "192.0.2.7", "1-1", false)
 	if *calls != 1 {
 		t.Fatalf("devlist attempted %d times, want 1", *calls)
 	}

@@ -214,17 +214,26 @@ func (g *fakeGadget) state() (bool, int, int) {
 }
 
 type fakeVHCI struct {
-	mu       sync.Mutex
-	device   Device
-	port     uint32
-	attached []string
-	detached []uint32
-	fail     error
+	mu         sync.Mutex
+	device     Device
+	port       uint32
+	attached   []string
+	detached   []uint32
+	fail       error
+	allowedIso bool
 }
 
-func (v *fakeVHCI) Attach(_ context.Context, _ string, busID string) (Attachment, error) {
+func (v *fakeVHCI) isoAllowed() bool {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+	return v.allowedIso
+}
+
+func (v *fakeVHCI) Attach(_ context.Context, _ string, busID string, allowIso bool) (Attachment, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	v.allowedIso = allowIso
 
 	if v.fail != nil {
 		return Attachment{}, v.fail
@@ -587,7 +596,7 @@ func TestHybridKeepsBootHIDAndRestoresTheGadget(t *testing.T) {
 	manager.gadget = gadget
 	manager.hybrid = factory
 
-	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid)
+	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -629,7 +638,7 @@ func TestHybridRegistersTheFFSInstanceBeforeMounting(t *testing.T) {
 	manager.gadget = gadget
 	manager.hybrid = factory
 
-	if _, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid); err != nil {
+	if _, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid, false); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = manager.Stop() }()
@@ -911,6 +920,81 @@ func TestIsochronousDescriptorsAreRejectedBeforeTheGadgetIsTouched(t *testing.T)
 	}
 	if _, detached := vhci.calls(); !slices.Equal(detached, []uint32{5}) {
 		t.Fatalf("detached = %v, want [5]", detached)
+	}
+}
+
+// The refusal has to name the endpoint that caused it. A device with a bulk
+// pair and one isochronous IN is refused for 0x83 and for nothing else.
+func TestTheIsochronousRefusalNamesTheOffendingEndpoint(t *testing.T) {
+	manager, _, _, _ := newTestManager(t)
+	descriptors := filepath.Join(vhciRoot, "usb3", "3-6", "descriptors")
+	raw := []byte{
+		18, 1, 0, 2, 0, 0, 0, 64, 0x6d, 0x04, 0x1c, 0xc3, 0, 1, 1, 2, 3, 1,
+		9, 2, 39, 0, 1, 1, 0, 0x80, 50,
+		9, 4, 0, 0, 3, 0, 0, 0, 0,
+		7, 5, 0x81, 0x02, 0, 2, 0,
+		7, 5, 0x02, 0x02, 0, 2, 0,
+		7, 5, 0x83, 0x01, 0, 3, 1,
+	}
+	if err := os.WriteFile(descriptors, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeExact, false)
+	if !errors.Is(err, ErrIsochronous) {
+		t.Fatalf("start = %v, want %v", err, ErrIsochronous)
+	}
+	if !strings.Contains(err.Error(), "endpoint 0x83") {
+		t.Fatalf("refusal = %q, want it to name endpoint 0x83", err)
+	}
+	if reason := manager.Status().Reason; !strings.Contains(reason, "endpoint 0x83") {
+		t.Fatalf("status reason = %q, want it to name endpoint 0x83", reason)
+	}
+}
+
+// The guard is an opt-out, not a wall: a start that allowed isochronous
+// transfers surrenders the UDC and runs the proxy for the same descriptors the
+// default refuses, and the proxy is told the isochronous batch to use.
+func TestAllowingIsochronousStartsTheProxyForAStreamingDevice(t *testing.T) {
+	manager, gadget, vhci, spawner := newTestManager(t)
+	descriptors := filepath.Join(vhciRoot, "usb3", "3-6", "descriptors")
+	raw := []byte{
+		18, 1, 0, 2, 0, 0, 0, 64, 0x6d, 0x04, 0x1c, 0xc3, 0, 1, 1, 2, 3, 1,
+		9, 2, 25, 0, 1, 1, 0, 0x80, 50,
+		9, 4, 0, 0, 1, 0, 0, 0, 0,
+		7, 5, 0x81, 0x01, 0, 3, 1,
+	}
+	if err := os.WriteFile(descriptors, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeExact, true); err != nil {
+		t.Fatalf("start with isochronous allowed = %v", err)
+	}
+	if !vhci.isoAllowed() {
+		t.Fatal("the attach was not told isochronous transfers were allowed")
+	}
+	if bound, surrendered, _ := gadget.state(); bound || surrendered != 1 {
+		t.Fatalf("bound = %t, surrenders = %d, want false, 1", bound, surrendered)
+	}
+	argv := spawner.last()
+	if argv == nil {
+		t.Fatal("the proxy did not run for an allowed isochronous device")
+	}
+	if !slices.Contains(argv, "--iso_batch_size") {
+		t.Fatalf("argv = %v, want it to carry --iso_batch_size", argv)
+	}
+	if i := slices.Index(argv, "--iso_batch_size"); argv[i+1] != strconv.Itoa(isoBatchPackets) {
+		t.Fatalf("--iso_batch_size = %q, want %d", argv[i+1], isoBatchPackets)
+	}
+}
+
+// A plain session must keep the argv it always had, so enabling the opt-in is
+// the only thing that changes what the proxy is asked to do.
+func TestADefaultStartDoesNotMentionIsochronousInTheArgv(t *testing.T) {
+	argv := proxyArgv("/etc/kvm/bin/usb-proxy", "4340000.usb", "dwc2", Local{Bus: 3, Address: 7}, false)
+	if slices.Contains(argv, "--iso_batch_size") {
+		t.Fatalf("argv = %v, want no isochronous flag", argv)
 	}
 }
 
@@ -1228,7 +1312,7 @@ func TestAHybridRelayFailureReachesTheStatus(t *testing.T) {
 	manager.gadget = gadget
 	manager.hybrid = &fakeHybridFactory{relay: relay}
 
-	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid)
+	session, err := manager.StartMode(context.Background(), "10.0.0.5", "1-1", ModeHybrid, false)
 	if err != nil {
 		t.Fatalf("start: %s", err)
 	}

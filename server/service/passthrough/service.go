@@ -148,7 +148,7 @@ func (s *Service) StartPassthrough(c *gin.Context) {
 	}
 
 	principal, _ := middleware.CurrentPrincipal(c)
-	_, err := s.manager.StartMode(c.Request.Context(), req.Exporter, req.BusID, req.Mode)
+	_, err := s.manager.StartMode(c.Request.Context(), req.Exporter, req.BusID, req.Mode, req.AllowIsochronous)
 	audit.Record(principal, "passthrough.start", strings.TrimSpace(req.BusID+" "+req.Mode), err)
 	if err != nil {
 		log.Errorf("passthrough: start failed: %s", err)

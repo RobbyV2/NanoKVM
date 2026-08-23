@@ -136,7 +136,7 @@ func TestKernelTier2HybridRegistersTheFFSInstanceBeforeMounting(t *testing.T) {
 	manager.gadget = kernelPresentation(t)
 	manager.hybrid = &kernelHybridFactory{caps: presentation.LoadCapabilities()}
 
-	session, err := manager.StartMode(context.Background(), "127.0.0.1", "1-1", ModeHybrid)
+	session, err := manager.StartMode(context.Background(), "127.0.0.1", "1-1", ModeHybrid, false)
 	if err != nil {
 		t.Fatalf("start hybrid against the real kernel: %v", err)
 	}

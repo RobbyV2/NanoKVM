@@ -229,17 +229,18 @@ const (
 	subclassRadio uint8 = 0x01
 )
 
-// Neither backend carries an isochronous endpoint, so a device that streams is
-// refused. An interface class is all the exporter tells us, and these are the
-// classes whose interfaces carry the isochronous endpoints.
+// Exact can relay an isochronous endpoint when the start allows it, and Hybrid
+// has no isochronous data path at all, so a streaming device is refused unless
+// it was asked for. An interface class is all the exporter tells us, and these
+// are the classes whose interfaces carry the isochronous endpoints.
 func (i Interface) Unsupported() string {
 	switch {
 	case i.Class == classAudio:
-		return "audio interfaces stream over isochronous endpoints"
+		return fmt.Sprintf("audio interface (class %02x) streams over isochronous endpoints", i.Class)
 	case i.Class == classVideo:
-		return "video interfaces stream over isochronous endpoints"
+		return fmt.Sprintf("video interface (class %02x) streams over isochronous endpoints", i.Class)
 	case i.Class == classWireless && i.SubClass == subclassRadio:
-		return "the Bluetooth SCO channel is isochronous"
+		return fmt.Sprintf("the Bluetooth SCO channel (class %02x) is isochronous", i.Class)
 	}
 	return ""
 }
