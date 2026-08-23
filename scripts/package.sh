@@ -81,6 +81,7 @@ require_file "$ROOT/web/dist/index.html" "run: make web"
 # tracked in server/dl_lib/ exists for cgo link time and lags far behind. If it
 # were optional here, "make package" on its own would quietly ship the stale one.
 require_file "$ROOT/kvmapp/server/dl_lib/libkvm.so" "run: make vision"
+require_file "$ROOT/server/dl_lib/libtinyalsa.so" "tracked media runtime is missing"
 # The tunnel seeds ship as gzip, so the arch check has to run against the
 # uncompressed binaries the "tunnels" target stages alongside them.
 require_file "$ROOT/build/tunnels/wstunnel" "run: make tunnels"
@@ -94,6 +95,7 @@ require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
 require_riscv64 "$ROOT/server/NanoKVM-Server"
 require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
 require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
+require_riscv64 "$ROOT/server/dl_lib/libtinyalsa.so"
 require_riscv64 "$ROOT/build/tunnels/wstunnel"
 require_riscv64 "$ROOT/build/tunnels/newt"
 require_riscv64 "$ROOT/build/passthrough/usb-proxy"
@@ -131,6 +133,11 @@ for lib in "$ROOT"/server/dl_lib/*; do
         cp -a "$lib" "$STAGE/server/dl_lib/$name"
     fi
 done
+
+if ! cmp -s "$ROOT/server/dl_lib/libtinyalsa.so" "$STAGE/server/dl_lib/libtinyalsa.so"; then
+    echo "[ERROR] packaged libtinyalsa.so differs from the ABI-checked tracked runtime" >&2
+    exit 1
+fi
 
 #    The SDK is built from an unpinned MaixCDK checkout, so its dist could one
 #    day add or rename a library (e.g. an soname bump leaving both .409 and
