@@ -50,22 +50,22 @@ export const Vnc = () => {
       <Divider className="opacity-50" />
 
       <div className="flex flex-col space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col space-y-1">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col space-y-1">
             <span>{t('settings.vnc.server')}</span>
             <span className="text-xs text-neutral-500">{t('settings.vnc.description')}</span>
           </div>
 
-          <Switch checked={isEnabled} loading={isLoading} onChange={update} />
+          <Switch className="shrink-0" checked={isEnabled} loading={isLoading} onChange={update} />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col space-y-1">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col space-y-1">
             <span>{t('settings.vnc.port')}</span>
             <span className="text-xs text-neutral-500">{t('settings.vnc.portDescription')}</span>
           </div>
 
-          <span className="text-sm text-neutral-400">{port}</span>
+          <span className="shrink-0 text-sm text-neutral-400">{port}</span>
         </div>
       </div>
     </>
