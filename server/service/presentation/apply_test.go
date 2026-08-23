@@ -96,17 +96,44 @@ func TestApplyCycleNeverRemovesAHIDFunction(t *testing.T) {
 		t.Fatalf("apply standard plus disk: %v", err)
 	}
 
+	// The one function whose link precedes its attributes, rewritten over a
+	// linkage that is already up.
+	moved := derivedProfile()
+	for i, function := range moved.Functions {
+		if function.Kind == FunctionMassStorage {
+			storage := *function.Storage
+			storage.File = "/dev/mmcblk0p4"
+			moved.Functions[i].Storage = &storage
+		}
+	}
+	if err := manager.ApplyProfile(ctx, moved); err != nil {
+		t.Fatalf("apply a moved backing file: %v", err)
+	}
+
+	// The minor comes from an ida in hidg_alloc_inst at mkdir and goes back in
+	// hidg_free_inst at rmdir, so the renumbering this guards against is a
+	// removal under functions/hid.*. Reconcile drops the config symlink to
+	// release opts->refcnt, which moves no minor, and the plan links it again;
+	// the linkage below is what says every one of those unlinks was paired.
 	var order []string
 	for _, op := range ops.Trace() {
 		switch {
-		case op.Kind == OpUnlink && strings.Contains(op.Path, string(FunctionHID)+"."):
-			t.Fatalf("apply emits unlink %s, which can renumber /dev/hidgN", op.Path)
+		case (op.Kind == OpUnlink || op.Kind == OpRmdir) && strings.HasPrefix(op.Path, functionsDir+"/hid."):
+			t.Fatalf("apply emits %s %s, which renumbers /dev/hidgN", op.Kind, op.Path)
 		case op.Kind == OpMkdir && strings.HasPrefix(op.Path, functionsDir+"/hid."):
 			order = append(order, strings.TrimPrefix(op.Path, functionsDir+"/hid."))
 		}
 	}
-	if want := "GS0,GS1,GS2,GS0,GS1,GS2,GS0,GS1,GS2,GS0,GS1,GS2"; strings.Join(order, ",") != want {
+	if want := "GS0,GS1,GS2,GS0,GS1,GS2,GS0,GS1,GS2,GS0,GS1,GS2,GS0,GS1,GS2"; strings.Join(order, ",") != want {
 		t.Fatalf("hid mkdir order = %v, want %v", order, want)
+	}
+
+	links := ops.Links()
+	for _, function := range moved.Functions {
+		name := functionName(function)
+		if _, ok := links[configPrefix+"/"+name]; !ok {
+			t.Fatalf("apply left %s unlinked", name)
+		}
 	}
 
 	if bound := ops.Bound(); bound != dwc2Device {

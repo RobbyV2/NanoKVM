@@ -220,6 +220,76 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos, Device: p.Device.identity()}, nil
 }
 
+// Compile plans a virgin gadget, where no function is linked yet and every
+// attribute store is free. On a running one the link is already there, and
+// f_hid, f_ncm, f_rndis, f_uvc and f_uac2 all take opts->refcnt when a function
+// is linked into a config and refuse every option store with -EBUSY while they
+// hold it. Reconcile is what closes that gap: it takes the linkage that is
+// actually up and puts the unlink that releases the refcnt in front of the
+// first op the kernel would refuse. It stays pure, so ordering keeps living in
+// the plan rather than in a special case in the applier.
+//
+// hidg_alloc_inst takes the /dev/hidgN minor from an ida at mkdir and
+// hidg_free_inst returns it at rmdir, so unlinking a hid.* function does not
+// renumber anything; only rmdir functions/hid.* would, and no plan ever emits
+// one. Every unlink inserted here is paired with the link the plan already ends
+// that function with, which is why a failure between the two is still repaired
+// by the rollback ladder: the recovery plan links the same functions.
+func Reconcile(current Snapshot, plan Plan) Plan {
+	links := make(map[string]int, len(plan.Ops))
+	for i, op := range plan.Ops {
+		if op.Kind != OpSymlink {
+			continue
+		}
+		if name, ok := strings.CutPrefix(op.Path, configPrefix+"/"); ok {
+			links[name] = i
+		}
+	}
+
+	// unlinkStale removes these before the first op runs, so an unlink here
+	// would be a second copy of that rule rather than a released refcnt.
+	stale := make(map[string]bool)
+	for _, name := range plan.Outcome(current).Removes {
+		stale[name] = true
+	}
+
+	insert := make(map[int]string)
+	for _, name := range current.Linked {
+		link, ok := links[name]
+		if !ok || stale[name] {
+			continue
+		}
+		for i, op := range plan.Ops[:link] {
+			if refcntGuarded(op.Kind) && writtenFunction(op.Path) == name {
+				insert[i] = name
+				break
+			}
+		}
+	}
+	if len(insert) == 0 {
+		return plan
+	}
+
+	ops := make([]Op, 0, len(plan.Ops)+len(insert))
+	for i, op := range plan.Ops {
+		if name, ok := insert[i]; ok {
+			ops = append(ops, Op{Kind: OpUnlink, Path: configPrefix + "/" + name})
+		}
+		ops = append(ops, op)
+	}
+	plan.Ops = ops
+	return plan
+}
+
+// The kinds opts->refcnt refuses: an attribute store, and the descriptor group
+// removals f_uvc's rebuild opens with. Only the ones ahead of the function's own
+// link count, which is what leaves mass_storage alone: its LUN attributes carry
+// no refcnt check and its link precedes them, so an unlink in front of them
+// would have nothing left in the plan to put the link back.
+func refcntGuarded(kind OpKind) bool {
+	return kind == OpWrite || kind == OpUnlink || kind == OpRmdir
+}
+
 func (k FunctionKind) isNet() bool {
 	return k == FunctionNCM || k == FunctionRNDIS
 }

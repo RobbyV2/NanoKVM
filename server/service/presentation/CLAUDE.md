@@ -239,7 +239,7 @@ still accepts it. `dummy_udc.0` rejects writes a recorder accepts, `f_hid` hands
 ordering contract is asserted from `service/functionfs` and `service/passthrough`, since
 that is where the two halves live.
 
-### Two things the kernel said that no fake had
+### Three things the kernel said that no fake had
 
 `f_hid` takes its `opts->refcnt` at **link** time, not at bind time, and every
 `F_HID_OPT` store returns `-EBUSY` while that refcnt is held. `f_ncm`, `f_rndis`, `f_uvc`
@@ -253,10 +253,36 @@ drops the op when it already holds those bytes. That is what makes the first app
 boot possible at all, and it is why a second apply of the same profile emits no function
 writes.
 
-A write that genuinely differs is left in the plan for the kernel to refuse. `report_desc`
-and `subclass` differ between `standard` and `hid-only`, R1.1 forbids unlinking `hid.*` to
-release the refcnt, and that is why `SetHidMode` stages the mode on disk and reboots
-rather than trusting the live apply it also runs.
+A write that genuinely differs cannot be dropped, and until `Reconcile` existed it was
+left in the plan for the kernel to refuse: applying any profile that changed an
+attribute failed with `-EBUSY`, the rollback failed for the same reason, and so did the
+hid-only rung below it, which left `c.1` holding three HID links and `functions/`
+holding everything the attempt had built. What releases the refcnt is dropping the
+`configs/c.1/<name>` symlink, and that is not the removal `R1.1` forbids:
+`hidg_alloc_inst` takes the `/dev/hidgN` minor from an `ida` at **mkdir** and
+`hidg_free_inst` returns it at **rmdir**, while `hidg_alloc` and `hidg_free` move the
+refcnt on **link** and **unlink**. `TestKernelTier2UnlinkKeepsHIDMinors` runs that cycle
+against the kernel and the minors do not move.
+
+So the unlink belongs in the plan, and `Reconcile(current Snapshot, plan Plan) Plan` in
+`compile.go` puts it there: it is pure, it takes the linkage that is actually up, and it
+inserts `unlink configs/c.1/<name>` in front of the first op the refcnt would refuse.
+`Compile` stays a plan for a virgin gadget and the twenty traces stay byte-identical.
+Every unlink it inserts is paired with the link the same plan already ends that function
+with, so a failure between the two is repaired by a rollback rung that links the same
+functions, and `applyPlan` and `restore` both run it so the whole ladder can write
+attributes. `mass_storage` is excluded because its link precedes its LUN attributes,
+which carry no refcnt check; a media function is excluded because `unlinkStale` has
+already removed it. A function whose attributes all came back redundant keeps its link,
+so a partial relink appends the reconciled functions to the config's `func_list` and the
+interface numbers move. Nothing on this side reads them, and every apply already unbinds
+and rebinds, so the host re-enumerates either way.
+
+`SetHidMode` stages the mode on disk because the init script is still the boot-time
+configurator and `system_init.cpp` restores its `kvmapp` copy on every update. The reboot
+next to it is justified in `service/hid/status.go` by the `-EBUSY` on `report_desc`, and
+that justification no longer holds; whether the reboot itself is still wanted is a
+question for that package, not this one.
 
 `applyPlan` and `restore` unbind through `unbindIfBound`, because an empty `UDC` write is
 `unregister_gadget` and returns `ENODEV` unless the gadget is bound at that moment. Every

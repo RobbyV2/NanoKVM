@@ -41,7 +41,7 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 
 	probes := append(append([]Function(nil), profile.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
-	plan = m.dropRedundantWrites(before, plan)
+	plan = Reconcile(before, m.dropRedundantWrites(before, plan))
 	if err := m.unbindIfBound(); err != nil {
 		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
 		if bindErr := m.ensureBound(udc); bindErr != nil {
@@ -173,7 +173,7 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 
 	probes := append(append([]Function(nil), failed.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
-	recovery.plan = m.dropRedundantWrites(before, recovery.plan)
+	recovery.plan = Reconcile(before, m.dropRedundantWrites(before, recovery.plan))
 	if err := m.unbindIfBound(); err != nil {
 		return fmt.Errorf("unbind: %w", err)
 	}
@@ -222,13 +222,13 @@ func (m *Manager) unbindIfBound() error {
 
 // f_hid, f_ncm, f_rndis, f_uvc and f_uac2 all take opts->refcnt when the
 // function is linked into a config and return -EBUSY from every option store
-// while they hold it, and R1.1 forbids unlinking hid.* to release it.
-// S03usbdev builds and links hid.GS0-GS2 at boot from the same values the
-// built-in profiles carry, and unlinkStale keeps a link the incoming plan also
-// carries, so the first apply after boot reissues writes the attribute already
-// holds. The stores are guarded but the shows are not, so a write whose
-// attribute reads back as the bytes the plan wants is dropped. One that differs
-// is left in the plan for the kernel to answer.
+// while they hold it. S03usbdev builds and links hid.GS0-GS2 at boot from the
+// same values the built-in profiles carry, and unlinkStale keeps a link the
+// incoming plan also carries, so the first apply after boot reissues writes the
+// attribute already holds. The stores are guarded but the shows are not, so a
+// write whose attribute reads back as the bytes the plan wants is dropped. One
+// that differs is left in the plan, and Reconcile is what buys it the unlinked
+// window the kernel needs to accept it.
 func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 	linked := make(map[string]bool, len(before.Linked))
 	for _, name := range before.Linked {

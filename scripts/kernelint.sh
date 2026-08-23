@@ -240,7 +240,7 @@ run_tier2() {
         write_tier2_payload "$package"
         vm_run tier2
     done
-    assert_ran "$log" 7
+    assert_ran "$log" 9
 }
 
 case "${1:-all}" in

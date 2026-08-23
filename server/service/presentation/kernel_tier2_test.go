@@ -5,6 +5,8 @@ package presentation
 import (
 	"bytes"
 	"context"
+	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,6 +16,8 @@ import (
 	"time"
 
 	"NanoKVM-Server/service/kernelint"
+
+	"golang.org/x/sys/unix"
 )
 
 // dummy_hcd has no OTG role switch and no dwc2 to rebind, so that write is
@@ -279,5 +283,217 @@ func TestKernelTier2CapabilityProbeSparesTheBoundGadget(t *testing.T) {
 	}
 	if after := gadgetSnapshot(t); after != before {
 		t.Fatalf("the probe changed the bound gadget:\n before %s\n after  %s", before, after)
+	}
+}
+
+func hidMinors(t *testing.T) map[string]string {
+	t.Helper()
+
+	minors := make(map[string]string, 3)
+	for _, name := range []string{"hid.GS0", "hid.GS1", "hid.GS2"} {
+		data, err := os.ReadFile(filepath.Join(GadgetRoot, "functions", name, "dev"))
+		if err != nil {
+			t.Fatalf("read %s minor: %v", name, err)
+		}
+		minors[name] = strings.TrimSpace(string(data))
+	}
+	return minors
+}
+
+func configLinks(t *testing.T) map[string]bool {
+	t.Helper()
+
+	entries, err := os.ReadDir(filepath.Join(GadgetRoot, configPrefix))
+	if err != nil {
+		t.Fatalf("read %s: %v", configPrefix, err)
+	}
+	links := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		info, err := os.Lstat(filepath.Join(GadgetRoot, configPrefix, entry.Name()))
+		if err == nil && info.Mode()&os.ModeSymlink != 0 {
+			links[entry.Name()] = true
+		}
+	}
+	return links
+}
+
+// S03usbdev's gadget: three hid functions linked into c.1, then the UDC bound.
+// configfs refuses a config change on a bound gadget and f_hid refuses an
+// attribute store on a linked function, so the order is unbind, unlink, write,
+// link, bind. One VM boot runs every test in this package against one configfs,
+// so the hid links are taken back down rather than assumed to be down; what
+// kernelint.BootstrapGadget links beside them is left alone, since a config
+// change on a bound gadget is EINVAL and the next test to call it would find
+// its own link gone.
+func bootstrapHIDGadget(t *testing.T) {
+	t.Helper()
+	kernelint.RequireTier2(t)
+
+	for _, dir := range []string{"", "strings/0x409", "configs/c.1", "configs/c.1/strings/0x409"} {
+		if err := os.MkdirAll(filepath.Join(GadgetRoot, dir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	udcAttrPath := filepath.Join(GadgetRoot, udcAttr)
+	if bound, err := os.ReadFile(udcAttrPath); err == nil && strings.TrimSpace(string(bound)) != "" {
+		if err := os.WriteFile(udcAttrPath, []byte(emptyUDCName), 0o644); err != nil {
+			t.Fatalf("unbind: %v", err)
+		}
+	}
+	for name := range configLinks(t) {
+		if !strings.HasPrefix(name, string(FunctionHID)+".") {
+			continue
+		}
+		if err := os.Remove(filepath.Join(GadgetRoot, configPrefix, name)); err != nil {
+			t.Fatalf("unlink %s: %v", name, err)
+		}
+	}
+	for path, value := range map[string]string{
+		"idVendor":                                "0x3346",
+		"idProduct":                               "0x1009",
+		"strings/0x409/manufacturer":              "sipeed",
+		"strings/0x409/product":                   "NanoKVM",
+		"strings/0x409/serialnumber":              "0123456789ABCDEF",
+		"configs/c.1/strings/0x409/configuration": "NanoKVM",
+	} {
+		if err := os.WriteFile(filepath.Join(GadgetRoot, path), []byte(value+"\n"), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+	for _, name := range []string{"hid.GS0", "hid.GS1", "hid.GS2"} {
+		dir := filepath.Join(GadgetRoot, "functions", name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "report_desc"),
+			[]byte{0x05, 0x01, 0x09, 0x06, 0xa1, 0x01, 0xc0}, 0o644); err != nil {
+			t.Fatalf("write %s report_desc: %v", name, err)
+		}
+		if err := os.Symlink(dir, filepath.Join(GadgetRoot, "configs/c.1", name)); err != nil && !os.IsExist(err) {
+			t.Fatalf("link %s: %v", name, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(GadgetRoot, "UDC"), []byte(kernelint.DummyUDC+"\n"), 0o644); err != nil {
+		t.Fatalf("bind UDC: %v", err)
+	}
+}
+
+// f_hid takes its /dev/hidgN minor from an ida in hidg_alloc_inst, which runs at
+// mkdir, and returns it in hidg_free_inst, which runs at rmdir. The refcnt that
+// makes an attribute write -EBUSY is the one hidg_alloc and hidg_free move on
+// link and unlink. So an attribute write needs the symlink gone, and dropping
+// the symlink is not what renumbers the minors: only rmdir is.
+func TestKernelTier2UnlinkKeepsHIDMinors(t *testing.T) {
+	previousDir := presentationDir
+	presentationDir = filepath.Join(t.TempDir(), "presentation")
+	t.Cleanup(func() { presentationDir = previousDir })
+
+	bootstrapHIDGadget(t)
+	before := hidMinors(t)
+
+	udc := filepath.Join(GadgetRoot, "UDC")
+	link := filepath.Join(GadgetRoot, "configs/c.1/hid.GS0")
+	subclass := filepath.Join(GadgetRoot, "functions/hid.GS0/subclass")
+
+	if err := os.WriteFile(udc, []byte("\n"), 0o644); err != nil {
+		t.Fatalf("unbind UDC: %v", err)
+	}
+
+	if err := os.WriteFile(subclass, []byte("1\n"), 0o644); err == nil {
+		t.Fatal("writing subclass while linked should be EBUSY")
+	} else if !errors.Is(err, unix.EBUSY) {
+		t.Fatalf("writing subclass while linked: got %v, want EBUSY", err)
+	}
+
+	if err := os.Remove(link); err != nil {
+		t.Fatalf("unlink hid.GS0: %v", err)
+	}
+	if err := os.WriteFile(subclass, []byte("1\n"), 0o644); err != nil {
+		t.Fatalf("write subclass while unlinked: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(GadgetRoot, "functions/hid.GS0"), link); err != nil {
+		t.Fatalf("relink hid.GS0: %v", err)
+	}
+	if err := os.WriteFile(udc, []byte(kernelint.DummyUDC+"\n"), 0o644); err != nil {
+		t.Fatalf("rebind UDC: %v", err)
+	}
+
+	if after := hidMinors(t); !maps.Equal(before, after) {
+		t.Fatalf("unlink and relink renumbered the minors:\n before %v\n after  %v", before, after)
+	}
+}
+
+// The failure the device reports, reproduced against a real kernel: a profile
+// that changes the identity the host keys its driver binding off and a HID
+// attribute at the same time, applied over the gadget S03usbdev built and
+// bound. Every one of those stores is -EBUSY while the function holds
+// opts->refcnt, the rollback and the hid-only fallback are refused for the same
+// reason, and what the device was left with was three HID links in c.1 and six
+// function directories the host could not see.
+func TestKernelTier2ApplyChangesAttributesOnALinkedGadget(t *testing.T) {
+	manager := kernelManager(t)
+	bootstrapHIDGadget(t)
+
+	minors := hidMinors(t)
+	linked := configLinks(t)
+	for _, instance := range hidInstances {
+		if name := string(FunctionHID) + "." + instance; !linked[name] {
+			t.Fatalf("configs/c.1 holds %v, want the %s link S03usbdev leaves", linked, name)
+		}
+	}
+
+	profile := kernelProfile(standardProfile())
+	profile.Name, profile.BuiltIn = "foreign", false
+	profile.Device.VendorID, profile.Device.ProductID = "0x046d", "0xc52b"
+	profile.Device.Manufacturer, profile.Device.Product = "Logitech, Inc.", "Unifying Receiver"
+	profile.Device.Serial = ptr("KVM0000000000001")
+	for i := range profile.Functions {
+		hid := *profile.Functions[i].HID
+		hid.SubClass = 1
+		profile.Functions[i].HID = &hid
+	}
+	profile.Normalize()
+
+	plan, err := Compile(profile, manager.caps)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+		t.Fatalf("apply a changed identity over the boot linkage: %v", err)
+	}
+
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+
+	// Eliding a redundant write is what makes the first apply after boot
+	// possible; it must not be what makes this one pass. Every value here
+	// differs from the one bootstrapHIDGadget wrote.
+	for path, want := range map[string]string{
+		"idVendor":                   "0x046d",
+		"idProduct":                  "0xc52b",
+		"strings/0x409/manufacturer": "Logitech, Inc.",
+		"strings/0x409/product":      "Unifying Receiver",
+		"strings/0x409/serialnumber": "KVM0000000000001",
+		"functions/hid.GS0/subclass": "1",
+	} {
+		data, err := os.ReadFile(filepath.Join(GadgetRoot, path))
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if got := strings.TrimSpace(string(data)); got != want {
+			t.Fatalf("%s holds %q, want %q", path, got, want)
+		}
+	}
+
+	bound, err := os.ReadFile(filepath.Join(GadgetRoot, udcAttr))
+	if err != nil || strings.TrimSpace(string(bound)) != kernelint.DummyUDC {
+		t.Fatalf("UDC holds %q err = %v, want %q", strings.TrimSpace(string(bound)), err, kernelint.DummyUDC)
+	}
+	for name := range linked {
+		if !configLinks(t)[name] {
+			t.Fatalf("%s was linked before the apply and is not linked after", name)
+		}
+	}
+	if after := hidMinors(t); !maps.Equal(minors, after) {
+		t.Fatalf("the apply renumbered the minors:\n before %v\n after  %v", minors, after)
 	}
 }
