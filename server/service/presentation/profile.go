@@ -19,6 +19,7 @@ const (
 
 	ProfileStandard = "standard"
 	ProfileHIDOnly  = "hid-only"
+	ProfileHybrid   = "hybrid"
 
 	// D6: the normal-mode marker was the gadget core's get_default_bcdDevice(),
 	// bin2bcd(VERSION)<<8|bin2bcd(PATCHLEVEL), so a vendor kernel bump moved it
@@ -37,6 +38,7 @@ const (
 	FunctionNCM         FunctionKind = "ncm"
 	FunctionRNDIS       FunctionKind = "rndis"
 	FunctionMassStorage FunctionKind = "mass_storage"
+	FunctionFFS         FunctionKind = "ffs"
 )
 
 // The network protocols the gadget layer can actually build, in the precedence
@@ -158,6 +160,27 @@ type Function struct {
 	HID      *HIDFunction     `json:"hid,omitempty"`
 	Net      *NetFunction     `json:"net,omitempty"`
 	Storage  *StorageFunction `json:"storage,omitempty"`
+	FFS      *FunctionFS      `json:"functionfs,omitempty"`
+}
+
+type EndpointTransfer string
+
+const (
+	EndpointBulk      EndpointTransfer = "bulk"
+	EndpointInterrupt EndpointTransfer = "interrupt"
+)
+
+type FunctionFS struct {
+	Interfaces uint8                `json:"interfaces"`
+	Endpoints  []FunctionFSEndpoint `json:"endpoints"`
+}
+
+type FunctionFSEndpoint struct {
+	SourceAddress uint8            `json:"source_address"`
+	Address       uint8            `json:"address"`
+	Transfer      EndpointTransfer `json:"transfer"`
+	MaxPacket     uint16           `json:"max_packet"`
+	Interval      uint8            `json:"interval,omitempty"`
 }
 
 type HIDFunction struct {
@@ -230,6 +253,7 @@ func (p *Profile) Validate() error {
 
 	seen := make(map[string]bool, len(p.Functions))
 	var hid []Function
+	functionFS := false
 	for _, f := range p.Functions {
 		if err := f.validate(); err != nil {
 			return fmt.Errorf("function %s.%s: %w", f.Kind, f.Instance, err)
@@ -242,8 +266,9 @@ func (p *Profile) Validate() error {
 		if f.Kind == FunctionHID {
 			hid = append(hid, f)
 		}
+		functionFS = functionFS || f.Kind == FunctionFFS
 	}
-	if err := validateHIDOrder(hid); err != nil {
+	if err := validateHIDOrder(hid, functionFS); err != nil {
 		return err
 	}
 	if p.OSDesc != nil {
@@ -259,12 +284,16 @@ func (p *Profile) Validate() error {
 	return nil
 }
 
-func validateHIDOrder(hid []Function) error {
+func validateHIDOrder(hid []Function, functionFS bool) error {
 	if len(hid) == 0 {
 		return nil
 	}
-	if len(hid) != len(hidInstances) {
-		return fmt.Errorf("%d hid functions, want %d", len(hid), len(hidInstances))
+	want := len(hidInstances)
+	if functionFS {
+		want = 2
+	}
+	if len(hid) != want {
+		return fmt.Errorf("%d hid functions, want %d", len(hid), want)
 	}
 	for i, f := range hid {
 		if f.Instance != hidInstances[i] {
@@ -338,23 +367,77 @@ func (f *Function) validate() error {
 		if f.Instance != "GS0" && f.Instance != "GS1" && f.Instance != "GS2" {
 			return fmt.Errorf("unsupported hid instance %q", f.Instance)
 		}
-		if f.HID == nil || f.Net != nil || f.Storage != nil {
+		if f.HID == nil || f.Net != nil || f.Storage != nil || f.FFS != nil {
 			return fmt.Errorf("expects exactly a hid payload")
 		}
 		return f.HID.validate()
 	case FunctionNCM, FunctionRNDIS:
-		if f.Net == nil || f.HID != nil || f.Storage != nil {
+		if f.Net == nil || f.HID != nil || f.Storage != nil || f.FFS != nil {
 			return fmt.Errorf("expects exactly a net payload")
 		}
 		return f.Net.validate()
 	case FunctionMassStorage:
-		if f.Storage == nil || f.HID != nil || f.Net != nil {
+		if f.Storage == nil || f.HID != nil || f.Net != nil || f.FFS != nil {
 			return fmt.Errorf("expects exactly a storage payload")
 		}
 		return f.Storage.validate()
+	case FunctionFFS:
+		if f.Instance != "hybrid" {
+			return fmt.Errorf("unsupported functionfs instance %q", f.Instance)
+		}
+		if f.FFS == nil || f.HID != nil || f.Net != nil || f.Storage != nil {
+			return fmt.Errorf("expects exactly a functionfs payload")
+		}
+		return f.FFS.Validate()
 	default:
 		return fmt.Errorf("unknown kind")
 	}
+}
+
+func (f *FunctionFS) Validate() error {
+	if f.Interfaces == 0 || f.Interfaces > 16 {
+		return fmt.Errorf("interfaces %d outside 1..16", f.Interfaces)
+	}
+	if len(f.Endpoints) == 0 || len(f.Endpoints) > 7 {
+		return fmt.Errorf("endpoints %d outside 1..7", len(f.Endpoints))
+	}
+	seenSource := make(map[uint8]bool, len(f.Endpoints))
+	seenMapped := make(map[uint8]bool, len(f.Endpoints))
+	for i, endpoint := range f.Endpoints {
+		if err := endpoint.validate(); err != nil {
+			return fmt.Errorf("endpoint %d: %w", i, err)
+		}
+		if seenSource[endpoint.SourceAddress] || seenMapped[endpoint.Address] {
+			return fmt.Errorf("endpoint %d has a duplicate address", i)
+		}
+		seenSource[endpoint.SourceAddress] = true
+		seenMapped[endpoint.Address] = true
+	}
+	return nil
+}
+
+func (e FunctionFSEndpoint) validate() error {
+	for name, address := range map[string]uint8{"source": e.SourceAddress, "mapped": e.Address} {
+		if address&0x0f == 0 || address&0x70 != 0 {
+			return fmt.Errorf("%s address 0x%02x is invalid", name, address)
+		}
+	}
+	if e.SourceAddress&0x80 != e.Address&0x80 {
+		return fmt.Errorf("source and mapped directions differ")
+	}
+	switch e.Transfer {
+	case EndpointBulk:
+		if e.MaxPacket == 0 || e.MaxPacket > 512 || e.Interval != 0 {
+			return fmt.Errorf("bulk packet %d interval %d", e.MaxPacket, e.Interval)
+		}
+	case EndpointInterrupt:
+		if e.MaxPacket == 0 || e.MaxPacket > 1024 || e.Interval == 0 || e.Interval > 16 {
+			return fmt.Errorf("interrupt packet %d interval %d", e.MaxPacket, e.Interval)
+		}
+	default:
+		return fmt.Errorf("transfer %q", e.Transfer)
+	}
+	return nil
 }
 
 func (h *HIDFunction) validate() error {
@@ -459,6 +542,10 @@ func (d *DescriptorSet) validate() error {
 		}
 	}
 	return nil
+}
+
+func (d *DescriptorSet) Validate() error {
+	return d.validate()
 }
 
 func validateDeviceDescriptor(data []byte, configurations int, strings map[string]string) error {

@@ -35,8 +35,9 @@ type Op struct {
 }
 
 type Plan struct {
-	Ops     []Op   `json:"ops"`
-	Profile string `json:"profile"`
+	Ops       []Op        `json:"ops"`
+	Profile   string      `json:"profile"`
+	Endpoints EndpointUse `json:"endpoints"`
 }
 
 const (
@@ -53,7 +54,8 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	if err := p.Validate(); err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
-	if _, err := AccountEndpoints(p.Functions, caps); err != nil {
+	allocation, err := AccountEndpoints(p.Functions, caps)
+	if err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
 
@@ -87,7 +89,7 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 			return Plan{}, fmt.Errorf("compile %s: %s %s: %w", p.Name, op.Kind, op.Path, err)
 		}
 	}
-	return Plan{Ops: c.ops, Profile: p.Name}, nil
+	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: allocation}, nil
 }
 
 func (k FunctionKind) isNet() bool {
@@ -186,6 +188,9 @@ func (c *compiler) function(f Function) {
 		c.net(dir, name, f.Kind, *f.Net)
 	case FunctionMassStorage:
 		c.storage(dir, name, *f.Storage)
+	case FunctionFFS:
+		c.mkdir(dir)
+		c.link(configPrefix+"/"+name, dir)
 	}
 }
 
