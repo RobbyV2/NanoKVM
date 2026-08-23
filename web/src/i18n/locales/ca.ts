@@ -439,6 +439,7 @@ const ca = {
         profile: 'Perfil USB',
         builtIn: 'integrat',
         descriptors: 'descriptors',
+        imported: 'importat',
         clone: 'Clona',
         cloneTitle: 'Clona aquest perfil',
         cloneToEdit:

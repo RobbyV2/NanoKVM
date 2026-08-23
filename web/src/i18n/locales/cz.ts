@@ -440,6 +440,7 @@ const cz = {
         profile: 'Profil USB',
         builtIn: 'vestavěný',
         descriptors: 'deskriptory',
+        imported: 'importováno',
         clone: 'Klonovat',
         cloneTitle: 'Klonovat tento profil',
         cloneToEdit:

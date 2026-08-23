@@ -435,6 +435,7 @@ const ko = {
         profile: 'USB 프로필',
         builtIn: '내장',
         descriptors: '디스크립터',
+        imported: '가져옴',
         clone: '복제',
         cloneTitle: '이 프로필 복제',
         cloneToEdit:

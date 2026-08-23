@@ -440,6 +440,7 @@ const en = {
         profile: 'USB profile',
         builtIn: 'built-in',
         descriptors: 'descriptors',
+        imported: 'imported',
         clone: 'Clone',
         cloneTitle: 'Clone this profile',
         cloneToEdit: 'Built-in profiles stay read-only. Clone this profile to edit its identity.',

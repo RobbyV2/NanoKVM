@@ -15,10 +15,10 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/presentation.ts';
 import type {
-  Preset,
   PresentationPreview,
   PresentationProfile,
   PresentationStatus,
+  Preset,
   ProfileSummary
 } from '@/api/presentation.ts';
 import { client } from '@/lib/websocket.ts';
@@ -39,6 +39,7 @@ import {
   identityFields,
   isProfileName,
   matchPreset,
+  provenanceTags,
   recoveryKey,
   type IdentityFields
 } from './editor.ts';
@@ -397,7 +398,11 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
               value={selected || undefined}
               options={profiles.map((item) => ({
                 value: item.name,
-                label: `${item.name} · ${item.manufacturer} ${item.product}${item.built_in ? ` (${t('settings.presentation.builtIn')})` : ''}${item.provenance.descriptors ? ` · ${t('settings.presentation.descriptors')}` : ''}`
+                label: `${item.name} · ${item.manufacturer} ${item.product}${item.built_in ? ` (${t('settings.presentation.builtIn')})` : ''}${provenanceTags(
+                  item.provenance
+                )
+                  .map((key) => ` · ${t(key)}`)
+                  .join('')}`
               }))}
               onChange={(name) => loadProfile(name).catch((err) => setError(err.message))}
             />

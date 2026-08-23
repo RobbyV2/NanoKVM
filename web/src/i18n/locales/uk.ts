@@ -441,6 +441,7 @@ const uk = {
         profile: 'Профіль USB',
         builtIn: 'вбудований',
         descriptors: 'дескриптори',
+        imported: 'імпортовано',
         clone: 'Клонувати',
         cloneTitle: 'Клонувати цей профіль',
         cloneToEdit:

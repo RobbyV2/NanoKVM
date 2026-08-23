@@ -440,6 +440,7 @@ const pt_br = {
         profile: 'Perfil USB',
         builtIn: 'integrado',
         descriptors: 'descritores',
+        imported: 'importado',
         clone: 'Clonar',
         cloneTitle: 'Clonar este perfil',
         cloneToEdit:

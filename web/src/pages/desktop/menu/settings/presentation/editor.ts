@@ -1,4 +1,9 @@
-import type { FIFOAssignment, Preset, PresentationProfile } from '@/api/presentation.ts';
+import type {
+  FIFOAssignment,
+  PresentationProfile,
+  Preset,
+  ProfileSummary
+} from '@/api/presentation.ts';
 
 export type IdentityFields = {
   vendorId: string;
@@ -96,6 +101,13 @@ export function formatFIFOs(fifos?: FIFOAssignment) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, slots]) => `${name} ${slots.join(',')}`)
     .join('; ');
+}
+
+export function provenanceTags(provenance: ProfileSummary['provenance']) {
+  const tags: string[] = [];
+  if (provenance.descriptors) tags.push('settings.presentation.descriptors');
+  if (provenance.imported) tags.push('settings.presentation.imported');
+  return tags;
 }
 
 export function recoveryKey(action: string) {

@@ -440,6 +440,7 @@ const da = {
         profile: 'USB-profil',
         builtIn: 'indbygget',
         descriptors: 'deskriptorer',
+        imported: 'importeret',
         clone: 'Klon',
         cloneTitle: 'Klon denne profil',
         cloneToEdit:

@@ -427,6 +427,7 @@ const zh = {
         profile: 'USB 配置文件',
         builtIn: '内置',
         descriptors: '描述符',
+        imported: '已导入',
         clone: '克隆',
         cloneTitle: '克隆此配置文件',
         cloneToEdit: '内置配置文件保持只读。克隆此配置文件后即可编辑其身份。',

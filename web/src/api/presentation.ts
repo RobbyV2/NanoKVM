@@ -103,7 +103,7 @@ export type ProfileSummary = {
   manufacturer: string;
   product: string;
   functions: string[];
-  provenance: { origin: string; source?: string; descriptors: boolean };
+  provenance: { origin: string; source?: string; descriptors: boolean; imported: boolean };
 };
 
 export type PresentationPreview = {

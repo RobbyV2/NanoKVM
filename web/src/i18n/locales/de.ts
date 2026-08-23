@@ -446,6 +446,7 @@ const de = {
         profile: 'USB-Profil',
         builtIn: 'integriert',
         descriptors: 'Deskriptoren',
+        imported: 'importiert',
         clone: 'Klonen',
         cloneTitle: 'Dieses Profil klonen',
         cloneToEdit:

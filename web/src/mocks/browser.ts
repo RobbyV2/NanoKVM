@@ -216,7 +216,11 @@ function profileSummary(profile: typeof standardProfile) {
     manufacturer: profile.device.manufacturer,
     product: profile.device.product,
     functions: profile.functions.map((item) => `${item.kind}.${item.instance}`),
-    provenance: { origin: profile.built_in ? 'built-in' : 'user', descriptors: false }
+    provenance: {
+      origin: profile.built_in ? 'built-in' : 'user',
+      descriptors: false,
+      imported: false
+    }
   };
 }
 

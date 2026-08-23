@@ -439,6 +439,7 @@ const tr = {
         profile: 'USB profili',
         builtIn: 'yerleşik',
         descriptors: 'tanımlayıcılar',
+        imported: 'içe aktarıldı',
         clone: 'Klonla',
         cloneTitle: 'Bu profili klonla',
         cloneToEdit:

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { Preset, PresentationProfile } from '../../../../../api/presentation.ts';
+import type { PresentationProfile, Preset } from '../../../../../api/presentation.ts';
 import {
   applyPreset,
   descriptorCount,
@@ -11,6 +11,7 @@ import {
   identityFields,
   isProfileName,
   matchPreset,
+  provenanceTags,
   recoveryKey
 } from './editor.ts';
 
@@ -122,4 +123,15 @@ test('every recovery action names its own sentence', () => {
   const keys = ['power-cycle', 'host-reboot', 'hdmi-reset', 'usb-reconnect'].map(recoveryKey);
   assert.equal(new Set(keys).size, 4);
   assert.equal(recoveryKey('power-cycle'), 'settings.presentation.recoveryPowerCycle');
+});
+
+test('provenance tags surface an imported profile', () => {
+  assert.deepEqual(provenanceTags({ origin: 'user', descriptors: false, imported: false }), []);
+  assert.deepEqual(provenanceTags({ origin: 'preset', descriptors: false, imported: true }), [
+    'settings.presentation.imported'
+  ]);
+  assert.deepEqual(provenanceTags({ origin: 'migrated', descriptors: true, imported: true }), [
+    'settings.presentation.descriptors',
+    'settings.presentation.imported'
+  ]);
 });

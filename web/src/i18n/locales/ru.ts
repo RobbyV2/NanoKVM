@@ -440,6 +440,7 @@ const ru = {
         profile: 'Профиль USB',
         builtIn: 'встроенный',
         descriptors: 'дескрипторы',
+        imported: 'импортирован',
         clone: 'Клонировать',
         cloneTitle: 'Клонировать этот профиль',
         cloneToEdit:

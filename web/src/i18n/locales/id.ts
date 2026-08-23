@@ -441,6 +441,7 @@ const id = {
         profile: 'Profil USB',
         builtIn: 'bawaan',
         descriptors: 'deskriptor',
+        imported: 'diimpor',
         clone: 'Klon',
         cloneTitle: 'Klon profil ini',
         cloneToEdit:

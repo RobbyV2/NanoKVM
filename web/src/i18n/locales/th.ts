@@ -431,6 +431,7 @@ const th = {
         profile: 'โปรไฟล์ USB',
         builtIn: 'มาในตัว',
         descriptors: 'ดีสคริปเตอร์',
+        imported: 'นำเข้าแล้ว',
         clone: 'ทำสำเนา',
         cloneTitle: 'ทำสำเนาโปรไฟล์นี้',
         cloneToEdit:

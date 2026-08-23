@@ -442,6 +442,7 @@ const hu = {
         profile: 'USB-profil',
         builtIn: 'beépített',
         descriptors: 'leírók',
+        imported: 'importált',
         clone: 'Klónozás',
         cloneTitle: 'A profil klónozása',
         cloneToEdit:

@@ -436,6 +436,7 @@ const vi = {
         profile: 'Hồ sơ USB',
         builtIn: 'dựng sẵn',
         descriptors: 'bộ mô tả',
+        imported: 'đã nhập',
         clone: 'Nhân bản',
         cloneTitle: 'Nhân bản hồ sơ này',
         cloneToEdit:

@@ -440,6 +440,7 @@ const ja = {
         profile: 'USB プロファイル',
         builtIn: '組み込み',
         descriptors: 'ディスクリプター',
+        imported: 'インポート済み',
         clone: '複製',
         cloneTitle: 'このプロファイルを複製',
         cloneToEdit:

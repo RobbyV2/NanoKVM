@@ -438,6 +438,7 @@ const se = {
         profile: 'USB-profil',
         builtIn: 'inbyggd',
         descriptors: 'deskriptorer',
+        imported: 'importerad',
         clone: 'Klona',
         cloneTitle: 'Klona den här profilen',
         cloneToEdit:

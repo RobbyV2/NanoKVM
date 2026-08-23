@@ -424,6 +424,7 @@ const zh_tw = {
         profile: 'USB 設定檔',
         builtIn: '內建',
         descriptors: '描述元',
+        imported: '已匯入',
         clone: '複製',
         cloneTitle: '複製此設定檔',
         cloneToEdit: '內建設定檔維持唯讀。複製此設定檔後即可編輯其身分。',
