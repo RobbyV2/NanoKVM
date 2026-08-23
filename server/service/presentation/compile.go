@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 type OpKind int
@@ -16,9 +17,10 @@ const (
 	OpBind
 	OpUnbind
 	OpOTGRole
+	OpRmdir
 )
 
-var opKindNames = [...]string{"mkdir", "write", "symlink", "unlink", "bind", "unbind", "otg"}
+var opKindNames = [...]string{"mkdir", "write", "symlink", "unlink", "bind", "unbind", "otg", "rmdir"}
 
 func (k OpKind) String() string {
 	if k < 0 || int(k) >= len(opKindNames) {
@@ -35,9 +37,10 @@ type Op struct {
 }
 
 type Plan struct {
-	Ops       []Op        `json:"ops"`
-	Profile   string      `json:"profile"`
-	Endpoints EndpointUse `json:"endpoints"`
+	Ops       []Op           `json:"ops"`
+	Profile   string         `json:"profile"`
+	Endpoints EndpointUse    `json:"endpoints"`
+	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
 }
 
 const (
@@ -54,7 +57,11 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 	if err := p.Validate(); err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
-	allocation, err := AccountEndpoints(p.Functions, caps)
+	endpoints, err := AccountEndpoints(p.Functions, caps)
+	if err != nil {
+		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
+	}
+	fifos, err := SeatFIFOs(p.Functions, caps)
 	if err != nil {
 		return Plan{}, fmt.Errorf("compile %s: %w", p.Name, err)
 	}
@@ -85,11 +92,20 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 		if op.Kind == OpOTGRole {
 			continue
 		}
-		if err := validateRel(op.Path); err != nil {
+		var err error
+		switch op.Kind {
+		case OpUnlink:
+			err = validateRemove(op.Path)
+		case OpRmdir:
+			err = validateRmdir(op.Path)
+		default:
+			err = validateRel(op.Path)
+		}
+		if err != nil {
 			return Plan{}, fmt.Errorf("compile %s: %s %s: %w", p.Name, op.Kind, op.Path, err)
 		}
 	}
-	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: allocation}, nil
+	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos}, nil
 }
 
 func (k FunctionKind) isNet() bool {
@@ -114,6 +130,14 @@ func (c *compiler) write(path, value string) {
 
 func (c *compiler) link(path, target string) {
 	c.ops = append(c.ops, Op{Kind: OpSymlink, Path: path, Target: target})
+}
+
+func (c *compiler) unlink(path string) {
+	c.ops = append(c.ops, Op{Kind: OpUnlink, Path: path})
+}
+
+func (c *compiler) rmdir(path string) {
+	c.ops = append(c.ops, Op{Kind: OpRmdir, Path: path})
 }
 
 func (c *compiler) device(d Device) {
@@ -191,6 +215,10 @@ func (c *compiler) function(f Function) {
 	case FunctionFFS:
 		c.mkdir(dir)
 		c.link(configPrefix+"/"+name, dir)
+	case FunctionUVC:
+		c.uvc(dir, name, *f.Video)
+	case FunctionUAC2:
+		c.uac2(dir, name, *f.Audio)
 	}
 }
 
@@ -260,6 +288,96 @@ func (c *compiler) storage(dir, name string, s StorageFunction) {
 		c.write(lun+"/inquiry_string", s.InquiryString)
 	}
 	c.write(lun+"/file", s.File)
+}
+
+func (c *compiler) uvc(dir, name string, video VideoFunction) {
+	for _, speed := range [...]string{"fs", "hs", "ss"} {
+		c.unlink(dir + "/streaming/class/" + speed + "/h")
+	}
+	c.unlink(dir + "/streaming/header/h/m")
+	for _, size := range [...]string{"1280x720", "640x480", "320x240", "160x120"} {
+		c.rmdir(dir + "/streaming/mjpeg/m/" + size)
+	}
+	c.rmdir(dir + "/streaming/mjpeg/m")
+	c.rmdir(dir + "/streaming/header/h")
+	for _, speed := range [...]string{"fs", "ss"} {
+		c.unlink(dir + "/control/class/" + speed + "/h")
+	}
+	c.rmdir(dir + "/control/header/h")
+	c.mkdir(dir)
+	c.write(dir+"/streaming_interval", strconv.Itoa(int(video.StreamingInterval)))
+	c.write(dir+"/streaming_maxpacket", strconv.Itoa(int(video.StreamingMaxPacket)))
+	c.write(dir+"/streaming_maxburst", strconv.Itoa(int(video.StreamingMaxBurst)))
+
+	controlHeader := dir + "/control/header/h"
+	c.mkdir(controlHeader)
+	c.link(dir+"/control/class/fs/h", controlHeader)
+
+	format := dir + "/streaming/mjpeg/m"
+	c.mkdir(format)
+	for _, frame := range video.Formats[0].Frames {
+		frameDir := format + "/" + strconv.Itoa(int(frame.Width)) + "x" + strconv.Itoa(int(frame.Height))
+		c.mkdir(frameDir)
+		c.write(frameDir+"/wWidth", strconv.Itoa(int(frame.Width)))
+		c.write(frameDir+"/wHeight", strconv.Itoa(int(frame.Height)))
+		minRate, maxRate := videoRates(video.StreamingMaxPacket, frame.Intervals)
+		c.write(frameDir+"/dwMinBitRate", strconv.FormatUint(uint64(minRate), 10))
+		c.write(frameDir+"/dwMaxBitRate", strconv.FormatUint(uint64(maxRate), 10))
+		bufferSize := uint64(frame.Width) * uint64(frame.Height) * 2
+		c.write(frameDir+"/dwMaxVideoFrameBufferSize", strconv.FormatUint(bufferSize, 10))
+		c.write(frameDir+"/dwDefaultFrameInterval", strconv.FormatUint(uint64(frame.Intervals[0]), 10))
+		values := make([]string, len(frame.Intervals))
+		for i, interval := range frame.Intervals {
+			values[i] = strconv.FormatUint(uint64(interval), 10)
+		}
+		c.raw(frameDir+"/dwFrameInterval", []byte(strings.Join(values, "\n")+"\n"))
+	}
+
+	streamHeader := dir + "/streaming/header/h"
+	c.mkdir(streamHeader)
+	c.link(streamHeader+"/m", format)
+	for _, speed := range [...]string{"fs", "hs"} {
+		c.link(dir+"/streaming/class/"+speed+"/h", streamHeader)
+	}
+	c.link(configPrefix+"/"+name, dir)
+}
+
+func videoRates(packet uint16, intervals []uint32) (uint32, uint32) {
+	minFPS, maxFPS := uint32(^uint32(0)), uint32(0)
+	for _, interval := range intervals {
+		fps := uint32(10_000_000 / interval)
+		if fps < minFPS {
+			minFPS = fps
+		}
+		if fps > maxFPS {
+			maxFPS = fps
+		}
+	}
+	capacity := uint64(packet) * 8000 * 8
+	if minFPS == maxFPS {
+		return uint32(capacity), uint32(capacity)
+	}
+	return uint32(capacity * uint64(minFPS) / uint64(maxFPS)), uint32(capacity)
+}
+
+func (c *compiler) uac2(dir, name string, audio AudioFunction) {
+	c.mkdir(dir)
+	attributes := []struct {
+		name  string
+		value uint32
+	}{
+		{"p_chmask", audio.PChannelMask},
+		{"p_srate", audio.PSampleRate},
+		{"p_ssize", uint32(audio.PSampleSize)},
+		{"c_chmask", audio.CChannelMask},
+		{"c_srate", audio.CSampleRate},
+		{"c_ssize", uint32(audio.CSampleSize)},
+		{"req_number", uint32(audio.RequestNumber)},
+	}
+	for _, attribute := range attributes {
+		c.write(dir+"/"+attribute.name, strconv.FormatUint(uint64(attribute.value), 10))
+	}
+	c.link(configPrefix+"/"+name, dir)
 }
 
 func hexByte(v uint8) string {

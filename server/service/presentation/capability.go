@@ -15,6 +15,7 @@ import (
 
 const (
 	SourceStaticV0 = "static-v0"
+	SourceStaticV1 = "static-v1"
 	SourceProbeV1  = "probe-v1"
 )
 
@@ -33,6 +34,7 @@ type FunctionCaps struct {
 	Available  bool            `json:"available"`
 	InEPs      int             `json:"in_eps"`
 	OutEPs     int             `json:"out_eps"`
+	INPackets  []int           `json:"in_packets,omitempty"`
 	Attributes map[string]bool `json:"attributes,omitempty"`
 }
 
@@ -51,8 +53,25 @@ var staticV0 = CapabilityTable{
 	},
 }
 
+var staticV1 = CapabilityTable{
+	Source:          SourceStaticV1,
+	GeneratedAt:     time.Date(2026, time.August, 22, 0, 0, 0, 0, time.UTC),
+	MaxInEndpoints:  6,
+	MaxOutEndpoints: 5,
+	InFIFOWords:     []int{768, 512, 512, 384, 128, 128},
+	Functions: map[FunctionKind]FunctionCaps{
+		FunctionHID:         {Available: true, InEPs: 1, OutEPs: 1},
+		FunctionNCM:         {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.ncm": true}},
+		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
+		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1, INPackets: []int{512}},
+		FunctionFFS:         {Available: true},
+		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}},
+		FunctionUAC2:        {Available: true, InEPs: 1, OutEPs: 0, INPackets: []int{96}},
+	},
+}
+
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
-var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS}
+var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS, FunctionUVC, FunctionUAC2}
 
 func LoadCapabilities() CapabilityTable {
 	capabilityMu.Lock()
@@ -61,18 +80,26 @@ func LoadCapabilities() CapabilityTable {
 	path := capabilityPath()
 	table, err := loadCapabilityTable(path)
 	switch {
-	case err == nil:
+	case err == nil && table.supportsMedia():
 		return table
+	case err == nil:
+		log.Warnf("ignoring pre-media capability table %s", path)
 	case !errors.Is(err, os.ErrNotExist):
 		log.Warnf("ignoring capability table %s: %s", path, err)
 	}
 
 	available, err := probeAvailability()
 	if err != nil {
-		log.Debugf("capability probe unavailable, using %s: %s", staticV0.Source, err)
-		return staticV0.clone()
+		log.Debugf("capability probe unavailable, using %s: %s", staticV1.Source, err)
+		return staticV1.clone()
 	}
-	return staticV0.withAvailability(available)
+	return staticV1.withAvailability(available)
+}
+
+func (t CapabilityTable) supportsMedia() bool {
+	_, video := t.Functions[FunctionUVC]
+	_, audio := t.Functions[FunctionUAC2]
+	return video && audio && len(t.InFIFOWords) == t.MaxInEndpoints
 }
 
 func capabilityPath() string {
@@ -101,10 +128,10 @@ func (t CapabilityTable) Validate() error {
 		return errors.New("source is empty")
 	case t.MaxInEndpoints <= 0 || t.MaxOutEndpoints <= 0:
 		return fmt.Errorf("budget %d IN %d OUT is not positive", t.MaxInEndpoints, t.MaxOutEndpoints)
-	case len(t.Functions) == 0:
-		return errors.New("no functions")
 	case len(t.InFIFOWords) != 0 && len(t.InFIFOWords) != t.MaxInEndpoints:
 		return fmt.Errorf("%d IN FIFOs for %d endpoints", len(t.InFIFOWords), t.MaxInEndpoints)
+	case len(t.Functions) == 0:
+		return errors.New("no functions")
 	}
 	for index, words := range t.InFIFOWords {
 		if words <= 0 {
@@ -136,6 +163,7 @@ func (t CapabilityTable) clone() CapabilityTable {
 	cloned.Functions = make(map[FunctionKind]FunctionCaps, len(t.Functions))
 
 	for kind, caps := range t.Functions {
+		caps.INPackets = append([]int(nil), caps.INPackets...)
 		if caps.Attributes != nil {
 			attributes := make(map[string]bool, len(caps.Attributes))
 			maps.Copy(attributes, caps.Attributes)

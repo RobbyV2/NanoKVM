@@ -87,12 +87,55 @@ func validateRemove(rel string) error {
 	if rel == osDescDir+"/"+configName {
 		return nil
 	}
+	if validUVCLink(rel) {
+		return nil
+	}
 
 	segments := strings.Split(rel, "/")
 	if len(segments) != 3 || segments[0]+"/"+segments[1] != configPrefix {
 		return fmt.Errorf("%w: remove is limited to %s and %s symlinks, got %q", ErrInvalidPath, configPrefix, osDescDir, rel)
 	}
 	return nil
+}
+
+func validUVCLink(rel string) bool {
+	segments := strings.Split(rel, "/")
+	if len(segments) != 6 || segments[0] != functionsDir || !strings.HasPrefix(segments[1], string(FunctionUVC)+".") || !cameraPattern.MatchString(strings.TrimPrefix(segments[1], string(FunctionUVC)+".")) {
+		return false
+	}
+	if segments[2] == "control" && segments[3] == "class" && (segments[4] == "fs" || segments[4] == "ss") && segments[5] == "h" {
+		return true
+	}
+	if segments[2] == "streaming" && segments[3] == "class" && (segments[4] == "fs" || segments[4] == "hs" || segments[4] == "ss") && segments[5] == "h" {
+		return true
+	}
+	return segments[2] == "streaming" && segments[3] == "header" && segments[4] == "h" && segments[5] == "m"
+}
+
+func validateRmdir(rel string) error {
+	if err := validateRel(rel); err != nil {
+		return err
+	}
+	segments := strings.Split(rel, "/")
+	if len(segments) < 5 || len(segments) > 6 || segments[0] != functionsDir || !strings.HasPrefix(segments[1], string(FunctionUVC)+".") || !cameraPattern.MatchString(strings.TrimPrefix(segments[1], string(FunctionUVC)+".")) {
+		return fmt.Errorf("%w: rmdir is limited to uvc descriptor groups, got %q", ErrInvalidPath, rel)
+	}
+	if len(segments) == 5 {
+		valid := (segments[2] == "control" && segments[3] == "header" && segments[4] == "h") ||
+			(segments[2] == "streaming" && segments[3] == "header" && segments[4] == "h") ||
+			(segments[2] == "streaming" && segments[3] == "mjpeg" && segments[4] == "m")
+		if valid {
+			return nil
+		}
+	}
+	if len(segments) == 6 && segments[2] == "streaming" && segments[3] == "mjpeg" && segments[4] == "m" {
+		for _, size := range [...]string{"1280x720", "640x480", "320x240", "160x120"} {
+			if segments[5] == size {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("%w: rmdir is limited to uvc descriptor groups, got %q", ErrInvalidPath, rel)
 }
 
 type ConfigFSOps struct {
@@ -204,6 +247,16 @@ func (o *ConfigFSOps) Remove(rel string) error {
 
 	if err := unix.Unlinkat(o.fd(), rel, 0); err != nil && !errors.Is(err, unix.ENOENT) {
 		return fmt.Errorf("unlink %s: %w", rel, err)
+	}
+	return nil
+}
+
+func (o *ConfigFSOps) RemoveDir(rel string) error {
+	if err := validateRmdir(rel); err != nil {
+		return err
+	}
+	if err := unix.Unlinkat(o.fd(), rel, unix.AT_REMOVEDIR); err != nil && !errors.Is(err, unix.ENOENT) {
+		return fmt.Errorf("rmdir %s: %w", rel, err)
 	}
 	return nil
 }

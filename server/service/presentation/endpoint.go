@@ -3,18 +3,23 @@ package presentation
 import (
 	"errors"
 	"fmt"
+	"math/bits"
+	"slices"
 )
 
 var (
 	ErrUnknownFunction     = errors.New("unknown function")
 	ErrFunctionUnavailable = errors.New("function unavailable")
 	ErrEndpointBudget      = errors.New("endpoint budget exceeded")
+	ErrFIFOBudget          = errors.New("fifo budget exceeded")
 )
 
 type EndpointUse struct {
 	In  int `json:"in"`
 	Out int `json:"out"`
 }
+
+type FIFOAssignment map[string][]int
 
 func (u EndpointUse) add(caps FunctionCaps) EndpointUse {
 	return EndpointUse{In: u.In + caps.InEPs, Out: u.Out + caps.OutEPs}
@@ -77,5 +82,57 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 			}
 		}
 	}
+	if _, err := SeatFIFOs(functions, table); err != nil {
+		return used, err
+	}
 	return used, nil
+}
+
+func SeatFIFOs(functions []Function, table CapabilityTable) (FIFOAssignment, error) {
+	assigned := make(FIFOAssignment)
+	if len(table.InFIFOWords) == 0 {
+		return assigned, nil
+	}
+	free := slices.Clone(table.InFIFOWords)
+	slices.Sort(free)
+	for _, function := range functions {
+		name := functionName(function)
+		for _, packet := range inPackets(function, table.Functions[function.Kind]) {
+			words := (packet + 3) / 4
+			index := -1
+			for i, depth := range free {
+				if depth >= words {
+					index = i
+					break
+				}
+			}
+			if index < 0 {
+				return assigned, fmt.Errorf("%w: %s needs a fifo of at least %d words for a %d byte IN packet, free fifos are %v, rejected by capability table %s",
+					ErrFIFOBudget, name, words, packet, free, table.Source)
+			}
+			assigned[name] = append(assigned[name], free[index])
+			free = append(free[:index], free[index+1:]...)
+		}
+	}
+	return assigned, nil
+}
+
+func inPackets(function Function, caps FunctionCaps) []int {
+	switch function.Kind {
+	case FunctionHID:
+		if function.HID != nil {
+			return []int{int(function.HID.ReportLength)}
+		}
+	case FunctionUVC:
+		if function.Video != nil {
+			return []int{16, int(function.Video.StreamingMaxPacket)}
+		}
+	case FunctionUAC2:
+		if function.Audio != nil {
+			channels := bits.OnesCount32(function.Audio.PChannelMask)
+			packet := channels * int(function.Audio.PSampleSize) * int((function.Audio.PSampleRate+999)/1000)
+			return []int{packet}
+		}
+	}
+	return slices.Clone(caps.INPackets)
 }

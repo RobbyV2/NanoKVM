@@ -20,6 +20,7 @@ type Ops interface {
 	ReadFile(rel string) ([]byte, error)
 	Symlink(target, linkRel string) error
 	Remove(rel string) error
+	RemoveDir(rel string) error
 	ListUDC() ([]string, error)
 	BindUDC(name string) error
 	UnbindUDC() error

@@ -149,3 +149,17 @@ func TestWithAvailabilityKeepsBudget(t *testing.T) {
 		t.Fatal("staticV0 was mutated by the merge")
 	}
 }
+
+func TestMediaCapabilityNeedsFunctionsAndFIFOMap(t *testing.T) {
+	if staticV0.supportsMedia() {
+		t.Fatal("pre-media capability table was accepted")
+	}
+	if !staticV1.supportsMedia() {
+		t.Fatal("media capability table was rejected")
+	}
+	withoutAudio := staticV1.clone()
+	delete(withoutAudio.Functions, FunctionUAC2)
+	if withoutAudio.supportsMedia() {
+		t.Fatal("capability table without UAC2 was accepted")
+	}
+}

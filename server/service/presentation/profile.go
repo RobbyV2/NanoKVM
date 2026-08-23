@@ -39,6 +39,8 @@ const (
 	FunctionRNDIS       FunctionKind = "rndis"
 	FunctionMassStorage FunctionKind = "mass_storage"
 	FunctionFFS         FunctionKind = "ffs"
+	FunctionUVC         FunctionKind = "uvc"
+	FunctionUAC2        FunctionKind = "uac2"
 )
 
 // The network protocols the gadget layer can actually build, in the precedence
@@ -66,6 +68,8 @@ var (
 	profileNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
 	instancePattern    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`)
 	stringIndexPattern = regexp.MustCompile(`^(?:0x[0-9A-Fa-f]{4}:)?(?:[1-9][0-9]{0,2})$`)
+	cameraPattern      = regexp.MustCompile(`^cam([0-9])$`)
+	microphonePattern  = regexp.MustCompile(`^mic([0-9])$`)
 )
 
 var (
@@ -161,6 +165,8 @@ type Function struct {
 	Net      *NetFunction     `json:"net,omitempty"`
 	Storage  *StorageFunction `json:"storage,omitempty"`
 	FFS      *FunctionFS      `json:"functionfs,omitempty"`
+	Video    *VideoFunction   `json:"video,omitempty"`
+	Audio    *AudioFunction   `json:"audio,omitempty"`
 }
 
 type EndpointTransfer string
@@ -209,6 +215,36 @@ type StorageFunction struct {
 	File          string `json:"file"`
 }
 
+type VideoFunction struct {
+	FunctionName       string        `json:"function_name"`
+	Formats            []VideoFormat `json:"formats"`
+	StreamingMaxPacket uint16        `json:"streaming_maxpacket"`
+	StreamingMaxBurst  uint8         `json:"streaming_maxburst"`
+	StreamingInterval  uint8         `json:"streaming_interval"`
+}
+
+type VideoFormat struct {
+	Codec  string       `json:"codec"`
+	Frames []VideoFrame `json:"frames"`
+}
+
+type VideoFrame struct {
+	Width     uint16   `json:"width"`
+	Height    uint16   `json:"height"`
+	Intervals []uint32 `json:"intervals"`
+}
+
+type AudioFunction struct {
+	FunctionName  string `json:"function_name"`
+	PChannelMask  uint32 `json:"p_chmask"`
+	PSampleRate   uint32 `json:"p_srate"`
+	PSampleSize   uint8  `json:"p_ssize"`
+	CChannelMask  uint32 `json:"c_chmask"`
+	CSampleRate   uint32 `json:"c_srate"`
+	CSampleSize   uint8  `json:"c_ssize"`
+	RequestNumber uint8  `json:"req_number"`
+}
+
 type OSDesc struct {
 	VendorCode string `json:"b_vendor_code"`
 	QwSign     string `json:"qw_sign"`
@@ -254,6 +290,8 @@ func (p *Profile) Validate() error {
 	seen := make(map[string]bool, len(p.Functions))
 	var hid []Function
 	functionFS := false
+	mediaStarted := false
+	indices := map[FunctionKind]int{FunctionUVC: 0, FunctionUAC2: 0}
 	for _, f := range p.Functions {
 		if err := f.validate(); err != nil {
 			return fmt.Errorf("function %s.%s: %w", f.Kind, f.Instance, err)
@@ -264,9 +302,28 @@ func (p *Profile) Validate() error {
 		}
 		seen[key] = true
 		if f.Kind == FunctionHID {
+			if mediaStarted {
+				return fmt.Errorf("hid functions must precede media functions")
+			}
 			hid = append(hid, f)
 		}
 		functionFS = functionFS || f.Kind == FunctionFFS
+		if f.Kind == FunctionUVC || f.Kind == FunctionUAC2 {
+			mediaStarted = true
+			pattern := cameraPattern
+			if f.Kind == FunctionUAC2 {
+				pattern = microphonePattern
+			}
+			match := pattern.FindStringSubmatch(f.Instance)
+			index, _ := strconv.Atoi(match[1])
+			if index != indices[f.Kind] {
+				return fmt.Errorf("%s instances must be contiguous from zero, got %s", f.Kind, f.Instance)
+			}
+			indices[f.Kind]++
+		}
+	}
+	if functionFS && mediaStarted {
+		return fmt.Errorf("functionfs and media functions cannot coexist")
 	}
 	if err := validateHIDOrder(hid, functionFS); err != nil {
 		return err
@@ -367,28 +424,44 @@ func (f *Function) validate() error {
 		if f.Instance != "GS0" && f.Instance != "GS1" && f.Instance != "GS2" {
 			return fmt.Errorf("unsupported hid instance %q", f.Instance)
 		}
-		if f.HID == nil || f.Net != nil || f.Storage != nil || f.FFS != nil {
+		if f.HID == nil || f.Net != nil || f.Storage != nil || f.FFS != nil || f.Video != nil || f.Audio != nil {
 			return fmt.Errorf("expects exactly a hid payload")
 		}
 		return f.HID.validate()
 	case FunctionNCM, FunctionRNDIS:
-		if f.Net == nil || f.HID != nil || f.Storage != nil || f.FFS != nil {
+		if f.Net == nil || f.HID != nil || f.Storage != nil || f.FFS != nil || f.Video != nil || f.Audio != nil {
 			return fmt.Errorf("expects exactly a net payload")
 		}
 		return f.Net.validate()
 	case FunctionMassStorage:
-		if f.Storage == nil || f.HID != nil || f.Net != nil || f.FFS != nil {
+		if f.Storage == nil || f.HID != nil || f.Net != nil || f.FFS != nil || f.Video != nil || f.Audio != nil {
 			return fmt.Errorf("expects exactly a storage payload")
-		}
+	}
 		return f.Storage.validate()
 	case FunctionFFS:
 		if f.Instance != "hybrid" {
 			return fmt.Errorf("unsupported functionfs instance %q", f.Instance)
 		}
-		if f.FFS == nil || f.HID != nil || f.Net != nil || f.Storage != nil {
+		if f.FFS == nil || f.HID != nil || f.Net != nil || f.Storage != nil || f.Video != nil || f.Audio != nil {
 			return fmt.Errorf("expects exactly a functionfs payload")
 		}
 		return f.FFS.Validate()
+	case FunctionUVC:
+		if f.Video == nil || f.HID != nil || f.Net != nil || f.Storage != nil || f.FFS != nil || f.Audio != nil {
+			return fmt.Errorf("expects exactly a video payload")
+		}
+		if !cameraPattern.MatchString(f.Instance) {
+			return fmt.Errorf("unsupported uvc instance %q", f.Instance)
+		}
+		return f.Video.validate()
+	case FunctionUAC2:
+		if f.Audio == nil || f.HID != nil || f.Net != nil || f.Storage != nil || f.FFS != nil || f.Video != nil {
+			return fmt.Errorf("expects exactly an audio payload")
+		}
+		if !microphonePattern.MatchString(f.Instance) {
+			return fmt.Errorf("unsupported uac2 instance %q", f.Instance)
+		}
+		return f.Audio.validate()
 	default:
 		return fmt.Errorf("unknown kind")
 	}
@@ -416,6 +489,36 @@ func (f *FunctionFS) Validate() error {
 	return nil
 }
 
+func (v *VideoFunction) validate() error {
+	if err := usbString("function name", v.FunctionName); err != nil || v.FunctionName == "" {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("function name is empty")
+	}
+	if v.StreamingMaxPacket != 256 && v.StreamingMaxPacket != 512 && v.StreamingMaxPacket != 768 {
+		return fmt.Errorf("streaming maxpacket %d, want 256, 512, or 768", v.StreamingMaxPacket)
+	}
+	if v.StreamingMaxBurst != 0 || v.StreamingInterval != 1 {
+		return fmt.Errorf("high-speed streaming requires maxburst 0 and interval 1")
+	}
+	if len(v.Formats) != 1 || v.Formats[0].Codec != "mjpeg" || len(v.Formats[0].Frames) == 0 {
+		return fmt.Errorf("exactly one non-empty mjpeg format is required")
+	}
+	seen := make(map[[2]uint16]bool, len(v.Formats[0].Frames))
+	for _, frame := range v.Formats[0].Frames {
+		if err := frame.validate(); err != nil {
+			return err
+		}
+		key := [2]uint16{frame.Width, frame.Height}
+		if seen[key] {
+			return fmt.Errorf("duplicate frame %dx%d", frame.Width, frame.Height)
+		}
+		seen[key] = true
+	}
+	return nil
+}
+
 func (e FunctionFSEndpoint) validate() error {
 	for name, address := range map[string]uint8{"source": e.SourceAddress, "mapped": e.Address} {
 		if address&0x0f == 0 || address&0x70 != 0 {
@@ -436,6 +539,52 @@ func (e FunctionFSEndpoint) validate() error {
 		}
 	default:
 		return fmt.Errorf("transfer %q", e.Transfer)
+	}
+	return nil
+}
+
+func (f VideoFrame) validate() error {
+	allowed := map[[2]uint16]bool{{1280, 720}: true, {640, 480}: true, {320, 240}: true, {160, 120}: true}
+	if !allowed[[2]uint16{f.Width, f.Height}] {
+		return fmt.Errorf("unsupported frame %dx%d", f.Width, f.Height)
+	}
+	if len(f.Intervals) == 0 || len(f.Intervals) > 2 {
+		return fmt.Errorf("frame %dx%d needs one or two intervals", f.Width, f.Height)
+	}
+	seen := make(map[uint32]bool, len(f.Intervals))
+	for _, interval := range f.Intervals {
+		if interval != 333333 && interval != 666666 {
+			return fmt.Errorf("frame %dx%d has unsupported interval %d", f.Width, f.Height, interval)
+		}
+		if seen[interval] {
+			return fmt.Errorf("frame %dx%d repeats interval %d", f.Width, f.Height, interval)
+		}
+		seen[interval] = true
+	}
+	if len(f.Intervals) == 2 && f.Intervals[0] > f.Intervals[1] {
+		return fmt.Errorf("frame %dx%d intervals are not ascending", f.Width, f.Height)
+	}
+	return nil
+}
+
+func (a *AudioFunction) validate() error {
+	if err := usbString("function name", a.FunctionName); err != nil || a.FunctionName == "" {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("function name is empty")
+	}
+	if a.PChannelMask != 1 || a.PSampleRate != 48000 || a.PSampleSize != 2 {
+		return fmt.Errorf("microphone must expose mono 48000 Hz signed 16-bit USB IN")
+	}
+	if a.CChannelMask != 0 {
+		return fmt.Errorf("microphone cannot expose USB OUT channels")
+	}
+	if a.CSampleRate != 48000 || a.CSampleSize != 2 {
+		return fmt.Errorf("disabled USB OUT must retain 48000 Hz signed 16-bit defaults")
+	}
+	if a.RequestNumber < 2 || a.RequestNumber > 8 {
+		return fmt.Errorf("request number %d, want 2 through 8", a.RequestNumber)
 	}
 	return nil
 }

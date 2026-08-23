@@ -38,7 +38,8 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 	}
 	udc := udcs[0]
 
-	before := readSnapshot(m.ops, profile.Functions)
+	probes := append(append([]Function(nil), profile.Functions...), recovery.profile.Functions...)
+	before := readSnapshot(m.ops, probes)
 	if err := m.ops.UnbindUDC(); err != nil {
 		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
 		if bindErr := m.ensureBound(udc); bindErr != nil {
@@ -206,6 +207,8 @@ func (m *Manager) execute(op Op, udc string) error {
 		return m.ops.Symlink(op.Target, op.Path)
 	case OpUnlink:
 		return m.ops.Remove(op.Path)
+	case OpRmdir:
+		return m.ops.RemoveDir(op.Path)
 	case OpBind:
 		return m.ops.BindUDC(udc)
 	case OpOTGRole:
@@ -229,7 +232,9 @@ func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
 	}
 
 	for _, name := range before.Linked {
-		if linked[name] || !transient && strings.HasPrefix(name, string(FunctionHID)+".") {
+		media := strings.HasPrefix(name, string(FunctionUVC)+".") || strings.HasPrefix(name, string(FunctionUAC2)+".")
+		hid := strings.HasPrefix(name, string(FunctionHID)+".")
+		if (linked[name] && !media) || (!transient && hid) {
 			continue
 		}
 		if err := m.ops.Remove(configPrefix + "/" + name); err != nil {
