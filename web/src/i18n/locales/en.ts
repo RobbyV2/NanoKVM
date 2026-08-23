@@ -507,9 +507,23 @@ const en = {
           'NanoKVM has one USB device controller and the proxy needs all of it, so while a session runs the remote host sees the passed-through device instead of NanoKVM’s keyboard, mouse and virtual media. They come back on their own the moment the session stops. This web interface is unaffected, so you can always stop a session from this page.',
         hidWarningSafeDesc:
           'NanoKVM has one USB device controller and the proxy needs all of it, so while a session runs the remote host sees the passed-through device instead of NanoKVM’s keyboard, mouse and virtual media. They return when the session stops.',
-        isoWarning: 'Webcams, microphones and other isochronous devices cannot pass through',
+        isoWarning: 'Audio and video devices are refused today',
         isoWarningDesc:
-          'This hardware carries control, bulk and interrupt transfers only. Audio and video devices will not work no matter how they are bound.',
+          'Webcams, microphones and other devices that stream over isochronous endpoints are turned away before a session starts. This is a current limitation of this build.',
+        info: {
+          title: 'Info',
+          hybrid:
+            'Hybrid mode keeps the keyboard and the relative mouse available. Storage, USB networking and the absolute pointer disconnect while the imported device is active.',
+          exact:
+            'Exact mode replaces every NanoKVM USB function with the imported device. The keyboard, the mouse and virtual media come back on their own when the session stops.',
+          udc: 'NanoKVM has one USB device controller and the proxy needs all of it, which is why the functions above go away for as long as a session runs.',
+          web: 'This web interface is unaffected, so you can always stop a session from this page.',
+          network:
+            'Start passthrough over Ethernet or Wi-Fi. Starting it from NanoKVM’s USB network is refused, because that connection would disappear.',
+          iso: 'Audio and video devices are refused before a session starts, because they stream over isochronous endpoints. This is a current limitation of this build, not a property of the hardware.',
+          camera:
+            'To give the target machine a camera or a microphone, use the browser camera and microphone under Devices. They present a USB video or audio device to the target without passthrough.'
+        },
         session: 'Session',
         activeDesc: 'A device is imported and the proxy is holding the USB controller.',
         inactiveDesc:
@@ -524,7 +538,7 @@ const en = {
         pid: 'Proxy PID',
         startedAt: 'Started',
         isoDevice:
-          'This device reports an audio or video class, which needs isochronous transfers. It will not work.',
+          'This device reports an audio or video class, which streams over isochronous endpoints. NanoKVM refuses those devices today.',
         exporterLabel: 'Exporter address',
         exporterHint:
           'The host and port NanoKVM dials. Over the tunnel below that is {{exporter}}.',
@@ -537,7 +551,7 @@ const en = {
         startHid:
           'The USB keyboard, the mouse and virtual media stop working for as long as the session runs, and start again on their own when you stop it.',
         startIso:
-          'Webcams, microphones and other isochronous devices will not work on this hardware.',
+          'Audio and video devices are refused today, because they stream over isochronous endpoints.',
         startWeb:
           'This web interface keeps working, so you can stop the session from this page at any time.',
         startNetwork:
@@ -823,6 +837,14 @@ const en = {
           router: 'Router',
           none: 'None'
         }
+      },
+      vnc: {
+        title: 'VNC',
+        server: 'VNC Server',
+        description:
+          'Let any VNC client view the remote screen and use the keyboard and mouse, using your NanoKVM account to log in',
+        port: 'Port',
+        portDescription: 'Connect to this port on the NanoKVM address'
       },
       tailscale: {
         title: 'Tailscale',

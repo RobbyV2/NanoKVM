@@ -285,32 +285,23 @@ export const Passthrough = () => {
         </div>
       ) : (
         <div className="flex flex-col space-y-5">
-          {(isActive ? status?.mode : mode) === 'exact' ? (
-            <Alert
-              type="warning"
-              showIcon
-              message={t('settings.passthrough.hidWarning')}
-              description={
-                <span className="text-xs">{t('settings.passthrough.hidWarningSafeDesc')}</span>
-              }
-            />
-          ) : (
-            <Alert
-              type="info"
-              showIcon
-              message={t('settings.passthrough.hybridWarning')}
-              description={
-                <span className="text-xs">{t('settings.passthrough.hybridWarningDesc')}</span>
-              }
-            />
-          )}
-
           <Alert
             type="info"
             showIcon
-            message={t('settings.passthrough.isoWarning')}
+            message={t('settings.passthrough.info.title')}
             description={
-              <span className="text-xs">{t('settings.passthrough.isoWarningDesc')}</span>
+              <ul className="list-disc space-y-1 pl-4 text-xs">
+                <li>
+                  {(isActive ? status?.mode : mode) === 'exact'
+                    ? t('settings.passthrough.info.exact')
+                    : t('settings.passthrough.info.hybrid')}
+                </li>
+                <li>{t('settings.passthrough.info.udc')}</li>
+                <li>{t('settings.passthrough.info.web')}</li>
+                <li>{t('settings.passthrough.info.network')}</li>
+                <li>{t('settings.passthrough.info.iso')}</li>
+                <li>{t('settings.passthrough.info.camera')}</li>
+              </ul>
             }
           />
 
