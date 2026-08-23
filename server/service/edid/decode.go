@@ -605,9 +605,12 @@ func encodeDescriptor(dst []byte, descriptor Descriptor) {
 	copy(dst, descriptor.Raw[:])
 }
 
+// 0x0A then 0x20 padding is what the spec says; NUL padding is what some
+// panels ship, and a name carrying embedded NULs reaches the API and the
+// profile table.
 func descriptorText(b []byte) string {
 	text := string(b[5:18])
-	if i := strings.IndexByte(text, 0x0A); i >= 0 {
+	if i := strings.IndexAny(text, "\x0A\x00"); i >= 0 {
 		text = text[:i]
 	}
 	return strings.TrimRight(text, " ")

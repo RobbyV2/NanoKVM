@@ -551,7 +551,7 @@ func TestApplyRejectsBeforeSpawning(t *testing.T) {
 	tests := []struct {
 		name  string
 		chip  string
-		blob  func(t *testing.T) []byte
+		blob  func(t testing.TB) []byte
 		state proto.EdidState
 	}{
 		{
@@ -569,7 +569,7 @@ func TestApplyRejectsBeforeSpawning(t *testing.T) {
 		{
 			name: "oversized blob the tool would have truncated",
 			chip: "c\n",
-			blob: func(t *testing.T) []byte {
+			blob: func(t testing.TB) []byte {
 				return append(fixture(t), 0x00)
 			},
 			state: proto.EdidStateInvalidInput,
@@ -577,7 +577,7 @@ func TestApplyRejectsBeforeSpawning(t *testing.T) {
 		{
 			name: "broken checksum",
 			chip: "c\n",
-			blob: func(t *testing.T) []byte {
+			blob: func(t testing.TB) []byte {
 				blob := fixture(t)
 				blob[127]++
 				return blob

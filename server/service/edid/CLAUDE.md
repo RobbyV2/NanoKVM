@@ -149,5 +149,38 @@ the attached host. Keeping the validator strict is what keeps the classifier's
 `invalid_input` row unreachable in practice.
 
 The serializer recomputes both checksums rather than trusting the input, and preserves
-unknown descriptor tags and unknown CTA data blocks byte for byte. `E21_NanoKVM.bin`
-round-tripping to identical bytes is the single best test available here.
+unknown descriptor tags and unknown CTA data blocks byte for byte. Everything `Decode`
+accepts must re-encode to the same bytes, which is what `FuzzDecode` and the single byte
+edit sweep in `fuzz_test.go` assert.
+
+## The decoder is checked against edid-decode, not against itself
+
+`E21_NanoKVM.bin` alone reaches almost none of the decoder. It carries no audio SAD, no
+speaker allocation, no HDMI Forum VSDB, no CTA extended data block, no analog input, no
+border, no stereo bit and no EDID 1.4 descriptor, and the 25 shipped profiles are curated
+for one mode so they add little. `testdata/corpus` is fifteen real blobs from the pinned
+`linuxhw/EDID` commit chosen to reach those branches, ten that decode and five real
+monitors the strict validator refuses, one per reject kind that occurs in the wild.
+Provenance and licence are in `testdata/corpus/SOURCES`.
+
+The literals in `corpus_test.go` are not the decoder's own output written down.
+`oracle_test.go`, behind `//go:build edidoracle`, decodes every corpus blob and every
+shipped profile with `edid-decode` and compares identity, display parameters, standard
+timings, every detailed timing field, range limits, CTA flags, the VIC list, every audio
+descriptor and the speaker allocation. `scripts/edid-repro.sh decode` runs it. Two
+divergences are deliberate and are in that file: EDID states vertical active in lines per
+field where edid-decode reports frame lines, so an interlaced DTD is half our figure, and
+edid-decode drops the reserved VIC 0 that a few real blobs carry.
+
+`scripts/edid-repro.sh tool` runs the shipped riscv64 ELF under QEMU against real files.
+Every row of `stderrRows` that does not need silicon is reachable that way, including
+`Failed to acquire bus access` with a regular file standing in for `/dev/i2c-4`, and the
+tool's `check_edid` is confirmed to accept what `Decode` refuses. `EDID data mismatch
+after write/read cycle`, `Unsupported chip version`, `Clean Error`, `Failed to read
+LT6911D version data` and `EDID data verified successfully` need the chip.
+
+`scripts/edid-repro.sh device <ssh target>` closes that half. The tool reads the flash
+region back and compares it itself, so a write that prints `EDID data verified
+successfully` is a completed write, read and compare. It flashes a corpus blob, checks
+that line, and flashes the factory blob back. No monitor and no operator, and it does
+write to the chip.

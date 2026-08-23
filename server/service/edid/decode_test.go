@@ -10,7 +10,7 @@ import (
 
 const fixturePath = "testdata/E21_NanoKVM.bin"
 
-func fixture(t *testing.T) []byte {
+func fixture(t testing.TB) []byte {
 	t.Helper()
 
 	data, err := os.ReadFile(fixturePath)
