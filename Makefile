@@ -76,7 +76,7 @@ PASSTHROUGH_BUILD_CMD := rm -rf $(PASSTHROUGH_DEPS) $(PASSTHROUGH_DIR)/libusb-$(
 
 .PHONY: help check-root check-version builder-image rebuild-image check-image shell app support vision \
         web tunnels passthrough edid-profiles release-build package release all clean \
-        kernelint kernelint-tier1 kernelint-tier2 kernelint-watchdog
+        kernelint kernelint-tier1 kernelint-tier2 kernelint-watchdog kernelint-zram
 
 # Default target
 all: app support
@@ -101,6 +101,7 @@ help:
 	@echo "  kernelint-tier1 - Kernel tests needing netns and vhci_hcd"
 	@echo "  kernelint-tier2 - Kernel tests needing a UDC, in a QEMU VM"
 	@echo "  kernelint-watchdog - Settle /dev/watchdog close semantics in a VM"
+	@echo "  kernelint-zram - Run S02zram against a real /sys/block/zram0 in a VM"
 	@echo "  kernelint     - Both kernel test tiers"
 	@echo "  all           - Build both app and support (default)"
 	@echo "  release-build - Build every riscv64 release artifact in one pass"
@@ -192,6 +193,9 @@ kernelint-tier2:
 
 kernelint-watchdog:
 	@scripts/kernelint.sh watchdog
+
+kernelint-zram:
+	@scripts/kernelint.sh zram
 
 kernelint: kernelint-tier1 kernelint-tier2
 

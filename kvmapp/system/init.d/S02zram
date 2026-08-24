@@ -1,0 +1,78 @@
+#!/bin/sh
+
+DEV=/dev/zram0
+SYS=/sys/block/zram0
+ALGO=lzo-rle
+SWAPPINESS=100
+PAGE_CLUSTER=0
+
+# Half of what the kernel can see. zsmalloc never stores more than the
+# uncompressed page, so the disksize is itself the ceiling on what zram can
+# cost: at a pathological 1:1 ratio a full device is a wash, never a loss.
+# The carve-out for the video pipeline is set in the DTB, so the fraction is
+# computed rather than written down.
+disksize() {
+    awk '/^MemTotal:/ { print int($2 / 2048) "M"; exit }' /proc/meminfo
+}
+
+# 100 stops the kernel preferring to evict file pages, which here are the
+# server, kvm_system and libkvm text backed by the SD card at 1-3ms a fault,
+# in favour of anonymous pages that cost one lzo-rle round trip. page-cluster
+# 0 turns a swap-in back into a single page: readahead on a device with no
+# seek buys nothing and costs eight decompressions on the faulting path.
+tune() {
+    echo "$SWAPPINESS" > /proc/sys/vm/swappiness
+    echo "$PAGE_CLUSTER" > /proc/sys/vm/page-cluster
+}
+
+start() {
+    [ -d "$SYS" ] || return 0
+
+    if grep -q "^$DEV " /proc/swaps; then
+        tune
+        return 0
+    fi
+
+    printf "Enabling zram: "
+
+    case "$(cat "$SYS/comp_algorithm" 2>/dev/null)" in
+        *"$ALGO"*) ;;
+        *) echo "FAIL ($ALGO not in this kernel)"; return 1 ;;
+    esac
+
+    # comp_algorithm and disksize are both write-once until the device is
+    # reset, so a device left initialised by a previous run is cleared first.
+    if [ "$(cat "$SYS/disksize")" != 0 ]; then
+        echo 1 > "$SYS/reset" || { echo FAIL; return 1; }
+    fi
+
+    size=$(disksize)
+    if echo "$ALGO" > "$SYS/comp_algorithm" &&
+       echo "$size" > "$SYS/disksize" &&
+       mkswap "$DEV" >/dev/null 2>&1 &&
+       swapon "$DEV"; then
+        tune
+        echo "OK ($size $ALGO)"
+    else
+        echo FAIL
+        return 1
+    fi
+}
+
+stop() {
+    swapoff "$DEV" 2>/dev/null
+    [ -d "$SYS" ] && echo 1 > "$SYS/reset" 2>/dev/null
+    return 0
+}
+
+case "$1" in
+    start) start ;;
+    stop) stop ;;
+    restart|reload)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac

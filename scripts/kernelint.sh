@@ -14,6 +14,11 @@
 #          settle what the watchdog core does when the process holding
 #          /dev/watchdog dies. See run_watchdog.
 #
+#   zram
+#          A VM of its own to run kvmapp/system/init.d/S02zram against a real
+#          /sys/block/zram0. The script is shell, so the only thing worth
+#          testing is whether sysfs behaves the way it assumes. See run_zram.
+#
 #   tier2  service/presentation, service/functionfs, service/passthrough
 #          Needs a UDC, which means dummy_hcd. No distro ships it
 #          (CONFIG_USB_DUMMY_HCD is not set anywhere, and it is in neither
@@ -26,7 +31,7 @@
 # by every container and machine, and it carries no vhci_hcd and no gadget
 # stack at all.
 #
-# Usage: scripts/kernelint.sh [tier1|tier2|watchdog|all]
+# Usage: scripts/kernelint.sh [tier1|tier2|watchdog|zram|all]
 
 set -euo pipefail
 
@@ -36,6 +41,7 @@ BUILD="$ROOT/build/kernelint"
 GO_IMAGE="${GO_IMAGE:-golang:1.25}"
 VM_IMAGE="${VM_IMAGE:-nanokvm-kernelint-vm:4}"
 WDT_IMAGE="${WDT_IMAGE:-nanokvm-watchdog-vm:1}"
+ZRAM_IMAGE="${ZRAM_IMAGE:-nanokvm-zram-vm:1}"
 KVER="${KVER:-6.8.0-138-generic}"
 KTAG="${KTAG:-v6.8}"
 ARCH="${ARCH:-arm64}"
@@ -464,6 +470,187 @@ run_watchdog() {
     done
 }
 
+# S02zram is shell, so what a real kernel adds is whether sysfs behaves the way
+# the script assumes: comp_algorithm listing lzo-rle and going write-once,
+# disksize refusing a second write until reset, swapon taking the device, and
+# lzo-rle actually shrinking what is swapped. The rootfs carries busybox so the
+# script runs under the same ash the device has, not under dash.
+write_zram_payload() {
+    cat > "$BUILD/zram/run.sh" <<'EOF'
+#!/bin/sh
+set -u
+SCRIPT=/S02zram
+SH="busybox ash"
+status=0
+
+check() {
+    if [ "$2" = "$3" ]; then
+        echo "zram: ok   $1 = $2"
+    else
+        echo "zram: FAIL $1 = $3, want $2"
+        status=1
+    fi
+}
+
+swaps() { grep -c '^/dev/zram0 ' /proc/swaps; }
+selected() { sed 's/.*\[//;s/\].*//' /sys/block/zram0/comp_algorithm; }
+
+out=$($SH "$SCRIPT" start 2>&1); rc=$?
+check "no driver, exit" 0 "$rc"
+check "no driver, output" "" "$out"
+
+modprobe zram
+
+out=$($SH "$SCRIPT" start 2>&1); rc=$?
+echo "zram: start -> $out"
+check "start exit" 0 "$rc"
+check "swap entries" 1 "$(swaps)"
+check "algorithm" lzo-rle "$(selected)"
+check "disksize" "$(awk '/^MemTotal:/ { print int($2 / 2048) * 1048576; exit }' /proc/meminfo)" \
+    "$(cat /sys/block/zram0/disksize)"
+check "swappiness" 100 "$(cat /proc/sys/vm/swappiness)"
+check "page-cluster" 0 "$(cat /proc/sys/vm/page-cluster)"
+
+$SH "$SCRIPT" start
+check "restart exit" 0 "$?"
+check "devices after second start" 1 "$(ls -d /sys/block/zram* | wc -l)"
+check "swap entries after second start" 1 "$(swaps)"
+
+mkdir -p /mnt/fill
+fill=$(awk '/^MemTotal:/ { print int($2 * 9 / 10240); exit }' /proc/meminfo)
+mount -t tmpfs -o size="$((fill + 16))M" none /mnt/fill
+dd if=/dev/zero of=/mnt/fill/pages bs=1M count="$fill" 2>/dev/null
+orig=$(awk '{print $1}' /sys/block/zram0/mm_stat)
+compr=$(awk '{print $2}' /sys/block/zram0/mm_stat)
+echo "zram: mm_stat orig=$orig compr=$compr"
+if [ "$orig" -gt 0 ] && [ "$compr" -lt "$orig" ]; then
+    echo "zram: ok   swap took pages and lzo-rle shrank them"
+else
+    echo "zram: FAIL nothing reached the device, or it did not compress"
+    status=1
+fi
+rm -f /mnt/fill/pages
+umount /mnt/fill
+
+swapoff /dev/zram0
+$SH "$SCRIPT" start
+check "exit after a stray swapoff" 0 "$?"
+check "swap entries after a stray swapoff" 1 "$(swaps)"
+
+$SH "$SCRIPT" restart
+check "restart exit" 0 "$?"
+check "swap entries after restart" 1 "$(swaps)"
+
+$SH "$SCRIPT" stop
+check "stop exit" 0 "$?"
+check "swap entries after stop" 0 "$(swaps)"
+check "disksize after stop" 0 "$(cat /sys/block/zram0/disksize)"
+
+sed 's/^ALGO=.*/ALGO=nosuchalgo/' "$SCRIPT" > /tmp/bogus
+out=$($SH /tmp/bogus start 2>&1); rc=$?
+check "missing algorithm exit" 1 "$rc"
+case "$out" in
+    *FAIL*) echo "zram: ok   missing algorithm is loud: $out" ;;
+    *) echo "zram: FAIL missing algorithm was silent"; status=1 ;;
+esac
+check "swap entries after a refused start" 0 "$(swaps)"
+
+echo "zram: status=$status"
+exit $status
+EOF
+    chmod +x "$BUILD/zram/run.sh"
+}
+
+zram_image() {
+    docker image inspect "$ZRAM_IMAGE" >/dev/null 2>&1 && return 0
+
+    local context="$BUILD/zramimg"
+    mkdir -p "$context"
+    cat > "$context/runvm.sh" <<'EOF'
+#!/bin/bash
+set -e
+work=$(mktemp -d)
+mkdir -p "$work/x"
+cp -a /script/. "$work/x/"
+chmod +x "$work/x/run.sh"
+( cd "$work/x" && find . | cpio -o -H newc --quiet | gzip -1 ) > "$work/extra.cpio.gz"
+cat /vm/initrd.img "$work/extra.cpio.gz" > "$work/combined.img"
+exec qemu-system-aarch64 \
+  -M virt -cpu max -smp "${VMCPUS:-2}" -m "${VMMEM:-2048}" \
+  -kernel /vm/vmlinuz -initrd "$work/combined.img" \
+  -append "console=ttyAMA0 panic=1 loglevel=4" \
+  -nographic -no-reboot
+EOF
+
+    cat > "$context/Dockerfile" <<'EOF'
+FROM ubuntu:24.04 AS build
+ARG KVER
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      linux-image-${KVER} linux-modules-${KVER} linux-modules-extra-${KVER} \
+      kmod cpio busybox-static \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /rootfs/lib/modules/${KVER} \
+ && cd /lib/modules/${KVER} \
+ && cp modules.builtin modules.builtin.modinfo modules.order /rootfs/lib/modules/${KVER}/ \
+ && for d in kernel/drivers/block kernel/crypto kernel/lib; do \
+      tar cf - "$d" | (cd /rootfs/lib/modules/${KVER} && tar xf -); \
+    done \
+ && depmod -b /rootfs ${KVER}
+
+RUN set -e; cd /rootfs \
+ && mkdir -p bin sbin usr/bin usr/sbin etc proc sys dev tmp run mnt lib/aarch64-linux-gnu usr/lib/aarch64-linux-gnu \
+ && cp -a /bin/. bin/ && cp -a /sbin/. sbin/ && cp -a /usr/bin/. usr/bin/ && cp -a /usr/sbin/. usr/sbin/ \
+ && cp -a /lib/aarch64-linux-gnu/. lib/aarch64-linux-gnu/ \
+ && cp -a /usr/lib/aarch64-linux-gnu/. usr/lib/aarch64-linux-gnu/ \
+ && cp -a /lib/ld-linux-aarch64.so.1 lib/ \
+ && cp -a /etc/passwd /etc/group /etc/nsswitch.conf /etc/hosts etc/ \
+ && rm -rf usr/share/doc usr/share/man usr/share/locale \
+ && ln -sf /bin/busybox usr/bin/awk \
+ && printf '%s\n' '#!/bin/sh' \
+      'mount -t proc none /proc' \
+      'mount -t sysfs none /sys' \
+      'mount -t devtmpfs none /dev 2>/dev/null' \
+      'export PATH=/usr/sbin:/usr/bin:/sbin:/bin' \
+      '/run.sh; echo "RUNSH_EXIT=$?"' \
+      'sync; echo 1 > /proc/sys/kernel/sysrq; echo o > /proc/sysrq-trigger; sleep 5' > init \
+ && chmod +x init \
+ && find . | cpio -o -H newc --quiet | gzip -1 > /initrd.img \
+ && cp /boot/vmlinuz-${KVER} /vmlinuz
+
+FROM alpine:3.22
+RUN apk add --no-cache qemu-system-aarch64 cpio bash
+COPY --from=build /initrd.img /vm/initrd.img
+COPY --from=build /vmlinuz /vm/vmlinuz
+COPY runvm.sh /usr/local/bin/runvm
+RUN chmod +x /usr/local/bin/runvm
+ENTRYPOINT ["/usr/local/bin/runvm"]
+EOF
+
+    docker build --platform "linux/$ARCH" \
+        --build-arg "KVER=$KVER" \
+        -t "$ZRAM_IMAGE" "$context"
+}
+
+run_zram() {
+    local log="$BUILD/zram.log"
+    mkdir -p "$BUILD/zram"
+    : > "$log"
+    cp "$ROOT/kvmapp/system/init.d/S02zram" "$BUILD/zram/S02zram"
+    write_zram_payload
+    zram_image
+    docker run --rm --platform "linux/$ARCH" \
+        -v "$BUILD/zram/S02zram:/script/S02zram:ro" \
+        -v "$BUILD/zram/run.sh:/script/run.sh:ro" \
+        "$ZRAM_IMAGE" 2>&1 | tee -a "$log"
+    grep -q '^RUNSH_EXIT=0' "$log" || {
+        echo "kernelint: zram payload exited non-zero" >&2
+        exit 1
+    }
+    echo "kernelint: zram checks passed"
+}
+
 run_tier1() {
     local log="$BUILD/tier1.log"
     : > "$log"
@@ -503,12 +690,15 @@ watchdog)
     : > "$BUILD/watchdog.verdict"
     run_watchdog
     ;;
+zram)
+    run_zram
+    ;;
 all)
     "$0" tier1
     "$0" tier2
     ;;
 *)
-    echo "usage: $0 [tier1|tier2|watchdog|all]" >&2
+    echo "usage: $0 [tier1|tier2|watchdog|zram|all]" >&2
     exit 2
     ;;
 esac
