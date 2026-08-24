@@ -637,7 +637,7 @@ func TestReconcileSkipsAFunctionWhoseWritesWereDropped(t *testing.T) {
 // the first op runs. A second unlink here would be a second copy of that rule.
 func TestReconcileLeavesAMediaFunctionToUnlinkStale(t *testing.T) {
 	profile := standardProfile()
-	profile.Functions = append(profile.Functions, defaultCamera(0, "cam"))
+	profile.Functions = append(profile.Functions, defaultCamera(0, "cam", false))
 	profile.Normalize()
 
 	plan, err := Compile(profile, staticV1)

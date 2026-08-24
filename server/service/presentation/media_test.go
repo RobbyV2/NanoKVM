@@ -114,7 +114,7 @@ func TestUVCCompileMatchesVendorConfigFS(t *testing.T) {
 			links[op.Path] = true
 		}
 		if strings.HasSuffix(op.Path, "/function_name") {
-			t.Fatalf("vendor 5.10 has no writable UVC function_name attribute: %+v", op)
+			t.Fatalf("an unnamed camera must leave f_uvc's own name alone: %+v", op)
 		}
 	}
 	for path, want := range map[string]string{
@@ -178,7 +178,7 @@ func TestUAC2CompileBuildsHostMicrophoneDirection(t *testing.T) {
 			linkAt = i
 		}
 		if strings.HasSuffix(op.Path, "/function_name") {
-			t.Fatalf("vendor 5.10 has no writable UAC2 function_name attribute: %+v", op)
+			t.Fatalf("an unnamed microphone must leave f_uac2's own name alone: %+v", op)
 		}
 	}
 	for path, want := range map[string]string{
@@ -418,5 +418,158 @@ func TestSetMediaSlotsRejectsImpossibleProfileWithoutChangingActive(t *testing.T
 	active, err := manager.store.Active()
 	if err != nil || active != ProfileStandard {
 		t.Fatalf("active = %q, err = %v", active, err)
+	}
+}
+
+func namingCaps() CapabilityTable {
+	table := staticV1.clone()
+	table.Source = SourceProbeV1
+	table.Functions[FunctionUVC].Attributes[UVCAttrFunctionName] = true
+	table.Functions[FunctionUAC2].Attributes[UAC2AttrFunctionName] = true
+	return table
+}
+
+func named(function Function, name string) Function {
+	if function.Video != nil {
+		video := *function.Video
+		video.HostName = &name
+		function.Video = &video
+	}
+	if function.Audio != nil {
+		audio := *function.Audio
+		audio.HostName = &name
+		function.Audio = &audio
+	}
+	return function
+}
+
+func TestMediaHostNamesAreWrittenBeforeTheLink(t *testing.T) {
+	profile := mediaProfile(named(testCamera("cam0", 768), "Desk Camera"), named(testMicrophone("mic0"), "Desk Microphone"))
+	plan, err := Compile(profile, namingCaps())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writes := map[string]string{}
+	lastAttribute := map[string]int{}
+	linkAt := map[string]int{}
+	for i, op := range plan.Ops {
+		for _, function := range []string{"uvc.cam0", "uac2.mic0"} {
+			if op.Kind == OpWrite && strings.HasPrefix(op.Path, functionsDir+"/"+function+"/") {
+				writes[op.Path] = string(op.Data)
+				lastAttribute[function] = i
+			}
+			if op.Path == configPrefix+"/"+function {
+				linkAt[function] = i
+			}
+		}
+	}
+	for path, want := range map[string]string{
+		"functions/uvc.cam0/function_name":  "Desk Camera\n",
+		"functions/uac2.mic0/function_name": "Desk Microphone\n",
+	} {
+		if got := writes[path]; got != want {
+			t.Errorf("%s = %q, want %q", path, got, want)
+		}
+	}
+	for _, function := range []string{"uvc.cam0", "uac2.mic0"} {
+		if linkAt[function] <= lastAttribute[function] {
+			t.Fatalf("%s link op %d precedes final attribute op %d, which the kernel refuses with -EBUSY",
+				function, linkAt[function], lastAttribute[function])
+		}
+	}
+	want := map[string]string{"uvc.cam0": "Desk Camera", "uac2.mic0": "Desk Microphone"}
+	for function, name := range want {
+		if plan.MediaNames[function] != name {
+			t.Fatalf("plan media name for %s = %q, want %q", function, plan.MediaNames[function], name)
+		}
+	}
+}
+
+// A slot the operator has never named still reports the name its host reads,
+// which is the kernel's, so the panel can show the change before it is saved.
+func TestMediaNamesFallBackToTheKernelDefaults(t *testing.T) {
+	plan, err := Compile(mediaProfile(testCamera("cam0", 768), testMicrophone("mic0")), namingCaps())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"uvc.cam0": uvcDefaultName, "uac2.mic0": uac2DefaultName}
+	for function, name := range want {
+		if plan.MediaNames[function] != name {
+			t.Fatalf("plan media name for %s = %q, want %q", function, plan.MediaNames[function], name)
+		}
+	}
+	if plan, err := Compile(mediaProfile(testCamera("cam0", 768)), staticV1); err != nil || plan.MediaNames != nil {
+		t.Fatalf("media names on a kernel without the attribute = %v, err = %v", plan.MediaNames, err)
+	}
+}
+
+func TestMediaHostNameIsRefusedWithoutTheKernelAttribute(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		function Function
+	}{
+		{"uvc.cam0", named(testCamera("cam0", 768), "Desk Camera")},
+		{"uac2.mic0", named(testMicrophone("mic0"), "Desk Microphone")},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Compile(mediaProfile(tt.function), staticV1)
+			if !errors.Is(err, ErrFunctionUnavailable) {
+				t.Fatalf("Compile() = %v, want ErrFunctionUnavailable", err)
+			}
+			if !strings.Contains(err.Error(), tt.name) || !strings.Contains(err.Error(), "function_name") {
+				t.Fatalf("err = %v, want the function and attribute named", err)
+			}
+		})
+	}
+}
+
+func TestMediaHostNameIsBoundedLikeASlotLabel(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		value string
+	}{
+		{"empty", ""},
+		{"81 bytes", strings.Repeat("n", 81)},
+		{"control characters", "Desk\x01Camera"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Compile(mediaProfile(named(testCamera("cam0", 768), tt.value)), namingCaps()); err == nil {
+				t.Fatal("host name was accepted")
+			}
+		})
+	}
+}
+
+func TestSetMediaSlotsNamesTheHostOnlyWhereTheKernelCan(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		caps  CapabilityTable
+		named bool
+	}{
+		{"probed kernel with the attribute", namingCaps(), true},
+		{"kernel without it", staticV1, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			manager, _ := newTestManager(t)
+			manager.caps = tt.caps
+			if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}); err != nil {
+				t.Fatal(err)
+			}
+			profile, err := manager.store.LoadProfile(ProfileCurrent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			video, audio := profile.Functions[3].Video.HostName, profile.Functions[4].Audio.HostName
+			if tt.named {
+				if video == nil || *video != "Desk Camera" || audio == nil || *audio != "Desk Microphone" {
+					t.Fatalf("host names = %v/%v, want the slot labels", video, audio)
+				}
+				return
+			}
+			if video != nil || audio != nil {
+				t.Fatalf("host names = %v/%v, want nil on a kernel that cannot carry them", video, audio)
+			}
+		})
 	}
 }

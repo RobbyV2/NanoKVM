@@ -201,6 +201,8 @@ func TestMediaCapabilityNeedsFunctionsAndFIFOMap(t *testing.T) {
 		{"UAC2", withoutFunction(FunctionUAC2)},
 		{"FunctionFS", withoutFunction(FunctionFFS)},
 		{"a FIFO map", func() CapabilityTable { table := staticV1.clone(); table.InFIFOWords = nil; return table }()},
+		{"an answer for the uvc naming attribute", withoutAttribute(FunctionUVC, UVCAttrFunctionName)},
+		{"an answer for the uac2 naming attribute", withoutAttribute(FunctionUAC2, UAC2AttrFunctionName)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -364,7 +366,7 @@ func TestHIDLayoutAndISOOptOutShareTheSixINBudget(t *testing.T) {
 				if err := SetHIDLayout(&profile, groups); err != nil {
 					t.Fatalf("layout: %s", err)
 				}
-				video := defaultCamera(0, "Camera")
+				video := defaultCamera(0, "Camera", false)
 				if !keepInterrupt {
 					declined := false
 					video.Video.InterruptEndpoint = &declined
@@ -395,4 +397,13 @@ func TestHIDLayoutAndISOOptOutShareTheSixINBudget(t *testing.T) {
 			})
 		}
 	}
+}
+
+// A probe-v1 table written before the naming attributes were probed answers
+// nothing about them, and a missing key is indistinguishable from a false one.
+func withoutAttribute(kind FunctionKind, name string) CapabilityTable {
+	table := staticV1.clone()
+	table.Source = SourceProbeV1
+	delete(table.Functions[kind].Attributes, name)
+	return table
 }

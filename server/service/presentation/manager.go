@@ -402,34 +402,47 @@ func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []stri
 		}
 	}
 	profile.Functions = functions
+	named := m.caps.Functions[FunctionUVC].Attributes[UVCAttrFunctionName]
 	for index, label := range cameras {
-		profile.Functions = append(profile.Functions, defaultCamera(index, label))
+		profile.Functions = append(profile.Functions, defaultCamera(index, label, named))
 	}
+	named = m.caps.Functions[FunctionUAC2].Attributes[UAC2AttrFunctionName]
 	for index, label := range microphones {
-		profile.Functions = append(profile.Functions, defaultMicrophone(index, label))
+		profile.Functions = append(profile.Functions, defaultMicrophone(index, label, named))
 	}
 	profile.Normalize()
 	return m.ApplyProfile(ctx, profile)
 }
 
-func defaultCamera(index int, label string) Function {
+// The slot label doubles as the host-visible name, but only where the kernel
+// can carry one: a device without the attribute must still be able to change
+// how many slots it has.
+func defaultCamera(index int, label string, named bool) Function {
 	frames := []VideoFrame{
 		{Width: 1280, Height: 720, Intervals: []uint32{333333, 666666}},
 		{Width: 640, Height: 480, Intervals: []uint32{333333, 666666}},
 		{Width: 320, Height: 240, Intervals: []uint32{333333, 666666}},
 		{Width: 160, Height: 120, Intervals: []uint32{333333, 666666}},
 	}
-	return Function{Kind: FunctionUVC, Instance: fmt.Sprintf("cam%d", index), Video: &VideoFunction{
+	video := &VideoFunction{
 		FunctionName: label, Formats: []VideoFormat{{Codec: "mjpeg", Frames: frames}},
 		StreamingMaxPacket: 768, StreamingInterval: 1,
-	}}
+	}
+	if named {
+		video.HostName = &label
+	}
+	return Function{Kind: FunctionUVC, Instance: fmt.Sprintf("cam%d", index), Video: video}
 }
 
-func defaultMicrophone(index int, label string) Function {
-	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("mic%d", index), Audio: &AudioFunction{
+func defaultMicrophone(index int, label string, named bool) Function {
+	audio := &AudioFunction{
 		FunctionName: label, PChannelMask: 1, PSampleRate: 48000, PSampleSize: 2,
 		CChannelMask: 0, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 4,
-	}}
+	}
+	if named {
+		audio.HostName = &label
+	}
+	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("mic%d", index), Audio: audio}
 }
 
 // mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";

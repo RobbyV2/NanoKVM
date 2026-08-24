@@ -395,10 +395,10 @@ func deriveSlots(profile presentation.Profile, plan presentation.Plan) ([]SlotSp
 		switch function.Kind {
 		case presentation.FunctionUVC:
 			specs = append(specs, SlotSpec{ID: name, Kind: sources.KindCamera, Label: function.Video.FunctionName, Video: function.Video, FIFOs: slices.Clone(plan.FIFOs[name])})
-			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindCamera, Label: function.Video.FunctionName})
+			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindCamera, Label: function.Video.FunctionName, HostName: plan.MediaNames[name]})
 		case presentation.FunctionUAC2:
 			specs = append(specs, SlotSpec{ID: name, Kind: sources.KindMicrophone, Label: function.Audio.FunctionName, Audio: function.Audio, FIFOs: slices.Clone(plan.FIFOs[name])})
-			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindMicrophone, Label: function.Audio.FunctionName})
+			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindMicrophone, Label: function.Audio.FunctionName, HostName: plan.MediaNames[name]})
 		}
 	}
 	return specs, slots

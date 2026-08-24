@@ -51,6 +51,14 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 			}
 			caps.InEPs--
 		}
+		if function.Kind == FunctionUVC && function.Video != nil && function.Video.HostName != nil && !caps.Attributes[UVCAttrFunctionName] {
+			return used, fmt.Errorf("%w: %s names itself to the host, which needs a writable %s on the uvc function, rejected by capability table %s",
+				ErrFunctionUnavailable, name, UVCAttrFunctionName, table.Source)
+		}
+		if function.Kind == FunctionUAC2 && function.Audio != nil && function.Audio.HostName != nil && !caps.Attributes[UAC2AttrFunctionName] {
+			return used, fmt.Errorf("%w: %s names itself to the host, which needs a writable %s on the uac2 function, rejected by capability table %s",
+				ErrFunctionUnavailable, name, UAC2AttrFunctionName, table.Source)
+		}
 		if function.Kind == FunctionFFS {
 			caps.InEPs, caps.OutEPs = 0, 0
 			for _, endpoint := range function.FFS.Endpoints {

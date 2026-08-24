@@ -49,8 +49,8 @@ var staticV1 = CapabilityTable{
 		FunctionRNDIS:       {Available: true, InEPs: 2, OutEPs: 1, INPackets: []int{512, 16}, Attributes: map[string]bool{"os_desc/interface.rndis": true}},
 		FunctionMassStorage: {Available: true, InEPs: 1, OutEPs: 1, INPackets: []int{512}},
 		FunctionFFS:         {Available: true},
-		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}, Attributes: map[string]bool{UVCAttrInterruptEP: false}},
-		FunctionUAC2:        {Available: true, InEPs: 1, OutEPs: 0, INPackets: []int{96}},
+		FunctionUVC:         {Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768}, Attributes: map[string]bool{UVCAttrInterruptEP: false, UVCAttrFunctionName: false}},
+		FunctionUAC2:        {Available: true, InEPs: 1, OutEPs: 0, INPackets: []int{96}, Attributes: map[string]bool{UAC2AttrFunctionName: false}},
 	},
 }
 
@@ -65,7 +65,18 @@ var probe = probeAvailability
 // rather than assumed before a profile is allowed to count on it.
 const UVCAttrInterruptEP = "enable_interrupt_ep"
 
-var probeAttributes = map[FunctionKind][]string{FunctionUVC: {UVCAttrInterruptEP}}
+// The writable configfs attribute that sets the interface string a host shows
+// for a media function. Distinct from the read-only sysfs attribute of the
+// same name that media/resolver.go maps a /dev/videoN or hw:N,0 back through.
+const (
+	UVCAttrFunctionName  = "function_name"
+	UAC2AttrFunctionName = "function_name"
+)
+
+var probeAttributes = map[FunctionKind][]string{
+	FunctionUVC:  {UVCAttrInterruptEP, UVCAttrFunctionName},
+	FunctionUAC2: {UAC2AttrFunctionName},
+}
 
 // f_hid allocates a /dev/hidgN minor at mkdir time, so hid is never probed.
 var probeKinds = []FunctionKind{FunctionNCM, FunctionRNDIS, FunctionMassStorage, FunctionFFS, FunctionUVC, FunctionUAC2}
@@ -118,11 +129,20 @@ func probeWithin(budget time.Duration) (map[FunctionKind]FunctionProbe, error) {
 	}
 }
 
+// A table probed before the naming attributes were known carries no answer for
+// them, and a missing key reads as false everywhere else. Requiring the keys
+// rather than their values is what makes such a table stale instead of a
+// silent "this kernel cannot name media devices".
 func (t CapabilityTable) supportsMedia() bool {
-	_, video := t.Functions[FunctionUVC]
-	_, audio := t.Functions[FunctionUAC2]
+	video, hasVideo := t.Functions[FunctionUVC]
+	audio, hasAudio := t.Functions[FunctionUAC2]
 	_, functionFS := t.Functions[FunctionFFS]
-	return video && audio && functionFS && len(t.InFIFOWords) == t.MaxInEndpoints
+	if !hasVideo || !hasAudio || !functionFS || len(t.InFIFOWords) != t.MaxInEndpoints {
+		return false
+	}
+	_, videoName := video.Attributes[UVCAttrFunctionName]
+	_, audioName := audio.Attributes[UAC2AttrFunctionName]
+	return videoName && audioName
 }
 
 func capabilityPath() string {

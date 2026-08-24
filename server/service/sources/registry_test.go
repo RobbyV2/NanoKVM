@@ -458,3 +458,37 @@ func TestResumeRefusesANonAdminOnTheUSBSink(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// The host re-enumerates when the interface string changes, so a binding that
+// survived the rename would be streaming into descriptors its browser never saw.
+func TestSyncSlotsTerminatesOnAHostNameChangeAlone(t *testing.T) {
+	registry := mustRegistry(t, testSlots, RegistryOptions{})
+	actor := Actor{Username: "alice"}
+	camera := mustSource(t, registry, actor, "Camera", KindCamera)
+	if _, err := registry.Claim(actor, camera.ID, "stream", "uvc.cam0"); err != nil {
+		t.Fatal(err)
+	}
+	events, cancel := registry.Subscribe()
+	defer cancel()
+	<-events
+
+	slots := append([]Slot(nil), testSlots...)
+	for i := range slots {
+		if slots[i].ID == "uvc.cam0" {
+			slots[i].HostName = "Desk Camera"
+		}
+	}
+	if err := registry.SyncSlots(slots); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		event := <-events
+		if event.Type == "binding_removed" {
+			if event.Reason != ReasonSlotChanged {
+				t.Fatalf("reason = %s, want %s", event.Reason, ReasonSlotChanged)
+			}
+			return
+		}
+	}
+	t.Fatal("renaming the host-visible interface string left the binding up")
+}

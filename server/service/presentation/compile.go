@@ -42,6 +42,10 @@ type Plan struct {
 	Endpoints EndpointUse    `json:"endpoints"`
 	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
 	Device    DeviceIdentity `json:"device"`
+	// The interface string each media function ends up presenting, keyed by
+	// function name. A kind whose kernel has no writable function_name is
+	// absent rather than defaulted, because there the name is not ours.
+	MediaNames map[string]string `json:"media_names,omitempty"`
 }
 
 // What the host will key its driver binding off once the plan is applied. The
@@ -217,7 +221,38 @@ func Compile(p Profile, caps CapabilityTable) (Plan, error) {
 			return Plan{}, fmt.Errorf("compile %s: %s %s: %w", p.Name, op.Kind, op.Path, err)
 		}
 	}
-	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos, Device: p.Device.identity()}, nil
+	return Plan{Ops: c.ops, Profile: p.Name, Endpoints: endpoints, FIFOs: fifos, Device: p.Device.identity(), MediaNames: mediaNames(p.Functions, caps)}, nil
+}
+
+// f_uvc and f_uac2 initialise function_name to these, so a slot the operator
+// has never named still has a name the panel can show before it is changed.
+const (
+	uvcDefaultName  = "UVC Camera"
+	uac2DefaultName = "Source/Sink"
+)
+
+func mediaNames(functions []Function, caps CapabilityTable) map[string]string {
+	names := make(map[string]string)
+	for _, function := range functions {
+		name := string(function.Kind) + "." + function.Instance
+		switch {
+		case function.Kind == FunctionUVC && function.Video != nil && caps.Functions[FunctionUVC].Attributes[UVCAttrFunctionName]:
+			names[name] = orDefault(function.Video.HostName, uvcDefaultName)
+		case function.Kind == FunctionUAC2 && function.Audio != nil && caps.Functions[FunctionUAC2].Attributes[UAC2AttrFunctionName]:
+			names[name] = orDefault(function.Audio.HostName, uac2DefaultName)
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return names
+}
+
+func orDefault(value *string, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 // Compile plans a virgin gadget, where no function is linked yet and every
@@ -493,6 +528,9 @@ func (c *compiler) uvc(dir, name string, video VideoFunction) {
 	c.write(dir+"/streaming_interval", strconv.Itoa(int(video.StreamingInterval)))
 	c.write(dir+"/streaming_maxpacket", strconv.Itoa(int(video.StreamingMaxPacket)))
 	c.write(dir+"/streaming_maxburst", strconv.Itoa(int(video.StreamingMaxBurst)))
+	if video.HostName != nil {
+		c.write(dir+"/"+UVCAttrFunctionName, *video.HostName)
+	}
 
 	controlHeader := dir + "/control/header/h"
 	c.mkdir(controlHeader)
@@ -561,6 +599,9 @@ func (c *compiler) uac2(dir, name string, audio AudioFunction) {
 	}
 	for _, attribute := range attributes {
 		c.write(dir+"/"+attribute.name, strconv.FormatUint(uint64(attribute.value), 10))
+	}
+	if audio.HostName != nil {
+		c.write(dir+"/"+UAC2AttrFunctionName, *audio.HostName)
 	}
 	c.link(configPrefix+"/"+name, dir)
 }

@@ -93,6 +93,11 @@ type Slot struct {
 	ID    string `json:"id"`
 	Kind  Kind   `json:"kind"`
 	Label string `json:"label"`
+	// What a target host reads as this slot's interface string. Empty means
+	// the kernel has no writable function_name for the slot's function, so
+	// the host shows the kernel's own name whatever the label says. Compared
+	// by value in SyncSlots, which is what makes a rename re-enumerate.
+	HostName string `json:"host_name,omitempty"`
 }
 
 type Sink struct {
@@ -229,6 +234,11 @@ func validateSlots(slots []Slot) ([]Slot, error) {
 func validateSlot(slot Slot) error {
 	if err := validateLabel("label", slot.Label); err != nil {
 		return err
+	}
+	if slot.HostName != "" {
+		if err := validateLabel("host name", slot.HostName); err != nil {
+			return err
+		}
 	}
 	pattern := cameraSlotID
 	if slot.Kind == KindMicrophone {

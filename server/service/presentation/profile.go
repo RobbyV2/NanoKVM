@@ -223,6 +223,11 @@ type StorageFunction struct {
 type VideoFunction struct {
 	FunctionName string        `json:"function_name"`
 	Formats      []VideoFormat `json:"formats"`
+	// The iInterface string the host displays for this camera. nil = DO NOT
+	// WRITE, which leaves f_uvc's own "UVC Camera" in place; a profile stored
+	// before the attribute existed deserializes that way, and renaming every
+	// host's camera on upgrade is not something an upgrade may do.
+	HostName *string `json:"host_name,omitempty"`
 	// nil = DO NOT WRITE, which leaves f_uvc's own default and the control
 	// interrupt IN endpoint in place. Only a kernel whose uvc function group
 	// carries enable_interrupt_ep can honour false.
@@ -244,14 +249,15 @@ type VideoFrame struct {
 }
 
 type AudioFunction struct {
-	FunctionName  string `json:"function_name"`
-	PChannelMask  uint32 `json:"p_chmask"`
-	PSampleRate   uint32 `json:"p_srate"`
-	PSampleSize   uint8  `json:"p_ssize"`
-	CChannelMask  uint32 `json:"c_chmask"`
-	CSampleRate   uint32 `json:"c_srate"`
-	CSampleSize   uint8  `json:"c_ssize"`
-	RequestNumber uint8  `json:"req_number"`
+	FunctionName  string  `json:"function_name"`
+	HostName      *string `json:"host_name,omitempty"`
+	PChannelMask  uint32  `json:"p_chmask"`
+	PSampleRate   uint32  `json:"p_srate"`
+	PSampleSize   uint8   `json:"p_ssize"`
+	CChannelMask  uint32  `json:"c_chmask"`
+	CSampleRate   uint32  `json:"c_srate"`
+	CSampleSize   uint8   `json:"c_ssize"`
+	RequestNumber uint8   `json:"req_number"`
 }
 
 type OSDesc struct {
@@ -524,6 +530,9 @@ func (v *VideoFunction) validate() error {
 		}
 		return fmt.Errorf("function name is empty")
 	}
+	if err := hostName(v.HostName); err != nil {
+		return err
+	}
 	if v.StreamingMaxPacket != 256 && v.StreamingMaxPacket != 512 && v.StreamingMaxPacket != 768 {
 		return fmt.Errorf("streaming maxpacket %d, want 256, 512, or 768", v.StreamingMaxPacket)
 	}
@@ -605,6 +614,9 @@ func (a *AudioFunction) validate() error {
 			return err
 		}
 		return fmt.Errorf("function name is empty")
+	}
+	if err := hostName(a.HostName); err != nil {
+		return err
 	}
 	if a.PChannelMask != 1 || a.PSampleRate != 48000 || a.PSampleSize != 2 {
 		return fmt.Errorf("microphone must expose mono 48000 Hz signed 16-bit USB IN")
@@ -920,6 +932,22 @@ func validateHIDReportDescriptor(data []byte) error {
 	}
 	if mainItems == 0 {
 		return fmt.Errorf("contains no input, output, feature, or collection item")
+	}
+	return nil
+}
+
+// A blank iInterface is worse on a host than the kernel default, and the 80
+// bytes sources.validateLabel already enforces on the API that sets these is
+// the stricter of the two limits, so it is the one that decides.
+func hostName(value *string) error {
+	if value == nil {
+		return nil
+	}
+	if err := usbString("host name", *value); err != nil {
+		return err
+	}
+	if *value == "" || len(*value) > 80 {
+		return fmt.Errorf("host name must contain 1 to 80 bytes")
 	}
 	return nil
 }

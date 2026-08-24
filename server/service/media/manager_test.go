@@ -540,3 +540,21 @@ func TestPacketSpanNeverIndexesAnEmptyPayload(t *testing.T) {
 		t.Fatalf("payload span = (%v, %d), want (%v, %d)", base, size, &data[0], len(data))
 	}
 }
+
+func TestSlotsCarryTheNameTheHostWillRead(t *testing.T) {
+	registry := &fakeRegistry{}
+	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0", "uac2.mic0": "hw:0,0"}}, &fakeFactory{})
+	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0"), microphoneFunction("mic0")}}
+	plan := presentation.Plan{MediaNames: map[string]string{"uvc.cam0": "Desk Camera"}}
+	if err := manager.Reconcile(context.Background(), profile, plan); err != nil {
+		t.Fatal(err)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	if registry.slots[0].HostName != "Desk Camera" {
+		t.Fatalf("camera host name = %q, want the name the plan writes", registry.slots[0].HostName)
+	}
+	if registry.slots[1].HostName != "" {
+		t.Fatalf("microphone host name = %q, want empty where the kernel cannot carry one", registry.slots[1].HostName)
+	}
+}

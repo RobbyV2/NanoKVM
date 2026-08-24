@@ -342,14 +342,14 @@ func probeAvailability() (map[FunctionKind]FunctionProbe, error) {
 		dir := filepath.Join(probeGadgetDir, functionsDir, string(kind)+".probe")
 		err := os.Mkdir(dir, 0o755)
 		probed := FunctionProbe{Available: err == nil || errors.Is(err, os.ErrExist)}
-		if probed.Available {
-			for _, name := range probeAttributes[kind] {
-				if probed.Attributes == nil {
-					probed.Attributes = make(map[string]bool, len(probeAttributes[kind]))
-				}
+		if names := probeAttributes[kind]; len(names) > 0 {
+			probed.Attributes = make(map[string]bool, len(names))
+			for _, name := range names {
 				_, statErr := os.Stat(filepath.Join(dir, name))
-				probed.Attributes[name] = statErr == nil
+				probed.Attributes[name] = probed.Available && statErr == nil
 			}
+		}
+		if probed.Available {
 			_ = os.Remove(dir)
 		}
 		available[kind] = probed
