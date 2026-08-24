@@ -46,6 +46,16 @@ extracted package in `CacheDir` on partition 2, which is why the read-back compa
 against the package and not against a checksum carried alongside. Never create a third
 file in `/boot`.
 
+## Committing is the other place /boot can run out
+
+`Confirm` rewrites `boot.sd` in place from `boot.alt`, and `boot.sd` is also where a
+rollback goes. An ENOSPC halfway through would leave the committed slot truncated and
+nothing bootable, so `ensureRoomToCommit` compares the two sizes against the live free
+space first and refuses. A refused commit costs one rollback and leaves the old kernel
+whole, which is the correct trade. A kernel more than the free margin larger than the one
+it replaces simply cannot be committed on this partition, and that is a packaging limit,
+not a bug to work around here.
+
 ## A kernel package ships alone
 
 A/B protects the kernel and nothing else. If one package carried both and the kernel

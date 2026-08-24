@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -38,6 +40,7 @@ var (
 	ErrNoState  = errors.New("uEnv.txt carries no ab_state")
 	ErrState    = errors.New("unknown ab_state")
 	ErrNotReady = errors.New("trial kernel never reached a serving state; the next boot rolls back")
+	ErrNoRoom   = errors.New("not enough free space in /boot to commit the trial kernel")
 )
 
 type Paths struct {
@@ -214,6 +217,9 @@ func (p Paths) Confirm() error {
 	if err := os.WriteFile(p.ConfirmPath, nil, 0o644); err != nil {
 		return fmt.Errorf("signal trial guard: %w", err)
 	}
+	if err := p.ensureRoomToCommit(); err != nil {
+		return err
+	}
 	if err := copyFile(p.good(), p.Alt()); err != nil {
 		return fmt.Errorf("commit kernel: %w", err)
 	}
@@ -227,6 +233,35 @@ func (p Paths) Confirm() error {
 		_ = replace(p.InstalledPath, version)
 	}
 	_ = os.Remove(p.Pending)
+	return nil
+}
+
+// ensureRoomToCommit is what keeps a commit from bricking the device. /boot is
+// a FAT partition with under 2 MiB free against a ~7 MiB kernel, and the
+// commit rewrites boot.sd in place; running out of space halfway would leave
+// the committed slot truncated, which is also the slot the rollback goes to.
+// Refusing here costs a rollback, and the old kernel is still whole.
+func (p Paths) ensureRoomToCommit() error {
+	alt, err := os.Stat(p.Alt())
+	if err != nil {
+		return fmt.Errorf("stat trial kernel: %w", err)
+	}
+	good, err := os.Stat(p.good())
+	if err != nil {
+		return fmt.Errorf("stat committed kernel: %w", err)
+	}
+	needed := alt.Size() - good.Size()
+	if needed <= 0 {
+		return nil
+	}
+	var stat unix.Statfs_t
+	if err := unix.Statfs(p.Root, &stat); err != nil {
+		return fmt.Errorf("stat boot filesystem: %w", err)
+	}
+	free := uint64(stat.Bavail) * uint64(stat.Bsize)
+	if uint64(needed) > free {
+		return fmt.Errorf("%w: commit needs %d more bytes than %s has free", ErrNoRoom, needed, p.Root)
+	}
 	return nil
 }
 

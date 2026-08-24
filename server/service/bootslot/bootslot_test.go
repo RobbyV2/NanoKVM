@@ -232,3 +232,24 @@ func TestSetStateKeepsTheEnvTerminatorAndLastLine(t *testing.T) {
 		t.Errorf("uEnv.txt = %q, want %q", uenv, want)
 	}
 }
+
+// The commit rewrites boot.sd in place, and boot.sd is also where a rollback
+// goes. Running out of space halfway would leave nothing bootable.
+func TestCommitRefusesWhenBootCannotHoldTheTrialKernel(t *testing.T) {
+	p := rig(t, "nanokvm_slot=trial", uenvFixture)
+	if err := os.Truncate(p.Alt(), 1<<50); err != nil {
+		t.Skipf("cannot create a sparse file: %v", err)
+	}
+	err := p.Confirm()
+	if !errors.Is(err, ErrNoRoom) {
+		t.Fatalf("Confirm() = %v, want ErrNoRoom", err)
+	}
+	good, _ := os.ReadFile(filepath.Join(p.Root, "boot.sd"))
+	if string(good) != "boot.sd" {
+		t.Errorf("a refused commit still rewrote the committed kernel: %q", good)
+	}
+	uenv, _ := os.ReadFile(filepath.Join(p.Root, "uEnv.txt"))
+	if !strings.Contains(string(uenv), "ab_state=trial") {
+		t.Errorf("a refused commit still moved ab_state: %q", uenv)
+	}
+}
