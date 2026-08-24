@@ -1,0 +1,38 @@
+#!/bin/sh
+
+CONFIRMED=/run/nanokvm-kernel-confirmed
+DEADLINE=180
+
+trial() {
+    grep -q 'nanokvm_slot=trial' /proc/cmdline 2>/dev/null
+}
+
+watch() {
+    i=0
+    while [ "$i" -lt "$DEADLINE" ]; do
+        [ -e "$CONFIRMED" ] && return 0
+        sleep 1
+        i=$((i + 1))
+    done
+    echo "kernel trial unconfirmed after ${DEADLINE}s, rolling back"
+    sync
+    reboot -f
+}
+
+case "$1" in
+    start)
+        if trial; then
+            printf "Kernel trial: "
+            rm -f "$CONFIRMED"
+            watch &
+            echo "armed"
+        fi
+        ;;
+    stop)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+esac
+
+exit 0
