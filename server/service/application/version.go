@@ -28,6 +28,8 @@ type Latest struct {
 	LegacySize        uint64 `json:"size"`
 	SizeBytes         uint64 `json:"size_bytes,omitempty"`
 	UnpackedSizeBytes uint64 `json:"unpacked_size_bytes,omitempty"`
+	KernelVersion     string `json:"kernel_version,omitempty"`
+	KernelSha512      string `json:"kernel_sha512,omitempty"`
 	Url               string `json:"-"`
 }
 
@@ -65,8 +67,9 @@ func (s *Service) GetVersion(c *gin.Context) {
 	latestVersion = latest.Version
 
 	rsp.OkRspWithData(c, &proto.GetVersionRsp{
-		Current: currentVersion,
-		Latest:  latestVersion,
+		Current:      currentVersion,
+		Latest:       latestVersion,
+		LatestKernel: latest.KernelVersion,
 	})
 }
 
@@ -155,6 +158,9 @@ func validateLatest(latest *Latest) error {
 	if latest.LegacySize == 0 {
 		return errors.New("invalid update package size")
 	}
+	if err := validateLatestKernel(latest); err != nil {
+		return err
+	}
 	switch latest.ManifestVersion {
 	case 0, 1:
 		return nil
@@ -169,6 +175,42 @@ func validateLatest(latest *Latest) error {
 	default:
 		return errors.New("unsupported update manifest version")
 	}
+}
+
+func validateLatestKernel(latest *Latest) error {
+	if latest.KernelVersion == "" {
+		if latest.KernelSha512 != "" {
+			return errors.New("latest manifest has a kernel sha512 with no kernel version")
+		}
+		return nil
+	}
+	if !versionPattern.MatchString(latest.KernelVersion) {
+		return errors.New("invalid latest kernel version")
+	}
+	digest, err := base64.StdEncoding.DecodeString(latest.KernelSha512)
+	if err != nil || len(digest) != 64 {
+		return errors.New("invalid kernel sha512")
+	}
+	return nil
+}
+
+// The manifest and the package have to agree about the kernel before anything
+// is written to /boot: the UI warns from the manifest, and an operator who was
+// warned about one kernel must not get another.
+func validateManifestKernel(latest *Latest, kernel *kernelPayload) error {
+	if latest.KernelVersion == "" {
+		if kernel != nil {
+			return errors.New("update package carries a kernel the manifest does not declare")
+		}
+		return nil
+	}
+	if kernel == nil {
+		return errors.New("manifest declares a kernel the update package does not carry")
+	}
+	if kernel.version != latest.KernelVersion {
+		return fmt.Errorf("kernel version mismatch: manifest has %s, package has %s", latest.KernelVersion, kernel.version)
+	}
+	return checksum(kernel.itb, latest.KernelSha512)
 }
 
 func preflightManifestSpace(path string, latest *Latest) error {

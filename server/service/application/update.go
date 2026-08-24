@@ -31,15 +31,20 @@ func (s *Service) Update(c *gin.Context) {
 		return
 	}
 
-	if err := update(); err != nil {
+	reboot, err := update()
+	if err != nil {
 		releaseUpdateLock()
 		rsp.ErrRsp(c, -1, fmt.Sprintf("update failed: %s", err))
 		return
 	}
 
-	rsp.OkRsp(c)
+	rsp.OkRspWithData(c, &proto.UpdateRsp{Reboot: reboot})
 	log.Debugf("update application success")
 
+	if reboot {
+		go rebootForKernel()
+		return
+	}
 	go restartServices()
 }
 
@@ -52,17 +57,17 @@ func restartServices() {
 	}
 }
 
-func update() error {
+func update() (bool, error) {
 	latest, err := getLatest()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if err := prepareCacheForUpdate(); err != nil {
-		return err
+		return false, err
 	}
 	workspace, err := newUpdateWorkspace(CacheDir)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() {
 		if err := workspace.Close(); err != nil {
@@ -70,50 +75,54 @@ func update() error {
 		}
 	}()
 	if err := ensureInstallFilesystem(workspace.dir, AppDir, BackupDir); err != nil {
-		return err
+		return false, err
 	}
 	if err := preflightManifestSpace(workspace.dir, latest); err != nil {
-		return err
+		return false, err
 	}
 
 	target := filepath.Join(workspace.dir, latest.Name)
 	downloadInfo, err := download(latest, target)
 	if err != nil {
 		log.Errorf("download app failed: %s", err)
-		return err
+		return false, err
 	}
 	if err := validateDownloadedSize(latest, uint64(downloadInfo.Written)); err != nil {
-		return err
+		return false, err
 	}
 
 	if err := checksum(target, latest.Sha512); err != nil {
 		log.Errorf("check sha512 failed: %s", err)
-		return err
+		return false, err
 	}
 	expectedRoot := strings.TrimSuffix(latest.Name, ".tar.gz")
 	info, err := inspectUpdateArchive(target, expectedRoot)
 	if err != nil {
-		return fmt.Errorf("inspect update package: %w", err)
+		return false, fmt.Errorf("inspect update package: %w", err)
 	}
 	if err := validateExpandedSize(latest, info.expandedBytes); err != nil {
-		return err
+		return false, err
 	}
 	if err := ensureExpandedSpace(workspace.dir, info.expandedBytes); err != nil {
-		return err
+		return false, err
 	}
 	sourceDir, err := extractUpdateArchive(target, workspace.dir, expectedRoot)
 	if err != nil {
-		return fmt.Errorf("extract update package: %w", err)
+		return false, fmt.Errorf("extract update package: %w", err)
 	}
-	if err := validateExtractedPackage(sourceDir, latest.Version); err != nil {
-		return err
+	kernel, err := validateExtractedPackage(sourceDir, latest.Version)
+	if err != nil {
+		return false, err
 	}
-	if err := installPreparedPackage(sourceDir); err != nil {
+	if err := validateManifestKernel(latest, kernel); err != nil {
+		return false, err
+	}
+	if err := installPreparedPackage(sourceDir, kernel); err != nil {
 		log.Errorf("failed to install package: %v", err)
-		return err
+		return false, err
 	}
 
-	return nil
+	return kernel != nil, nil
 }
 
 func download(latest *Latest, target string) (info utils.DownloadInfo, err error) {

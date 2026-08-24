@@ -5,7 +5,9 @@ import (
 	"os"
 	"sync"
 
+	"NanoKVM-Server/service/bootslot"
 	"NanoKVM-Server/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +33,11 @@ func releaseUpdateLock() {
 	isUpdating = false
 }
 
-func installPreparedPackage(sourceDir string) error {
+func installPreparedPackage(sourceDir string, kernel *kernelPayload) error {
+	if kernel != nil {
+		return installKernelPayload(kernel, bootslot.Default())
+	}
+
 	if err := backupCurrentApp(); err != nil {
 		return err
 	}

@@ -14,9 +14,16 @@ const (
 	BootDir   = "/boot"
 	Confirmed = "/run/nanokvm-kernel-confirmed"
 	Pending   = "/kvmapp/kernel_pending"
+	Installed = "/kvmapp/kernel.version"
 
 	cmdlinePath = "/proc/cmdline"
 	statePrefix = "ab_state="
+)
+
+// StateCommitted and StateTrial are the two values ab_state carries.
+const (
+	StateCommitted = "committed"
+	StateTrial     = "trial"
 )
 
 // SlotTrial and SlotGood are the values u-boot passes in nanokvm_slot.
@@ -25,23 +32,36 @@ const (
 	SlotGood  = "good"
 )
 
-var ErrNoState = errors.New("uEnv.txt carries no ab_state")
+var (
+	ErrNoState = errors.New("uEnv.txt carries no ab_state")
+	ErrState   = errors.New("unknown ab_state")
+)
 
 type Paths struct {
-	Root        string
-	Cmdline     string
-	Pending     string
-	ConfirmPath string
+	Root          string
+	Cmdline       string
+	Pending       string
+	ConfirmPath   string
+	InstalledPath string
 }
 
 func Default() Paths {
-	return Paths{Root: BootDir, Cmdline: cmdlinePath, Pending: Pending, ConfirmPath: Confirmed}
+	return Paths{
+		Root:          BootDir,
+		Cmdline:       cmdlinePath,
+		Pending:       Pending,
+		ConfirmPath:   Confirmed,
+		InstalledPath: Installed,
+	}
 }
 
 func (p Paths) uenv() string    { return filepath.Join(p.Root, "uEnv.txt") }
 func (p Paths) bootcnt() string { return filepath.Join(p.Root, "bootcnt") }
 func (p Paths) good() string    { return filepath.Join(p.Root, "boot.sd") }
-func (p Paths) alt() string     { return filepath.Join(p.Root, "boot.alt") }
+
+// Alt is the trial slot an OTA writes over. Nothing else in /boot may be
+// created: the partition holds under 2 MiB free, less than one kernel.
+func (p Paths) Alt() string { return filepath.Join(p.Root, "boot.alt") }
 
 // Slot reports the slot the running kernel booted from. Empty when the
 // bootloader predates the A/B policy.
@@ -85,6 +105,44 @@ func (p Paths) setState(state string) error {
 	out.WriteString(statePrefix + state)
 	out.Write(data[end:])
 	return replace(p.uenv(), out.Bytes())
+}
+
+// SetState arms or disarms the trial slot. Step 3 of an OTA install, and the
+// only writer of ab_state besides Confirm.
+func (p Paths) SetState(state string) error {
+	if state != StateCommitted && state != StateTrial {
+		return fmt.Errorf("%w: %q", ErrState, state)
+	}
+	return p.setState(state)
+}
+
+// ResetBootCount zeroes the counter u-boot increments on every trial attempt.
+func (p Paths) ResetBootCount() error {
+	return replace(p.bootcnt(), make([]byte, 4))
+}
+
+// MarkPending records the version being tried, so a rollback can name it.
+func (p Paths) MarkPending(version string) error {
+	return replace(p.Pending, []byte(strings.TrimSpace(version)+"\n"))
+}
+
+// ClearRollback drops the marker a rollback was reported from, so the warning
+// does not outlive the operator having seen it.
+func (p Paths) ClearRollback() error {
+	if err := os.Remove(p.Pending); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// InstalledVersion is the kernel version that last passed its trial. Empty on
+// a device whose kernel has only ever come from a flashed image.
+func (p Paths) InstalledVersion() string {
+	data, err := os.ReadFile(p.InstalledPath)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // replace writes through a temporary file in the same directory so a torn
@@ -153,14 +211,17 @@ func (p Paths) Confirm() error {
 	if err := os.WriteFile(p.ConfirmPath, nil, 0o644); err != nil {
 		return fmt.Errorf("signal trial guard: %w", err)
 	}
-	if err := copyFile(p.good(), p.alt()); err != nil {
+	if err := copyFile(p.good(), p.Alt()); err != nil {
 		return fmt.Errorf("commit kernel: %w", err)
 	}
 	if err := p.setState("committed"); err != nil {
 		return fmt.Errorf("commit boot policy: %w", err)
 	}
-	if err := replace(p.bootcnt(), make([]byte, 4)); err != nil {
+	if err := p.ResetBootCount(); err != nil {
 		return fmt.Errorf("reset boot counter: %w", err)
+	}
+	if version, err := os.ReadFile(p.Pending); err == nil {
+		_ = replace(p.InstalledPath, version)
 	}
 	_ = os.Remove(p.Pending)
 	return nil

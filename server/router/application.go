@@ -17,6 +17,9 @@ func applicationRouter(r *gin.Engine) {
 	api.POST("/application/update", service.Update)                // update application
 	api.POST("/application/update/offline", service.OfflineUpdate) // update application offline
 
+	api.GET("/application/kernel", service.GetKernel)                // get A/B kernel slot state
+	api.POST("/application/kernel/dismiss", service.DismissRollback) // acknowledge a kernel rollback
+
 	api.GET("/application/preview", service.GetPreview)  // get preview updates state
 	api.POST("/application/preview", service.SetPreview) // set preview updates state
 

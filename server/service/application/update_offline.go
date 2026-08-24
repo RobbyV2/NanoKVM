@@ -26,30 +26,35 @@ func (s *Service) OfflineUpdate(c *gin.Context) {
 		return
 	}
 
-	if err := offlineUpdate(c); err != nil {
+	reboot, err := offlineUpdate(c)
+	if err != nil {
 		releaseUpdateLock()
 		rsp.ErrRsp(c, -1, fmt.Sprintf("update failed: %s", err))
 		return
 	}
 
-	rsp.OkRsp(c)
+	rsp.OkRspWithData(c, &proto.UpdateRsp{Reboot: reboot})
 	log.Debugf("offline update application success")
 
+	if reboot {
+		go rebootForKernel()
+		return
+	}
 	go restartServices()
 }
 
-func offlineUpdate(c *gin.Context) error {
+func offlineUpdate(c *gin.Context) (bool, error) {
 	expectedSHA256, err := utils.ParseSHA256Checksum(c.GetHeader("X-SHA256-Checksum"))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if err := prepareCacheForUpdate(); err != nil {
-		return err
+		return false, err
 	}
 	workspace, err := newUpdateWorkspace(CacheDir)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() {
 		if err := workspace.Close(); err != nil {
@@ -57,41 +62,41 @@ func offlineUpdate(c *gin.Context) error {
 		}
 	}()
 	if err := ensureInstallFilesystem(workspace.dir, AppDir, BackupDir); err != nil {
-		return err
+		return false, err
 	}
 
 	maxRequestBytes := int64(maxPackageSize) + (1 << 20)
 	contentLength := c.Request.ContentLength
 	if contentLength > maxRequestBytes {
-		return fmt.Errorf("offline update request exceeds %d bytes", maxRequestBytes)
+		return false, fmt.Errorf("offline update request exceeds %d bytes", maxRequestBytes)
 	}
 	if contentLength > 0 {
 		if err := ensureFreeSpace(workspace.dir, uint64(contentLength)); err != nil {
-			return err
+			return false, err
 		}
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxRequestBytes)
 
 	if err := createSentinelFile(); err != nil {
-		return err
+		return false, err
 	}
 	defer removeSentinelFile()
 
 	reader, err := c.Request.MultipartReader()
 	if err != nil {
 		log.Errorf("Invalid multipart data: %v", err)
-		return fmt.Errorf("invalid multipart data: %w", err)
+		return false, fmt.Errorf("invalid multipart data: %w", err)
 	}
 
 	target, err := processUpload(reader, contentLength, workspace.dir)
 	if err != nil {
 		log.Errorf("failed to upload install package: %v", err)
-		return err
+		return false, err
 	}
 
 	if err := verifySHA256Checksum(target, expectedSHA256); err != nil {
 		log.Errorf("failed to verify install package: %v", err)
-		return err
+		return false, err
 	}
 
 	archiveName := filepath.Base(target)
@@ -99,24 +104,25 @@ func offlineUpdate(c *gin.Context) error {
 	expectedVersion := strings.TrimPrefix(expectedRoot, "nanokvm_")
 	info, err := inspectUpdateArchive(target, expectedRoot)
 	if err != nil {
-		return fmt.Errorf("inspect update package: %w", err)
+		return false, fmt.Errorf("inspect update package: %w", err)
 	}
 	if err := ensureExpandedSpace(workspace.dir, info.expandedBytes); err != nil {
-		return err
+		return false, err
 	}
 	sourceDir, err := extractUpdateArchive(target, workspace.dir, expectedRoot)
 	if err != nil {
-		return fmt.Errorf("extract update package: %w", err)
+		return false, fmt.Errorf("extract update package: %w", err)
 	}
-	if err := validateExtractedPackage(sourceDir, expectedVersion); err != nil {
-		return err
+	kernel, err := validateExtractedPackage(sourceDir, expectedVersion)
+	if err != nil {
+		return false, err
 	}
-	if err := installPreparedPackage(sourceDir); err != nil {
+	if err := installPreparedPackage(sourceDir, kernel); err != nil {
 		log.Errorf("failed to install package: %v", err)
-		return err
+		return false, err
 	}
 
-	return nil
+	return kernel != nil, nil
 }
 
 func verifySHA256Checksum(filePath string, expected []byte) error {

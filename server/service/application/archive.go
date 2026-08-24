@@ -2,6 +2,7 @@ package application
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -180,13 +181,23 @@ func isRegularType(typeFlag byte) bool {
 	return typeFlag == tar.TypeReg || typeFlag == tar.TypeRegA
 }
 
-func validateExtractedPackage(rootDir, expectedVersion string) error {
+// kernelPayload is the kernel a package carries. Nil for an ordinary
+// application package, which is every package that predates the A/B scheme.
+type kernelPayload struct {
+	itb     string
+	version string
+}
+
+func validateExtractedPackage(rootDir, expectedVersion string) (*kernelPayload, error) {
 	version, err := os.ReadFile(filepath.Join(rootDir, "version"))
 	if err != nil {
-		return fmt.Errorf("invalid update package layout: read version: %w", err)
+		return nil, fmt.Errorf("invalid update package layout: read version: %w", err)
 	}
 	if strings.TrimSpace(string(version)) != expectedVersion {
-		return fmt.Errorf("invalid update package layout: version mismatch")
+		return nil, fmt.Errorf("invalid update package layout: version mismatch")
+	}
+	if info, err := os.Stat(filepath.Join(rootDir, kernelSubtree)); err == nil && info.IsDir() {
+		return validateKernelPackage(rootDir)
 	}
 	for _, required := range []string{
 		"version",
@@ -196,8 +207,59 @@ func validateExtractedPackage(rootDir, expectedVersion string) error {
 	} {
 		info, err := os.Stat(filepath.Join(rootDir, filepath.FromSlash(required)))
 		if err != nil || !info.Mode().IsRegular() {
-			return fmt.Errorf("invalid update package layout: missing required file %s", required)
+			return nil, fmt.Errorf("invalid update package layout: missing required file %s", required)
 		}
+	}
+	return nil, nil
+}
+
+// A/B protects the kernel and nothing else. Shipping an application in the
+// same package would put the new application on the old kernel whenever the
+// trial rolls back, which is a combination nobody tested, so a package that
+// carries a kernel may carry nothing else.
+func validateKernelPackage(rootDir string) (*kernelPayload, error) {
+	entries, err := os.ReadDir(rootDir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid update package layout: read package root: %w", err)
+	}
+	for _, entry := range entries {
+		if entry.Name() != "version" && entry.Name() != kernelSubtree {
+			return nil, fmt.Errorf("invalid update package layout: a kernel update must ship as its own package, but this one also carries %s", entry.Name())
+		}
+	}
+
+	itb := filepath.Join(rootDir, kernelSubtree, "boot.itb")
+	info, err := os.Stat(itb)
+	if err != nil || !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("invalid update package layout: missing required file %s/boot.itb", kernelSubtree)
+	}
+	if err := verifyFDTMagic(itb); err != nil {
+		return nil, err
+	}
+
+	raw, err := os.ReadFile(filepath.Join(rootDir, kernelSubtree, "kernel.version"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid update package layout: read %s/kernel.version: %w", kernelSubtree, err)
+	}
+	version := strings.TrimSpace(string(raw))
+	if !versionPattern.MatchString(version) {
+		return nil, fmt.Errorf("invalid update package layout: invalid kernel version %q", version)
+	}
+	return &kernelPayload{itb: itb, version: version}, nil
+}
+
+// u-boot's bootm reads a FIT image, whose outer container is a flattened
+// device tree. Anything else here would be written over the trial slot and
+// only discovered by a device that no longer boots.
+func verifyFDTMagic(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("invalid update package layout: open %s/boot.itb: %w", kernelSubtree, err)
+	}
+	defer file.Close()
+	head := make([]byte, len(fdtMagic))
+	if _, err := io.ReadFull(file, head); err != nil || !bytes.Equal(head, fdtMagic) {
+		return fmt.Errorf("invalid update package layout: %s/boot.itb is not a FIT image", kernelSubtree)
 	}
 	return nil
 }

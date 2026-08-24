@@ -1,8 +1,19 @@
 package proto
 
 type GetVersionRsp struct {
-	Current string `json:"current"`
-	Latest  string `json:"latest"`
+	Current      string `json:"current"`
+	Latest       string `json:"latest"`
+	LatestKernel string `json:"latestKernel,omitempty"`
+}
+
+type UpdateRsp struct {
+	Reboot bool `json:"reboot"`
+}
+
+type GetKernelRsp struct {
+	Slot       string `json:"slot,omitempty"`
+	Installed  string `json:"installed,omitempty"`
+	RolledBack string `json:"rolledBack,omitempty"`
 }
 
 type GetPreviewRsp struct {

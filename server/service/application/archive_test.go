@@ -84,7 +84,11 @@ func TestInspectAndExtractArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validateExtractedPackage(extracted, "1.2.3"); err != nil {
+	kernel, err := validateExtractedPackage(extracted, "1.2.3")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if kernel != nil {
+		t.Fatalf("an application package reported a kernel payload %+v", kernel)
 	}
 }
