@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -701,5 +702,47 @@ func TestCollapsingTheHIDLayoutUnlinksTheInterfacesItDrops(t *testing.T) {
 	outcome := plan.Outcome(Snapshot{Linked: []string{"hid.GS0", "hid.GS1", "hid.GS2", "rndis.usb0"}})
 	if got := strings.Join(outcome.Removes, ","); got != "hid.GS1,hid.GS2,rndis.usb0" {
 		t.Fatalf("removes = %q, want %q", got, "hid.GS1,hid.GS2,rndis.usb0")
+	}
+}
+
+// The arrangement the user is actually after - keyboard, mouse and pointer on a
+// single HID interface, USB networking, a camera and a microphone - is the
+// tightest fit six IN endpoints allow: 1 + 2 + 2 + 1. It is also the case that
+// failed on hardware, because the collapse costed one HID and linked three. The
+// budget is a silicon ceiling, so pin the whole arrangement rather than the
+// collapse alone, and pin it at exactly six: a change that leaves a spare
+// endpoint here has stopped accounting for something the kernel still binds.
+func TestCameraAndMicrophoneFitBesideNetworkingAndOneHID(t *testing.T) {
+	profile := standardProfile()
+	if err := SetHIDLayout(&profile, [][]HIDRole{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}}); err != nil {
+		t.Fatalf("set hid layout: %v", err)
+	}
+	profile.Functions = append(profile.Functions,
+		NetworkFunction(FunctionRNDIS),
+		testCamera("cam0", 768),
+		testMicrophone("mic0"),
+	)
+
+	used, err := AccountEndpoints(profile.Functions, staticV1)
+	if err != nil {
+		t.Fatalf("account endpoints: %v", err)
+	}
+	if used.In != staticV1.MaxInEndpoints {
+		t.Fatalf("used %d IN endpoints, want exactly %d", used.In, staticV1.MaxInEndpoints)
+	}
+
+	plan, err := Compile(profile, staticV1)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+
+	outcome := plan.Outcome(Snapshot{Linked: []string{"hid.GS0", "hid.GS1", "hid.GS2", "rndis.usb0"}})
+	for _, dropped := range []string{"hid.GS1", "hid.GS2"} {
+		if slices.Contains(outcome.Linked, dropped) {
+			t.Fatalf("linked = %v, want %s taken away, not kept", outcome.Linked, dropped)
+		}
+		if !slices.Contains(outcome.Removes, dropped) {
+			t.Fatalf("removes = %v, want it to contain %s", outcome.Removes, dropped)
+		}
 	}
 }
