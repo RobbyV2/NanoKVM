@@ -46,8 +46,9 @@ const (
 	// S30rndis puts the standalone 10.x.y.1/24 on the gadget NIC and starts a
 	// udhcpd on it unless this flag exists. Both are wrong once the NIC is a
 	// bridge port: the address belongs to a subnet the bridge does not carry,
-	// and the DHCP server answers the target ahead of the LAN's with a lease
-	// whose config names no router, which is what strands the attached host.
+	// and the DHCP server is then sitting on the bridged segment, where it can
+	// answer the target ahead of the LAN's own server with a lease whose config
+	// names no router and no DNS.
 	RNDISNoDHCPDPath = "/boot/rndis.nodhcpd"
 
 	// S30rndis generates one of these per interface, and it is what identifies

@@ -11,8 +11,9 @@ RECOVERED="$STATE_DIR/recovered.json"
 LAST_GOOD="$STATE_DIR/last-known-good.json"
 # S30rndis runs after this script and, unless this flag is there, unconditionally
 # puts the standalone 10.x.y.1/24 on the gadget NIC and starts a udhcpd on it.
-# Bridged, that address sits on an enslaved port and the DHCP server answers the
-# target ahead of the LAN's, handing it a lease whose config names no router.
+# Bridged, that address sits on an enslaved port, and the DHCP server ends up on
+# the bridged segment where it can answer the target ahead of the LAN's own with
+# a lease whose config names no router and no DNS.
 NODHCPD=/boot/rndis.nodhcpd
 
 teardown() {
