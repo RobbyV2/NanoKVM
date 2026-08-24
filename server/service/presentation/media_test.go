@@ -137,6 +137,13 @@ func TestUVCCompileMatchesVendorConfigFS(t *testing.T) {
 	if !links["functions/uvc.cam0/control/class/fs/h"] || links["functions/uvc.cam0/control/class/hs/h"] {
 		t.Fatalf("control class links = %v, vendor 5.10 exposes fs and ss but not hs", links)
 	}
+	// From 5.15 uvc_function_bind copies the SuperSpeed descriptors whether or
+	// not the UDC is one, and refuses to bind without these two links.
+	for _, path := range []string{"functions/uvc.cam0/control/class/ss/h", "functions/uvc.cam0/streaming/class/ss/h"} {
+		if !links[path] {
+			t.Fatalf("%s is not linked, so f_uvc from 5.15 on cannot bind", path)
+		}
+	}
 	firstCreate := slices.IndexFunc(plan.Ops, func(op Op) bool { return op.Kind == OpMkdir && op.Path == "functions/uvc.cam0" })
 	lastCleanup := slices.IndexFunc(plan.Ops, func(op Op) bool { return op.Kind == OpRmdir && op.Path == "functions/uvc.cam0/control/header/h" })
 	if firstCreate < 0 || lastCleanup < 0 || lastCleanup >= firstCreate {

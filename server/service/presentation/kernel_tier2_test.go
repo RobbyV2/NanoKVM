@@ -6,14 +6,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"NanoKVM-Server/service/kernelint"
 
@@ -585,4 +588,198 @@ func TestKernelTier2CompositeHIDReportDescriptorBinds(t *testing.T) {
 		entries, err := os.ReadDir("/sys/bus/hid/devices")
 		return err == nil && len(entries) >= 1
 	})
+}
+
+// A host reads a camera's name out of the descriptors it enumerated, so the
+// only place the writable function_name can be confirmed is the other side of
+// an enumeration. Two cameras that differ in nothing else must read back as two
+// different strings; identical ones are the "UVC Camera, UVC Camera" this
+// exists to fix. dummy_hcd still refuses PIPE_ISOCHRONOUS traffic, so this says
+// nothing about streaming and everything about descriptors.
+func TestKernelTier2NamedCamerasEnumerateDistinctHostNames(t *testing.T) {
+	kernelint.RequireTier2(t)
+	manager := kernelManager(t)
+	if !manager.caps.Functions[FunctionUVC].Attributes[UVCAttrFunctionName] {
+		t.Fatalf("uvc has no writable %s on this kernel; the naming backport is not in it", UVCAttrFunctionName)
+	}
+
+	left, right := "Left Camera", "Right Camera"
+	profile := standardProfile()
+	profile.Name = "media-naming"
+	profile.BuiltIn = false
+	profile.Functions = []Function{
+		kernelCamera("cam0", &left),
+		kernelCamera("cam1", &right),
+	}
+	plan, err := Compile(profile, manager.caps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.applyPlan(context.Background(), profile, plan, false); err != nil {
+		t.Fatalf("apply two named cameras: %v", err)
+	}
+	for _, node := range videoNodes(t, len(profile.Functions)) {
+		subscribeUVCSetup(t, node)
+	}
+	waitFor(t, "the gadget to reach configured", func() bool { return udcState(t) == "configured" })
+
+	// The gadget the previous apply left behind is still enumerated for a
+	// moment, so the names are polled rather than read once.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		names := videoFunctionNames(t, profile.Device.VendorID, profile.Device.ProductID)
+		if slices.Contains(names, left) && slices.Contains(names, right) {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("host-visible video function names = %q, want %q and %q", names, left, right)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// f_uvc binds deactivated and asks the composite to connect only once a
+// userspace app subscribes to UVC_EVENT_SETUP on its V4L2 node, which is what
+// service/media does on the device. Without it the gadget, though bound, never
+// pulls up and the host sees nothing to enumerate.
+func subscribeUVCSetup(t *testing.T, node string) {
+	t.Helper()
+
+	const (
+		vidiocSubscribeEvent = 0x4020565A
+		uvcEventSetup        = 0x08000000 + 4
+	)
+	file, err := os.OpenFile(node, os.O_RDWR, 0)
+	if err != nil {
+		t.Fatalf("open %s: %v", node, err)
+	}
+	t.Cleanup(func() { _ = file.Close() })
+
+	subscription := [8]uint32{uvcEventSetup}
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, file.Fd(), vidiocSubscribeEvent, uintptr(unsafe.Pointer(&subscription))); errno != 0 {
+		t.Fatalf("subscribe UVC_EVENT_SETUP on %s: %v", node, errno)
+	}
+}
+
+func videoNodes(t *testing.T, want int) []string {
+	t.Helper()
+
+	var nodes []string
+	waitFor(t, "f_uvc to register a V4L2 node per camera", func() bool {
+		nodes, _ = filepath.Glob("/dev/video*")
+		return len(nodes) >= want
+	})
+	return nodes[:want]
+}
+
+func kernelCamera(instance string, name *string) Function {
+	return Function{Kind: FunctionUVC, Instance: instance, Video: &VideoFunction{
+		FunctionName: "NanoKVM " + instance, HostName: name,
+		StreamingMaxPacket: 768, StreamingInterval: 1,
+		Formats: []VideoFormat{{Codec: "mjpeg", Frames: []VideoFrame{
+			{Width: 640, Height: 480, Intervals: []uint32{333333}},
+		}}},
+	}}
+}
+
+// The gadget and its host controller are the same machine under dummy_hcd, so
+// the descriptors it presented are readable back through usbfs. f_uvc puts the
+// function name on the interface association descriptor's iFunction, which is
+// the string a host shows for the whole camera; sysfs exposes no attribute for
+// it, so the index comes out of the raw config descriptor and the string out of
+// a GET_DESCRIPTOR the host controller answers.
+func videoFunctionNames(t *testing.T, vendor, product string) []string {
+	t.Helper()
+
+	entries, err := os.ReadDir("/sys/bus/usb/devices")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		device := filepath.Join("/sys/bus/usb/devices", entry.Name())
+		if !sysfsHas(device, "idVendor", strings.TrimPrefix(vendor, "0x")) || !sysfsHas(device, "idProduct", strings.TrimPrefix(product, "0x")) {
+			continue
+		}
+		descriptors, err := os.ReadFile(filepath.Join(device, "descriptors"))
+		if err != nil {
+			continue
+		}
+		node := usbfsNode(device)
+		if node == nil {
+			continue
+		}
+		for _, index := range videoFunctionStringIndices(descriptors) {
+			names = append(names, usbStringDescriptor(node, index))
+		}
+		_ = node.Close()
+	}
+	return names
+}
+
+func videoFunctionStringIndices(descriptors []byte) []uint8 {
+	const associationDescriptor, videoClass = 0x0B, 0x0E
+
+	var indices []uint8
+	for i := 0; i+2 <= len(descriptors); {
+		length := int(descriptors[i])
+		if length < 2 || i+length > len(descriptors) {
+			break
+		}
+		if descriptors[i+1] == associationDescriptor && length >= 8 && descriptors[i+4] == videoClass {
+			indices = append(indices, descriptors[i+7])
+		}
+		i += length
+	}
+	return indices
+}
+
+// A device that is on its way out between the sysfs walk and the open is the
+// gadget the previous apply left behind, so a failure here is polled through
+// rather than reported.
+func usbfsNode(device string) *os.File {
+	bus, err := os.ReadFile(filepath.Join(device, "busnum"))
+	if err != nil {
+		return nil
+	}
+	dev, err := os.ReadFile(filepath.Join(device, "devnum"))
+	if err != nil {
+		return nil
+	}
+	busNumber, _ := strconv.Atoi(strings.TrimSpace(string(bus)))
+	devNumber, _ := strconv.Atoi(strings.TrimSpace(string(dev)))
+	file, err := os.OpenFile(fmt.Sprintf("/dev/bus/usb/%03d/%03d", busNumber, devNumber), os.O_RDWR, 0)
+	if err != nil {
+		return nil
+	}
+	return file
+}
+
+func usbStringDescriptor(node *os.File, index uint8) string {
+	const usbdevfsControl = 0xC0185500
+	buffer := make([]byte, 255)
+	request := struct {
+		requestType, request uint8
+		value, index, length uint16
+		timeout              uint32
+		data                 unsafe.Pointer
+	}{
+		requestType: 0x80, request: 0x06,
+		value: 0x0300 | uint16(index), index: 0x0409, length: uint16(len(buffer)),
+		timeout: 1000, data: unsafe.Pointer(&buffer[0]),
+	}
+	read, _, errno := unix.Syscall(unix.SYS_IOCTL, node.Fd(), usbdevfsControl, uintptr(unsafe.Pointer(&request)))
+	if errno != 0 {
+		return ""
+	}
+	var decoded []rune
+	for i := 2; i+1 < int(read); i += 2 {
+		decoded = append(decoded, rune(uint16(buffer[i])|uint16(buffer[i+1])<<8))
+	}
+	return strings.TrimSpace(string(decoded))
+}
+
+func sysfsHas(dir, attr, want string) bool {
+	data, err := os.ReadFile(filepath.Join(dir, attr))
+	return err == nil && strings.EqualFold(strings.TrimSpace(string(data)), want)
 }

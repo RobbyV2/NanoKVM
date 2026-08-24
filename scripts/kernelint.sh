@@ -29,7 +29,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build/kernelint"
 
 GO_IMAGE="${GO_IMAGE:-golang:1.25}"
-VM_IMAGE="${VM_IMAGE:-nanokvm-kernelint-vm:1}"
+VM_IMAGE="${VM_IMAGE:-nanokvm-kernelint-vm:4}"
 KVER="${KVER:-6.8.0-138-generic}"
 KTAG="${KTAG:-v6.8}"
 ARCH="${ARCH:-arm64}"
@@ -110,7 +110,7 @@ write_tier2_payload() {
     cat > "$BUILD/tier2/run.sh" <<EOF
 #!/bin/sh
 set -u
-for module in libcomposite dummy_hcd usb_f_fs usb_f_hid usb_f_ncm usbhid hid-generic; do
+for module in libcomposite dummy_hcd usb_f_fs usb_f_hid usb_f_ncm usb_f_uvc usb_f_uac2 usbhid hid-generic; do
     modprobe "\$module" || echo "kernelint: modprobe \$module failed"
 done
 mkdir -p /sys/kernel/config
@@ -155,17 +155,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src/dummy
+# dummy_hcd comments out its three isochronous EP_INFO pairs, so f_uvc and
+# f_uac2 find no ISO endpoint to autoconfigure and never bind. Uncommenting
+# them lets the rig verify enumeration and descriptors, and nothing else:
+# PIPE_ISOCHRONOUS still returns -EINVAL because dummy_hcd never implemented
+# ISO scheduling, so no conclusion about throughput or timing can be drawn
+# here. That is a limit of the emulator, not of NanoKVM.
 RUN curl -fsSL -o dummy_hcd.c "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/usb/gadget/udc/dummy_hcd.c?h=${KTAG}" \
+ && perl -0777 -i -pe 'BEGIN{$n=0} $n += s{^/\*\n((?:\tEP_INFO\("ep\d+(?:in|out)-iso",\n\t\tUSB_EP_CAPS\(USB_EP_CAPS_TYPE_ISO, USB_EP_CAPS_DIR_(?:IN|OUT)\)\),\n){2})\*/\n}{$1}gm; END{die "uncommented $n iso endpoint pairs, expected 3\n" unless $n == 3}' dummy_hcd.c \
  && printf 'obj-m += dummy_hcd.o\n' > Makefile \
  && make -C /lib/modules/${KVER}/build M=/src/dummy modules \
  && install -m644 dummy_hcd.ko /lib/modules/${KVER}/kernel/drivers/usb/gadget/udc/dummy_hcd.ko
 
+# f_uvc pulls in the V4L2 core and f_uac2 the ALSA core, neither of which is
+# under kernel/drivers/usb; copying either subsystem whole would multiply the
+# initrd, so only what modprobe says they need comes across.
 RUN mkdir -p /rootfs/lib/modules/${KVER} \
  && cd /lib/modules/${KVER} \
  && cp modules.builtin modules.builtin.modinfo modules.order /rootfs/lib/modules/${KVER}/ \
  && for d in kernel/drivers/usb kernel/drivers/hid kernel/net/bridge kernel/net/llc kernel/net/802; do \
       tar cf - "$d" | (cd /rootfs/lib/modules/${KVER} && tar xf -); \
     done \
+ && for module in usb_f_uvc usb_f_uac2; do modprobe -S ${KVER} -n --show-depends "$module" | awk '{print $2}'; done \
+      | sed "s|^/lib/modules/${KVER}/||" | sort -u > /tmp/media-modules \
+ && test -s /tmp/media-modules \
+ && tar cf - -T /tmp/media-modules | (cd /rootfs/lib/modules/${KVER} && tar xf -) \
  && m=$(find kernel/drivers/net -maxdepth 1 -name 'veth.ko*' | head -1) \
  && tar cf - "$m" | (cd /rootfs/lib/modules/${KVER} && tar xf -) \
  && depmod -b /rootfs ${KVER}

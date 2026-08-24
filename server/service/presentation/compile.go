@@ -532,9 +532,16 @@ func (c *compiler) uvc(dir, name string, video VideoFunction) {
 		c.write(dir+"/"+UVCAttrFunctionName, *video.HostName)
 	}
 
+	// S03usbdev links only the full-speed control class and the fs and hs
+	// streaming ones, which is all a 5.10 f_uvc reads on a high-speed UDC:
+	// there the SuperSpeed copy is behind gadget_is_superspeed. From 5.15 that
+	// guard is gone and uvc_function_bind copies the SuperSpeed descriptors
+	// unconditionally, so a function with no ss class link fails to bind with
+	// -ENODEV and no log line. The extra links cost the device nothing.
 	controlHeader := dir + "/control/header/h"
 	c.mkdir(controlHeader)
 	c.link(dir+"/control/class/fs/h", controlHeader)
+	c.link(dir+"/control/class/ss/h", controlHeader)
 
 	format := dir + "/streaming/mjpeg/m"
 	c.mkdir(format)
@@ -559,7 +566,7 @@ func (c *compiler) uvc(dir, name string, video VideoFunction) {
 	streamHeader := dir + "/streaming/header/h"
 	c.mkdir(streamHeader)
 	c.link(streamHeader+"/m", format)
-	for _, speed := range [...]string{"fs", "hs"} {
+	for _, speed := range [...]string{"fs", "hs", "ss"} {
 		c.link(dir+"/streaming/class/"+speed+"/h", streamHeader)
 	}
 	c.link(configPrefix+"/"+name, dir)
