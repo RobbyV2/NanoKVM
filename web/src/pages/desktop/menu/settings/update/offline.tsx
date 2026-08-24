@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/application.ts';
 
+import { reloadWhenBack } from './state.ts';
+
 interface UpdateProps {
   status: string;
   setStatus: (status: string) => void;
@@ -79,12 +81,14 @@ export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdatePro
             : rspj.msg || t('settings.update.offline.updateFailed');
           throw new Error(message);
         }
+        return !!rspj.data?.reboot;
       })
-      .then(() => {
-        setTimeout(() => {
+      .then((isRebooting) => {
+        if (isRebooting) setStatus('rebooting');
+        reloadWhenBack(!!isRebooting, api.getKernel, () => {
           setIsLocked(false);
           window.location.reload();
-        }, 12000);
+        });
       })
       .catch((error: unknown) => {
         setIsLocked(false);

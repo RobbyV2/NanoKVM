@@ -8,15 +8,7 @@ import * as api from '@/api/application.ts';
 import { CustomServer } from './custom-server.tsx';
 import { Offline } from './offline.tsx';
 import { Preview } from './preview.tsx';
-import {
-  pollIntervalMs,
-  rebootGraceMs,
-  rebootWaitMs,
-  restartWaitMs,
-  rollbackWarning,
-  updateStatus,
-  type KernelState
-} from './state.ts';
+import { reloadWhenBack, rollbackWarning, updateStatus, type KernelState } from './state.ts';
 
 type UpdateProps = {
   setIsLocked: (isClosable: boolean) => void;
@@ -78,27 +70,12 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
     api.dismissKernelRollback().catch(() => {});
   }
 
-  function reloadWhenBack(isRebooting: boolean) {
-    const deadline = Date.now() + rebootWaitMs;
-
-    function finish() {
+  function reload(isRebooting: boolean) {
+    reloadWhenBack(isRebooting, api.getKernel, () => {
       setIsLocked(false);
       setErrMsg('');
       window.location.reload();
-    }
-
-    function poll() {
-      if (!isRebooting || Date.now() >= deadline) {
-        finish();
-        return;
-      }
-      api
-        .getKernel()
-        .then(finish)
-        .catch(() => setTimeout(poll, pollIntervalMs));
-    }
-
-    setTimeout(poll, isRebooting ? rebootGraceMs : restartWaitMs);
+    });
   }
 
   function update() {
@@ -113,14 +90,14 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
         if (rsp.code !== 0) {
           setStatus('failed');
           setErrMsg(t('settings.update.updateFailed'));
-          reloadWhenBack(false);
+          reload(false);
           return;
         }
         const isRebooting = !!rsp.data?.reboot;
         if (isRebooting) setStatus('rebooting');
-        reloadWhenBack(isRebooting);
+        reload(isRebooting);
       })
-      .catch(() => reloadWhenBack(false));
+      .catch(() => reload(false));
   }
 
   return (
