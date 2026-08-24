@@ -682,3 +682,24 @@ func TestReconcileNeverLeavesAFunctionUnlinked(t *testing.T) {
 		})
 	}
 }
+
+// The HID layout editor is the remedy the endpoint budget error recommends, so
+// collapsing three interfaces onto one has to take the other two out of the
+// config. Leaving them linked spends two IN endpoints the plan never counted,
+// and the kernel refuses at bind what the compiler accepted.
+func TestCollapsingTheHIDLayoutUnlinksTheInterfacesItDrops(t *testing.T) {
+	profile := standardProfile()
+	if err := SetHIDLayout(&profile, [][]HIDRole{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}}); err != nil {
+		t.Fatalf("set hid layout: %v", err)
+	}
+
+	plan, err := Compile(profile, staticV1)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+
+	outcome := plan.Outcome(Snapshot{Linked: []string{"hid.GS0", "hid.GS1", "hid.GS2", "rndis.usb0"}})
+	if got := strings.Join(outcome.Removes, ","); got != "hid.GS1,hid.GS2,rndis.usb0" {
+		t.Fatalf("removes = %q, want %q", got, "hid.GS1,hid.GS2,rndis.usb0")
+	}
+}

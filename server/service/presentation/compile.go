@@ -83,9 +83,14 @@ type Outcome struct {
 	Recovery string   `json:"recovery"`
 }
 
+// Compile links every function the profile carries, so links is the profile and
+// a linked function missing from it is one the apply has to take away. HID is
+// no exception: collapsing three interfaces onto one is the lever that fits a
+// camera, a microphone and a NIC inside six IN endpoints, and a HID link the new
+// profile does not carry costs an IN endpoint the plan never counted, which the
+// kernel discovers at bind rather than the allocator at compile.
 func (p Plan) Outcome(before Snapshot) Outcome {
 	links := map[string]bool{}
-	transient := false
 	outcome := Outcome{Profile: p.Profile, Linked: []string{}, Removes: []string{}}
 
 	for _, op := range p.Ops {
@@ -94,7 +99,6 @@ func (p Plan) Outcome(before Snapshot) Outcome {
 		}
 		name := strings.TrimPrefix(op.Path, configPrefix+"/")
 		links[name] = true
-		transient = transient || name == "ffs.hybrid"
 		outcome.Linked = append(outcome.Linked, name)
 	}
 
@@ -103,10 +107,7 @@ func (p Plan) Outcome(before Snapshot) Outcome {
 		if isMedia(name) {
 			media = true
 		}
-		if (links[name] && !isMedia(name)) || (!transient && isHID(name)) {
-			if !links[name] {
-				outcome.Linked = append(outcome.Linked, name)
-			}
+		if links[name] && !isMedia(name) {
 			continue
 		}
 		outcome.Removes = append(outcome.Removes, name)
