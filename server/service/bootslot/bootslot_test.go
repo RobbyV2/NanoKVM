@@ -253,3 +253,15 @@ func TestCommitRefusesWhenBootCannotHoldTheTrialKernel(t *testing.T) {
 		t.Errorf("a refused commit still moved ab_state: %q", uenv)
 	}
 }
+
+func TestMarkPendingCreatesItsDirectory(t *testing.T) {
+	p := rig(t, "nanokvm_slot=good", uenvFixture)
+	p.Pending = filepath.Join(p.Root, "etc", "kvm", "kernel_pending")
+	if err := p.MarkPending("2.9.0"); err != nil {
+		t.Fatal(err)
+	}
+	version, ok := p.RolledBack()
+	if !ok || version != "2.9.0" {
+		t.Errorf("RolledBack() = %q, %v, want 2.9.0, true", version, ok)
+	}
+}

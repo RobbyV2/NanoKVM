@@ -27,7 +27,7 @@ any two of them:
 1. write the new kernel over `/boot/boot.alt`, sync, re-read it and compare digests
 2. zero `/boot/bootcnt`
 3. flip `ab_state` to `trial` (temp file, rename, directory sync)
-4. write `/kvmapp/kernel_pending` with the version being tried
+4. write `/etc/kvm/kernel_pending` with the version being tried
 
 Until step 3 the bootloader still picks `boot.sd`, so a half-written `boot.alt` is never
 selectable. Move the flip earlier and a torn kernel becomes bootable; that is the one
@@ -45,6 +45,10 @@ one: **`/boot` holds under 2 MiB free against a ~7 MiB kernel**. The safe copy i
 extracted package in `CacheDir` on partition 2, which is why the read-back comparison is
 against the package and not against a checksum carried alongside. Never create a third
 file in `/boot`.
+
+The pending marker and the confirmed kernel version live under `/etc/kvm`, not under
+`/kvmapp`: an application update moves that whole tree to `/root/old` and puts a fresh
+one in its place, so state kept there does not survive one.
 
 ## Committing is the other place /boot can run out
 

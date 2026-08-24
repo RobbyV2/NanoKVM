@@ -17,8 +17,10 @@ import (
 const (
 	BootDir   = "/boot"
 	Confirmed = "/run/nanokvm-kernel-confirmed"
-	Pending   = "/kvmapp/kernel_pending"
-	Installed = "/kvmapp/kernel.version"
+	// Not under /kvmapp: an application update moves that whole tree aside,
+	// which would take the record of a pending trial with it.
+	Pending   = "/etc/kvm/kernel_pending"
+	Installed = "/etc/kvm/kernel.version"
 
 	cmdlinePath = "/proc/cmdline"
 	statePrefix = "ab_state="
@@ -129,6 +131,9 @@ func (p Paths) ResetBootCount() error {
 
 // MarkPending records the version being tried, so a rollback can name it.
 func (p Paths) MarkPending(version string) error {
+	if err := os.MkdirAll(filepath.Dir(p.Pending), 0o755); err != nil {
+		return err
+	}
 	return replace(p.Pending, []byte(strings.TrimSpace(version)+"\n"))
 }
 
@@ -230,7 +235,9 @@ func (p Paths) Confirm() error {
 		return fmt.Errorf("reset boot counter: %w", err)
 	}
 	if version, err := os.ReadFile(p.Pending); err == nil {
-		_ = replace(p.InstalledPath, version)
+		if err := os.MkdirAll(filepath.Dir(p.InstalledPath), 0o755); err == nil {
+			_ = replace(p.InstalledPath, version)
+		}
 	}
 	_ = os.Remove(p.Pending)
 	return nil
