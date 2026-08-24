@@ -102,7 +102,7 @@ device permanently unbridged for a cable that is in fact plugged in.
 static, so `br_stp_recalculate_bridge_id()` stops re-electing the numerically lowest port
 address every time a port is added or removed.
 
-Without the pin, enslaving `usb0` at its deterministic `48:da:35:6e:xx:xx` can win that
+Without the pin, enslaving the gadget NIC at its deterministic `48:da:35:6e:xx:xx` can win that
 election, the bridge's L2 identity changes under a live DHCP lease, and the reservation
 the operator configured against the old address stops matching. That is the stable-adapter
 guarantee the comment at `S03usbdev:42-45` exists to provide, broken from the other side.
@@ -111,10 +111,16 @@ Read the MAC before enslaving: once `eth0` is a port, the value that matters is 
 
 ## wlan0 is refused by the enslavable set
 
-`enslavable` in `config.go` is a closed map holding `eth0` and `usb0`. `wlan0` is absent by
-construction, so the rule is enforced by the data rather than by a check every call site
-has to remember, and `checkEnslavable` reports it as its own error because that rejection
-has a cause worth surfacing.
+`enslavable` in `config.go` is a closed map, and it holds `eth0` alone. `checkEnslavable`
+admits one thing beside it: a name matching `gadgetNIC`, `^usb[0-9]+$`. `wlan0` is absent
+from both by construction, so the rule is still enforced by the data rather than by a check
+every call site has to remember, and `checkEnslavable` reports it as its own error because
+that rejection has a cause worth surfacing.
+
+The gadget half is a shape rather than a name because the name is runtime state; see
+"The gadget NIC is not usb0" below. The shape is the floor. The only caller that can put a
+`usbN` through it is `enslaveGadget`, which enslaves what `presentation.Manager.NIC` named
+a moment earlier and nothing else, so the effective set is `eth0` plus exactly that name.
 
 `wlan0` is the out-of-band recovery path. It is how an operator reaches a device whose
 wired management plane the bridge just broke, and `POST /api/network/bridge/revert` exists
@@ -146,19 +152,49 @@ nothing about whether anyone can reach the management plane.
 so verification would fail on every device and prove nothing about reachability either
 way. Any HTTP status counts: a 401 is still the listener answering.
 
+## The gadget NIC is not usb0
+
+`gether_setup` allocates the gadget netdev's name from `"usb%d"`. Applying a profile
+unlinks the outgoing net function from `configs/c.1`, but unlinking does not destroy an
+`f_ncm` or `f_rndis`: only removing its `functions/` directory does, and `gether_setup`
+holds the netdev until then. So a device that has switched protocol without that `rmdir`
+has an orphaned `rndis.usb0` sitting on `usb0` with no carrier while the live `ncm.usb0`
+came up as `usb1`.
+
+`functions/<net-fn>/ifname` is readable on both `ncm.*` and `rndis.*`, and the one linked
+into `configs/c.1` is the authority for the live name. `presentation.Manager.NIC` reads it;
+nothing in this package spells the name. `StockGadgetName` is the boot-time default for a
+script with no other answer and is never the authority.
+
+Four places had to stop assuming it. `checkEnslavable` matches the `usbN` shape instead of
+a constant. `Snapshot.GadgetPorts` reads the ports off the capture, because a disable has
+to release what is actually enslaved and a port left behind under a name a later profile
+stopped using is invisible to the presentation manager. `releasable` in `snapshot.go`
+unions the captured gadget names with any gadget-shaped port `br0` holds right now, because
+a snapshot taken as `usb0` and restored once the NIC is `usb1` needs both directions and
+neither list contains the other. And `killGadgetDHCPD` matches the whole
+`/etc/udhcpd.usbN.conf` family, because a rename leaves the previous boot's `udhcpd` running
+under the old name and that server is on the bridged segment.
+
+The shell side is `S29bridge`'s `gadget_nic`, which reads the same `ifname`, and the shipped
+`S30rndis`, which is the stock script with the interface resolved the same way. `S30rndis`
+is shipped at all because the bridge runs it on a disable to hand the standalone addressing
+back, so a copy that says `usb0` addresses the orphan.
+
 ## The gadget port does not stay put
 
 A presentation apply unbinds the UDC and binds it again, and the kernel destroys and
-recreates `usb0` with no memory of `br0`, so enable's step 13 holds only until the next
-profile change. `S29bridge` builds `br0` from scratch at every boot, so a script that
-enslaves `eth0` alone comes up one-ported. Both halves lose the second port silently.
+recreates the gadget NIC with no memory of `br0` — possibly under a different name — so
+enable's step 13 holds only until the next profile change. `S29bridge` builds `br0` from
+scratch at every boot, so a script that enslaves `eth0` alone comes up one-ported. Both
+halves lose the second port silently.
 
 `bridge.Gadget` gains `OnRebind` for the first half: `New` hands the presentation manager
 `ReattachGadget`, and the manager calls it after every apply, failed ones included, since a
-failed apply rebound the UDC too. `S29bridge` covers the second, enslaving `usb0` inside
-`create` after `eth0` and before the uplink file is written.
+failed apply rebound the UDC too. `S29bridge` covers the second, enslaving the NIC its
+`gadget_nic` resolves inside `create`, after `eth0` and before the uplink file is written.
 
-Neither path may fail on an absent `usb0`. It exists only when the active profile has a
+Neither path may fail on an absent gadget NIC. It exists only when the active profile has a
 network function linked into `configs/c.1`, and bridge-enabled-with-no-NIC is legitimate:
 `NIC` reports empty and `enslaveGadget` does nothing, and the script's `enslave_gadget`
 returns 0 on every failure it can meet, because a non-zero return there drops `start` into
@@ -191,9 +227,10 @@ static path replays the captured address itself instead of calling `S30eth start
 in preference to its own `ip route | grep eth0`. An OTA can ship a new server without a new
 `kvm_system`, and that file is what keeps the OLED showing a gateway on such a device.
 
-`usb0` is enslaved after the dead-man is disarmed. Its worst case is an attached host with
-no network, not a device with no management plane, so it takes its own smaller snapshot and
-its own rollback rather than sitting inside the one that holds the management address.
+The gadget NIC is enslaved after the dead-man is disarmed. Its worst case is an attached
+host with no network, not a device with no management plane, so it takes its own smaller
+snapshot and its own rollback rather than sitting inside the one that holds the management
+address.
 
 ## Testing against a real kernel
 
