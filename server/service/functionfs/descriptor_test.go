@@ -168,3 +168,40 @@ func FuzzImportDescriptors(f *testing.F) {
 		_, _ = Import(raw, fixtureFetcher{}, testCapabilities())
 	})
 }
+
+// The hybrid gadget Manager.hybridProfile builds carries the operator's own HID
+// functions capped at two, and the layout editor lets that be one, two or three
+// interfaces before the cap. Import budgets against the fixed pair here, so the
+// model has to stay at least as expensive as any layout the editor can produce:
+// if it ever charges less, an image passes Import and then fails at bind.
+func TestHybridImportNeverBudgetsFewerEndpointsThanTheLayoutEditorCanBuild(t *testing.T) {
+	caps := testCapabilities()
+
+	model, err := presentation.AccountEndpoints(hybridFunctions(presentation.FunctionFS{}), caps)
+	if err != nil {
+		t.Fatalf("account the imported model: %s", err)
+	}
+
+	for _, groups := range [][][]presentation.HIDRole{
+		{{presentation.HIDRoleKeyboard, presentation.HIDRoleRelative, presentation.HIDRoleAbsolute}},
+		{{presentation.HIDRoleKeyboard}, {presentation.HIDRoleRelative, presentation.HIDRoleAbsolute}},
+		{{presentation.HIDRoleKeyboard}, {presentation.HIDRoleRelative}, {presentation.HIDRoleAbsolute}},
+	} {
+		var profile presentation.Profile
+		if err := presentation.SetHIDLayout(&profile, groups); err != nil {
+			t.Fatalf("layout %d interfaces: %s", len(groups), err)
+		}
+		hid := profile.Functions
+		if len(hid) > 2 {
+			hid = hid[:2]
+		}
+		actual, err := presentation.AccountEndpoints(hid, caps)
+		if err != nil {
+			t.Fatalf("account %d interfaces: %s", len(groups), err)
+		}
+		if actual.In > model.In || actual.Out > model.Out {
+			t.Fatalf("a %d interface layout costs %+v but Import budgets only %+v",
+				len(groups), actual, model)
+		}
+	}
+}

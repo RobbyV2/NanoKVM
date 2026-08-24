@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -266,5 +267,132 @@ func TestLoadCapabilitiesAbandonsAStalledProbe(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("LoadCapabilities never returned from a stalled probe")
+	}
+}
+
+// The isochronous lane credits back a UVC control interrupt endpoint in
+// AccountEndpoints, and the HID lane changes how many HID interfaces a profile
+// carries. Both feed the same budget, and the two halves of the arithmetic only
+// agree if every IN endpoint charged also gets a FIFO seated: a function that is
+// charged an endpoint SeatFIFOs never seats compiles here and fails at bind.
+func TestEveryChargedINEndpointIsSeatedAFIFO(t *testing.T) {
+	table := staticV1.clone()
+	table.Functions[FunctionUVC] = FunctionCaps{
+		Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768},
+		Attributes: map[string]bool{UVCAttrInterruptEP: true},
+	}
+	declined := false
+
+	cases := map[string]Function{
+		"hid single role":    {Kind: FunctionHID, Instance: "GS0", HID: &HIDFunction{ReportLength: 8}},
+		"hid composite":      {Kind: FunctionHID, Instance: "GS0", HID: &HIDFunction{ReportLength: 9}},
+		"ncm":                {Kind: FunctionNCM, Instance: "usb0", Net: &NetFunction{}},
+		"rndis":              {Kind: FunctionRNDIS, Instance: "usb0", Net: &NetFunction{}},
+		"mass storage":       {Kind: FunctionMassStorage, Instance: "disk", Storage: &StorageFunction{}},
+		"uvc with interrupt": {Kind: FunctionUVC, Instance: "cam0", Video: &VideoFunction{StreamingMaxPacket: 768}},
+		"uvc declining the interrupt": {Kind: FunctionUVC, Instance: "cam0",
+			Video: &VideoFunction{StreamingMaxPacket: 768, InterruptEndpoint: &declined}},
+		"uac2": {Kind: FunctionUAC2, Instance: "mic0",
+			Audio: &AudioFunction{PChannelMask: 3, PSampleRate: 48000, PSampleSize: 2}},
+		"functionfs": {Kind: FunctionFFS, Instance: "hybrid", FFS: &FunctionFS{Endpoints: []FunctionFSEndpoint{
+			{Address: 0x81, MaxPacket: 512}, {Address: 0x02, MaxPacket: 512}, {Address: 0x83, MaxPacket: 64},
+		}}},
+	}
+
+	for name, function := range cases {
+		t.Run(name, func(t *testing.T) {
+			use, err := AccountEndpoints([]Function{function}, table)
+			if err != nil {
+				t.Fatalf("account: %s", err)
+			}
+			fifos, err := SeatFIFOs([]Function{function}, table)
+			if err != nil {
+				t.Fatalf("seat: %s", err)
+			}
+			seated := 0
+			for _, assignment := range fifos {
+				seated += len(assignment)
+			}
+			if seated != use.In {
+				t.Fatalf("charged %d IN endpoints but seated %d FIFOs (%v)", use.In, seated, fifos)
+			}
+		})
+	}
+}
+
+// Whichever lane produced the plan, the budget has to be the same budget. The
+// layout editor decides how many HID interfaces are charged and the isochronous
+// opt-in decides whether UVC costs one endpoint or two; the two are only
+// consistent if Compile refuses exactly what AccountEndpoints refuses.
+func TestHIDLayoutAndISOOptOutShareTheSixINBudget(t *testing.T) {
+	table := staticV1.clone()
+	table.Functions[FunctionUVC] = FunctionCaps{
+		Available: true, InEPs: 2, OutEPs: 0, INPackets: []int{16, 768},
+		Attributes: map[string]bool{UVCAttrInterruptEP: true},
+	}
+
+	layouts := [][][]HIDRole{
+		{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}},
+		{{HIDRoleKeyboard}, {HIDRoleRelative, HIDRoleAbsolute}},
+		{{HIDRoleKeyboard}, {HIDRoleRelative}, {HIDRoleAbsolute}},
+	}
+	// Charged IN endpoints per layout is exactly the interface count, and the
+	// camera costs two or one depending on the isochronous opt-in.
+	want := map[string]int{
+		"1 interface, interrupt kept":      1 + 2,
+		"1 interface, interrupt declined":  1 + 1,
+		"2 interfaces, interrupt kept":     2 + 2,
+		"2 interfaces, interrupt declined": 2 + 1,
+		"3 interfaces, interrupt kept":     3 + 2,
+		"3 interfaces, interrupt declined": 3 + 1,
+	}
+
+	for _, groups := range layouts {
+		for _, keepInterrupt := range []bool{true, false} {
+			label := fmt.Sprintf("%d interface", len(groups))
+			if len(groups) > 1 {
+				label += "s"
+			}
+			if keepInterrupt {
+				label += ", interrupt kept"
+			} else {
+				label += ", interrupt declined"
+			}
+
+			t.Run(label, func(t *testing.T) {
+				profile := standardProfile()
+				if err := SetHIDLayout(&profile, groups); err != nil {
+					t.Fatalf("layout: %s", err)
+				}
+				video := defaultCamera(0, "Camera")
+				if !keepInterrupt {
+					declined := false
+					video.Video.InterruptEndpoint = &declined
+				}
+				profile.Functions = append(profile.Functions, video)
+
+				use, accountErr := AccountEndpoints(profile.Functions, table)
+				plan, compileErr := Compile(profile, table)
+
+				if (accountErr == nil) != (compileErr == nil) {
+					t.Fatalf("account error %v disagrees with compile error %v", accountErr, compileErr)
+				}
+				if accountErr != nil {
+					if !errors.Is(accountErr, ErrEndpointBudget) && !errors.Is(accountErr, ErrFIFOBudget) {
+						t.Fatalf("unexpected refusal: %s", accountErr)
+					}
+					return
+				}
+				if use.In != want[label] {
+					t.Fatalf("charged %d IN endpoints, want %d", use.In, want[label])
+				}
+				if use.In > table.MaxInEndpoints {
+					t.Fatalf("accepted %d IN endpoints over the %d budget", use.In, table.MaxInEndpoints)
+				}
+				if plan.Endpoints != use {
+					t.Fatalf("the compiled plan reports %+v but the accounting says %+v", plan.Endpoints, use)
+				}
+			})
+		}
 	}
 }
