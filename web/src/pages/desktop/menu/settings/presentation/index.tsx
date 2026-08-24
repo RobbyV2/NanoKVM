@@ -62,6 +62,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
   const { t } = useTranslation();
   const videoMode = useAtomValue(videoModeAtom);
   const fileInput = useRef<HTMLInputElement>(null);
+  const queue = useRef<Promise<void>>(Promise.resolve());
   const [status, setStatus] = useState<PresentationStatus>();
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -299,19 +300,24 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
     if (fileInput.current) fileInput.current.value = '';
   }
 
+  // work queues instead of being dropped: a field commits itself on blur, and
+  // blurring by clicking Apply must not leave the apply with nothing to run
   async function act(fn: () => Promise<void>) {
-    if (working) return;
-    setWorking(true);
-    setIsLocked(true);
-    setError('');
-    try {
-      await fn();
-    } catch (err: any) {
-      setError(err?.message || t('settings.presentation.operationFailed'));
-    } finally {
-      setWorking(false);
-      setIsLocked(false);
-    }
+    const run = queue.current.then(async () => {
+      setWorking(true);
+      setIsLocked(true);
+      setError('');
+      try {
+        await fn();
+      } catch (err: any) {
+        setError(err?.message || t('settings.presentation.operationFailed'));
+      } finally {
+        setWorking(false);
+        setIsLocked(false);
+      }
+    });
+    queue.current = run;
+    await run;
   }
 
   const readOnly = profile?.built_in !== false;
