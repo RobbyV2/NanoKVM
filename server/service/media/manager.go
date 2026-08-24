@@ -172,6 +172,7 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 	holders, holdErr := m.holdVideoNodes(ctx)
 
 	next := make(map[string]*worker, len(specs))
+	claimed := make(map[string]string, len(specs))
 	var failures []error
 	if holdErr != nil {
 		failures = append(failures, holdErr)
@@ -186,6 +187,15 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 			continue
 		}
 		spec.Node = node
+		// Two slots on one node is the shape a partly bound profile takes when
+		// the kernel cannot name its functions. One held descriptor is still
+		// one, so the bus is safe, but the frames would go to whichever slot
+		// wrote last, so the second claim fails instead.
+		if owner, taken := claimed[node]; taken {
+			failures = append(failures, fmt.Errorf("%s: %w: %s already resolves to %s", spec.ID, ErrNodeIdentityAmbiguous, node, owner))
+			continue
+		}
+		claimed[node] = spec.ID
 		if spec.Kind == sources.KindCamera {
 			holder, held := holders[node]
 			if !held {

@@ -771,3 +771,27 @@ func TestAHoldThatNeverReturnsFailsInsteadOfHanging(t *testing.T) {
 		t.Fatalf("reconcile blocked for %s on a node that never opens", elapsed)
 	}
 }
+
+func TestTwoCamerasCannotClaimOneNode(t *testing.T) {
+	registry := &fakeRegistry{}
+	holds := newFakeHolds()
+	resolver := &listResolver{
+		nodes: []string{"/dev/video0"},
+		video: map[string]string{"uvc.cam0": "/dev/video0", "uvc.cam1": "/dev/video0"},
+	}
+	factory := &fakeFactory{}
+	manager := newManagerWith(registry, resolver, factory, holds.open)
+	defer manager.Suspend()
+	err := manager.Reconcile(context.Background(), presentation.Profile{
+		Functions: []presentation.Function{cameraFunction("cam0"), cameraFunction("cam1")},
+	}, presentation.Plan{})
+	if !errors.Is(err, ErrNodeIdentityAmbiguous) {
+		t.Fatalf("err = %v, want the second claim on the node refused", err)
+	}
+	if opens, _ := holds.count("/dev/video0"); opens != 1 {
+		t.Fatalf("node opened %d times, want 1", opens)
+	}
+	if _, streamed := factory.outputs["uvc.cam1"]; streamed {
+		t.Fatal("both slots streamed to one node")
+	}
+}
