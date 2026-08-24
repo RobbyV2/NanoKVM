@@ -23,7 +23,13 @@ var (
 	// is listening. It is bounded so that it can never be the reason the server
 	// does not reach its listener; the configfs writes themselves are
 	// synchronous and the context gates the transaction's entry points.
-	reconcileBudget = 20 * time.Second
+	//
+	// Ten seconds because the first caller of GetManager is main.go's
+	// startup.Run("usb passthrough", 15s, ...), which abandons its goroutine
+	// and records a timeout rather than joining it: a reconcile that outlived
+	// that budget would report itself as a passthrough failure and mask a real
+	// one. The realistic cost is an apply plus at most enumerateTimeout.
+	reconcileBudget = 10 * time.Second
 
 	// Spent only when a host had already reached configured before the reapply,
 	// so a device booting with nothing plugged into it is never delayed here.
