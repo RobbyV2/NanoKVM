@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Modal, Switch } from 'antd';
+import { Button, Modal, Segmented } from 'antd';
 import { LoaderCircleIcon, RotateCcwIcon, TriangleAlertIcon, UnplugIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -42,13 +42,17 @@ const InfoRow = ({
   );
 };
 
-type ToggleProps = {
+type ChoiceProps = {
   enabled: boolean;
   disabled: boolean;
   onSuccess: () => void;
 };
 
-const Toggle = ({ enabled, disabled, onSuccess }: ToggleProps) => {
+// Two working destinations, not on and off. Bridged, the adapter is enslaved to
+// br0 next to the uplink and the target takes an address from the real DHCP
+// server; standalone, it keeps 10.163.245.1/24 and udhcpd, so the target
+// reaches this device and nothing past it.
+const Choice = ({ enabled, disabled, onSuccess }: ChoiceProps) => {
   const { t } = useTranslation();
 
   const [isApplying, setIsApplying] = useState(false);
@@ -56,8 +60,8 @@ const Toggle = ({ enabled, disabled, onSuccess }: ToggleProps) => {
   const [isInterrupted, setIsInterrupted] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  function openModal() {
-    if (isApplying || disabled) return;
+  function openModal(next: boolean) {
+    if (isApplying || disabled || next === enabled) return;
     setErrMsg('');
     setIsInterrupted(false);
     setIsModalOpen(true);
@@ -95,15 +99,32 @@ const Toggle = ({ enabled, disabled, onSuccess }: ToggleProps) => {
 
   return (
     <>
-      <div className="flex items-center justify-between space-x-10">
-        <div className="flex flex-col space-y-1">
+      <div className="flex flex-col space-y-1">
+        <div className="flex items-center justify-between space-x-6">
           <span>{t('settings.network.bridge.title')}</span>
-          <span className="text-xs text-neutral-500">
-            {t('settings.network.bridge.twoDevices')}
-          </span>
+
+          <div className="flex items-center space-x-2">
+            {isApplying && <LoaderCircleIcon className="animate-spin" size={14} />}
+
+            <Segmented
+              value={enabled ? 'lan' : 'kvm'}
+              disabled={disabled || isApplying}
+              onChange={(value) => openModal(value === 'lan')}
+              options={[
+                { label: t('settings.network.bridge.lan'), value: 'lan' },
+                { label: t('settings.network.bridge.kvmOnly'), value: 'kvm' }
+              ]}
+            />
+          </div>
         </div>
 
-        <Switch checked={enabled} loading={isApplying} disabled={disabled} onChange={openModal} />
+        {/* the description follows the current choice, so the standalone side
+            reads as a link that works rather than as an absence */}
+        <span className="text-xs text-neutral-500">
+          {enabled
+            ? t('settings.network.bridge.lanDesc')
+            : t('settings.network.bridge.kvmOnlyDesc')}
+        </span>
       </div>
 
       {isInterrupted && (
@@ -132,7 +153,11 @@ const Toggle = ({ enabled, disabled, onSuccess }: ToggleProps) => {
         onCancel={closeModal}
       >
         <div className="flex flex-col space-y-4 py-4">
-          <span className="text-sm">{t('settings.network.bridge.twoDevices')}</span>
+          <span className="text-sm">
+            {enabled
+              ? t('settings.network.bridge.kvmOnlyDesc')
+              : t('settings.network.bridge.lanDesc')}
+          </span>
           <span className="text-sm">{t('settings.network.bridge.reconnect')}</span>
           <span className="text-sm">{t('settings.network.bridge.rollback')}</span>
         </div>
@@ -195,7 +220,12 @@ const Revert = ({ onSuccess }: RevertProps) => {
   );
 };
 
-export const Bridge = () => {
+type BridgeProps = {
+  // the adapter switch above is off, so there is nothing to bridge
+  disabled?: boolean;
+};
+
+export const Bridge = ({ disabled = false }: BridgeProps) => {
   const { t } = useTranslation();
 
   const isLoadingRef = useRef(false);
@@ -258,9 +288,9 @@ export const Bridge = () => {
 
   return (
     <div className="flex flex-col space-y-4">
-      <Toggle
+      <Choice
         enabled={state === 'enabled'}
-        disabled={isLoading || isPending}
+        disabled={disabled || isLoading || isPending}
         onSuccess={getStatus}
       />
 
@@ -270,15 +300,7 @@ export const Bridge = () => {
           value={t(`settings.network.bridge.states.${state}`)}
         />
         <InfoRow label={t('settings.network.bridge.uplink')} value={status?.uplink} />
-        <InfoRow label={t('settings.network.bridge.ports')} value={ports} />
-        {/* named, not offered: the control for it is the Virtual Network one
-            under Settings, Device, since the protocol decides what the gadget
-            presents whether or not a bridge exists */}
-        <InfoRow
-          label={t('settings.network.bridge.protocol')}
-          value={status?.protocol ? status.protocol.toUpperCase() : ''}
-          isLast
-        />
+        <InfoRow label={t('settings.network.bridge.ports')} value={ports} isLast />
       </div>
 
       {isPending && <Revert onSuccess={getStatus} />}

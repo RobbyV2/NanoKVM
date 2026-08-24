@@ -483,8 +483,6 @@ const se = {
         descriptorAssets: 'Sparade deskriptorfiler: {{count}}',
         endpointUse:
           'IN {{inUse}} använda, {{inFree}} lediga; OUT {{outUse}} använda, {{outFree}} lediga',
-        preview: 'Validera',
-        save: 'Spara',
         apply: 'Tillämpa',
         applyTitle: 'Vill du tillämpa den här USB-profilen?',
         applyDesc: 'NanoKVM kommer att presentera {{profile}} för den anslutna datorn.',
@@ -766,12 +764,8 @@ const se = {
         hidOnlyDesc: 'Sluta emulera virtuella enheter, behåll bara grundläggande HID kontroll',
         disk: 'Virtuell disk',
         diskDesc: 'Montera virtuell U-disk på fjärrvärden',
-        network: 'Virtuellt nätverk',
-        networkDesc: 'Montera virtuell nätverkskort på fjärrvärden',
-        networkProtocol: 'Nätverksprotokoll',
-        networkProtocolDesc: 'NCM för moderna värdar, RNDIS för äldre Windows',
         rebindNotice:
-          'Att slå om någon av brytarna räknar upp USB-enheten på nytt, så målet förlorar kort sina virtuella enheter och sitt USB-nätverk.',
+          'Att slå om den här brytaren räknar upp USB-enheten på nytt, så målet förlorar kort sina virtuella enheter och sitt USB-nätverk.',
         media: {
           title: 'Platser för kamera och mikrofon',
           desc: 'Ange vilka medieenheter webbläsare får fylla. Endpoint-budgeten kontrolleras när USB-profilen tillämpas. Att spara räknar upp enheten på nytt och kopplar från anslutna webbläsare.',
@@ -786,7 +780,7 @@ const se = {
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Varje plats behöver ett namn.',
           budgetHint:
-            'De sex USB IN-slutpunkterna är en fast hårdvarugräns. Samla tangentbord, mus och absolut pekdon på ett enda HID-gränssnitt under USB-presentation, eller stäng av den virtuella disken eller USB-nätverket ovan.',
+            'De sex USB IN-slutpunkterna är en fast hårdvarugräns. Samla tangentbord, mus och absolut pekdon på ett enda HID-gränssnitt under USB-presentation, eller stäng av den virtuella disken här eller USB-nätverkskortet under Nätverk.',
           unsupported:
             'Den här kärnan kan inte namnge medieenheter, så värdar visar standardnamnet.',
           save: 'Spara platser',
@@ -821,32 +815,40 @@ const se = {
           description: 'Aktivera HTTPS-protokoll',
           tip: 'Observera: Användning av HTTPS kan öka fördröjningen, särskilt med MJPEG-läge.'
         },
+        usb: {
+          title: 'USB-nätverkskort',
+          desc: 'Ger den styrda datorn ett nätverkskort över USB',
+          type: 'Korttyp',
+          typeDesc: 'NCM för moderna system, RNDIS för äldre Windows'
+        },
         bridge: {
-          title: 'Nätverksbrygga',
-          twoDevices:
-            'Din router ser NanoKVM och den styrda datorn som två separata enheter, var och en med sin egen adress.',
+          title: 'Kortet är anslutet till',
+          lan: 'Ditt nätverk',
+          kvmOnly: 'Bara NanoKVM',
+          lanDesc:
+            'Datorn kommer in på ditt nätverk genom NanoKVM:s Ethernet-port och får en egen adress från routern.',
+          kvmOnlyDesc: 'Datorn får sin adress från NanoKVM och når NanoKVM, men inget bortom det.',
           loading: 'Laddar...',
           state: 'Status',
           states: {
-            disabled: 'Inaktiverad',
-            enabled: 'Aktiverad',
+            disabled: 'Bara NanoKVM',
+            enabled: 'Ditt nätverk',
             rolledBack: 'Återställd',
             failed: 'Misslyckades',
             pending: 'Pågår'
           },
           uplink: 'Upplänk',
           ports: 'Portar',
-          protocol: 'Enhetens protokoll',
           up: 'aktiv',
           down: 'inaktiv',
           noLink: 'ingen länk',
-          enableTitle: 'Aktivera nätverksbryggan?',
-          disableTitle: 'Inaktivera nätverksbryggan?',
+          enableTitle: 'Ansluta datorn till ditt nätverk?',
+          disableTitle: 'Begränsa datorn till bara NanoKVM?',
           reconnect: 'Hanteringsanslutningen bryts kort och återansluter medan adressen flyttas.',
           rollback:
             'Om verifieringen misslyckas återställs den tidigare konfigurationen automatiskt.',
-          enableBtn: 'Aktivera',
-          disableBtn: 'Inaktivera',
+          enableBtn: 'Anslut till mitt nätverk',
+          disableBtn: 'Bara NanoKVM',
           cancelBtn: 'Avbryt',
           interrupted:
             'Anslutningen bröts under tillämpningen. Kontrollerar nuvarande status igen.',

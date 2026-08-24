@@ -62,8 +62,8 @@ export type BridgeStatus = {
   lastApply?: BridgeApply | null;
 
   // ncm, rndis, or empty for a gadget presenting no network. Reported only: the
-  // control for it is the Virtual Network one under Settings, Device, because
-  // the protocol is a property of the USB profile rather than of the bridge.
+  // control for it is the adapter type under Settings, Network, because the
+  // protocol is a property of the USB profile rather than of the bridge.
   protocol: string;
 };
 

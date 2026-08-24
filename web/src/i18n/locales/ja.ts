@@ -484,8 +484,6 @@ const ja = {
         functions: '機能',
         descriptorAssets: '保存済みのディスクリプターファイル: {{count}}',
         endpointUse: 'IN 使用 {{inUse}}、空き {{inFree}}／OUT 使用 {{outUse}}、空き {{outFree}}',
-        preview: '検証',
-        save: '保存',
         apply: '適用',
         applyTitle: 'この USB プロファイルを適用しますか？',
         applyDesc: 'NanoKVM は接続されたコンピューターに {{profile}} を提示します。',
@@ -765,12 +763,8 @@ const ja = {
           'このモードでは仮想デバイスはマウントされなくなり、基本的な HID 制御機能のみが保持されます。',
         disk: '仮想ディスク',
         diskDesc: 'リモートホストに仮想 USB ドライブをマウントする',
-        network: '仮想ネットワークカード',
-        networkDesc: 'リモートホストに仮想ネットワークカードをマウントする',
-        networkProtocol: 'ネットワークプロトコル',
-        networkProtocolDesc: '最新のホストには NCM、古い Windows には RNDIS',
         rebindNotice:
-          'どちらのスイッチを切り替えても USB デバイスは再列挙され、ターゲットは仮想デバイスと USB ネットワークを一時的に失います。',
+          'このスイッチを切り替えると USB デバイスは再列挙され、ターゲットは仮想デバイスと USB ネットワークを一時的に失います。',
         media: {
           title: 'カメラとマイクのスロット',
           desc: 'ブラウザーが使えるメディアデバイスを宣言します。エンドポイントの余裕は USB プロファイルの適用時に確認されます。 保存するとデバイスが再列挙され、接続中のブラウザーは切断されます。',
@@ -785,7 +779,7 @@ const ja = {
           microphoneDefault: 'NanoKVM マイク {{index}}',
           nameRequired: 'すべてのスロットに名前が必要です。',
           budgetHint:
-            '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、上の仮想ディスクか USB ネットワークをオフにしてください。',
+            '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、ここで仮想ディスクを、または「ネットワーク」で USB ネットワークアダプターをオフにしてください。',
           unsupported:
             'このカーネルはメディアデバイスに名前を付けられないため、ホストには既定の名前が表示されます。',
           save: 'スロットを保存',
@@ -820,31 +814,40 @@ const ja = {
           description: 'HTTPS プロトコルを有効にする',
           tip: '注意：HTTPS を使用すると、特に MJPEG ビデオモードで遅延が増加する可能性があります。'
         },
+        usb: {
+          title: 'USB ネットワークアダプター',
+          desc: '制御対象のコンピューターに USB 経由でネットワークカードを与えます',
+          type: 'アダプターの種類',
+          typeDesc: '最新のシステムには NCM、古い Windows には RNDIS'
+        },
         bridge: {
-          title: 'ネットワークブリッジ',
-          twoDevices:
-            'ルーターは NanoKVM と制御対象のコンピューターを、それぞれ独自のアドレスを持つ 2 台の別々のデバイスとして認識します。',
+          title: 'アダプターの接続先',
+          lan: '自分のネットワーク',
+          kvmOnly: 'NanoKVM のみ',
+          lanDesc:
+            'コンピューターは NanoKVM の Ethernet ポート経由で自分のネットワークに参加し、ルーターから固有のアドレスを受け取ります。',
+          kvmOnlyDesc:
+            'コンピューターは NanoKVM からアドレスを受け取り、NanoKVM には届きますが、その先へは届きません。',
           loading: '読み込み中...',
           state: '状態',
           states: {
-            disabled: '無効',
-            enabled: '有効',
+            disabled: 'NanoKVM のみ',
+            enabled: '自分のネットワーク',
             rolledBack: 'ロールバック済み',
             failed: '失敗',
             pending: '実行中'
           },
           uplink: 'アップリンク',
           ports: 'ポート',
-          protocol: 'デバイスのプロトコル',
           up: 'リンクアップ',
           down: 'リンクダウン',
           noLink: 'リンクなし',
-          enableTitle: 'ネットワークブリッジを有効にしますか？',
-          disableTitle: 'ネットワークブリッジを無効にしますか？',
+          enableTitle: 'コンピューターを自分のネットワークに接続しますか？',
+          disableTitle: 'コンピューターを NanoKVM のみに限定しますか？',
           reconnect: 'アドレスの移動中、管理接続は一時的に切断されてから再接続します。',
           rollback: '検証に失敗した場合、以前の構成が自動的に復元されます。',
-          enableBtn: '有効にする',
-          disableBtn: '無効にする',
+          enableBtn: '自分のネットワークに接続',
+          disableBtn: 'NanoKVM のみ',
           cancelBtn: 'キャンセル',
           interrupted: '適用中に接続が中断されました。現在の状態を再確認しています。',
           pendingNotice: 'ブリッジの変更がまだ実行中か、完了前に中断されました。',

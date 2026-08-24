@@ -486,8 +486,6 @@ const pl = {
         descriptorAssets: 'Zapisane pliki deskryptorów: {{count}}',
         endpointUse:
           'IN {{inUse}} zajęte, {{inFree}} wolne; OUT {{outUse}} zajęte, {{outFree}} wolne',
-        preview: 'Sprawdź',
-        save: 'Zapisz',
         apply: 'Zastosuj',
         applyTitle: 'Zastosować ten profil USB?',
         applyDesc: 'NanoKVM przedstawi podłączonemu komputerowi {{profile}}.',
@@ -768,12 +766,8 @@ const pl = {
           'Przestań emulować urządzenia wirtualne, zachowując jedynie podstawową kontrolę HID',
         disk: 'Dysk wirtualny',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Sieć wirtualna',
-        networkDesc: 'Zamontuj wirtualną kartę sieciową na zdalnym hoście',
-        networkProtocol: 'Protokół sieciowy',
-        networkProtocolDesc: 'NCM dla nowoczesnych hostów, RNDIS dla starszych systemów Windows',
         rebindNotice:
-          'Przełączenie któregokolwiek z przełączników ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
+          'Przełączenie tego przełącznika ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
         media: {
           title: 'Gniazda kamery i mikrofonu',
           desc: 'Zadeklaruj urządzenia multimedialne, które przeglądarki mogą zająć. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB. Zapis powoduje ponowne wyliczenie urządzenia i rozłączenie podłączonych przeglądarek.',
@@ -788,7 +782,7 @@ const pl = {
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Każde gniazdo wymaga nazwy.',
           budgetHint:
-            'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz powyżej dysk wirtualny lub sieć USB.',
+            'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz tutaj dysk wirtualny lub kartę sieciową USB w sekcji Sieć.',
           unsupported:
             'To jądro nie potrafi nazwać urządzeń multimedialnych, więc komputery pokazują nazwę domyślną.',
           save: 'Zapisz gniazda',
@@ -823,33 +817,41 @@ const pl = {
           description: 'Włącz protokół HTTPS',
           tip: 'Uwaga: użycie HTTPS może zwiększyć opóźnienie, szczególnie w trybie wideo MJPEG.'
         },
+        usb: {
+          title: 'Karta sieciowa USB',
+          desc: 'Daje sterowanemu komputerowi kartę sieciową przez USB',
+          type: 'Typ karty',
+          typeDesc: 'NCM dla nowoczesnych systemów, RNDIS dla starszych systemów Windows'
+        },
         bridge: {
-          title: 'Mostek sieciowy',
-          twoDevices:
-            'Router widzi NanoKVM i sterowany komputer jako dwa osobne urządzenia, każde z własnym adresem.',
+          title: 'Karta podłączona do',
+          lan: 'Twoja sieć',
+          kvmOnly: 'Tylko NanoKVM',
+          lanDesc:
+            'Komputer wchodzi do Twojej sieci przez port Ethernet NanoKVM i dostaje własny adres z routera.',
+          kvmOnlyDesc: 'Komputer dostaje adres od NanoKVM i sięga do NanoKVM, ale nie dalej.',
           loading: 'Ładowanie...',
           state: 'Stan',
           states: {
-            disabled: 'Wyłączony',
-            enabled: 'Włączony',
+            disabled: 'Tylko NanoKVM',
+            enabled: 'Twoja sieć',
             rolledBack: 'Wycofano',
             failed: 'Niepowodzenie',
             pending: 'W toku'
           },
           uplink: 'Łącze nadrzędne',
           ports: 'Porty',
-          protocol: 'Protokół urządzenia',
           up: 'aktywny',
           down: 'nieaktywny',
           noLink: 'brak łącza',
-          enableTitle: 'Włączyć mostek sieciowy?',
-          disableTitle: 'Wyłączyć mostek sieciowy?',
+          enableTitle: 'Podłączyć komputer do Twojej sieci?',
+          disableTitle: 'Ograniczyć komputer tylko do NanoKVM?',
           reconnect:
             'Połączenie zarządzania zostanie na chwilę przerwane i nawiązane ponownie podczas przenoszenia adresu.',
           rollback:
             'Jeśli weryfikacja się nie powiedzie, poprzednia konfiguracja zostanie automatycznie przywrócona.',
-          enableBtn: 'Włącz',
-          disableBtn: 'Wyłącz',
+          enableBtn: 'Podłącz do mojej sieci',
+          disableBtn: 'Tylko NanoKVM',
           cancelBtn: 'Anuluj',
           interrupted:
             'Połączenie zostało przerwane podczas stosowania zmian. Trwa ponowne sprawdzanie stanu.',

@@ -484,8 +484,6 @@ const ca = {
         descriptorAssets: 'Descriptors emmagatzemats: {{count}}',
         endpointUse:
           'IN {{inUse}} en ús, {{inFree}} lliures; OUT {{outUse}} en ús, {{outFree}} lliures',
-        preview: 'Valida',
-        save: 'Desa',
         apply: 'Aplica',
         applyTitle: 'Voleu aplicar aquest perfil USB?',
         applyDesc: 'El NanoKVM presentarà {{profile}} a l’ordinador connectat.',
@@ -766,12 +764,8 @@ const ca = {
         hidOnlyDesc: "Deixeu d'emular dispositius virtuals, conservant només el control bàsic HID",
         disk: 'Disc virtual',
         diskDesc: 'Munta un disc U virtual al dispositiu remot',
-        network: 'Xarxa virtual',
-        networkDesc: 'Munta una targeta de xarxa virtual al dispositiu remot',
-        networkProtocol: 'Protocol de xarxa',
-        networkProtocolDesc: 'NCM per a amfitrions moderns, RNDIS per a Windows antics',
         rebindNotice:
-          'Canviar qualsevol dels dos interruptors torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
+          'Canviar aquest interruptor torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
         media: {
           title: 'Ranures de càmera i micròfon',
           desc: 'Declareu els dispositius multimèdia que els navegadors poden omplir. El pressupost de punts finals es comprova en aplicar el perfil USB. En desar, el dispositiu es torna a enumerar i es desconnecta qualsevol navegador connectat.',
@@ -786,7 +780,7 @@ const ca = {
           microphoneDefault: 'Micròfon NanoKVM {{index}}',
           nameRequired: 'Cada ranura necessita un nom.',
           budgetHint:
-            'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva a dalt el disc virtual o la xarxa USB.',
+            'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva aquí el disc virtual o l’adaptador de xarxa USB a Xarxa.',
           unsupported:
             'Aquest nucli no pot anomenar els dispositius multimèdia, així que els amfitrions mostren el nom per defecte.',
           save: 'Desa les ranures',
@@ -821,32 +815,41 @@ const ca = {
           description: 'Activa el protocol HTTPS',
           tip: 'Atenció: Usar HTTPS pot augmentar la latència, sobretot amb vídeo MJPEG.'
         },
+        usb: {
+          title: 'Adaptador de xarxa USB',
+          desc: 'Dona una targeta de xarxa per USB a l’ordinador controlat',
+          type: 'Tipus d’adaptador',
+          typeDesc: 'NCM per a sistemes moderns, RNDIS per a Windows antics'
+        },
         bridge: {
-          title: 'Pont de xarxa',
-          twoDevices:
-            'El teu encaminador veurà el NanoKVM i l’ordinador controlat com dos dispositius separats, cadascun amb la seva pròpia adreça.',
+          title: 'L’adaptador es connecta a',
+          lan: 'La teva xarxa',
+          kvmOnly: 'Només NanoKVM',
+          lanDesc:
+            'L’ordinador s’uneix a la teva xarxa pel port Ethernet del NanoKVM, amb la seva pròpia adreça del router.',
+          kvmOnlyDesc:
+            'L’ordinador rep l’adreça del NanoKVM i pot arribar al NanoKVM, però a res més.',
           loading: 'Carregant...',
           state: 'Estat',
           states: {
-            disabled: 'Desactivat',
-            enabled: 'Activat',
+            disabled: 'Només NanoKVM',
+            enabled: 'La teva xarxa',
             rolledBack: 'Revertit',
             failed: 'Ha fallat',
             pending: 'En curs'
           },
           uplink: 'Enllaç ascendent',
           ports: 'Ports',
-          protocol: 'Protocol del dispositiu',
           up: 'actiu',
           down: 'inactiu',
           noLink: 'sense enllaç',
-          enableTitle: 'Vols activar el pont de xarxa?',
-          disableTitle: 'Vols desactivar el pont de xarxa?',
+          enableTitle: 'Vols connectar l’ordinador a la teva xarxa?',
+          disableTitle: 'Vols limitar l’ordinador només al NanoKVM?',
           reconnect:
             'La connexió d’administració es desconnectarà i es tornarà a connectar breument mentre es mou l’adreça.',
           rollback: 'Si la verificació falla, es restaura automàticament la configuració anterior.',
-          enableBtn: 'Activa',
-          disableBtn: 'Desactiva',
+          enableBtn: 'Uneix-lo a la meva xarxa',
+          disableBtn: 'Només NanoKVM',
           cancelBtn: 'Cancel·la',
           interrupted:
             'La connexió s’ha interromput durant l’aplicació. S’està tornant a comprovar l’estat actual.',

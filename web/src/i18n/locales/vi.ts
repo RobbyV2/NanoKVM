@@ -479,8 +479,6 @@ const vi = {
         functions: 'Chức năng',
         descriptorAssets: 'Tệp bộ mô tả đã lưu: {{count}}',
         endpointUse: 'IN dùng {{inUse}}, còn {{inFree}}; OUT dùng {{outUse}}, còn {{outFree}}',
-        preview: 'Kiểm tra',
-        save: 'Lưu',
         apply: 'Áp dụng',
         applyTitle: 'Áp dụng hồ sơ USB này?',
         applyDesc: 'NanoKVM sẽ trình diện {{profile}} với máy tính đang kết nối.',
@@ -759,12 +757,8 @@ const vi = {
         hidOnlyDesc: 'Dừng mô phỏng các thiết bị ảo, chỉ giữ lại điều khiển HID cơ bản',
         disk: 'Đĩa ảo',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Mạng ảo',
-        networkDesc: 'Gắn card mạng ảo trên máy chủ từ xa',
-        networkProtocol: 'Giao thức mạng',
-        networkProtocolDesc: 'NCM cho máy chủ hiện đại, RNDIS cho Windows cũ',
         rebindNotice:
-          'Gạt một trong hai công tắc sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
+          'Gạt công tắc này sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
         media: {
           title: 'Khe camera và micrô',
           desc: 'Khai báo các thiết bị đa phương tiện mà trình duyệt có thể lấp đầy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB. Việc lưu sẽ liệt kê lại thiết bị và ngắt kết nối các trình duyệt đang kết nối.',
@@ -779,7 +773,7 @@ const vi = {
           microphoneDefault: 'Micrô NanoKVM {{index}}',
           nameRequired: 'Mỗi khe cần một tên.',
           budgetHint:
-            'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo hay mạng USB ở trên.',
+            'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo ở đây hay card mạng USB trong mục Mạng.',
           unsupported:
             'Nhân này không thể đặt tên cho thiết bị đa phương tiện, nên máy đích sẽ hiển thị tên mặc định.',
           save: 'Lưu các khe',
@@ -814,32 +808,41 @@ const vi = {
           description: 'Bật giao thức HTTPS',
           tip: 'Lưu ý: Sử dụng HTTPS có thể tăng độ trễ, đặc biệt trong chế độ video MJPEG.'
         },
+        usb: {
+          title: 'Card mạng USB',
+          desc: 'Cấp cho máy tính được điều khiển một card mạng qua USB',
+          type: 'Loại card',
+          typeDesc: 'NCM cho hệ thống hiện đại, RNDIS cho Windows cũ'
+        },
         bridge: {
-          title: 'Cầu nối mạng',
-          twoDevices:
-            'Bộ định tuyến sẽ thấy NanoKVM và máy tính được điều khiển là hai thiết bị riêng biệt, mỗi thiết bị có địa chỉ riêng.',
+          title: 'Card kết nối tới',
+          lan: 'Mạng của bạn',
+          kvmOnly: 'Chỉ NanoKVM',
+          lanDesc:
+            'Máy tính vào mạng của bạn qua cổng Ethernet của NanoKVM và nhận địa chỉ riêng từ bộ định tuyến.',
+          kvmOnlyDesc:
+            'Máy tính nhận địa chỉ từ NanoKVM và tới được NanoKVM, nhưng không đi xa hơn.',
           loading: 'Đang tải...',
           state: 'Trạng thái',
           states: {
-            disabled: 'Đã tắt',
-            enabled: 'Đã bật',
+            disabled: 'Chỉ NanoKVM',
+            enabled: 'Mạng của bạn',
             rolledBack: 'Đã khôi phục',
             failed: 'Thất bại',
             pending: 'Đang xử lý'
           },
           uplink: 'Uplink',
           ports: 'Cổng',
-          protocol: 'Giao thức thiết bị',
           up: 'hoạt động',
           down: 'không hoạt động',
           noLink: 'không có liên kết',
-          enableTitle: 'Bật cầu nối mạng?',
-          disableTitle: 'Tắt cầu nối mạng?',
+          enableTitle: 'Kết nối máy tính vào mạng của bạn?',
+          disableTitle: 'Giới hạn máy tính chỉ tới NanoKVM?',
           reconnect:
             'Kết nối quản lý sẽ ngắt trong giây lát rồi kết nối lại khi địa chỉ được chuyển.',
           rollback: 'Nếu việc xác minh thất bại, cấu hình trước đó sẽ được khôi phục tự động.',
-          enableBtn: 'Bật',
-          disableBtn: 'Tắt',
+          enableBtn: 'Vào mạng của tôi',
+          disableBtn: 'Chỉ NanoKVM',
           cancelBtn: 'Hủy',
           interrupted:
             'Kết nối bị gián đoạn trong khi áp dụng. Đang kiểm tra lại trạng thái hiện tại.',

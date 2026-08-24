@@ -486,8 +486,6 @@ const id = {
         descriptorAssets: 'Berkas deskriptor tersimpan: {{count}}',
         endpointUse:
           'IN {{inUse}} terpakai, {{inFree}} bebas; OUT {{outUse}} terpakai, {{outFree}} bebas',
-        preview: 'Validasi',
-        save: 'Simpan',
         apply: 'Terapkan',
         applyTitle: 'Terapkan profil USB ini?',
         applyDesc: 'NanoKVM akan menampilkan {{profile}} ke komputer yang tersambung.',
@@ -768,12 +766,8 @@ const id = {
         hidOnlyDesc: 'Berhenti meniru perangkat virtual, hanya mempertahankan kontrol dasar HID',
         disk: 'Disk virtual',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Jaringan virtual',
-        networkDesc: 'Pasang kartu jaringan virtual pada host jarak jauh',
-        networkProtocol: 'Protokol jaringan',
-        networkProtocolDesc: 'NCM untuk host modern, RNDIS untuk Windows lama',
         rebindNotice:
-          'Mengubah salah satu sakelar akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
+          'Mengubah sakelar ini akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
         media: {
           title: 'Slot kamera dan mikrofon',
           desc: 'Tetapkan perangkat media yang boleh diisi peramban. Anggaran endpoint diperiksa saat profil USB diterapkan. Menyimpan akan menghitung ulang perangkat dan memutuskan peramban yang terhubung.',
@@ -788,7 +782,7 @@ const id = {
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Setiap slot memerlukan nama.',
           budgetHint:
-            'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual atau jaringan USB di atas.',
+            'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual di sini atau adaptor jaringan USB di bagian Jaringan.',
           unsupported:
             'Kernel ini tidak dapat menamai perangkat media, sehingga host menampilkan nama bawaan.',
           save: 'Simpan slot',
@@ -823,32 +817,41 @@ const id = {
           description: 'Aktifkan protokol HTTPS',
           tip: 'Perhatian: Menggunakan HTTPS dapat meningkatkan latensi, terutama pada mode video MJPEG.'
         },
+        usb: {
+          title: 'Adaptor jaringan USB',
+          desc: 'Memberi komputer yang dikendalikan kartu jaringan lewat USB',
+          type: 'Jenis adaptor',
+          typeDesc: 'NCM untuk sistem modern, RNDIS untuk Windows lama'
+        },
         bridge: {
-          title: 'Jembatan jaringan',
-          twoDevices:
-            'Router Anda melihat NanoKVM dan komputer yang dikendalikan sebagai dua perangkat terpisah, masing-masing dengan alamatnya sendiri.',
+          title: 'Adaptor terhubung ke',
+          lan: 'Jaringan Anda',
+          kvmOnly: 'Hanya NanoKVM',
+          lanDesc:
+            'Komputer bergabung ke jaringan Anda lewat port Ethernet NanoKVM, dengan alamatnya sendiri dari router.',
+          kvmOnlyDesc:
+            'Komputer mendapat alamat dari NanoKVM dan bisa menjangkau NanoKVM, tetapi tidak lebih jauh.',
           loading: 'Memuat...',
           state: 'Status',
           states: {
-            disabled: 'Nonaktif',
-            enabled: 'Aktif',
+            disabled: 'Hanya NanoKVM',
+            enabled: 'Jaringan Anda',
             rolledBack: 'Dikembalikan',
             failed: 'Gagal',
             pending: 'Sedang berjalan'
           },
           uplink: 'Uplink',
           ports: 'Port',
-          protocol: 'Protokol perangkat',
           up: 'aktif',
           down: 'nonaktif',
           noLink: 'tanpa link',
-          enableTitle: 'Aktifkan jembatan jaringan?',
-          disableTitle: 'Nonaktifkan jembatan jaringan?',
+          enableTitle: 'Hubungkan komputer ke jaringan Anda?',
+          disableTitle: 'Batasi komputer hanya ke NanoKVM?',
           reconnect:
             'Koneksi manajemen akan terputus sebentar lalu tersambung kembali saat alamat dipindahkan.',
           rollback: 'Jika verifikasi gagal, konfigurasi sebelumnya dipulihkan secara otomatis.',
-          enableBtn: 'Aktifkan',
-          disableBtn: 'Nonaktifkan',
+          enableBtn: 'Gabung ke jaringan saya',
+          disableBtn: 'Hanya NanoKVM',
           cancelBtn: 'Batal',
           interrupted:
             'Koneksi terputus saat menerapkan perubahan. Memeriksa ulang status saat ini.',

@@ -489,8 +489,6 @@ const nl = {
         descriptorAssets: 'Opgeslagen descriptors: {{count}}',
         endpointUse:
           'IN {{inUse}} in gebruik, {{inFree}} vrij; OUT {{outUse}} in gebruik, {{outFree}} vrij',
-        preview: 'Valideren',
-        save: 'Opslaan',
         apply: 'Toepassen',
         applyTitle: 'Dit USB-profiel toepassen?',
         applyDesc: 'De NanoKVM presenteert {{profile}} aan de aangesloten computer.',
@@ -772,12 +770,8 @@ const nl = {
           'Stop met het emuleren van virtuele apparaten en behoud alleen de basisbesturing van HID',
         disk: 'Virtuele schijf',
         diskDesc: 'Koppel virtuele U-schijf aan de externe host',
-        network: 'Virtueel Netwerk',
-        networkDesc: 'Koppel virtueel netwerk kaart aan de externe host',
-        networkProtocol: 'Netwerkprotocol',
-        networkProtocolDesc: 'NCM voor moderne hosts, RNDIS voor oudere Windows',
         rebindNotice:
-          'Een van beide schakelaars omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
+          'Deze schakelaar omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
         media: {
           title: 'Camera- en microfoonplaatsen',
           desc: 'Geef aan welke media-apparaten browsers mogen invullen. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast. Bij opslaan wordt het apparaat opnieuw opgesomd en worden verbonden browsers verbroken.',
@@ -792,7 +786,7 @@ const nl = {
           microphoneDefault: 'NanoKVM-microfoon {{index}}',
           nameRequired: 'Elke plaats heeft een naam nodig.',
           budgetHint:
-            'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hierboven de virtuele schijf of het USB-netwerk uit.',
+            'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hier de virtuele schijf uit of onder Netwerk de USB-netwerkadapter.',
           unsupported:
             'Deze kernel kan media-apparaten geen naam geven, dus computers tonen de standaardnaam.',
           save: 'Plaatsen opslaan',
@@ -827,33 +821,42 @@ const nl = {
           description: 'HTTPS-protocol inschakelen',
           tip: 'Let op: HTTPS gebruiken kan de latentie verhogen, vooral in MJPEG-videomodus.'
         },
+        usb: {
+          title: 'USB-netwerkadapter',
+          desc: 'Geeft de bestuurde computer een netwerkkaart via USB',
+          type: 'Adaptertype',
+          typeDesc: 'NCM voor moderne systemen, RNDIS voor oudere Windows'
+        },
         bridge: {
-          title: 'Netwerkbrug',
-          twoDevices:
-            'Je router ziet NanoKVM en de bestuurde computer als twee afzonderlijke apparaten, elk met een eigen adres.',
+          title: 'De adapter is verbonden met',
+          lan: 'Jouw netwerk',
+          kvmOnly: 'Alleen NanoKVM',
+          lanDesc:
+            'De computer komt via de ethernetpoort van de NanoKVM op jouw netwerk en krijgt een eigen adres van je router.',
+          kvmOnlyDesc:
+            'De computer krijgt zijn adres van de NanoKVM en bereikt de NanoKVM, maar niets daarbuiten.',
           loading: 'Laden...',
           state: 'Status',
           states: {
-            disabled: 'Uitgeschakeld',
-            enabled: 'Ingeschakeld',
+            disabled: 'Alleen NanoKVM',
+            enabled: 'Jouw netwerk',
             rolledBack: 'Teruggedraaid',
             failed: 'Mislukt',
             pending: 'Bezig'
           },
           uplink: 'Uplink',
           ports: 'Poorten',
-          protocol: 'Apparaatprotocol',
           up: 'actief',
           down: 'inactief',
           noLink: 'geen link',
-          enableTitle: 'Netwerkbrug inschakelen?',
-          disableTitle: 'Netwerkbrug uitschakelen?',
+          enableTitle: 'De computer met jouw netwerk verbinden?',
+          disableTitle: 'De computer tot alleen de NanoKVM beperken?',
           reconnect:
             'De beheerverbinding wordt kort verbroken en hersteld terwijl het adres verhuist.',
           rollback:
             'Als de verificatie mislukt, wordt de vorige configuratie automatisch hersteld.',
-          enableBtn: 'Inschakelen',
-          disableBtn: 'Uitschakelen',
+          enableBtn: 'Verbind met mijn netwerk',
+          disableBtn: 'Alleen NanoKVM',
           cancelBtn: 'Annuleren',
           interrupted:
             'De verbinding werd tijdens het toepassen verbroken. De huidige status wordt opnieuw gecontroleerd.',

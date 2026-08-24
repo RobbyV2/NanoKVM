@@ -483,8 +483,6 @@ const tr = {
         descriptorAssets: 'Saklanan tanımlayıcı dosyaları: {{count}}',
         endpointUse:
           'IN {{inUse}} kullanımda, {{inFree}} boş; OUT {{outUse}} kullanımda, {{outFree}} boş',
-        preview: 'Doğrula',
-        save: 'Kaydet',
         apply: 'Uygula',
         applyTitle: 'Bu USB profili uygulansın mı?',
         applyDesc: 'NanoKVM bağlı bilgisayara {{profile}} profilini sunacak.',
@@ -765,12 +763,8 @@ const tr = {
           'Yalnızca temel HID kontrolünü koruyarak sanal aygıtları taklit etmeyi bırakın',
         disk: 'Sanal Disk',
         diskDesc: "Sanal U-disk'i uzak ana bilgisayara bağla",
-        network: 'Sanal Ağ',
-        networkDesc: 'Sanal ağ kartını uzak ana bilgisayara bağla',
-        networkProtocol: 'Ağ protokolü',
-        networkProtocolDesc: 'Modern ana bilgisayarlar için NCM, eski Windows için RNDIS',
         rebindNotice:
-          'İki anahtardan birini değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
+          'Bu anahtarı değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
         media: {
           title: 'Kamera ve mikrofon yuvaları',
           desc: 'Tarayıcıların doldurabileceği medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir. Kaydetmek aygıtı yeniden numaralandırır ve bağlı tarayıcıların bağlantısını keser.',
@@ -785,7 +779,7 @@ const tr = {
           microphoneDefault: 'NanoKVM Mikrofon {{index}}',
           nameRequired: 'Her yuvanın bir adı olmalı.',
           budgetHint:
-            'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da yukarıdaki sanal diski veya USB ağını kapatın.',
+            'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da buradaki sanal diski veya Ağ bölümündeki USB ağ bağdaştırıcısını kapatın.',
           unsupported:
             'Bu çekirdek medya aygıtlarını adlandıramaz, bu yüzden makineler varsayılan adı gösterir.',
           save: 'Yuvaları kaydet',
@@ -820,31 +814,40 @@ const tr = {
           description: 'HTTPS protokolünü etkinleştir',
           tip: 'HTTPS protokolü bağlantıda gecikmeye sebep olabilir, özellikle MJPEG görüntü modu ile.'
         },
+        usb: {
+          title: 'USB ağ bağdaştırıcısı',
+          desc: 'Kontrol edilen bilgisayara USB üzerinden ağ kartı verir',
+          type: 'Bağdaştırıcı türü',
+          typeDesc: 'Modern sistemler için NCM, eski Windows için RNDIS'
+        },
         bridge: {
-          title: 'Ağ köprüsü',
-          twoDevices:
-            'Yönlendiriciniz NanoKVM ile kontrol edilen bilgisayarı, her biri kendi adresine sahip iki ayrı cihaz olarak görür.',
+          title: 'Bağdaştırıcının bağlandığı yer',
+          lan: 'Ağınız',
+          kvmOnly: 'Yalnızca NanoKVM',
+          lanDesc:
+            'Bilgisayar, NanoKVM’in Ethernet portu üzerinden ağınıza katılır ve yönlendiriciden kendi adresini alır.',
+          kvmOnlyDesc:
+            'Bilgisayar adresini NanoKVM’den alır ve NanoKVM’e ulaşır, ama ötesine geçemez.',
           loading: 'Yükleniyor...',
           state: 'Durum',
           states: {
-            disabled: 'Devre dışı',
-            enabled: 'Etkin',
+            disabled: 'Yalnızca NanoKVM',
+            enabled: 'Ağınız',
             rolledBack: 'Geri alındı',
             failed: 'Başarısız',
             pending: 'Sürüyor'
           },
           uplink: 'Uplink',
           ports: 'Bağlantı noktaları',
-          protocol: 'Aygıt protokolü',
           up: 'bağlı',
           down: 'bağlı değil',
           noLink: 'bağlantı yok',
-          enableTitle: 'Ağ köprüsü etkinleştirilsin mi?',
-          disableTitle: 'Ağ köprüsü devre dışı bırakılsın mı?',
+          enableTitle: 'Bilgisayar ağınıza bağlansın mı?',
+          disableTitle: 'Bilgisayar yalnızca NanoKVM ile sınırlansın mı?',
           reconnect: 'Adres taşınırken yönetim bağlantısı kısa süre kopar ve yeniden kurulur.',
           rollback: 'Doğrulama başarısız olursa önceki yapılandırma otomatik olarak geri yüklenir.',
-          enableBtn: 'Etkinleştir',
-          disableBtn: 'Devre dışı bırak',
+          enableBtn: 'Ağıma bağla',
+          disableBtn: 'Yalnızca NanoKVM',
           cancelBtn: 'İptal',
           interrupted:
             'Uygulama sırasında bağlantı kesildi. Geçerli durum yeniden kontrol ediliyor.',

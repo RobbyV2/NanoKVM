@@ -485,8 +485,6 @@ const da = {
         descriptorAssets: 'Gemte deskriptorfiler: {{count}}',
         endpointUse:
           'IN {{inUse}} brugt, {{inFree}} ledige; OUT {{outUse}} brugt, {{outFree}} ledige',
-        preview: 'Validér',
-        save: 'Gem',
         apply: 'Anvend',
         applyTitle: 'Anvend denne USB-profil?',
         applyDesc: 'NanoKVM vil præsentere {{profile}} for den tilsluttede computer.',
@@ -763,12 +761,8 @@ const da = {
           'Stop med at emulere virtuelle enheder, og behold kun grundlæggende HID kontrol',
         disk: 'Virtuel disk',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Virtuelt netværk',
-        networkDesc: 'Monter det virtuelle netværkskort på den eksterne vært',
-        networkProtocol: 'Netværksprotokol',
-        networkProtocolDesc: 'NCM til moderne værter, RNDIS til ældre Windows',
         rebindNotice:
-          'At skifte en af kontakterne opregner USB-enheden igen, så målet kortvarigt mister sine virtuelle enheder og sit USB-netværk.',
+          'At skifte denne kontakt opregner USB-enheden igen, så målet kortvarigt mister sine virtuelle enheder og sit USB-netværk.',
         media: {
           title: 'Kamera- og mikrofonpladser',
           desc: 'Angiv de medieenheder, browsere må udfylde. Endepunktsbudgettet kontrolleres, når USB-profilen anvendes. Når du gemmer, opregnes enheden igen, og tilsluttede browsere afbrydes.',
@@ -783,7 +777,7 @@ const da = {
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Hver plads skal have et navn.',
           budgetHint:
-            'De seks USB IN-endepunkter er en fast hardwaregrænse. Saml tastatur, mus og absolut pegeredskab på én HID-grænseflade under USB-præsentation, eller slå den virtuelle disk eller USB-netværket fra ovenfor.',
+            'De seks USB IN-endepunkter er en fast hardwaregrænse. Saml tastatur, mus og absolut pegeredskab på én HID-grænseflade under USB-præsentation, eller slå den virtuelle disk fra her eller USB-netværkskortet under Netværk.',
           unsupported:
             'Denne kerne kan ikke navngive medieenheder, så værter viser standardnavnet.',
           save: 'Gem pladser',
@@ -818,33 +812,42 @@ const da = {
           description: 'Aktiver HTTPS-protokol',
           tip: 'Bemærk: Brug af HTTPS kan øge forsinkelsen, især med MJPEG-videotilstand.'
         },
+        usb: {
+          title: 'USB-netværkskort',
+          desc: 'Giver den styrede computer et netværkskort via USB',
+          type: 'Korttype',
+          typeDesc: 'NCM til moderne systemer, RNDIS til ældre Windows'
+        },
         bridge: {
-          title: 'Netværksbro',
-          twoDevices:
-            'Din router ser NanoKVM og den styrede computer som to separate enheder, hver med sin egen adresse.',
+          title: 'Kortet er forbundet til',
+          lan: 'Dit netværk',
+          kvmOnly: 'Kun NanoKVM',
+          lanDesc:
+            'Computeren kommer på dit netværk gennem NanoKVM’s Ethernet-port og får sin egen adresse fra routeren.',
+          kvmOnlyDesc:
+            'Computeren får sin adresse fra NanoKVM og kan nå NanoKVM, men intet derudover.',
           loading: 'Indlæser...',
           state: 'Status',
           states: {
-            disabled: 'Deaktiveret',
-            enabled: 'Aktiveret',
+            disabled: 'Kun NanoKVM',
+            enabled: 'Dit netværk',
             rolledBack: 'Rullet tilbage',
             failed: 'Mislykkedes',
             pending: 'I gang'
           },
           uplink: 'Uplink',
           ports: 'Porte',
-          protocol: 'Enhedens protokol',
           up: 'aktiv',
           down: 'inaktiv',
           noLink: 'intet link',
-          enableTitle: 'Aktivér netværksbroen?',
-          disableTitle: 'Deaktivér netværksbroen?',
+          enableTitle: 'Forbind computeren til dit netværk?',
+          disableTitle: 'Begræns computeren til kun NanoKVM?',
           reconnect:
             'Administrationsforbindelsen afbrydes kortvarigt og genoprettes, mens adressen flyttes.',
           rollback:
             'Hvis verifikationen mislykkes, gendannes den tidligere konfiguration automatisk.',
-          enableBtn: 'Aktivér',
-          disableBtn: 'Deaktivér',
+          enableBtn: 'Slut til mit netværk',
+          disableBtn: 'Kun NanoKVM',
           cancelBtn: 'Annuller',
           interrupted:
             'Forbindelsen blev afbrudt under anvendelsen. Den aktuelle status kontrolleres igen.',

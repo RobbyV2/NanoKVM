@@ -480,8 +480,6 @@ const en = {
         functions: 'Functions',
         descriptorAssets: 'Stored descriptor assets: {{count}}',
         endpointUse: 'IN {{inUse}} used, {{inFree}} free; OUT {{outUse}} used, {{outFree}} free',
-        preview: 'Validate',
-        save: 'Save',
         apply: 'Apply',
         applyTitle: 'Apply this USB profile?',
         applyDesc: 'NanoKVM will present {{profile}} to the connected computer.',
@@ -756,12 +754,8 @@ const en = {
         hidOnlyDesc: 'Stop emulating virtual devices, retaining only basic HID control',
         disk: 'Virtual Disk',
         diskDesc: 'Mount SD card on the remote host',
-        network: 'Virtual Network',
-        networkDesc: 'Mount virtual network card on the remote host',
-        networkProtocol: 'Network Protocol',
-        networkProtocolDesc: 'NCM for modern hosts, RNDIS for older Windows',
         rebindNotice:
-          'Changing either switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
+          'Changing this switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
         media: {
           title: 'Camera and microphone slots',
           desc: 'Declare the media devices browsers may fill. The endpoint budget is checked when the USB profile is applied. Saving re-enumerates the gadget and disconnects any connected browser.',
@@ -776,7 +770,7 @@ const en = {
           microphoneDefault: 'NanoKVM Microphone {{index}}',
           nameRequired: 'Every slot needs a name.',
           budgetHint:
-            'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk or USB networking above.',
+            'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk here or the USB network adapter under Network.',
           unsupported: 'This kernel cannot name media devices, so hosts show the default name.',
           save: 'Save slots',
           disconnect: 'Disconnect',
@@ -810,31 +804,40 @@ const en = {
           description: 'Enable HTTPS protocol',
           tip: 'Be aware: Using HTTPS can increase latency, especially with MJPEG video mode.'
         },
+        usb: {
+          title: 'USB Network Adapter',
+          desc: 'Gives the controlled computer a network card over USB',
+          type: 'Adapter type',
+          typeDesc: 'NCM for modern systems, RNDIS for older Windows'
+        },
         bridge: {
-          title: 'Network Bridge',
-          twoDevices:
-            'Your router sees NanoKVM and the controlled computer as two separate devices, each with its own address.',
+          title: 'Adapter connects to',
+          lan: 'Your network',
+          kvmOnly: 'NanoKVM only',
+          lanDesc:
+            "The computer joins your network through NanoKVM's Ethernet port, with its own address from your router.",
+          kvmOnlyDesc:
+            'The computer gets its address from NanoKVM and can reach NanoKVM, but nothing beyond it.',
           loading: 'Loading...',
           state: 'State',
           states: {
-            disabled: 'Disabled',
-            enabled: 'Enabled',
+            disabled: 'NanoKVM only',
+            enabled: 'Your network',
             rolledBack: 'Rolled back',
             failed: 'Failed',
             pending: 'In progress'
           },
           uplink: 'Uplink',
           ports: 'Ports',
-          protocol: 'Gadget protocol',
           up: 'up',
           down: 'down',
           noLink: 'no link',
-          enableTitle: 'Enable the network bridge?',
-          disableTitle: 'Disable the network bridge?',
+          enableTitle: 'Connect the computer to your network?',
+          disableTitle: 'Limit the computer to NanoKVM only?',
           reconnect: 'Management will briefly disconnect and reconnect while the address moves.',
           rollback: 'If verification fails, the previous configuration is restored automatically.',
-          enableBtn: 'Enable',
-          disableBtn: 'Disable',
+          enableBtn: 'Join my network',
+          disableBtn: 'NanoKVM only',
           cancelBtn: 'Cancel',
           interrupted:
             'The connection was interrupted while applying. Re-checking the current state.',

@@ -489,8 +489,6 @@ const fr = {
         descriptorAssets: 'Descripteurs stockés : {{count}}',
         endpointUse:
           'IN {{inUse}} utilisés, {{inFree}} libres ; OUT {{outUse}} utilisés, {{outFree}} libres',
-        preview: 'Valider',
-        save: 'Enregistrer',
         apply: 'Appliquer',
         applyTitle: 'Appliquer ce profil USB ?',
         applyDesc: 'Le NanoKVM présentera {{profile}} à l’ordinateur connecté.',
@@ -774,12 +772,8 @@ const fr = {
           "Arrêtez d'émuler des périphériques virtuels, en ne conservant que le contrôle de base HID",
         disk: 'Disque virtuel',
         diskDesc: "Monter le disque virtuel U sur l'hôte distant",
-        network: 'Réseau virtuel',
-        networkDesc: "Monter la carte réseau virtuelle sur l'hôte distant",
-        networkProtocol: 'Protocole réseau',
-        networkProtocolDesc: 'NCM pour les hôtes récents, RNDIS pour les anciens Windows',
         rebindNotice:
-          "Basculer l'un ou l'autre interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.",
+          'Basculer cet interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.',
         media: {
           title: 'Emplacements caméra et micro',
           desc: 'Déclarez les périphériques média que les navigateurs peuvent occuper. Le budget de points de terminaison est vérifié lors de l’application du profil USB. L’enregistrement réénumère le périphérique et déconnecte les navigateurs connectés.',
@@ -794,7 +788,7 @@ const fr = {
           microphoneDefault: 'Microphone NanoKVM {{index}}',
           nameRequired: 'Chaque emplacement doit avoir un nom.',
           budgetHint:
-            'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez le disque virtuel ou le réseau USB ci-dessus.',
+            'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez ici le disque virtuel ou, dans Réseau, l’adaptateur réseau USB.',
           unsupported:
             'Ce noyau ne peut pas nommer les périphériques média : les machines affichent donc le nom par défaut.',
           save: 'Enregistrer les emplacements',
@@ -829,33 +823,42 @@ const fr = {
           description: 'Activer le protocole HTTPS',
           tip: "Attention : l'utilisation de HTTPS peut augmenter la latence, surtout en mode vidéo MJPEG."
         },
+        usb: {
+          title: 'Adaptateur réseau USB',
+          desc: 'Donne une carte réseau en USB à l’ordinateur contrôlé',
+          type: 'Type d’adaptateur',
+          typeDesc: 'NCM pour les systèmes récents, RNDIS pour les anciens Windows'
+        },
         bridge: {
-          title: 'Pont réseau',
-          twoDevices:
-            'Votre routeur voit NanoKVM et l’ordinateur contrôlé comme deux appareils distincts, chacun avec sa propre adresse.',
+          title: 'L’adaptateur est relié à',
+          lan: 'Votre réseau',
+          kvmOnly: 'NanoKVM seul',
+          lanDesc:
+            'L’ordinateur rejoint votre réseau par le port Ethernet du NanoKVM, avec sa propre adresse fournie par le routeur.',
+          kvmOnlyDesc:
+            'L’ordinateur reçoit son adresse du NanoKVM et atteint le NanoKVM, mais rien au-delà.',
           loading: 'Chargement...',
           state: 'État',
           states: {
-            disabled: 'Désactivé',
-            enabled: 'Activé',
+            disabled: 'NanoKVM seul',
+            enabled: 'Votre réseau',
             rolledBack: 'Restauré',
             failed: 'Échec',
             pending: 'En cours'
           },
           uplink: 'Liaison montante',
           ports: 'Ports',
-          protocol: 'Protocole du périphérique',
           up: 'actif',
           down: 'inactif',
           noLink: 'pas de lien',
-          enableTitle: 'Activer le pont réseau ?',
-          disableTitle: 'Désactiver le pont réseau ?',
+          enableTitle: 'Relier l’ordinateur à votre réseau ?',
+          disableTitle: 'Limiter l’ordinateur au NanoKVM seul ?',
           reconnect:
             'La connexion d’administration sera brièvement interrompue puis rétablie pendant le déplacement de l’adresse.',
           rollback:
             'Si la vérification échoue, la configuration précédente est restaurée automatiquement.',
-          enableBtn: 'Activer',
-          disableBtn: 'Désactiver',
+          enableBtn: 'Rejoindre mon réseau',
+          disableBtn: 'NanoKVM seul',
           cancelBtn: 'Annuler',
           interrupted:
             'La connexion a été interrompue pendant l’application. Vérification de l’état actuel en cours.',

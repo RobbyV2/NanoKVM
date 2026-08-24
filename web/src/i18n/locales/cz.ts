@@ -485,8 +485,6 @@ const cz = {
         descriptorAssets: 'Uložené soubory deskriptorů: {{count}}',
         endpointUse:
           'IN {{inUse}} použito, {{inFree}} volných; OUT {{outUse}} použito, {{outFree}} volných',
-        preview: 'Ověřit',
-        save: 'Uložit',
         apply: 'Použít',
         applyTitle: 'Použít tento profil USB?',
         applyDesc: 'NanoKVM bude připojenému počítači předkládat {{profile}}.',
@@ -764,12 +762,8 @@ const cz = {
         hidOnlyDesc: 'Zastavit emulaci virtuálních zařízení a zachovat pouze základní ovládání HID',
         disk: 'Virtuální disk',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Virtuální síť',
-        networkDesc: 'Připojit virtuální síťovou kartu na vzdáleném hostiteli',
-        networkProtocol: 'Síťový protokol',
-        networkProtocolDesc: 'NCM pro moderní systémy, RNDIS pro starší Windows',
         rebindNotice:
-          'Přepnutí kteréhokoli z přepínačů znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
+          'Přepnutí tohoto přepínače znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
         media: {
           title: 'Sloty pro kameru a mikrofon',
           desc: 'Určete, která mediální zařízení smějí prohlížeče obsadit. Rozpočet koncových bodů se kontroluje při použití profilu USB. Uložení znovu vyčíslí zařízení a odpojí připojené prohlížeče.',
@@ -784,7 +778,7 @@ const cz = {
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Každý slot potřebuje název.',
           budgetHint:
-            'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo výše vypněte virtuální disk či USB síť.',
+            'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo zde vypněte virtuální disk či síťový adaptér přes USB v sekci Síť.',
           unsupported:
             'Toto jádro neumí pojmenovat mediální zařízení, takže počítače uvidí výchozí název.',
           save: 'Uložit sloty',
@@ -819,32 +813,40 @@ const cz = {
           description: 'Povolit protokol HTTPS',
           tip: 'Upozornění: Použití HTTPS může zvýšit latenci, zejména v režimu videa MJPEG.'
         },
+        usb: {
+          title: 'Síťový adaptér přes USB',
+          desc: 'Dá ovládanému počítači síťovou kartu přes USB',
+          type: 'Typ adaptéru',
+          typeDesc: 'NCM pro moderní systémy, RNDIS pro starší Windows'
+        },
         bridge: {
-          title: 'Síťový most',
-          twoDevices:
-            'Router uvidí NanoKVM a ovládaný počítač jako dvě samostatná zařízení, každé s vlastní adresou.',
+          title: 'Adaptér je připojen k',
+          lan: 'Vaše síť',
+          kvmOnly: 'Jen NanoKVM',
+          lanDesc:
+            'Počítač se přes ethernetový port NanoKVM připojí do vaší sítě a dostane vlastní adresu z routeru.',
+          kvmOnlyDesc: 'Počítač dostane adresu od NanoKVM a dosáhne na NanoKVM, ale nikam dál.',
           loading: 'Načítání...',
           state: 'Stav',
           states: {
-            disabled: 'Vypnuto',
-            enabled: 'Zapnuto',
+            disabled: 'Jen NanoKVM',
+            enabled: 'Vaše síť',
             rolledBack: 'Vráceno zpět',
             failed: 'Selhalo',
             pending: 'Probíhá'
           },
           uplink: 'Uplink',
           ports: 'Porty',
-          protocol: 'Protokol zařízení',
           up: 'aktivní',
           down: 'neaktivní',
           noLink: 'bez linky',
-          enableTitle: 'Zapnout síťový most?',
-          disableTitle: 'Vypnout síťový most?',
+          enableTitle: 'Připojit počítač do vaší sítě?',
+          disableTitle: 'Omezit počítač jen na NanoKVM?',
           reconnect:
             'Během přesunu adresy se správcovské spojení na chvíli přeruší a znovu naváže.',
           rollback: 'Pokud ověření selže, předchozí konfigurace se automaticky obnoví.',
-          enableBtn: 'Zapnout',
-          disableBtn: 'Vypnout',
+          enableBtn: 'Připojit do mé sítě',
+          disableBtn: 'Jen NanoKVM',
           cancelBtn: 'Zrušit',
           interrupted: 'Spojení bylo během aplikování přerušeno. Probíhá opětovná kontrola stavu.',
           pendingNotice: 'Změna mostu stále probíhá nebo byla přerušena před dokončením.',

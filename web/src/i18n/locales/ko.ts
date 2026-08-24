@@ -479,8 +479,6 @@ const ko = {
         descriptorAssets: '저장된 디스크립터 파일: {{count}}',
         endpointUse:
           'IN {{inUse}}개 사용, {{inFree}}개 여유; OUT {{outUse}}개 사용, {{outFree}}개 여유',
-        preview: '검증',
-        save: '저장',
         apply: '적용',
         applyTitle: '이 USB 프로필을 적용할까요?',
         applyDesc: 'NanoKVM이 연결된 컴퓨터에 {{profile}}을(를) 제시합니다.',
@@ -754,12 +752,8 @@ const ko = {
         hidOnlyDesc: '가상 장치 에뮬레이션을 중지하고 기본 HID 제어만 유지합니다.',
         disk: '가상 디스크',
         diskDesc: '원격 호스트에서 가상 USB를 마운트합니다.',
-        network: '가상 네트워크',
-        networkDesc: '원격 호스트에서 가상 네트워크 카드를 마운트합니다.',
-        networkProtocol: '네트워크 프로토콜',
-        networkProtocolDesc: '최신 호스트는 NCM, 구형 Windows는 RNDIS',
         rebindNotice:
-          '어느 스위치를 바꾸든 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
+          '이 스위치를 바꾸면 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
         media: {
           title: '카메라 및 마이크 슬롯',
           desc: '브라우저가 채울 수 있는 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다. 저장하면 장치가 다시 열거되고 연결된 브라우저는 끊어집니다.',
@@ -774,7 +768,7 @@ const ko = {
           microphoneDefault: 'NanoKVM 마이크 {{index}}',
           nameRequired: '모든 슬롯에 이름이 필요합니다.',
           budgetHint:
-            'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나 위의 가상 디스크 또는 USB 네트워크를 끄세요.',
+            'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나, 여기서 가상 디스크를 끄거나 네트워크에서 USB 네트워크 어댑터를 끄세요.',
           unsupported:
             '이 커널은 미디어 장치의 이름을 지정할 수 없으므로 호스트에는 기본 이름이 표시됩니다.',
           save: '슬롯 저장',
@@ -809,31 +803,40 @@ const ko = {
           description: 'HTTPS 프로토콜 활성화',
           tip: '주의: HTTPS 사용 시 특히 MJPEG 비디오 모드에서 지연 시간이 증가할 수 있습니다.'
         },
+        usb: {
+          title: 'USB 네트워크 어댑터',
+          desc: '제어 대상 컴퓨터에 USB로 네트워크 카드를 제공합니다',
+          type: '어댑터 종류',
+          typeDesc: '최신 시스템은 NCM, 구형 Windows는 RNDIS'
+        },
         bridge: {
-          title: '네트워크 브리지',
-          twoDevices:
-            '라우터는 NanoKVM과 제어 대상 컴퓨터를 각각 고유한 주소를 가진 두 개의 별도 장치로 인식합니다.',
+          title: '어댑터 연결 대상',
+          lan: '내 네트워크',
+          kvmOnly: 'NanoKVM만',
+          lanDesc:
+            '컴퓨터가 NanoKVM의 이더넷 포트를 통해 내 네트워크에 들어가 공유기에서 자체 주소를 받습니다.',
+          kvmOnlyDesc:
+            '컴퓨터는 NanoKVM에서 주소를 받아 NanoKVM에는 닿지만 그 너머로는 가지 못합니다.',
           loading: '불러오는 중...',
           state: '상태',
           states: {
-            disabled: '비활성화됨',
-            enabled: '활성화됨',
+            disabled: 'NanoKVM만',
+            enabled: '내 네트워크',
             rolledBack: '롤백됨',
             failed: '실패',
             pending: '진행 중'
           },
           uplink: '업링크',
           ports: '포트',
-          protocol: '장치 프로토콜',
           up: '연결됨',
           down: '연결 끊김',
           noLink: '링크 없음',
-          enableTitle: '네트워크 브리지를 활성화할까요?',
-          disableTitle: '네트워크 브리지를 비활성화할까요?',
+          enableTitle: '컴퓨터를 내 네트워크에 연결할까요?',
+          disableTitle: '컴퓨터를 NanoKVM으로만 제한할까요?',
           reconnect: '주소가 이동하는 동안 관리 연결이 잠시 끊겼다가 다시 연결됩니다.',
           rollback: '검증에 실패하면 이전 구성이 자동으로 복원됩니다.',
-          enableBtn: '활성화',
-          disableBtn: '비활성화',
+          enableBtn: '내 네트워크에 연결',
+          disableBtn: 'NanoKVM만',
           cancelBtn: '취소',
           interrupted: '적용 중 연결이 끊겼습니다. 현재 상태를 다시 확인하는 중입니다.',
           pendingNotice: '브리지 변경이 아직 진행 중이거나 완료되기 전에 중단되었습니다.',

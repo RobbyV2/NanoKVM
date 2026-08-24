@@ -487,8 +487,6 @@ const hu = {
         descriptorAssets: 'Tárolt leírófájlok: {{count}}',
         endpointUse:
           'IN {{inUse}} használatban, {{inFree}} szabad; OUT {{outUse}} használatban, {{outFree}} szabad',
-        preview: 'Ellenőrzés',
-        save: 'Mentés',
         apply: 'Alkalmaz',
         applyTitle: 'Alkalmazza ezt az USB-profilt?',
         applyDesc:
@@ -773,12 +771,8 @@ const hu = {
           'A virtuális eszközök emulálásának leállítása, csak az alapvető HID vezérlés megtartásával',
         disk: 'Virtuális lemez',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Virtuális hálózat',
-        networkDesc: 'Virtuális hálózati kártya csatlakoztatása a távoli gazdagépen',
-        networkProtocol: 'Hálózati protokoll',
-        networkProtocolDesc: 'NCM modern gazdagépekhez, RNDIS régebbi Windowshoz',
         rebindNotice:
-          'Bármelyik kapcsoló átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
+          'Ennek a kapcsolónak az átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
         media: {
           title: 'Kamera- és mikrofonhelyek',
           desc: 'Adja meg, mely médiaeszközöket tölthetik ki a böngészők. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi. A mentés újraszámlálja az eszközt, és lecsatlakoztatja a csatlakozott böngészőket.',
@@ -793,7 +787,7 @@ const hu = {
           microphoneDefault: 'NanoKVM mikrofon {{index}}',
           nameRequired: 'Minden helyhez név kell.',
           budgetHint:
-            'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki fent a virtuális lemezt vagy az USB-hálózatot.',
+            'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki itt a virtuális lemezt, illetve a Hálózat alatt az USB hálózati adaptert.',
           unsupported:
             'Ez a kernel nem tudja elnevezni a médiaeszközöket, ezért a gépek az alapértelmezett nevet mutatják.',
           save: 'Helyek mentése',
@@ -828,32 +822,41 @@ const hu = {
           description: 'HTTPS protokoll engedélyezése',
           tip: 'Figyelem: A HTTPS használata növelheti a késleltetést, különösen MJPEG videó módban.'
         },
+        usb: {
+          title: 'USB hálózati adapter',
+          desc: 'Hálózati kártyát ad a vezérelt számítógépnek USB-n',
+          type: 'Adapter típusa',
+          typeDesc: 'NCM modern rendszerekhez, RNDIS régebbi Windowshoz'
+        },
         bridge: {
-          title: 'Hálózati híd',
-          twoDevices:
-            'A router a NanoKVM-et és a vezérelt számítógépet két külön eszközként látja, mindegyiket saját címmel.',
+          title: 'Az adapter ide csatlakozik',
+          lan: 'A hálózatod',
+          kvmOnly: 'Csak NanoKVM',
+          lanDesc:
+            'A számítógép a NanoKVM Ethernet-portján át csatlakozik a hálózatodhoz, és saját címet kap a routertől.',
+          kvmOnlyDesc:
+            'A számítógép a NanoKVM-től kap címet, és eléri a NanoKVM-et, de azon túl semmit.',
           loading: 'Betöltés...',
           state: 'Állapot',
           states: {
-            disabled: 'Kikapcsolva',
-            enabled: 'Bekapcsolva',
+            disabled: 'Csak NanoKVM',
+            enabled: 'A hálózatod',
             rolledBack: 'Visszaállítva',
             failed: 'Sikertelen',
             pending: 'Folyamatban'
           },
           uplink: 'Uplink',
           ports: 'Portok',
-          protocol: 'Eszközprotokoll',
           up: 'aktív',
           down: 'inaktív',
           noLink: 'nincs link',
-          enableTitle: 'Bekapcsolja a hálózati hidat?',
-          disableTitle: 'Kikapcsolja a hálózati hidat?',
+          enableTitle: 'Csatlakoztatja a számítógépet a hálózatához?',
+          disableTitle: 'Csak a NanoKVM-re korlátozza a számítógépet?',
           reconnect:
             'A cím áthelyezése közben a felügyeleti kapcsolat rövid időre megszakad, majd újra létrejön.',
           rollback: 'Ha az ellenőrzés sikertelen, a korábbi konfiguráció automatikusan visszaáll.',
-          enableBtn: 'Bekapcsolás',
-          disableBtn: 'Kikapcsolás',
+          enableBtn: 'Csatlakozás a hálózatomhoz',
+          disableBtn: 'Csak NanoKVM',
           cancelBtn: 'Mégse',
           interrupted:
             'A kapcsolat megszakadt az alkalmazás közben. A jelenlegi állapot újraellenőrzése folyik.',

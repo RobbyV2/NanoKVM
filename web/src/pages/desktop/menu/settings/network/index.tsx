@@ -1,9 +1,9 @@
 import { Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 
-import { Bridge } from './bridge.tsx';
 import { DNS } from './dns.tsx';
 import { Tls } from './tls.tsx';
+import { UsbNetwork } from './usb-network.tsx';
 import { Wifi } from './wifi.tsx';
 
 export const Network = () => {
@@ -25,7 +25,7 @@ export const Network = () => {
 
       <Divider className="opacity-50" style={{ margin: '32px 0' }} />
 
-      <Bridge />
+      <UsbNetwork />
     </>
   );
 };

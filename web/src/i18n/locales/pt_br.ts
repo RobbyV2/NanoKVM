@@ -485,8 +485,6 @@ const pt_br = {
         descriptorAssets: 'Descritores armazenados: {{count}}',
         endpointUse:
           'IN {{inUse}} em uso, {{inFree}} livres; OUT {{outUse}} em uso, {{outFree}} livres',
-        preview: 'Validar',
-        save: 'Salvar',
         apply: 'Aplicar',
         applyTitle: 'Aplicar este perfil USB?',
         applyDesc: 'O NanoKVM vai apresentar {{profile}} ao computador conectado.',
@@ -767,12 +765,8 @@ const pt_br = {
         hidOnlyDesc: 'Pare de emular dispositivos virtuais, mantendo apenas o controle básico HID',
         disk: 'Disco Virtual',
         diskDesc: 'Montar U-disk virtual no host remoto',
-        network: 'Rede Virtual',
-        networkDesc: 'Montar placa de rede virtual no host remoto',
-        networkProtocol: 'Protocolo de rede',
-        networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antigos',
         rebindNotice:
-          'Mudar qualquer um dos interruptores reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
+          'Mudar este interruptor reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
         media: {
           title: 'Slots de câmera e microfone',
           desc: 'Declare os dispositivos de mídia que os navegadores podem ocupar. O orçamento de endpoints é verificado ao aplicar o perfil USB. Salvar reenumera o dispositivo e desconecta os navegadores conectados.',
@@ -787,7 +781,7 @@ const pt_br = {
           microphoneDefault: 'Microfone NanoKVM {{index}}',
           nameRequired: 'Cada slot precisa de um nome.',
           budgetHint:
-            'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue acima o disco virtual ou a rede USB.',
+            'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue aqui o disco virtual ou, em Rede, o adaptador de rede USB.',
           unsupported:
             'Este kernel não consegue nomear dispositivos de mídia, então os hosts mostram o nome padrão.',
           save: 'Salvar slots',
@@ -822,33 +816,42 @@ const pt_br = {
           description: 'Habilitar protocolo HTTPS',
           tip: 'Atenção: O uso de HTTPS pode aumentar a latência, especialmente com o modo de vídeo MJPEG.'
         },
+        usb: {
+          title: 'Adaptador de rede USB',
+          desc: 'Dá ao computador controlado uma placa de rede por USB',
+          type: 'Tipo de adaptador',
+          typeDesc: 'NCM para sistemas modernos, RNDIS para Windows antigos'
+        },
         bridge: {
-          title: 'Ponte de rede',
-          twoDevices:
-            'Seu roteador vê o NanoKVM e o computador controlado como dois dispositivos separados, cada um com o seu próprio endereço.',
+          title: 'O adaptador se conecta a',
+          lan: 'Sua rede',
+          kvmOnly: 'Só o NanoKVM',
+          lanDesc:
+            'O computador entra na sua rede pela porta Ethernet do NanoKVM, com o seu próprio endereço vindo do roteador.',
+          kvmOnlyDesc:
+            'O computador recebe o endereço do NanoKVM e alcança o NanoKVM, mas nada além dele.',
           loading: 'Carregando...',
           state: 'Estado',
           states: {
-            disabled: 'Desativado',
-            enabled: 'Ativado',
+            disabled: 'Só o NanoKVM',
+            enabled: 'Sua rede',
             rolledBack: 'Revertido',
             failed: 'Falhou',
             pending: 'Em andamento'
           },
           uplink: 'Uplink',
           ports: 'Portas',
-          protocol: 'Protocolo do dispositivo',
           up: 'ativa',
           down: 'inativa',
           noLink: 'sem link',
-          enableTitle: 'Ativar a ponte de rede?',
-          disableTitle: 'Desativar a ponte de rede?',
+          enableTitle: 'Conectar o computador à sua rede?',
+          disableTitle: 'Limitar o computador só ao NanoKVM?',
           reconnect:
             'A conexão de gerenciamento cairá e se reconectará brevemente enquanto o endereço é movido.',
           rollback:
             'Se a verificação falhar, a configuração anterior é restaurada automaticamente.',
-          enableBtn: 'Ativar',
-          disableBtn: 'Desativar',
+          enableBtn: 'Entrar na minha rede',
+          disableBtn: 'Só o NanoKVM',
           cancelBtn: 'Cancelar',
           interrupted:
             'A conexão foi interrompida durante a aplicação. Verificando novamente o estado atual.',

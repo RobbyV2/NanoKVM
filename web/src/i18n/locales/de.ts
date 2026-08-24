@@ -491,8 +491,6 @@ const de = {
         descriptorAssets: 'Gespeicherte Deskriptor-Dateien: {{count}}',
         endpointUse:
           'IN {{inUse}} belegt, {{inFree}} frei; OUT {{outUse}} belegt, {{outFree}} frei',
-        preview: 'Prüfen',
-        save: 'Speichern',
         apply: 'Anwenden',
         applyTitle: 'Dieses USB-Profil anwenden?',
         applyDesc: 'NanoKVM zeigt dem angeschlossenen Rechner {{profile}}.',
@@ -773,12 +771,8 @@ const de = {
           'Hören Sie auf, virtuelle Geräte zu emulieren, und behalten Sie nur die grundlegende HID-Steuerung bei',
         disk: 'Virtuelle Festplatte',
         diskDesc: 'Binde das virtuelle U-Laufwerk an den entfernten Host',
-        network: 'Virtuelles Netzwerk',
-        networkDesc: 'Binde die virtuelle Netzwerkkarte an den entfernten Host',
-        networkProtocol: 'Netzwerkprotokoll',
-        networkProtocolDesc: 'NCM für moderne Hosts, RNDIS für ältere Windows-Systeme',
         rebindNotice:
-          'Das Umschalten eines der beiden Schalter meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
+          'Das Umschalten dieses Schalters meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
         media: {
           title: 'Kamera- und Mikrofonplätze',
           desc: 'Legen Sie fest, welche Mediengeräte Browser belegen dürfen. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft. Beim Speichern wird das Gerät neu erkannt und verbundene Browser werden getrennt.',
@@ -793,7 +787,7 @@ const de = {
           microphoneDefault: 'NanoKVM-Mikrofon {{index}}',
           nameRequired: 'Jeder Platz braucht einen Namen.',
           budgetHint:
-            'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte oben die virtuelle Festplatte oder das USB-Netzwerk ab.',
+            'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte hier die virtuelle Festplatte oder unter Netzwerk den USB-Netzwerkadapter ab.',
           unsupported:
             'Dieser Kernel kann Mediengeräte nicht benennen, deshalb zeigen Hosts den Standardnamen.',
           save: 'Plätze speichern',
@@ -828,33 +822,42 @@ const de = {
           description: 'HTTPS-Protokoll aktivieren',
           tip: 'Hinweis: Die Verwendung von HTTPS kann die Latenz erhöhen, besonders im MJPEG-Videomodus.'
         },
+        usb: {
+          title: 'USB-Netzwerkadapter',
+          desc: 'Gibt dem gesteuerten Computer eine Netzwerkkarte über USB',
+          type: 'Adaptertyp',
+          typeDesc: 'NCM für moderne Systeme, RNDIS für ältere Windows-Systeme'
+        },
         bridge: {
-          title: 'Netzwerkbrücke',
-          twoDevices:
-            'Ihr Router sieht NanoKVM und den gesteuerten Computer als zwei separate Geräte mit jeweils eigener Adresse.',
+          title: 'Adapter verbunden mit',
+          lan: 'Ihr Netzwerk',
+          kvmOnly: 'Nur NanoKVM',
+          lanDesc:
+            'Der Computer kommt über den Ethernet-Port des NanoKVM in Ihr Netzwerk und erhält eine eigene Adresse vom Router.',
+          kvmOnlyDesc:
+            'Der Computer erhält seine Adresse vom NanoKVM und erreicht das NanoKVM, aber nichts dahinter.',
           loading: 'Wird geladen...',
           state: 'Status',
           states: {
-            disabled: 'Deaktiviert',
-            enabled: 'Aktiviert',
+            disabled: 'Nur NanoKVM',
+            enabled: 'Ihr Netzwerk',
             rolledBack: 'Zurückgesetzt',
             failed: 'Fehlgeschlagen',
             pending: 'Läuft'
           },
           uplink: 'Uplink',
           ports: 'Ports',
-          protocol: 'Geräteprotokoll',
           up: 'verbunden',
           down: 'getrennt',
           noLink: 'kein Link',
-          enableTitle: 'Netzwerkbrücke aktivieren?',
-          disableTitle: 'Netzwerkbrücke deaktivieren?',
+          enableTitle: 'Computer mit Ihrem Netzwerk verbinden?',
+          disableTitle: 'Computer auf nur NanoKVM beschränken?',
           reconnect:
             'Die Verwaltungsverbindung wird kurz getrennt und neu aufgebaut, während die Adresse umzieht.',
           rollback:
             'Schlägt die Überprüfung fehl, wird die vorherige Konfiguration automatisch wiederhergestellt.',
-          enableBtn: 'Aktivieren',
-          disableBtn: 'Deaktivieren',
+          enableBtn: 'Mit meinem Netzwerk verbinden',
+          disableBtn: 'Nur NanoKVM',
           cancelBtn: 'Abbrechen',
           interrupted:
             'Die Verbindung wurde während der Anwendung unterbrochen. Der aktuelle Status wird erneut geprüft.',

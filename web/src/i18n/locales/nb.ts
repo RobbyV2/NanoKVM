@@ -486,8 +486,6 @@ const nb = {
         descriptorAssets: 'Lagrede deskriptorfiler: {{count}}',
         endpointUse:
           'IN {{inUse}} i bruk, {{inFree}} ledige; OUT {{outUse}} i bruk, {{outFree}} ledige',
-        preview: 'Valider',
-        save: 'Lagre',
         apply: 'Bruk',
         applyTitle: 'Vil du bruke denne USB-profilen?',
         applyDesc: 'NanoKVM vil presentere {{profile}} for datamaskinen som er koblet til.',
@@ -765,12 +763,8 @@ const nb = {
         hidOnlyDesc: 'Slutt å emulere virtuelle enheter, behold bare grunnleggende HID-kontroll',
         disk: 'Virtuell disk',
         diskDesc: 'Mount virtual U-disk on the remote host',
-        network: 'Virtuelt nettverk',
-        networkDesc: 'Monter virtuelt nettverkskort på den eksterne verten',
-        networkProtocol: 'Nettverksprotokoll',
-        networkProtocolDesc: 'NCM for moderne verter, RNDIS for eldre Windows',
         rebindNotice:
-          'Å slå om en av bryterne teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
+          'Å slå om denne bryteren teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
         media: {
           title: 'Kamera- og mikrofonplasser',
           desc: 'Angi hvilke medieenheter nettlesere kan fylle. Endepunktsbudsjettet kontrolleres når USB-profilen tas i bruk. Lagring opplister enheten på nytt og kobler fra tilkoblede nettlesere.',
@@ -785,7 +779,7 @@ const nb = {
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Hver plass trenger et navn.',
           budgetHint:
-            'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken eller USB-nettverket over.',
+            'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken her eller USB-nettverkskortet under Nettverk.',
           unsupported:
             'Denne kjernen kan ikke navngi medieenheter, så verter viser standardnavnet.',
           save: 'Lagre plasser',
@@ -820,33 +814,42 @@ const nb = {
           description: 'Aktiver HTTPS-protokoll',
           tip: 'Merk: Bruk av HTTPS kan øke forsinkelsen, spesielt i MJPEG-videomodus.'
         },
+        usb: {
+          title: 'USB-nettverkskort',
+          desc: 'Gir den styrte datamaskinen et nettverkskort over USB',
+          type: 'Korttype',
+          typeDesc: 'NCM for moderne systemer, RNDIS for eldre Windows'
+        },
         bridge: {
-          title: 'Nettverksbro',
-          twoDevices:
-            'Ruteren din ser NanoKVM og den styrte datamaskinen som to separate enheter, hver med sin egen adresse.',
+          title: 'Kortet er koblet til',
+          lan: 'Nettverket ditt',
+          kvmOnly: 'Bare NanoKVM',
+          lanDesc:
+            'Datamaskinen kommer inn på nettverket ditt gjennom Ethernet-porten på NanoKVM, med sin egen adresse fra ruteren.',
+          kvmOnlyDesc:
+            'Datamaskinen får adressen sin fra NanoKVM og når NanoKVM, men ingenting utenfor.',
           loading: 'Laster...',
           state: 'Status',
           states: {
-            disabled: 'Deaktivert',
-            enabled: 'Aktivert',
+            disabled: 'Bare NanoKVM',
+            enabled: 'Nettverket ditt',
             rolledBack: 'Rullet tilbake',
             failed: 'Mislyktes',
             pending: 'Pågår'
           },
           uplink: 'Opplenke',
           ports: 'Porter',
-          protocol: 'Enhetsprotokoll',
           up: 'aktiv',
           down: 'inaktiv',
           noLink: 'ingen link',
-          enableTitle: 'Aktivere nettverksbroen?',
-          disableTitle: 'Deaktivere nettverksbroen?',
+          enableTitle: 'Koble datamaskinen til nettverket ditt?',
+          disableTitle: 'Begrense datamaskinen til bare NanoKVM?',
           reconnect:
             'Administrasjonstilkoblingen brytes kort og kobles til igjen mens adressen flyttes.',
           rollback:
             'Hvis verifiseringen mislykkes, gjenopprettes den forrige konfigurasjonen automatisk.',
-          enableBtn: 'Aktiver',
-          disableBtn: 'Deaktiver',
+          enableBtn: 'Koble til nettverket mitt',
+          disableBtn: 'Bare NanoKVM',
           cancelBtn: 'Avbryt',
           interrupted: 'Tilkoblingen ble brutt under bruken. Sjekker gjeldende status på nytt.',
           pendingNotice:
