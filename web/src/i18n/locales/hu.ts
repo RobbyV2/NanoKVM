@@ -321,7 +321,14 @@ const hu = {
       },
       permission: {
         denied: 'Letiltva a böngésző webhelybeállításaiban',
-        prompt: 'A böngésző engedélyt fog kérni'
+        prompt: 'A böngésző engedélyt fog kérni',
+        insecure:
+          'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltja ezt az eszközt. Kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.'
+      },
+      capture: {
+        unsupported: 'Ez a böngésző nem tud hangot vagy képet rögzíteni',
+        camera: 'Ez a böngésző nem tudja kódolni a kamera képkockáit',
+        microphone: 'Ez a böngésző nem tudja feldolgozni a mikrofon hangját'
       },
       mic: {
         mute: 'Némítás',

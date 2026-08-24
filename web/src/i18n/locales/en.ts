@@ -316,7 +316,14 @@ const en = {
       },
       permission: {
         denied: "Blocked in your browser's site settings",
-        prompt: 'Your browser will ask for access'
+        prompt: 'Your browser will ask for access',
+        insecure:
+          'This page is not served over HTTPS, so the browser withholds this device. Enable HTTPS in Settings, Network.'
+      },
+      capture: {
+        unsupported: 'This browser cannot capture audio or video',
+        camera: 'This browser cannot encode camera frames',
+        microphone: 'This browser cannot process microphone audio'
       },
       mic: {
         mute: 'Mute',

@@ -7,13 +7,20 @@ type ErrorHandler = (message: string) => void;
 
 type CameraWorkerResponse = { id: number; payload?: ArrayBuffer; error?: string };
 
-export function captureSupport(kind: SourceKind) {
-  if (!navigator.mediaDevices?.getUserMedia) return 'Media capture is unavailable';
+export type CaptureBlock = 'insecure' | 'unsupported' | 'camera' | 'microphone';
+
+// getUserMedia is absent both on a browser that never had it and on a browser
+// that has it but withholds it outside a secure context, and only the second is
+// fixable by the user.
+export function captureSupport(kind: SourceKind): CaptureBlock | '' {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return window.isSecureContext === false ? 'insecure' : 'unsupported';
+  }
   if (
     kind === 'camera' &&
     (!window.Worker || !window.OffscreenCanvas || !window.createImageBitmap)
   ) {
-    return 'This browser cannot encode camera frames';
+    return 'camera';
   }
   if (
     kind === 'microphone' &&
@@ -21,9 +28,21 @@ export function captureSupport(kind: SourceKind) {
       !window.AudioWorkletNode ||
       !('audioWorklet' in AudioContext.prototype))
   ) {
-    return 'This browser cannot process microphone audio';
+    return 'microphone';
   }
   return '';
+}
+
+// Carries the reason as a code so the view can translate it; the message is only
+// a fallback for logs.
+export class CaptureUnsupported extends Error {
+  readonly reason: CaptureBlock;
+
+  constructor(reason: CaptureBlock) {
+    super(`capture unsupported: ${reason}`);
+    this.name = 'CaptureUnsupported';
+    this.reason = reason;
+  }
 }
 
 export class CameraCapture {
@@ -37,8 +56,8 @@ export class CameraCapture {
 
   async start(deviceID: string, demand: Demand, onFrame: FrameHandler, onError: ErrorHandler) {
     this.stop();
-    const unsupported = captureSupport('camera');
-    if (unsupported) throw new Error(unsupported);
+    const blocked = captureSupport('camera');
+    if (blocked) throw new CaptureUnsupported(blocked);
     const width = demand.width || 640;
     const height = demand.height || 480;
     const fps = demand.fps || 15;
@@ -116,8 +135,8 @@ export class MicrophoneCapture {
 
   async start(deviceID: string, onFrame: FrameHandler, muted = false) {
     await this.stop();
-    const unsupported = captureSupport('microphone');
-    if (unsupported) throw new Error(unsupported);
+    const blocked = captureSupport('microphone');
+    if (blocked) throw new CaptureUnsupported(blocked);
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         deviceId: deviceID ? { exact: deviceID } : undefined,

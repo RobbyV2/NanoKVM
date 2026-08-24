@@ -320,7 +320,14 @@ const cz = {
       },
       permission: {
         denied: 'Blokováno v nastavení webu ve vašem prohlížeči',
-        prompt: 'Prohlížeč se zeptá na přístup'
+        prompt: 'Prohlížeč se zeptá na přístup',
+        insecure:
+          'Tato stránka není poskytována přes HTTPS, proto prohlížeč toto zařízení blokuje. Zapněte HTTPS v Nastavení, Síť.'
+      },
+      capture: {
+        unsupported: 'Tento prohlížeč neumí zachytávat zvuk ani obraz',
+        camera: 'Tento prohlížeč neumí kódovat snímky z kamery',
+        microphone: 'Tento prohlížeč neumí zpracovat zvuk z mikrofonu'
       },
       mic: {
         mute: 'Ztlumit',

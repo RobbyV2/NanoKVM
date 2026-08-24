@@ -320,7 +320,14 @@ const es = {
       },
       permission: {
         denied: 'Bloqueado en la configuración del sitio de tu navegador',
-        prompt: 'El navegador pedirá permiso'
+        prompt: 'El navegador pedirá permiso',
+        insecure:
+          'Esta página no se sirve por HTTPS, así que el navegador bloquea este dispositivo. Activa HTTPS en Ajustes, Red.'
+      },
+      capture: {
+        unsupported: 'Este navegador no puede capturar audio ni vídeo',
+        camera: 'Este navegador no puede codificar los fotogramas de la cámara',
+        microphone: 'Este navegador no puede procesar el audio del micrófono'
       },
       mic: {
         mute: 'Silenciar',

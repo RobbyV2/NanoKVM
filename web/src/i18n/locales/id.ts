@@ -319,7 +319,14 @@ const id = {
       },
       permission: {
         denied: 'Diblokir di pengaturan situs peramban Anda',
-        prompt: 'Peramban akan meminta izin akses'
+        prompt: 'Peramban akan meminta izin akses',
+        insecure:
+          'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir perangkat ini. Aktifkan HTTPS di Pengaturan, Jaringan.'
+      },
+      capture: {
+        unsupported: 'Peramban ini tidak dapat merekam audio atau video',
+        camera: 'Peramban ini tidak dapat mengodekan bingkai kamera',
+        microphone: 'Peramban ini tidak dapat memproses audio mikrofon'
       },
       mic: {
         mute: 'Bisukan',

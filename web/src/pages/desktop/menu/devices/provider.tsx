@@ -1,5 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 import { getPassthrough } from '@/api/passthrough.ts';
 import type { PassthroughStatus } from '@/api/passthrough.ts';
@@ -7,7 +9,7 @@ import * as api from '@/api/sources.ts';
 import type { ClaimRefusal, SourceKind, SourceSink, SourcesSnapshot } from '@/api/sources.ts';
 import { notifyAuthExpired } from '@/lib/auth-events.ts';
 
-import { CameraCapture, captureSupport, MicrophoneCapture } from './capture.ts';
+import { CameraCapture, captureSupport, CaptureUnsupported, MicrophoneCapture } from './capture.ts';
 import { BrowserSourceClient, type DeviceOffer, type SourceConnection } from './client.ts';
 import {
   DevicesContext,
@@ -31,6 +33,7 @@ type RunningCapture = {
 
 export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const { account } = useAuth();
+  const { t } = useTranslation();
   const [snapshot, setSnapshot] = useState<SourcesSnapshot>(emptySnapshot);
   const [eventsConnection, setEventsConnection] = useState<SourceEventsConnection>('connecting');
   const [sourceConnection, setSourceConnection] = useState<SourceConnection>('idle');
@@ -176,8 +179,8 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   const discover = useCallback(async (kind: SourceKind, requestPermission: boolean) => {
     if (kind === 'usb_device') throw new Error('Use the USB device picker');
-    const unsupported = captureSupport(kind);
-    if (unsupported) throw new Error(unsupported);
+    const blocked = captureSupport(kind);
+    if (blocked) throw new CaptureUnsupported(blocked);
     if (requestPermission) {
       const permission = await navigator.mediaDevices.getUserMedia({
         video: kind === 'camera',
@@ -217,10 +220,8 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     );
     void Promise.all(kinds.map((kind) => discover(kind, false)))
       .then((offers) => client.setOffers(offers.flat()))
-      .catch((error) =>
-        setError('connection', error instanceof Error ? error.message : String(error))
-      );
-  }, [client, discover, setError]);
+      .catch((error) => setError('connection', mediaError(error, t)));
+  }, [client, discover, setError, t]);
 
   const startCapture = useCallback(
     async (sink: SourceSink, lease: ReturnType<BrowserSourceClient['selections']>[number]) => {
@@ -265,10 +266,10 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         setActive((current) => new Set(current).add(sink.id));
       } catch (error) {
         await stopCapture(sink.id);
-        setError(sink.id, mediaError(error));
+        setError(sink.id, mediaError(error, t));
       }
     },
-    [clearError, client, devices, muted, setError, stopCapture]
+    [clearError, client, devices, muted, setError, stopCapture, t]
   );
 
   useEffect(() => {
@@ -421,7 +422,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         await client.claim(sink.id, offer);
         localStorage.setItem(deviceKey(account.username, sink.id), offer.deviceID);
       } catch (error) {
-        setError(sink.id, mediaError(error));
+        setError(sink.id, mediaError(error, t));
       } finally {
         setBusy((current) => {
           const next = new Set(current);
@@ -440,7 +441,8 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       devices,
       discover,
       pickOffer,
-      setError
+      setError,
+      t
     ]
   );
 
@@ -468,7 +470,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(deviceKey(account.username, sink.id), offer.deviceID);
         clearAttempt(sink.id);
       } catch (error) {
-        setError(sink.id, mediaError(error));
+        setError(sink.id, mediaError(error, t));
       } finally {
         setBusy((current) => {
           const next = new Set(current);
@@ -477,7 +479,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     },
-    [account.username, clearAttempt, clearError, client, devices, discover, pickOffer, setError]
+    [account.username, clearAttempt, clearError, client, devices, discover, pickOffer, setError, t]
   );
 
   const release = useCallback(
@@ -495,7 +497,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           client.forget(sinkID);
         }
       } catch (error) {
-        setError(sinkID, mediaError(error));
+        setError(sinkID, mediaError(error, t));
       } finally {
         setBusy((current) => {
           const next = new Set(current);
@@ -504,7 +506,17 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     },
-    [clearAttempt, clearError, client, closeRelay, owned, setError, sourceConnection, stopCapture]
+    [
+      clearAttempt,
+      clearError,
+      client,
+      closeRelay,
+      owned,
+      setError,
+      sourceConnection,
+      stopCapture,
+      t
+    ]
   );
 
   const choose = useCallback(
@@ -585,7 +597,12 @@ function deviceKey(owner: string, sinkID: string) {
   return `nanokvm-media-device:${owner}:${sinkID}`;
 }
 
-function mediaError(error: unknown) {
+function mediaError(error: unknown, t: TFunction) {
+  if (error instanceof CaptureUnsupported) {
+    return error.reason === 'insecure'
+      ? t('devices.permission.insecure')
+      : t(`devices.capture.${error.reason}`);
+  }
   if (error instanceof DOMException && error.name === 'NotAllowedError') return 'Permission denied';
   if (error instanceof DOMException && error.name === 'NotFoundError')
     return 'Input device not found';

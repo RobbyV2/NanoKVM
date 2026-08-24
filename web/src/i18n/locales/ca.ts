@@ -317,7 +317,14 @@ const ca = {
       },
       permission: {
         denied: 'Bloquejat a la configuració del lloc del navegador',
-        prompt: 'El navegador us demanarà permís'
+        prompt: 'El navegador us demanarà permís',
+        insecure:
+          "Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja aquest dispositiu. Activa l'HTTPS a Configuració, Xarxa."
+      },
+      capture: {
+        unsupported: 'Aquest navegador no pot capturar àudio ni vídeo',
+        camera: 'Aquest navegador no pot codificar els fotogrames de la càmera',
+        microphone: "Aquest navegador no pot processar l'àudio del micròfon"
       },
       mic: {
         mute: 'Silencia',

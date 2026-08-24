@@ -321,7 +321,14 @@ const it = {
       },
       permission: {
         denied: 'Bloccato nelle impostazioni del sito del browser',
-        prompt: 'Il browser chiederà l’autorizzazione'
+        prompt: 'Il browser chiederà l’autorizzazione',
+        insecure:
+          'Questa pagina non è servita via HTTPS, quindi il browser blocca questo dispositivo. Abilita HTTPS in Impostazioni, Rete.'
+      },
+      capture: {
+        unsupported: 'Questo browser non può acquisire audio o video',
+        camera: 'Questo browser non può codificare i fotogrammi della fotocamera',
+        microphone: 'Questo browser non può elaborare l’audio del microfono'
       },
       mic: {
         mute: 'Disattiva audio',

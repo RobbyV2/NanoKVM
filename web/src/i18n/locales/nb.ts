@@ -319,7 +319,14 @@ const nb = {
       },
       permission: {
         denied: 'Blokkert i nettleserens nettstedsinnstillinger',
-        prompt: 'Nettleseren vil spørre om tilgang'
+        prompt: 'Nettleseren vil spørre om tilgang',
+        insecure:
+          'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer denne enheten. Slå på HTTPS under Innstillinger, Nettverk.'
+      },
+      capture: {
+        unsupported: 'Denne nettleseren kan ikke ta opp lyd eller video',
+        camera: 'Denne nettleseren kan ikke kode kamerabilder',
+        microphone: 'Denne nettleseren kan ikke behandle mikrofonlyd'
       },
       mic: {
         mute: 'Slå av lyden',

@@ -316,7 +316,14 @@ const vi = {
       },
       permission: {
         denied: 'Bị chặn trong cài đặt trang web của trình duyệt',
-        prompt: 'Trình duyệt sẽ hỏi quyền truy cập'
+        prompt: 'Trình duyệt sẽ hỏi quyền truy cập',
+        insecure:
+          'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thiết bị này. Hãy bật HTTPS trong Cài đặt, Mạng.'
+      },
+      capture: {
+        unsupported: 'Trình duyệt này không thể thu âm thanh hoặc hình ảnh',
+        camera: 'Trình duyệt này không thể mã hóa khung hình camera',
+        microphone: 'Trình duyệt này không thể xử lý âm thanh micrô'
       },
       mic: {
         mute: 'Tắt tiếng',

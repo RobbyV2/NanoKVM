@@ -321,7 +321,14 @@ const nl = {
       },
       permission: {
         denied: 'Geblokkeerd in de site-instellingen van je browser',
-        prompt: 'Je browser vraagt om toegang'
+        prompt: 'Je browser vraagt om toegang',
+        insecure:
+          'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser dit apparaat. Schakel HTTPS in bij Instellingen, Netwerk.'
+      },
+      capture: {
+        unsupported: 'Deze browser kan geen audio of video opnemen',
+        camera: 'Deze browser kan geen camerabeelden coderen',
+        microphone: 'Deze browser kan geen microfoonaudio verwerken'
       },
       mic: {
         mute: 'Dempen',

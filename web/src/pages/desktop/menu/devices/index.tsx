@@ -125,6 +125,9 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
   const active = state.active.has(sink.id);
   const permission = sink.kind === 'usb_device' ? undefined : state.permissions[sink.kind];
   const isUSB = sink.kind === 'usb_device';
+  // Outside a secure context the browser reports the camera and microphone as
+  // denied even though nothing was blocked in site settings.
+  const insecure = !isUSB && window.isSecureContext === false;
   const refusal = state.refusals[sink.id];
   const revoked = state.revoked[sink.id];
   const selectedID = selected || options[0]?.deviceID;
@@ -163,12 +166,13 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
 
           {isUSB && <UsbDetail />}
 
-          {permission === 'denied' && (
+          {insecure ? (
+            <div className="text-xs text-amber-400">{t('devices.permission.insecure')}</div>
+          ) : permission === 'denied' ? (
             <div className="text-xs text-red-400">{t('devices.permission.denied')}</div>
-          )}
-          {permission === 'prompt' && !sink.binding && (
+          ) : permission === 'prompt' && !sink.binding ? (
             <div className="text-xs text-neutral-500">{t('devices.permission.prompt')}</div>
-          )}
+          ) : null}
 
           {!sink.binding && options.length > 0 && (
             <Select

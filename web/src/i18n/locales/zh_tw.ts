@@ -308,7 +308,14 @@ const zh_tw = {
       },
       permission: {
         denied: '已在瀏覽器的網站設定中被封鎖',
-        prompt: '瀏覽器將要求存取權限'
+        prompt: '瀏覽器將要求存取權限',
+        insecure:
+          '本頁面未透過 HTTPS 提供，瀏覽器因此停用了該裝置。請在「設定 - 網路」中啟用 HTTPS。'
+      },
+      capture: {
+        unsupported: '此瀏覽器無法擷取音訊或影像',
+        camera: '此瀏覽器無法編碼攝影機畫面',
+        microphone: '此瀏覽器無法處理麥克風音訊'
       },
       mic: {
         mute: '靜音',

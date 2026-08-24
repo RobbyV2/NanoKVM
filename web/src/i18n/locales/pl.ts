@@ -319,7 +319,14 @@ const pl = {
       },
       permission: {
         denied: 'Zablokowane w ustawieniach witryny w przeglądarce',
-        prompt: 'Przeglądarka poprosi o dostęp'
+        prompt: 'Przeglądarka poprosi o dostęp',
+        insecure:
+          'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka blokuje to urządzenie. Włącz HTTPS w Ustawieniach, Sieć.'
+      },
+      capture: {
+        unsupported: 'Ta przeglądarka nie potrafi przechwycić dźwięku ani obrazu',
+        camera: 'Ta przeglądarka nie potrafi zakodować klatek z kamery',
+        microphone: 'Ta przeglądarka nie potrafi przetworzyć dźwięku z mikrofonu'
       },
       mic: {
         mute: 'Wycisz',

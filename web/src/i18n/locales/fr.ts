@@ -322,7 +322,14 @@ const fr = {
       },
       permission: {
         denied: 'Bloqué dans les paramètres de site de votre navigateur',
-        prompt: 'Votre navigateur demandera l’autorisation'
+        prompt: 'Votre navigateur demandera l’autorisation',
+        insecure:
+          "Cette page n'est pas servie en HTTPS, le navigateur bloque donc cet appareil. Activez HTTPS dans Paramètres, Réseau."
+      },
+      capture: {
+        unsupported: 'Ce navigateur ne peut pas capturer l’audio ni la vidéo',
+        camera: 'Ce navigateur ne peut pas encoder les images de la caméra',
+        microphone: 'Ce navigateur ne peut pas traiter l’audio du microphone'
       },
       mic: {
         mute: 'Couper le micro',

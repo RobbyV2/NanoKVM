@@ -316,7 +316,14 @@ const se = {
       },
       permission: {
         denied: 'Blockerat i webbläsarens webbplatsinställningar',
-        prompt: 'Webbläsaren kommer att fråga om åtkomst'
+        prompt: 'Webbläsaren kommer att fråga om åtkomst',
+        insecure:
+          'Den här sidan levereras inte över HTTPS, så webbläsaren blockerar den här enheten. Aktivera HTTPS under Inställningar, Nätverk.'
+      },
+      capture: {
+        unsupported: 'Den här webbläsaren kan inte spela in ljud eller video',
+        camera: 'Den här webbläsaren kan inte koda kamerabilder',
+        microphone: 'Den här webbläsaren kan inte bearbeta mikrofonljud'
       },
       mic: {
         mute: 'Stäng av ljudet',

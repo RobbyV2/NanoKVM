@@ -317,7 +317,14 @@ const tr = {
       },
       permission: {
         denied: 'Tarayıcınızın site ayarlarında engellendi',
-        prompt: 'Tarayıcınız izin isteyecek'
+        prompt: 'Tarayıcınız izin isteyecek',
+        insecure:
+          "Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı bu cihazı engelliyor. Ayarlar, Ağ bölümünden HTTPS'yi etkinleştirin."
+      },
+      capture: {
+        unsupported: 'Bu tarayıcı ses veya video yakalayamıyor',
+        camera: 'Bu tarayıcı kamera karelerini kodlayamıyor',
+        microphone: 'Bu tarayıcı mikrofon sesini işleyemiyor'
       },
       mic: {
         mute: 'Sesi kapat',

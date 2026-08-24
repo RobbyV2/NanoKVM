@@ -308,7 +308,13 @@ const zh = {
       },
       permission: {
         denied: '已在浏览器的网站设置中被阻止',
-        prompt: '浏览器将请求访问权限'
+        prompt: '浏览器将请求访问权限',
+        insecure: '本页面未通过 HTTPS 提供，浏览器因此禁用了该设备。请在“设置 - 网络”中启用 HTTPS。'
+      },
+      capture: {
+        unsupported: '此浏览器无法采集音频或视频',
+        camera: '此浏览器无法编码摄像头画面',
+        microphone: '此浏览器无法处理麦克风音频'
       },
       mic: {
         mute: '静音',

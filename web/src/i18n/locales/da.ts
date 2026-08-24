@@ -318,7 +318,14 @@ const da = {
       },
       permission: {
         denied: 'Blokeret i browserens webstedsindstillinger',
-        prompt: 'Browseren vil bede om adgang'
+        prompt: 'Browseren vil bede om adgang',
+        insecure:
+          'Denne side leveres ikke over HTTPS, så browseren blokerer denne enhed. Slå HTTPS til under Indstillinger, Netværk.'
+      },
+      capture: {
+        unsupported: 'Denne browser kan ikke optage lyd eller video',
+        camera: 'Denne browser kan ikke kode kamerabilleder',
+        microphone: 'Denne browser kan ikke behandle mikrofonlyd'
       },
       mic: {
         mute: 'Slå lyden fra',

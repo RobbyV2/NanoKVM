@@ -323,7 +323,14 @@ const de = {
       },
       permission: {
         denied: 'In den Website-Einstellungen Ihres Browsers blockiert',
-        prompt: 'Ihr Browser wird nach der Freigabe fragen'
+        prompt: 'Ihr Browser wird nach der Freigabe fragen',
+        insecure:
+          'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb sperrt der Browser dieses Gerät. HTTPS unter Einstellungen, Netzwerk aktivieren.'
+      },
+      capture: {
+        unsupported: 'Dieser Browser kann kein Audio und kein Video aufnehmen',
+        camera: 'Dieser Browser kann keine Kamerabilder kodieren',
+        microphone: 'Dieser Browser kann kein Mikrofonaudio verarbeiten'
       },
       mic: {
         mute: 'Stummschalten',
