@@ -4,7 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"sync"
@@ -475,4 +479,61 @@ func TestSessionFollowsASourceModeChange(t *testing.T) {
 	if !bytes.Equal(data, large) {
 		t.Fatal("update after the resize did not carry the new frame")
 	}
+}
+
+// A real encoder's JPEG is far past the 16383 bytes where the Tight compact
+// length grows its third byte, which no test reached while the payload was a
+// synthetic blob, and only a decoder proves the client can read the frame back.
+func TestSessionServesADecodableFrameOverTheWire(t *testing.T) {
+	frame := encodedJPEG(t, 1920, 1080)
+	if len(frame) <= 0x3fff {
+		t.Fatalf("frame is %d bytes, too small to reach the three-byte compact length", len(frame))
+	}
+
+	addr := startServer(t, &Server{
+		AllowNone: true,
+		Screen:    func() (uint16, uint16, uint16, int) { return 0, 0, 80, 30 },
+		ReadJPEG:  func(uint16, uint16, uint16) ([]byte, int) { return frame, 0 },
+	})
+	client := dial(t, addr)
+
+	width, height := client.handshakeNone()
+	if width != 1920 || height != 1080 {
+		t.Fatalf("ServerInit framebuffer = %dx%d, want 1920x1080", width, height)
+	}
+
+	client.setEncodings(encodingTight, encodingDesktopSize)
+	client.requestUpdate(0)
+
+	rectWidth, rectHeight, data := client.readTightUpdate()
+	if rectWidth != width || rectHeight != height {
+		t.Fatalf("rectangle = %dx%d, but ServerInit said %dx%d", rectWidth, rectHeight, width, height)
+	}
+
+	decoded, err := jpeg.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("decode framebuffer update: %s", err)
+	}
+	bounds := decoded.Bounds()
+	if bounds.Dx() != int(rectWidth) || bounds.Dy() != int(rectHeight) {
+		t.Fatalf("decoded image is %dx%d, but the rectangle claimed %dx%d",
+			bounds.Dx(), bounds.Dy(), rectWidth, rectHeight)
+	}
+}
+
+func encodedJPEG(t *testing.T, width, height int) []byte {
+	t.Helper()
+
+	source := image.NewRGBA(image.Rect(0, 0, width, height))
+	random := rand.New(rand.NewSource(1))
+	for y := range height {
+		for x := range width {
+			source.Set(x, y, color.RGBA{R: uint8(random.Intn(256)), G: uint8(x), B: uint8(y), A: 255})
+		}
+	}
+	var buffer bytes.Buffer
+	if err := jpeg.Encode(&buffer, source, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatalf("encode: %s", err)
+	}
+	return buffer.Bytes()
 }
