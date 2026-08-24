@@ -109,7 +109,6 @@ func TestImportRefusesUnsafeLayouts(t *testing.T) {
 		want   error
 	}{
 		"hub":                {func(raw []byte) { raw[32] = 0x09 }, ErrProtected},
-		"isochronous":        {func(raw []byte) { raw[39] = 0x01 }, ErrEndpointSize},
 		"iso feedback":       {func(raw []byte) { raw[39], raw[42] = 0x11, 1 }, ErrUnsupported},
 		"alternate":          {func(raw []byte) { raw[30] = 1 }, ErrAmbiguous},
 		"oversize":           {func(raw []byte) { binary.LittleEndian.PutUint16(raw[40:42], 513) }, ErrEndpointSize},
@@ -315,15 +314,9 @@ func TestImportRefusesAStreamingAlternateZero(t *testing.T) {
 	}
 }
 
-func TestImportAcceptsAnIsochronousEndpointWithoutAlternates(t *testing.T) {
-	image, err := Import(vendorFixture(isoEndpoint(0x81, 512, 0)), fixtureFetcher{}, testCapabilities())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(image.Alternates) != 0 {
-		t.Fatalf("alternates = %v, want none", image.Alternates)
-	}
-	if got := image.Function.Endpoints[0]; got.Transfer != presentation.EndpointIsochronous {
-		t.Fatalf("function endpoint = %#v", got)
+func TestImportRefusesAnIsochronousEndpointAtAlternateZero(t *testing.T) {
+	_, err := Import(vendorFixture(isoEndpoint(0x81, 512, 0)), fixtureFetcher{}, testCapabilities())
+	if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "0x81 is on interface 0 alternate setting 0") {
+		t.Fatalf("Import() error = %v, want an ErrUnsupported naming the endpoint and its alternate setting", err)
 	}
 }

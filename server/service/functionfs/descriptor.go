@@ -471,6 +471,12 @@ func (image *Image) compile(all []descriptor, fetcher Fetcher, caps presentation
 			if packet == 0 || kind == 2 && packet > 512 || kind == 3 && packet > 1024 || kind == 1 && packet > 1024 {
 				return fmt.Errorf("%w: endpoint 0x%02x packet %d", ErrEndpointSize, data[2], packet)
 			}
+			// An isochronous endpoint that lives only at alternate setting 0
+			// asks every host for bandwidth in the default configuration and
+			// gives the relay no SET_INTERFACE to start a stream on.
+			if kind == 1 && alternates[item.interfaceNumber] == 0 {
+				return fmt.Errorf("%w: isochronous endpoint 0x%02x is on interface %d alternate setting 0, which reserves no bandwidth and never starts a stream", ErrUnsupported, data[2], item.interfaceNumber)
+			}
 			if kind == 1 && data[2]&0x80 != 0 && int(packet)*(int(mult)+1) > ceiling {
 				return fmt.Errorf("%w: isochronous endpoint 0x%02x asks for %d bytes per microframe, the controller seats at most %d", ErrEndpointSize, data[2], int(packet)*(int(mult)+1), ceiling)
 			}
