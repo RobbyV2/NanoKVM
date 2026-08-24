@@ -1263,6 +1263,80 @@ func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 	}
 }
 
+// The other shell-side half. S30rndis owns the gadget NIC's standalone address
+// and the udhcpd that serves the attached host, and the bridge runs it verbatim
+// on a disable to hand that addressing back. The stock copy spells usb0 in
+// three places, so on a device whose NIC came up as usb1 a disable puts the
+// 10.x.y.1/24 on the orphan and starts a DHCP server bound to an interface with
+// no carrier: the attached host silently gets nothing back.
+//
+// The script is run for real under a PATH shim, with only the absolute roots it
+// reaches relocated into a sandbox.
+func TestGadgetAddressingScriptResolvesTheNIC(t *testing.T) {
+	root := t.TempDir()
+	swap(t, &udhcpdConfDir, filepath.Join(root, "etc"))
+
+	// The device from the bug: rndis.usb0 unlinked but never removed, so it
+	// still holds usb0, and the linked function came up as usb1.
+	writeFile(t, filepath.Join(root,
+		"sys/kernel/config/usb_gadget/g0/configs/c.1/ncm.usb0/ifname"), "usb1\n")
+	writeFile(t, filepath.Join(root, "boot/usb.rndis0"), "")
+	writeFile(t, filepath.Join(root, "boot/rndis.ipv4_prefix"), "10.7.8\n")
+	writeFile(t, filepath.Join(root, "etc/profile"), "")
+
+	trace := filepath.Join(root, "cmd.trace")
+	for _, name := range []string{"ip", "udhcpd"} {
+		shim := filepath.Join(root, "bin", name)
+		writeFile(t, shim, "#!/bin/sh\necho \""+name+" $@\" >> "+trace+"\n")
+		if err := os.Chmod(shim, 0o755); err != nil {
+			t.Fatalf("chmod %s shim: %v", name, err)
+		}
+	}
+
+	source, err := os.ReadFile(filepath.Join("..", "..", "..", "kvmapp", "system", "init.d", "S30rndis"))
+	if err != nil {
+		t.Fatalf("read S30rndis: %v", err)
+	}
+	body := strings.ReplaceAll(string(source), "/sys/kernel/config",
+		filepath.Join(root, "sys/kernel/config"))
+	body = strings.ReplaceAll(body, "/boot/", filepath.Join(root, "boot")+"/")
+	body = strings.ReplaceAll(body, "/etc/profile", filepath.Join(root, "etc/profile"))
+	body = strings.ReplaceAll(body, "/etc/udhcpd.", filepath.Join(root, "etc")+"/udhcpd.")
+	script := filepath.Join(root, "S30rndis")
+	writeFile(t, script, body)
+
+	cmd := exec.Command("/bin/sh", script, "start")
+	cmd.Env = append(os.Environ(),
+		"PATH="+filepath.Join(root, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("S30rndis start: %v\n%s", err, out)
+	}
+
+	recorded, err := os.ReadFile(trace)
+	if err != nil {
+		t.Fatalf("read trace: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(recorded)), "\n")
+	requireOrder(t, lines,
+		"ip addr add 10.7.8.1/24 dev usb1",
+		"udhcpd -S "+filepath.Join(root, "etc/udhcpd.usb1.conf"),
+	)
+	notInTrace(t, lines, "usb0")
+
+	// The generated config names the same interface, which is what the bridge
+	// matches on to find and kill that udhcpd before enslaving the NIC.
+	conf, err := os.ReadFile(filepath.Join(root, "etc/udhcpd.usb1.conf"))
+	if err != nil {
+		t.Fatalf("read the generated udhcpd config: %v", err)
+	}
+	if !strings.Contains(string(conf), "interface usb1\n") {
+		t.Fatalf("generated config does not serve usb1:\n%s", conf)
+	}
+	if !namesGadgetDHCPDConf([]string{"udhcpd", "-S", filepath.Join(root, "etc/udhcpd.usb1.conf")}) {
+		t.Fatal("the bridge does not recognise the config S30rndis just wrote")
+	}
+}
+
 func TestBridgeBootScriptIsInstalledBeforeEthernet(t *testing.T) {
 	root := filepath.Clean(filepath.Join("..", "..", ".."))
 	seed := filepath.Join(root, "kvmapp", "system", "init.d", "S29bridge")
@@ -1286,5 +1360,20 @@ func TestBridgeBootScriptIsInstalledBeforeEthernet(t *testing.T) {
 	}
 	if ethernetAt < 0 || bridgeAt > ethernetAt {
 		t.Fatal("S29bridge is not installed before S30eth")
+	}
+
+	// The resolving S30rndis has to be refreshed too. Left to the stock copy,
+	// every disable hands the gadget's addressing back to the wrong interface
+	// on a renamed NIC, and nothing in the server can see that it happened.
+	rndis := filepath.Join(root, "kvmapp", "system", "init.d", "S30rndis")
+	info, err = os.Stat(rndis)
+	if err != nil {
+		t.Fatalf("stat the gadget addressing seed: %v", err)
+	}
+	if info.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("gadget addressing seed mode = %o, want executable", info.Mode().Perm())
+	}
+	if !strings.Contains(string(source), `cp -f /kvmapp/system/init.d/S30rndis /etc/init.d/`) {
+		t.Fatal("system installer does not refresh S30rndis")
 	}
 }

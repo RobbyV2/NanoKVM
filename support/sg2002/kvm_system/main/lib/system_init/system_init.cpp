@@ -101,6 +101,12 @@ void new_app_init(void)
 	system("cp -f /kvmapp/system/init.d/S15kvmhwd /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S29bridge /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S30eth /etc/init.d/");
+	// The stock S30rndis addresses the gadget NIC and starts its udhcpd against
+	// the literal usb0, which is the wrong interface on any device whose net
+	// function was renamed by an orphan holding that name. The shipped copy
+	// resolves it from configfs instead, and the bridge runs the same script when
+	// it releases the NIC, so both halves have to be the resolving one.
+	system("cp -f /kvmapp/system/init.d/S30rndis /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S50sshd /etc/init.d/");
 	if(kvm_wifi_exist()) {
 		system("cp -f /kvmapp/system/init.d/S30wifi /etc/init.d/");
