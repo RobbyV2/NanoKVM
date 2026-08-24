@@ -69,6 +69,14 @@ func filesystemRegistered(t *testing.T, name string) bool {
 	return false
 }
 
+// The relay's isochronous path stands on io_submit, and the arm64 container the
+// normal suite runs in is not the kernel the device runs, so the same batch round
+// trip is repeated against the VM kernel that carries the gadget stack.
+func TestKernelTier2AIOBatchRoundTrip(t *testing.T) {
+	kernelint.RequireTier2(t)
+	aioBatchRoundTrip(t)
+}
+
 func TestKernelTier2FunctionFSMountRequiresTheConfigFSInstance(t *testing.T) {
 	kernelint.RequireTier2(t)
 	gadget := kernelGadget(t)
