@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -76,6 +77,12 @@ type Manager struct {
 	loan      string
 	nextToken uint64
 
+	// A mirror of transient != nil for readers that must not take m.mu.
+	// SurrenderUDC and the ffs paths call back into the bridge and the media
+	// observer while holding it, and those callbacks reach Snapshot, so a
+	// Snapshot that took m.mu would close the loop.
+	transientUp atomic.Bool
+
 	statusMu   sync.Mutex
 	lastError  *ApplyFailure
 	powerCycle bool
@@ -112,6 +119,17 @@ func GetManager() *Manager {
 		if err := Migrate(store, ops); err != nil {
 			log.Errorf("migrate usb presentation: %s", err)
 		}
+		// Migrate returns early on every boot after the first, so without this
+		// nothing ever compares the promise against the hardware again, and
+		// S03usbdev rebuilding the stock gadget from scratch each boot wins by
+		// default. A failure here is logged and never fatal: the ladder inside
+		// applyPlan leaves the controller bound whatever happens, and the HID
+		// routes follow the gadget that survived rather than this profile.
+		ctx, cancel := context.WithTimeout(context.Background(), reconcileBudget)
+		defer cancel()
+		if err := defaultManager.ReconcileGadget(ctx); err != nil {
+			log.Errorf("reconcile usb presentation: %s", err)
+		}
 	})
 	return defaultManager
 }
@@ -132,17 +150,18 @@ func (m *Manager) pushHIDRoutes(h HIDQuiescer) {
 	if !ok {
 		return
 	}
-	name, err := m.store.Active()
-	if err != nil || name == "" {
+	routes, ok := m.hidRoutes()
+	if !ok {
 		return
 	}
-	profile, err := m.store.LoadProfile(name)
-	if err != nil {
-		log.Debugf("hid routes: load active profile %s: %s", name, err)
-		return
-	}
-	profile.Normalize()
-	router.SetHIDRoutes(HIDRoutes(profile.Functions))
+	router.SetHIDRoutes(routes)
+}
+
+// Callers hold m.mu. The flag exists so that Snapshot can answer the same
+// question without it.
+func (m *Manager) setTransient(state *Transient) {
+	m.transient = state
+	m.transientUp.Store(state != nil)
 }
 
 func (m *Manager) SetObserver(observer GadgetObserver) {
@@ -198,6 +217,20 @@ func (m *Manager) Snapshot() (Snapshot, error) {
 	}
 	snapshot.UDC = m.udcStatus()
 	snapshot.LastError, snapshot.PendingPowerCycle = m.pendingStatus(snapshot.UDC)
+
+	// Derived here and stored nowhere. What the store promises and what the
+	// kernel bound are two separate facts, only the second one decides where a
+	// HID report lands, and a device whose init script rebuilds the gadget on
+	// every boot will make them disagree again after any flag is written. A
+	// transient owns the gadget on purpose while it is up, so it is not a lie
+	// worth reporting.
+	if active != "" && !m.transientUp.Load() {
+		divergence := compareLayout(Profile{Name: active, Functions: functions},
+			liveFunctionsFrom(m.ops, snapshot.Linked))
+		if !divergence.Empty() {
+			snapshot.Diverged = &divergence
+		}
+	}
 	return snapshot, nil
 }
 
@@ -267,10 +300,34 @@ func (m *Manager) NIC(context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !snapshot.HasNetwork() {
+	kind := snapshot.NetworkKind()
+	if kind == "" {
 		return "", nil
 	}
-	return GadgetNIC, nil
+	return m.netIfname(functionName(Function{Kind: kind, Instance: netInstance})), nil
+}
+
+// f_ncm and f_rndis take their interface name from gether_setup's "usb%d"
+// allocation and not from the function instance, so the instance called usb0 is
+// only usually named usb0. A function that was unlinked but never rmdir'd keeps
+// its netdev and keeps that name, and the replacement created after it is
+// handed usb1 - which is how a bridge port, S30rndis's addressing and udhcpd's
+// interface line all end up on a netdev with no carrier and no function behind
+// it. ifname is the kernel's own answer and is what every caller that puts the
+// gadget NIC on a command line gets.
+func (m *Manager) netIfname(name string) string {
+	data, err := m.ops.ReadFile(configPrefix + "/" + name + "/ifname")
+	if err != nil {
+		// Only a kernel whose f_ncm or f_rndis does not publish ifname reaches
+		// here, and there the instance name is what gether_setup would have
+		// produced on a gadget with no orphan holding it.
+		log.Debugf("read %s ifname: %s; assuming %s", name, err, GadgetNIC)
+		return GadgetNIC
+	}
+	if ifname := strings.TrimSpace(string(data)); ifname != "" {
+		return ifname
+	}
+	return GadgetNIC
 }
 
 // What the gadget is presenting to the attached host, empty when it presents no
@@ -319,6 +376,13 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 		observer.Suspend()
 	}
 	err = m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
+	// The ladder inside applyPlan reverts the store along with the gadget on
+	// every rung that completes. This is the rung below the last one: when
+	// nothing completed, the store is still naming a profile the controller is
+	// not presenting, and saying so is the whole of what is left to do.
+	if err != nil {
+		err = errors.Join(err, m.reportDivergence())
+	}
 	m.recordApply(profile.Name, err)
 	if err != nil {
 		m.refreshObserver(context.Background())
@@ -506,7 +570,7 @@ func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Tr
 	}
 	m.nextToken++
 	state := &Transient{Token: m.nextToken, Profile: profile, recovery: recovery, udc: udc}
-	m.transient = state
+	m.setTransient(state)
 	m.mu.Unlock()
 	m.notifyObserver(context.Background(), profile, plan)
 	return state, nil
@@ -527,7 +591,7 @@ func (m *Manager) StopFunctionFS(ctx context.Context, token uint64) error {
 	}
 	err := m.withHIDQuiesced(func() error { return m.restoreFunctionFS(ctx, state) })
 	if err == nil {
-		m.transient = nil
+		m.setTransient(nil)
 	}
 	m.mu.Unlock()
 	if err != nil {

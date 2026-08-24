@@ -20,6 +20,15 @@ type RecordOps struct {
 	bound         string
 	role          string
 	resets        int
+	onBind        func()
+}
+
+// Fired after every successful bind, so a test can make the world change the
+// way a controller taken away from a host does.
+func (r *RecordOps) OnBind(fn func()) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onBind = fn
 }
 
 func NewRecordOps(udcs ...string) *RecordOps {
@@ -205,6 +214,9 @@ func (r *RecordOps) BindUDC(name string) error {
 	r.record(Op{Kind: OpBind, Path: udcAttr, Data: []byte(name)})
 	r.files[udcAttr] = []byte(name)
 	r.bound = name
+	if r.onBind != nil {
+		r.onBind()
+	}
 	return nil
 }
 

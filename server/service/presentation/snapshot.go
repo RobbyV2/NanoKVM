@@ -12,9 +12,11 @@ const (
 
 	diskFunctionName = string(FunctionMassStorage) + "." + diskInstance
 
-	// f_ncm and f_rndis both take the interface name from the function
-	// instance, so the gadget NIC is usb0 on this device and this package is
-	// what knows it.
+	// What a gadget with no orphaned net function left over from an earlier
+	// apply names its NIC, and nothing stronger than that: gether_setup asks
+	// for "usb%d" and the kernel fills in the first free number, which is not
+	// necessarily zero. Manager.NIC reads functions/<net-fn>/ifname for the
+	// real answer and falls back to this only where the attribute is absent.
 	GadgetNIC = netInstance
 )
 
@@ -44,6 +46,12 @@ type Snapshot struct {
 	Endpoints EndpointUse    `json:"endpoints"`
 	Headroom  EndpointUse    `json:"headroom"`
 	FIFOs     FIFOAssignment `json:"fifos,omitempty"`
+
+	// How the gadget the kernel bound differs from the profile named above,
+	// absent when it does not. It is re-derived on every read rather than
+	// remembered, because S03usbdev rebuilds the gadget from scratch on every
+	// boot and any flag written about it goes stale the moment it does.
+	Diverged *Divergence `json:"diverged,omitempty"`
 }
 
 type UDCStatus struct {

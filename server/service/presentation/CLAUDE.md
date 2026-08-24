@@ -13,13 +13,68 @@ function owns which minor, so if `functions/hid.GS0` is ever removed and recreat
 numbering shifts and the server writes mouse reports into the keyboard endpoint. There
 is no error and no log line. The attached host sees garbage keystrokes.
 
-So a transaction here is bind, unbind, symlink add and symlink remove. It is never
-`rmdir functions/*` and never `rmdir g0`. `validateRemove` in `ops_configfs.go` restricts
-`Ops.Remove` to symlinks under `configs/c.1/` plus the `os_desc/c.1` link and nothing
-else, `Profile.Validate` rejects any profile whose HID
-functions are not exactly GS0, GS1, GS2 in that order, and `apply_test.go` asserts that
-standard, then hid-only, then standard emits zero ops touching `functions/hid.*`. Keep
-all three. Do not add a teardown path because a rebuild would be tidier.
+So a transaction here never `rmdir`s `functions/hid.*` and never `rmdir g0`.
+`validateRemove` in `ops_configfs.go` restricts `Ops.Remove` to symlinks under
+`configs/c.1/` plus the `os_desc/c.1` link and nothing else, `Profile.Validate` rejects
+any profile whose HID functions are not exactly GS0, GS1, GS2 in that order, and
+`apply_test.go` asserts that standard, then hid-only, then standard emits zero ops
+touching `functions/hid.*`. Keep all three. Do not add a HID teardown path because a
+rebuild would be tidier.
+
+## Dropped net and disk functions do lose their directories, and that is not tidiness
+
+The rule above is about `hid` and only about `hid`. Unlinking any function from a config
+does not destroy it, and for `f_ncm` and `f_rndis` that is a live bug: both call
+`gether_setup` at mkdir, which registers a netdev under gether's `"usb%d"` and holds it
+until `rmdir`. An unlinked-but-present `rndis.usb0` therefore goes on owning the name
+`usb0`, and the `ncm.usb0` created to replace it is handed `usb1` by the kernel's
+first-free allocation. Everything that then asks for the gadget NIC by name - the bridge
+port, `S30rndis`'s addressing, `udhcpd`'s `interface` line - binds to a netdev with no
+carrier and no function behind it, and only a reboot clears it. This was observed on
+hardware: `br0` carrying a dead `usb0` while the live NCM link sat unbridged on `usb1`.
+
+`unlinkStale` therefore releases the directory of every dropped function whose kind is in
+`releasableKinds` - `ncm`, `rndis` and `mass_storage` - between the unlink and the plan's
+mkdir, which is the only window where the name is free and `rmdir` is not `-EBUSY`. `hid`
+is excluded for the ida reason above. `uvc` and `uac2` are excluded because the media
+manager owns their nested descriptor groups and their `/dev/video` and ALSA indices, and
+because `Plan.Outcome` lists every media function as removed on every apply since it
+relinks them.
+
+Because the netdev name is now allocated rather than assumed, `Manager.NIC` reads
+`configs/c.1/<net-fn>/ifname` and returns the kernel's own answer. `GadgetNIC` is only the
+fallback for a kernel that does not publish the attribute.
+
+## The gadget is reconciled against the profile at startup
+
+`S03usbdev` rebuilds the stock three-HID gadget from scratch on every boot and knows
+nothing about the profile store, while `Migrate` returns early the moment an active
+profile exists. Between them, a layout the operator chose and an apply that rolled back
+leave the store promising one gadget and the kernel presenting another - permanently,
+silently, and with the server writing HID reports shaped for the promise into endpoints
+that belong to the other one. That is how a device ended up showing HID devices in
+Windows that controlled nothing: a stored `report_length: 9` report-ID composite written
+into what was really the stock eight-byte boot keyboard.
+
+`Manager.ReconcileGadget` runs from `GetManager` after `Migrate`, compares
+`compareLayout(activeProfile, liveFunctions(ops))` and reapplies the profile when they
+differ. It is what makes a collapsed HID layout survive a reboot at all. A reconcile that
+cannot land the profile is logged and never fatal: every rung of `applyPlan`'s ladder ends
+in a bind, so the controller is left bound whatever happens.
+
+**The routes follow the gadget, never the store.** `Manager.hidRoutes` builds
+`[]HIDRoute` from the live functions read back out of configfs, and consults the stored
+profile only to put role names to a descriptor this package did not compose. Roles are
+recovered by composing all fifteen layouts `hidLayoutFunctions` can build and comparing
+`report_desc` bytes, which is exact and needs no descriptor parser; the node number comes
+from `f_hid`'s own `dev` attribute rather than from link order. This is the safety
+property: a mismatched profile still leaves the operator a working keyboard.
+
+`Snapshot.Diverged` re-derives the same comparison on every read and is stored nowhere. A
+marker file would go stale the next time `S03usbdev` rewrote the gadget under it. A failed
+apply folds the same derivation into its error as `ErrDiverged`, because `applyPlan`'s
+ladder reverts the store along with the gadget on every rung that completes and the only
+case left is the one where none of them did.
 
 The same rule is why `capability.go` never probes `hid.*`: a scratch `mkdir functions/hid.probe`
 consumes a minor and shifts the numbering for everything created after it.
