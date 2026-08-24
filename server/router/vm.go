@@ -8,6 +8,7 @@ import (
 	"NanoKVM-Server/service/edid"
 	"NanoKVM-Server/service/passthrough"
 	"NanoKVM-Server/service/vm"
+	"NanoKVM-Server/service/vm/favicon"
 )
 
 func vmRouter(r *gin.Engine) {
@@ -19,6 +20,7 @@ func vmRouter(r *gin.Engine) {
 	})
 
 	passthroughService := passthrough.NewService()
+	faviconService := favicon.NewService()
 
 	api := r.Group("/api").Use(middleware.CheckToken())
 	admin := r.Group("/api").Use(
@@ -87,6 +89,13 @@ func vmRouter(r *gin.Engine) {
 
 	api.GET("/vm/web-title", service.GetWebTitle)    // Get web title
 	admin.POST("/vm/web-title", service.SetWebTitle) // Set web title
+
+	// The icon itself is intentionally outside every auth group: the browser
+	// requests it while painting the login page, before a token exists.
+	r.GET("/api/vm/favicon", faviconService.Get)            // serve the favicon
+	api.GET("/vm/favicon/state", faviconService.GetState)   // which icon is live
+	admin.POST("/vm/favicon", faviconService.Set)           // set from url, or reset when empty
+	admin.POST("/vm/favicon/upload", faviconService.Upload) // set from an uploaded file
 
 	admin.GET("/vm/mdns", service.GetMdnsState)         // get mDNS state
 	admin.POST("/vm/mdns/enable", service.EnableMdns)   // enable mDNS

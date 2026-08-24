@@ -168,6 +168,19 @@ type GetWebTitleRsp struct {
 	Title string `json:"title"`
 }
 
+type SetFaviconReq struct {
+	// Empty resets to the device default, mirroring SetWebTitleReq.
+	Url string `json:"url" form:"url" validate:"omitempty"`
+}
+
+type GetFaviconRsp struct {
+	Source      string `json:"source"` // custom | boot | default
+	ContentType string `json:"contentType"`
+	Size        int    `json:"size"`
+	Version     string `json:"version"` // cache key for the icon URL
+	BootLogo    bool   `json:"bootLogo"`
+}
+
 type SetTlsReq struct {
 	Enabled bool `validate:"omitempty"`
 }
