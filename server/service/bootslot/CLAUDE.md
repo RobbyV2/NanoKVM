@@ -20,9 +20,10 @@ entry point; use it rather than reimplementing the rewrite.
 
 ## The install order is the whole safety property
 
-`installKernelPayload` runs four steps, and only this order survives losing power between
+`installKernelPayload` runs five steps, and only this order survives losing power between
 any two of them:
 
+0. flip `ab_state` back to `committed`
 1. write the new kernel over `/boot/boot.alt`, sync, re-read it and compare digests
 2. zero `/boot/bootcnt`
 3. flip `ab_state` to `trial` (temp file, rename, directory sync)
@@ -32,6 +33,12 @@ Until step 3 the bootloader still picks `boot.sd`, so a half-written `boot.alt` 
 selectable. Move the flip earlier and a torn kernel becomes bootable; that is the one
 sequence that bricks the device, and
 `TestKernelInstallSurvivesPowerLossAtEveryStep` fails on exactly that swap.
+
+Step 0 exists because `ab_state` is not reset by a rollback: `ab_try` bumps `bootcnt` and
+falls back to `ab_good_boot`, leaving the policy armed. A device that rolled back, or one
+whose reboot never happened, therefore reaches the next install with `ab_state=trial`
+already set, and writing into an armed slot is exactly the case the ordering exists to
+prevent.
 
 Step 1 writes straight over `boot.alt` with no temporary file because it cannot afford
 one: **`/boot` holds under 2 MiB free against a ~7 MiB kernel**. The safe copy is the

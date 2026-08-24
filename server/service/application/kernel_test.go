@@ -96,7 +96,7 @@ func read(t *testing.T, path string) []byte {
 // reverse ordering is the one that bricks: flipping ab_state before boot.alt
 // holds a whole kernel makes a partial write selectable.
 func TestKernelInstallSurvivesPowerLossAtEveryStep(t *testing.T) {
-	for cut := 0; cut <= 4; cut++ {
+	for cut := 0; cut <= 5; cut++ {
 		slot, payload := kernelRig(t)
 		steps := kernelInstallSteps(payload, slot)
 		for i := range cut {
@@ -106,7 +106,7 @@ func TestKernelInstallSurvivesPowerLossAtEveryStep(t *testing.T) {
 		}
 
 		booted := simulateBoot(t, slot)
-		if cut < 3 {
+		if cut < 4 {
 			if booted != "boot.sd" {
 				t.Errorf("power loss after step %d boots %s, want the committed slot", cut, booted)
 			}
@@ -192,5 +192,32 @@ func TestStagedKernelIsRejectedWhenTheReadBackDiffers(t *testing.T) {
 	}
 	if err := verifyStaged(dst, bytes.Repeat([]byte{0}, 32)); err == nil {
 		t.Fatal("a trial kernel that does not match the package was accepted")
+	}
+}
+
+// A rolled back device, and one whose reboot never happened, both keep
+// ab_state=trial. Writing the next kernel into an armed slot would make a torn
+// write selectable, so the install disarms before it writes.
+func TestAnInstallOverAnArmedTrialDisarmsFirst(t *testing.T) {
+	slot, payload := kernelRig(t)
+	if err := slot.SetState(bootslot.StateTrial); err != nil {
+		t.Fatal(err)
+	}
+	if err := slot.ResetBootCount(); err != nil {
+		t.Fatal(err)
+	}
+	if booted := simulateBoot(t, slot); booted != "boot.alt" {
+		t.Fatalf("the armed precondition boots %s, want the trial slot", booted)
+	}
+
+	steps := kernelInstallSteps(payload, slot)
+	if err := steps[0].run(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(slot.Alt(), newKernel[:7], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if booted := simulateBoot(t, slot); booted != "boot.sd" {
+		t.Errorf("a torn write over an armed trial boots %s, want the committed slot", booted)
 	}
 }

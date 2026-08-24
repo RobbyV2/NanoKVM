@@ -46,10 +46,11 @@ func (s *Service) DismissRollback(c *gin.Context) {
 }
 
 // installKernelPayload runs the one ordering that survives losing power at any
-// point. Until the state flip in step 3 the bootloader still picks boot.sd, so
-// a half-written boot.alt is never selectable; after it, bootcnt is already
-// zero and the trial gets its single attempt. Reversing any pair of these is
-// what bricks the device.
+// point. Until the state flip the bootloader still picks boot.sd, so a
+// half-written boot.alt is never selectable; after it, bootcnt is already zero
+// and the trial gets its single attempt. Reversing any pair of these is what
+// bricks the device. The leading disarm matters because a rolled back device,
+// and one whose reboot never happened, still carries ab_state=trial.
 func installKernelPayload(kernel *kernelPayload, slot bootslot.Paths) error {
 	switch slot.Slot() {
 	case "":
@@ -73,6 +74,7 @@ type kernelStep struct {
 
 func kernelInstallSteps(kernel *kernelPayload, slot bootslot.Paths) []kernelStep {
 	return []kernelStep{
+		{"disarm trial slot", func() error { return slot.SetState(bootslot.StateCommitted) }},
 		{"write trial kernel", func() error { return stageKernel(slot.Alt(), kernel.itb) }},
 		{"reset boot counter", slot.ResetBootCount},
 		{"arm trial slot", func() error { return slot.SetState(bootslot.StateTrial) }},
