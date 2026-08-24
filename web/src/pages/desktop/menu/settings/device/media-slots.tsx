@@ -158,6 +158,9 @@ export const MediaSlots = () => {
         </div>
       ))}
       {error && <div className="text-xs text-red-400">{error}</div>}
+      {error.includes('endpoint budget') && (
+        <div className="text-xs text-neutral-500">{t('settings.device.media.budgetHint')}</div>
+      )}
     </div>
   );
 };

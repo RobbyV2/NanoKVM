@@ -407,3 +407,31 @@ func withoutAttribute(kind FunctionKind, name string) CapabilityTable {
 	delete(table.Functions[kind].Attributes, name)
 	return table
 }
+
+// Six IN endpoints cannot be widened, so the only useful refusal is one that
+// names what is holding them and what trading it away would return.
+func TestEndpointBudgetRefusalNamesTheHoldersAndTheTrades(t *testing.T) {
+	functions := []Function{
+		{Kind: FunctionRNDIS, Instance: "usb0", Net: &NetFunction{}},
+		{Kind: FunctionHID, Instance: "GS0", HID: &HIDFunction{ReportLength: 8}},
+		{Kind: FunctionHID, Instance: "GS1", HID: &HIDFunction{ReportLength: 4}},
+		{Kind: FunctionHID, Instance: "GS2", HID: &HIDFunction{ReportLength: 6}},
+		testCamera("cam0", 768),
+	}
+
+	_, err := AccountEndpoints(functions, staticV1)
+	if !errors.Is(err, ErrEndpointBudget) {
+		t.Fatalf("err = %v, want ErrEndpointBudget", err)
+	}
+
+	for _, want := range []string{
+		"in use by rndis.usb0 2, hid.GS0 1, hid.GS1 1, hid.GS2 1",
+		"1 more needed",
+		"putting the 3 HID interfaces on one frees 2",
+		"turning off USB networking frees 2",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("err = %q, want it to contain %q", err.Error(), want)
+		}
+	}
+}

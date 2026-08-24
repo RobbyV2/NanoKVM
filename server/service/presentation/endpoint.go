@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 	"slices"
+	"strings"
 )
 
 var (
@@ -71,8 +72,9 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 		}
 		used = used.add(caps)
 		if used.In > table.MaxInEndpoints {
-			return used, fmt.Errorf("%w: %s needs %d IN endpoints, %d of %d in use, rejected by capability table %s",
-				ErrEndpointBudget, name, caps.InEPs, used.In, table.MaxInEndpoints, table.Source)
+			return used, fmt.Errorf("%w: %s needs %d IN endpoints, %d of %d in use, rejected by capability table %s%s",
+				ErrEndpointBudget, name, caps.InEPs, used.In, table.MaxInEndpoints, table.Source,
+				budgetAdvice(functions, function, table, used.In-table.MaxInEndpoints))
 		}
 		if used.Out > table.MaxOutEndpoints {
 			return used, fmt.Errorf("%w: %s needs %d OUT endpoints, %d of %d in use, rejected by capability table %s",
@@ -112,6 +114,57 @@ func SeatFIFOs(functions []Function, table CapabilityTable) (FIFOAssignment, err
 		}
 	}
 	return assigned, nil
+}
+
+// Six IN endpoints is a hard silicon ceiling, so a refusal can never be answered
+// with more endpoints and is only useful if it says what is spending them and
+// which trade would fit. Only the trades this plan can actually make are named,
+// and each is worth what removing it would really return.
+func budgetAdvice(functions []Function, refused Function, table CapabilityTable, short int) string {
+	var held []string
+	var hid, net, disk int
+
+	for _, function := range functions {
+		if function.Kind == refused.Kind && function.Instance == refused.Instance {
+			break
+		}
+		cost := table.Functions[function.Kind].InEPs
+		if function.Kind == FunctionUVC && function.Video != nil && !function.Video.interruptEndpoint() {
+			cost--
+		}
+		if cost <= 0 {
+			continue
+		}
+		held = append(held, fmt.Sprintf("%s %d", functionName(function), cost))
+		switch {
+		case function.Kind == FunctionHID:
+			hid++
+		case function.Kind.isNet():
+			net += cost
+		case function.Kind == FunctionMassStorage:
+			disk += cost
+		}
+	}
+	if len(held) == 0 {
+		return ""
+	}
+
+	var frees []string
+	if hid > 1 {
+		frees = append(frees, fmt.Sprintf("putting the %d HID interfaces on one frees %d", hid, hid-1))
+	}
+	if net > 0 {
+		frees = append(frees, fmt.Sprintf("turning off USB networking frees %d", net))
+	}
+	if disk > 0 {
+		frees = append(frees, fmt.Sprintf("turning off the virtual disk frees %d", disk))
+	}
+
+	advice := "; in use by " + strings.Join(held, ", ")
+	if len(frees) == 0 {
+		return advice
+	}
+	return fmt.Sprintf("%s; %d more needed, and %s", advice, short, strings.Join(frees, ", "))
 }
 
 func inPackets(function Function, caps FunctionCaps) []int {
