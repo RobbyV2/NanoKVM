@@ -445,7 +445,7 @@ func videoCommitPayload(size uint32) []byte {
 	return data
 }
 
-func TestRelayStartsTheStreamOnAVideoCommit(t *testing.T) {
+func TestRelayStartsTheStreamAtTheSizeTheCommitNamed(t *testing.T) {
 	control := newFakeControl()
 	control.payload = videoCommitPayload(768)
 	stream := newFakeStream()
@@ -463,6 +463,15 @@ func TestRelayStartsTheStreamOnAVideoCommit(t *testing.T) {
 	device.mu.Unlock()
 	if forwarded.Index != 1 || forwarded.Value != 0x0200 {
 		t.Fatalf("commit forwarded to the source as %+v, want interface 1 and VS_COMMIT_CONTROL", forwarded)
+	}
+	stream.mu.Lock()
+	started := len(stream.payloads)
+	stream.mu.Unlock()
+	if started != 0 {
+		t.Fatal("the commit started the stream on its own; only the alternate edge may")
+	}
+	if err := relay.startStreams(); err != nil {
+		t.Fatal(err)
 	}
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
@@ -483,10 +492,8 @@ func TestRelayLeavesTheStreamAloneOnAProbe(t *testing.T) {
 	if err := relay.handleSetup(context.Background(), setup); err != nil {
 		t.Fatal(err)
 	}
-	stream.mu.Lock()
-	defer stream.mu.Unlock()
-	if len(stream.payloads) != 0 {
-		t.Fatalf("VS_PROBE_CONTROL started the stream: %v", stream.payloads)
+	if len(relay.payloads) != 0 {
+		t.Fatalf("VS_PROBE_CONTROL sized the slot: %v", relay.payloads)
 	}
 }
 
@@ -497,30 +504,49 @@ func TestRelayRefusesAnIsochronousEndpointWithNoStream(t *testing.T) {
 	}
 }
 
-func TestRelayStopsTheStreamWhenTheHostDeconfigures(t *testing.T) {
+// SET_INTERFACE(alt != 0) starts an isochronous stream and alt 0 stops it, for
+// video and audio alike; the patched f_fs reports the pair as ENABLE and DISABLE.
+// A host sends the stop routinely, so it has to drain the pipeline, and it is not
+// a deconfigure: resetting the source there would drop the negotiated format.
+func TestRelayStartsAndStopsTheStreamOnTheAlternateEdge(t *testing.T) {
 	control := newFakeControl()
 	stream := newFakeStream()
-	relay, err := NewRelay(streamRelayImage(), control, map[uint8]DataEndpoint{0x81: stream}, &fakeDevice{})
+	device := &fakeDevice{}
+	relay, err := NewRelay(streamRelayImage(), control, map[uint8]DataEndpoint{0x81: stream}, device)
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() { done <- relay.Run(context.Background()) }()
 	control.events <- Event{Type: EventEnable}
+	waitStream(t, stream, func(starts, stops int) bool { return starts == 1 }, "the alternate edge did not start the stream")
 	control.events <- Event{Type: EventDisable}
+	waitStream(t, stream, func(starts, stops int) bool { return stops == 1 }, "alternate 0 left the isochronous stream running")
+	device.mu.Lock()
+	resets := device.resets
+	device.mu.Unlock()
+	if resets != 0 {
+		t.Fatalf("a stream stop reset the source %d times", resets)
+	}
+	_ = relay.Close()
+	if err := <-done; !errors.Is(err, ErrClosed) {
+		t.Fatalf("Run returned %v", err)
+	}
+}
+
+func waitStream(t *testing.T, stream *fakeStream, ok func(starts, stops int) bool, message string) {
+	t.Helper()
 	deadline := time.Now().Add(time.Second)
 	for {
 		stream.mu.Lock()
-		stops := stream.stops
+		starts, stops := len(stream.payloads), stream.stops
 		stream.mu.Unlock()
-		if stops > 0 {
-			break
+		if ok(starts, stops) {
+			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("a deconfigured host left the isochronous stream running")
+			t.Fatal(message)
 		}
 		time.Sleep(time.Millisecond)
 	}
-	_ = relay.Close()
-	<-done
 }

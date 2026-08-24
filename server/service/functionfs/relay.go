@@ -87,6 +87,7 @@ type Relay struct {
 	control   ControlEndpoint
 	endpoints map[uint8]DataEndpoint
 	device    USBDevice
+	payloads  map[uint8]int
 
 	closeOnce sync.Once
 	closed    chan struct{}
@@ -104,7 +105,7 @@ func NewRelay(image Image, control ControlEndpoint, endpoints map[uint8]DataEndp
 			return nil, fmt.Errorf("%w: isochronous endpoint 0x%02x has no pipelined transport, which only a locally attached source provides", ErrUnsupported, endpoint.Address)
 		}
 	}
-	return &Relay{image: image, control: control, endpoints: endpoints, device: device, closed: make(chan struct{})}, nil
+	return &Relay{image: image, control: control, endpoints: endpoints, device: device, payloads: make(map[uint8]int), closed: make(chan struct{})}, nil
 }
 
 func (r *Relay) Run(ctx context.Context) error {
@@ -176,6 +177,9 @@ func (r *Relay) Run(ctx context.Context) error {
 			switch event.Type {
 			case EventEnable:
 				start()
+				if err := r.startStreams(); err != nil {
+					return err
+				}
 			case EventSuspend:
 				stop()
 			case EventResume:
@@ -185,8 +189,14 @@ func (r *Relay) Run(ctx context.Context) error {
 				if err := r.stopStreams(); err != nil {
 					return err
 				}
-				if err := r.device.Reset(); err != nil {
-					return fmt.Errorf("reset imported device: %w", err)
+				// For an alternate-bearing function this is the host's
+				// SET_INTERFACE(alt=0), which every host sends routinely to
+				// stop a stream. Resetting the source there would throw away
+				// the format it just negotiated.
+				if len(r.image.Alternates) == 0 {
+					if err := r.device.Reset(); err != nil {
+						return fmt.Errorf("reset imported device: %w", err)
+					}
 				}
 			case EventSetup:
 				if err := r.handleSetup(ctx, event.Setup); err != nil {
@@ -329,16 +339,18 @@ func (r *Relay) handleSetup(ctx context.Context, setup Setup) error {
 		return err
 	}
 	if number, payload, ok := r.videoCommit(setup, data); ok {
-		return r.startStream(number, payload)
+		r.payloads[number] = payload
 	}
 	return nil
 }
 
-// SET_INTERFACE never reaches userspace and set_alt carries no alternate number,
-// so the stream start is taken from the request UVC always sends immediately
-// before it: SET_CUR on VS_COMMIT_CONTROL, forwarded because the descriptor block
-// sets FUNCTIONFS_ALL_CTRL_RECIP. Its payload carries dwMaxPayloadTransferSize,
-// which is the per-microframe size the host and the source have just agreed on.
+// Start and stop are the SET_INTERFACE edge, which the patched f_fs reports as
+// ENABLE and DISABLE for an alternate-bearing function, so they are the same for
+// video, audio and anything else isochronous. This only sizes the slot: UVC sends
+// SET_CUR on VS_COMMIT_CONTROL immediately before SET_INTERFACE, forwarded because
+// the descriptor block sets FUNCTIONFS_ALL_CTRL_RECIP, and its
+// dwMaxPayloadTransferSize is the per-microframe size the host and the source have
+// just agreed on.
 func (r *Relay) videoCommit(setup Setup, data []byte) (uint8, int, bool) {
 	number := uint8(setup.Index)
 	if setup.RequestType != 0x21 || setup.Request != 0x01 || setup.Value != 0x0200 {
@@ -354,13 +366,13 @@ func (r *Relay) videoCommit(setup Setup, data []byte) (uint8, int, bool) {
 	return number, payload, true
 }
 
-func (r *Relay) startStream(number uint8, payload int) error {
+func (r *Relay) startStreams() error {
 	for address, owner := range r.image.EndpointOwners {
 		stream, ok := r.endpoints[address].(Stream)
-		if !ok || owner != number {
+		if !ok {
 			continue
 		}
-		if err := stream.Start(payload); err != nil {
+		if err := stream.Start(r.payloads[owner]); err != nil {
 			return fmt.Errorf("functionfs endpoint 0x%02x: %w", address, err)
 		}
 	}
