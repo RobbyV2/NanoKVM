@@ -15,10 +15,12 @@ type recoveryPlan struct {
 	plan    Plan
 }
 
-// The transaction is unbind, mutate, bind, verify. It is add-only: no op ever
-// rmdirs functions/* or removes the gadget root, because f_hid allocates the
+// The transaction is unbind, mutate, bind, verify. It never removes the gadget
+// root, and it never rmdirs functions/hid.*, because f_hid allocates the
 // /dev/hidgN minor from an ida at mkdir time and hid/hid.go:29-32 hardcodes
-// that mapping (H3, R1.1).
+// that mapping (H3, R1.1). It does release the function directories of the
+// dropped net and mass-storage functions, which is a different rule for a
+// different reason; see unlinkStale and releasableKinds.
 func (m *Manager) apply(ctx context.Context, profile Profile, plan Plan) error {
 	_, _, err := m.applyPlan(ctx, profile, plan, true)
 	return err
@@ -306,10 +308,31 @@ func (m *Manager) execute(op Op, udc string) error {
 
 // Hybrid unlinks GS2 but retains its function directory, which keeps its minor
 // reserved for rollback. Persistent profile changes keep the original rule.
+//
+// Unlinking a function from a config does not destroy it, and for the two net
+// functions that is not a tidiness question. f_ncm and f_rndis both call
+// gether_setup at mkdir, which registers a netdev under gether's "usb%d" and
+// holds it until rmdir. So an unlinked-but-present rndis.usb0 goes on owning
+// the name usb0, and the ncm function that replaced it is handed usb1 by the
+// kernel's first-free allocation. Everything downstream that asks for the
+// gadget NIC by name then binds to a netdev with no carrier and no function
+// behind it, and only a reboot clears it. Every apply that replaced a function
+// leaked another one.
+//
+// The release happens here because here is the only place it can: the UDC is
+// already unbound, the config symlink has just gone (rmdir on a linked function
+// is -EBUSY), and the plan's mkdir for the replacement has not run yet, so the
+// name is free when it does.
 func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
 	for _, name := range plan.Outcome(before).Removes {
 		if err := m.ops.Remove(configPrefix + "/" + name); err != nil {
 			return fmt.Errorf("unlink %s: %w", name, err)
+		}
+		if !releasableFunction(name) {
+			continue
+		}
+		if err := m.ops.RemoveDir(functionsDir + "/" + name); err != nil {
+			return fmt.Errorf("release %s: %w", name, err)
 		}
 	}
 	return nil

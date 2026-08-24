@@ -112,11 +112,41 @@ func validUVCLink(rel string) bool {
 	return segments[2] == "streaming" && segments[3] == "header" && segments[4] == "h" && segments[5] == "m"
 }
 
+// The function directories a transaction may destroy, which is deliberately not
+// "the ones it stopped linking".
+//
+// hid is absent and must stay absent: hidg_alloc takes the /dev/hidgN minor
+// from an ida at mkdir and hidg_free_inst returns it at rmdir, so removing
+// functions/hid.GS0 hands its minor to whatever is created next, and
+// service/hid/hid.go maps role to node by number with nothing checking (H3,
+// R1.1). uvc and uac2 are absent for a different reason: the media manager owns
+// their nested descriptor groups and their /dev/video and ALSA card indices,
+// and Plan.Outcome lists every media function as removed on every apply because
+// it relinks them. What is left is the set whose orphan is actively harmful -
+// a netdev holding the name its replacement needs, and a mass_storage function
+// holding its backing file open.
+var releasableKinds = map[FunctionKind]bool{
+	FunctionNCM:         true,
+	FunctionRNDIS:       true,
+	FunctionMassStorage: true,
+}
+
+// The instance is matched against the same pattern Profile.Validate holds every
+// function to, because the name reaches an unlinkat(AT_REMOVEDIR) two segments
+// below the gadget root.
+func releasableFunction(name string) bool {
+	kind, instance, ok := strings.Cut(name, ".")
+	return ok && instancePattern.MatchString(instance) && releasableKinds[FunctionKind(kind)]
+}
+
 func validateRmdir(rel string) error {
 	if err := validateRel(rel); err != nil {
 		return err
 	}
 	segments := strings.Split(rel, "/")
+	if len(segments) == 2 && segments[0] == functionsDir && releasableFunction(segments[1]) {
+		return nil
+	}
 	if len(segments) < 5 || len(segments) > 6 || segments[0] != functionsDir || !strings.HasPrefix(segments[1], string(FunctionUVC)+".") || !cameraPattern.MatchString(strings.TrimPrefix(segments[1], string(FunctionUVC)+".")) {
 		return fmt.Errorf("%w: rmdir is limited to uvc descriptor groups, got %q", ErrInvalidPath, rel)
 	}
