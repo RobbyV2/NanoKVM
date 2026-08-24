@@ -264,12 +264,12 @@ const UsbDetail = () => {
   const state = useDevices();
   const session = state.passthrough;
   const device = session?.device;
-  const supported = WebUSBRelay.supported();
-  if (supported && !session) return null;
+  const unavailable = WebUSBRelay.unavailable();
+  if (!unavailable && !session) return null;
 
   return (
     <div className="space-y-1 text-xs text-neutral-500">
-      {!supported && <div className="text-amber-400">{t('devices.usb.unsupported')}</div>}
+      {unavailable && <div className="text-amber-400">{t(`devices.usb.${unavailable}`)}</div>}
       {session?.active && (
         <div className="truncate">
           {t('devices.usb.session', {

@@ -336,7 +336,8 @@ const id = {
         surrendered: 'Passthrough USB sedang memegang papan ketik dan tetikus',
         surrenderedDesc:
           'Host jarak jauh melihat perangkat yang diimpor, bukan papan ketik, tetikus, dan media virtual NanoKVM. Semuanya kembali begitu sesi berhenti.',
-        unsupported: 'WebUSB memerlukan peramban berbasis Chromium melalui HTTPS',
+        unsupported: 'WebUSB memerlukan peramban berbasis Chromium',
+        insecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban menyembunyikan WebUSB. Aktifkan HTTPS di Pengaturan, Jaringan.',
         session: 'Meneruskan {{device}} ({{mode}})',
         idle: 'Tidak ada sesi passthrough',
         mode: {
@@ -582,6 +583,7 @@ const id = {
         instructionsDesc:
           'Memang tidak ada agen klien yang perlu dipasang. Jalankan perintah usbip standar berikut di komputer tempat perangkat terpasang.',
         copyFailed: 'Gagal menyalin. Salin perintah secara manual.',
+        copyInsecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin perintah secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
         directNote:
           'Tanpa terowongan, usbipd harus dapat dijangkau di jaringan Anda dan alamat pengekspor di atas harus menunjuk ke sana. usbip membawa data perangkat tanpa enkripsi, jadi terowongan lebih disarankan.',
         steps: {
@@ -633,6 +635,7 @@ const id = {
           'Mengaktifkan MCP akan menghentikan PicoClaw dan menutup semua sesi PicoClaw yang aktif.',
         failed: 'Operasi MCP gagal',
         copyFailed: 'Gagal menyalin. Salin secara manual.',
+        copyInsecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
         okBtn: 'Konfirmasi',
         cancelBtn: 'Batal'
       },

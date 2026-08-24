@@ -332,7 +332,8 @@ const ko = {
         surrendered: 'USB 패스스루가 키보드와 마우스를 점유하고 있습니다',
         surrenderedDesc:
           '원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 가져온 장치가 보입니다. 세션이 끝나면 다시 돌아옵니다.',
-        unsupported: 'WebUSB에는 HTTPS로 접속한 Chromium 계열 브라우저가 필요합니다',
+        unsupported: 'WebUSB에는 Chromium 계열 브라우저가 필요합니다',
+        insecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 WebUSB를 차단합니다. 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         session: '{{device}} 전달 중({{mode}})',
         idle: '패스스루 세션 없음',
         mode: {
@@ -569,6 +570,7 @@ const ko = {
         instructionsDesc:
           '설계상 설치할 클라이언트 에이전트가 없습니다. 장치가 연결된 컴퓨터에서 아래의 표준 usbip 명령을 실행하세요.',
         copyFailed: '복사하지 못했습니다. 명령을 직접 복사하세요.',
+        copyInsecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 명령을 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         directNote:
           '터널을 쓰지 않으려면 usbipd가 네트워크에서 접근 가능해야 하고 위의 내보내는 쪽 주소가 그것을 가리켜야 합니다. usbip는 장치 데이터를 암호화하지 않으므로 터널을 권장합니다.',
         steps: {
@@ -620,6 +622,7 @@ const ko = {
           'MCP를 활성화하면 PicoClaw가 중지되고 활성 PicoClaw 세션이 모두 닫힙니다.',
         failed: 'MCP 작업에 실패했습니다',
         copyFailed: '복사에 실패했습니다. 수동으로 복사하세요.',
+        copyInsecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         okBtn: '확인',
         cancelBtn: '취소'
       },

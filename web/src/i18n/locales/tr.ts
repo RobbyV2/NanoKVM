@@ -335,7 +335,8 @@ const tr = {
         surrendered: 'USB passthrough klavye ve fareyi tutuyor',
         surrenderedDesc:
           'Uzak host, NanoKVM’in klavyesi, faresi ve sanal ortamları yerine içe aktarılan cihazı görür. Oturum durduğunda hepsi geri gelir.',
-        unsupported: 'WebUSB, HTTPS üzerinden Chromium tabanlı bir tarayıcı gerektirir',
+        unsupported: 'WebUSB için Chromium tabanlı bir tarayıcı gerekir',
+        insecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı WebUSB\'yi gizliyor. Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
         session: '{{device}} aktarılıyor ({{mode}})',
         idle: 'Passthrough oturumu yok',
         mode: {
@@ -577,6 +578,7 @@ const tr = {
         instructionsDesc:
           'Tasarım gereği kurulacak bir istemci aracısı yok. Bu standart usbip komutlarını aygıtın takılı olduğu makinede çalıştırın.',
         copyFailed: 'Kopyalanamadı. Komutu elle kopyalayın.',
+        copyInsecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Komutu elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
         directNote:
           'Tünel olmadan usbipd ağınızdan erişilebilir olmalı ve yukarıdaki dışa aktaran adresi onu göstermelidir. usbip aygıtı şifresiz taşır, bu yüzden tünel tercih edilmelidir.',
         steps: {
@@ -628,6 +630,7 @@ const tr = {
           'MCP etkinleştirildiğinde PicoClaw durdurulur ve tüm etkin PicoClaw oturumları kapatılır.',
         failed: 'MCP işlemi başarısız oldu',
         copyFailed: 'Kopyalama başarısız. Elle kopyalayın.',
+        copyInsecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
         okBtn: 'Onayla',
         cancelBtn: 'İptal'
       },

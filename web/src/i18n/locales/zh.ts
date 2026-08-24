@@ -326,7 +326,8 @@ const zh = {
         surrendered: 'USB 直通正占用键盘和鼠标',
         surrenderedDesc:
           '远程主机看到的是导入的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话停止后它们会自动恢复。',
-        unsupported: 'WebUSB 需要通过 HTTPS 使用 Chromium 内核浏览器',
+        unsupported: 'WebUSB 需要 Chromium 内核浏览器',
+        insecure: '本页面未通过 HTTPS 提供，浏览器因此禁用了 WebUSB。请在“设置 - 网络”中启用 HTTPS。',
         session: '正在直通 {{device}}（{{mode}}）',
         idle: '没有直通会话',
         mode: {
@@ -546,6 +547,7 @@ const zh = {
         instructionsDesc:
           '按照设计，无需安装任何客户端代理。请在拥有该设备的电脑上运行以下标准 usbip 命令。',
         copyFailed: '复制失败，请手动复制命令。',
+        copyInsecure: '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制命令，或在“设置 - 网络”中启用 HTTPS。',
         directNote:
           '不使用隧道时，usbipd 必须在您的网络上可达，并且上面的导出端地址要指向它。usbip 以明文传输设备数据，建议优先使用隧道。',
         steps: {
@@ -595,6 +597,7 @@ const zh = {
         enableConfirmDesc: '启用 MCP 将停止 PicoClaw，并关闭当前活动的 PicoClaw 会话。',
         failed: 'MCP 操作失败',
         copyFailed: '复制失败，请手动复制。',
+        copyInsecure: '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制，或在“设置 - 网络”中启用 HTTPS。',
         okBtn: '确认',
         cancelBtn: '取消'
       },

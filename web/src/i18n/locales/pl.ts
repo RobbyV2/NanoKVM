@@ -337,7 +337,8 @@ const pl = {
         surrendered: 'Passthrough USB trzyma klawiaturę i mysz',
         surrenderedDesc:
           'Zdalny host widzi zaimportowane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają, gdy sesja się kończy.',
-        unsupported: 'WebUSB wymaga przeglądarki opartej na Chromium po HTTPS',
+        unsupported: 'WebUSB wymaga przeglądarki opartej na Chromium',
+        insecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka blokuje WebUSB. Włącz HTTPS w Ustawieniach, Sieć.',
         session: 'Przekazywanie {{device}} ({{mode}})',
         idle: 'Brak sesji passthrough',
         mode: {
@@ -581,6 +582,7 @@ const pl = {
         instructionsDesc:
           'Z założenia nie ma żadnego agenta do zainstalowania. Wykonaj te standardowe polecenia usbip na komputerze, do którego podłączone jest urządzenie.',
         copyFailed: 'Kopiowanie nie powiodło się. Skopiuj polecenie ręcznie.',
+        copyInsecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj polecenie ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
         directNote:
           'Bez tunelu usbipd musi być osiągalny w Twojej sieci, a adres eksportera powyżej musi go wskazywać. usbip przesyła urządzenie bez szyfrowania, więc lepszy jest tunel.',
         steps: {
@@ -632,6 +634,7 @@ const pl = {
           'Włączenie MCP zatrzyma PicoClaw i zamknie wszystkie aktywne sesje PicoClaw.',
         failed: 'Operacja MCP nie powiodła się',
         copyFailed: 'Kopiowanie nie powiodło się. Skopiuj ręcznie.',
+        copyInsecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
         okBtn: 'Potwierdź',
         cancelBtn: 'Anuluj'
       },

@@ -334,7 +334,8 @@ const vi = {
         surrendered: 'USB passthrough đang giữ bàn phím và chuột',
         surrenderedDesc:
           'Máy chủ từ xa thấy thiết bị đã nhập thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng sẽ quay lại khi phiên dừng.',
-        unsupported: 'WebUSB cần trình duyệt nhân Chromium chạy qua HTTPS',
+        unsupported: 'WebUSB cần trình duyệt nhân Chromium',
+        insecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn WebUSB. Hãy bật HTTPS trong Cài đặt, Mạng.',
         session: 'Đang chuyển tiếp {{device}} ({{mode}})',
         idle: 'Không có phiên passthrough',
         mode: {
@@ -574,6 +575,7 @@ const vi = {
         instructionsDesc:
           'Theo thiết kế, không cần cài đặt tác nhân phía máy khách. Hãy chạy các lệnh usbip tiêu chuẩn sau trên máy đang cắm thiết bị.',
         copyFailed: 'Sao chép thất bại. Hãy sao chép lệnh thủ công.',
+        copyInsecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép lệnh thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
         directNote:
           'Nếu không dùng đường hầm, usbipd phải truy cập được trong mạng của bạn và địa chỉ bên xuất ở trên phải trỏ tới nó. usbip truyền dữ liệu thiết bị không mã hóa, vì vậy nên ưu tiên đường hầm.',
         steps: {
@@ -624,6 +626,7 @@ const vi = {
         enableConfirmDesc: 'Bật MCP sẽ dừng PicoClaw và đóng tất cả phiên PicoClaw đang hoạt động.',
         failed: 'Thao tác MCP không thành công',
         copyFailed: 'Sao chép thất bại. Vui lòng sao chép thủ công.',
+        copyInsecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
         okBtn: 'Xác nhận',
         cancelBtn: 'Hủy'
       },

@@ -339,7 +339,8 @@ const fr = {
         surrendered: 'Le passthrough USB retient le clavier et la souris',
         surrenderedDesc:
           'L’hôte distant voit le périphérique importé à la place du clavier, de la souris et des médias virtuels du NanoKVM. Ils reviennent dès que la session s’arrête.',
-        unsupported: 'WebUSB nécessite un navigateur Chromium en HTTPS',
+        unsupported: 'WebUSB nécessite un navigateur Chromium',
+        insecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc WebUSB. Activez HTTPS dans Paramètres, Réseau.',
         session: 'Transfert de {{device}} ({{mode}})',
         idle: 'Aucune session de passthrough',
         mode: {
@@ -586,6 +587,7 @@ const fr = {
         instructionsDesc:
           'Il n’y a volontairement aucun agent client à installer. Exécutez ces commandes usbip standard sur la machine à laquelle le périphérique est branché.',
         copyFailed: 'Échec de la copie. Copiez la commande manuellement.',
+        copyInsecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez la commande manuellement, ou activez HTTPS dans Paramètres, Réseau.',
         directNote:
           'Sans tunnel, usbipd doit être joignable sur votre réseau et l’adresse d’exportateur ci-dessus doit le désigner. usbip transporte le périphérique en clair, le tunnel est donc préférable.',
         steps: {
@@ -637,6 +639,7 @@ const fr = {
           'L’activation de MCP arrêtera PicoClaw et fermera toute session PicoClaw active.',
         failed: 'Échec de l’opération MCP',
         copyFailed: 'La copie a échoué. Copiez manuellement.',
+        copyInsecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez manuellement, ou activez HTTPS dans Paramètres, Réseau.',
         okBtn: 'Confirmer',
         cancelBtn: 'Annuler'
       },

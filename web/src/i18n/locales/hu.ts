@@ -338,7 +338,8 @@ const hu = {
         surrendered: 'Az USB-passthrough tartja a billentyűzetet és az egeret',
         surrenderedDesc:
           'A távoli gazdagép az importált eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek a munkamenet leállásakor visszatérnek.',
-        unsupported: 'A WebUSB Chromium alapú böngészőt igényel HTTPS felett',
+        unsupported: 'A WebUSB Chromium-alapú böngészőt igényel',
+        insecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző visszatartja a WebUSB-t. Kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         session: '{{device}} átadása ({{mode}})',
         idle: 'Nincs passthrough munkamenet',
         mode: {
@@ -585,6 +586,7 @@ const hu = {
         instructionsDesc:
           'Szándékosan nincs telepítendő kliensügynök. Futtassa ezeket a szokásos usbip parancsokat azon a gépen, amelyhez az eszköz csatlakozik.',
         copyFailed: 'A másolás nem sikerült. Másolja a parancsot kézzel.',
+        copyInsecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold a parancsot kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         directNote:
           'Alagút nélkül az usbipd-nek elérhetőnek kell lennie a hálózatán, és a fenti exportálócímnek rá kell mutatnia. Az usbip titkosítatlanul viszi az eszközt, ezért az alagút az ajánlott.',
         steps: {
@@ -636,6 +638,7 @@ const hu = {
           'Az MCP engedélyezése leállítja a PicoClaw-t, és bezár minden aktív PicoClaw-munkamenetet.',
         failed: 'Az MCP-művelet sikertelen',
         copyFailed: 'A másolás sikertelen. Másolja kézzel.',
+        copyInsecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         okBtn: 'Megerősítés',
         cancelBtn: 'Mégse'
       },

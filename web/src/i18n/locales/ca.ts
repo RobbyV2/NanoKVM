@@ -334,7 +334,8 @@ const ca = {
         surrendered: 'El passthrough USB reté el teclat i el ratolí',
         surrenderedDesc:
           'L’amfitrió remot veu el dispositiu importat en lloc del teclat, el ratolí i els mitjans virtuals del NanoKVM. Tornen quan s’atura la sessió.',
-        unsupported: 'WebUSB necessita un navegador Chromium sobre HTTPS',
+        unsupported: 'WebUSB necessita un navegador Chromium',
+        insecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador amaga el WebUSB. Activa l\'HTTPS a Configuració, Xarxa.',
         session: 'S’està reenviant {{device}} ({{mode}})',
         idle: 'Cap sessió de passthrough',
         mode: {
@@ -579,6 +580,7 @@ const ca = {
         instructionsDesc:
           'Per disseny no cal instal·lar cap agent client. Executa aquestes ordres estàndard d’usbip a la màquina on hi ha el dispositiu.',
         copyFailed: 'No s’ha pogut copiar. Copia l’ordre manualment.',
+        copyInsecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia l\'ordre manualment, o activa l\'HTTPS a Configuració, Xarxa.',
         directNote:
           'Sense túnel, l’usbipd ha de ser accessible a la teva xarxa i l’adreça de l’exportador de dalt l’ha d’indicar. L’usbip transporta el dispositiu sense xifrar, així que és preferible el túnel.',
         steps: {
@@ -630,6 +632,7 @@ const ca = {
           'En activar MCP, PicoClaw s’aturarà i es tancarà qualsevol sessió activa de PicoClaw.',
         failed: 'L’operació MCP ha fallat',
         copyFailed: 'La còpia ha fallat. Copieu-ho manualment.',
+        copyInsecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia-ho manualment, o activa l\'HTTPS a Configuració, Xarxa.',
         okBtn: 'Confirma',
         cancelBtn: 'Cancel·la'
       },

@@ -338,7 +338,8 @@ const nl = {
         surrendered: 'USB-passthrough houdt het toetsenbord en de muis vast',
         surrenderedDesc:
           'De externe host ziet het geïmporteerde apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen terug zodra de sessie stopt.',
-        unsupported: 'WebUSB vereist een Chromium-browser via HTTPS',
+        unsupported: 'WebUSB vereist een Chromium-browser',
+        insecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom houdt de browser WebUSB tegen. Schakel HTTPS in bij Instellingen, Netwerk.',
         session: '{{device}} wordt doorgegeven ({{mode}})',
         idle: 'Geen passthrough-sessie',
         mode: {
@@ -583,6 +584,7 @@ const nl = {
         instructionsDesc:
           'Er is bewust geen clientagent om te installeren. Voer deze gewone usbip-commando’s uit op de machine waar het apparaat aan hangt.',
         copyFailed: 'Kopiëren mislukt. Kopieer het commando handmatig.',
+        copyInsecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer de opdracht handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
         directNote:
           'Zonder tunnel moet usbipd bereikbaar zijn op uw netwerk en moet het exporteradres hierboven daarnaar verwijzen. usbip draagt het apparaat onversleuteld over, dus de tunnel verdient de voorkeur.',
         steps: {
@@ -634,6 +636,7 @@ const nl = {
           'Als MCP wordt ingeschakeld, stopt PicoClaw en worden alle actieve PicoClaw-sessies gesloten.',
         failed: 'MCP-bewerking mislukt',
         copyFailed: 'Kopiëren mislukt. Kopieer handmatig.',
+        copyInsecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
         okBtn: 'Bevestigen',
         cancelBtn: 'Annuleren'
       },

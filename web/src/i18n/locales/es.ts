@@ -337,7 +337,8 @@ const es = {
         surrendered: 'El passthrough USB retiene el teclado y el ratón',
         surrenderedDesc:
           'El host remoto ve el dispositivo importado en lugar del teclado, el ratón y los medios virtuales del NanoKVM. Vuelven cuando la sesión termina.',
-        unsupported: 'WebUSB necesita un navegador Chromium sobre HTTPS',
+        unsupported: 'WebUSB necesita un navegador Chromium',
+        insecure: 'Esta página no se sirve por HTTPS, así que el navegador oculta WebUSB. Activa HTTPS en Ajustes, Red.',
         session: 'Reenviando {{device}} ({{mode}})',
         idle: 'Ninguna sesión de passthrough',
         mode: {
@@ -583,6 +584,7 @@ const es = {
         instructionsDesc:
           'Por diseño no hay ningún agente cliente que instalar. Ejecute estas órdenes estándar de usbip en el equipo al que está conectado el dispositivo.',
         copyFailed: 'No se pudo copiar. Copie la orden manualmente.',
+        copyInsecure: 'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Copia el comando manualmente o activa HTTPS en Ajustes, Red.',
         directNote:
           'Sin túnel, usbipd tiene que ser accesible en su red y la dirección del exportador de arriba debe apuntar a él. usbip transporta el dispositivo sin cifrar, así que es preferible el túnel.',
         steps: {
@@ -634,6 +636,7 @@ const es = {
           'Al activar MCP se detendrá PicoClaw y se cerrará cualquier sesión activa de PicoClaw.',
         failed: 'Error en la operación MCP',
         copyFailed: 'Error al copiar. Copia manualmente.',
+        copyInsecure: 'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Cópialo manualmente o activa HTTPS en Ajustes, Red.',
         okBtn: 'Confirmar',
         cancelBtn: 'Cancelar'
       },

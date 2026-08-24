@@ -120,9 +120,22 @@ export class WebUSBRelay {
     return !!webUSB();
   }
 
+  // navigator.usb is absent both on a browser without WebUSB and on a Chromium
+  // that has it but withholds it outside a secure context, and only the second
+  // is fixable by the user.
+  static unavailable(): 'insecure' | 'unsupported' | '' {
+    if (webUSB()) return '';
+    return window.isSecureContext === false ? 'insecure' : 'unsupported';
+  }
+
   static async select(onDisconnect?: () => void) {
     const usb = webUSB();
-    if (!usb) throw new Error('WebUSB requires a Chromium browser over HTTPS');
+    if (!usb)
+      throw new Error(
+        WebUSBRelay.unavailable() === 'insecure'
+          ? 'This page is not a secure context, so the browser withholds WebUSB. Enable HTTPS in Settings, Network.'
+          : 'WebUSB requires a Chromium browser'
+      );
     const device = await usb.requestDevice({ filters: [] });
     const captured = await capture(device);
     await saveProfile(captured.profile);

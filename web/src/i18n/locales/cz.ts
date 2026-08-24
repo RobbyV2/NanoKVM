@@ -337,7 +337,8 @@ const cz = {
         surrendered: 'USB passthrough drží klávesnici a myš',
         surrenderedDesc:
           'Vzdálený host vidí importované zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se, jakmile relace skončí.',
-        unsupported: 'WebUSB vyžaduje prohlížeč založený na Chromiu přes HTTPS',
+        unsupported: 'WebUSB vyžaduje prohlížeč založený na Chromiu',
+        insecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč WebUSB skrývá. Zapněte HTTPS v Nastavení, Síť.',
         session: 'Předává se {{device}} ({{mode}})',
         idle: 'Žádná relace passthrough',
         mode: {
@@ -578,6 +579,7 @@ const cz = {
         instructionsDesc:
           'Záměrně se neinstaluje žádný klientský agent. Spusťte tyto běžné příkazy usbip na počítači, ke kterému je zařízení připojeno.',
         copyFailed: 'Kopírování se nezdařilo. Zkopírujte příkaz ručně.',
+        copyInsecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte příkaz ručně, nebo zapněte HTTPS v Nastavení, Síť.',
         directNote:
           'Bez tunelu musí být usbipd dostupný ve vaší síti a adresa exportéra výše na něj musí ukazovat. usbip přenáší zařízení nešifrovaně, proto je tunel vhodnější.',
         steps: {
@@ -629,6 +631,7 @@ const cz = {
           'Povolením MCP se zastaví PicoClaw a ukončí se všechny aktivní relace PicoClaw.',
         failed: 'Operace MCP se nezdařila',
         copyFailed: 'Kopírování se nezdařilo. Zkopírujte ručně.',
+        copyInsecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte ho ručně, nebo zapněte HTTPS v Nastavení, Síť.',
         okBtn: 'Potvrdit',
         cancelBtn: 'Zrušit'
       },

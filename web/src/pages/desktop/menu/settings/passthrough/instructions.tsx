@@ -44,7 +44,13 @@ export const Instructions = ({ exporter, busId }: InstructionsProps) => {
         window.setTimeout(() => setCopiedKey(''), 2000);
       })
       .catch(() => {
-        setErrMsg(t('settings.passthrough.copyFailed'));
+        setErrMsg(
+          t(
+            window.isSecureContext === false
+              ? 'settings.passthrough.copyInsecure'
+              : 'settings.passthrough.copyFailed'
+          )
+        );
       })
       .finally(() => {
         setIsCopying(false);

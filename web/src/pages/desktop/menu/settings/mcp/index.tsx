@@ -176,9 +176,11 @@ export const MCP = () => {
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       message.error(
-        t('settings.mcp.copyFailed', {
-          defaultValue: 'Copy failed. Copy manually.'
-        })
+        window.isSecureContext === false
+          ? t('settings.mcp.copyInsecure')
+          : t('settings.mcp.copyFailed', {
+              defaultValue: 'Copy failed. Copy manually.'
+            })
       );
     }
   }

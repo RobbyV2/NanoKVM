@@ -336,7 +336,8 @@ const nb = {
         surrendered: 'USB-passthrough holder tastaturet og musen',
         surrenderedDesc:
           'Den eksterne verten ser den importerte enheten i stedet for NanoKVMs tastatur, mus og virtuelle medier. De kommer tilbake når økten stopper.',
-        unsupported: 'WebUSB krever en Chromium-nettleser over HTTPS',
+        unsupported: 'WebUSB krever en Chromium-nettleser',
+        insecure: 'Denne siden leveres ikke over HTTPS, så nettleseren holder tilbake WebUSB. Slå på HTTPS under Innstillinger, Nettverk.',
         session: 'Videresender {{device}} ({{mode}})',
         idle: 'Ingen passthrough-økt',
         mode: {
@@ -580,6 +581,7 @@ const nb = {
         instructionsDesc:
           'Det finnes bevisst ingen klientagent å installere. Kjør disse vanlige usbip-kommandoene på maskinen enheten er koblet til.',
         copyFailed: 'Kopiering mislyktes. Kopier kommandoen manuelt.',
+        copyInsecure: 'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier kommandoen manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
         directNote:
           'Uten tunnel må usbipd være tilgjengelig på nettverket ditt, og eksportøradressen ovenfor må peke på den. usbip sender enheten ukryptert, så tunnelen er å foretrekke.',
         steps: {
@@ -630,6 +632,7 @@ const nb = {
           'Aktivering av MCP stopper PicoClaw og lukker alle aktive PicoClaw-økter.',
         failed: 'MCP-operasjonen mislyktes',
         copyFailed: 'Kopiering mislyktes. Kopier manuelt.',
+        copyInsecure: 'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
         okBtn: 'Bekreft',
         cancelBtn: 'Avbryt'
       },
