@@ -105,6 +105,30 @@ require_runpath() {
     fi
 }
 
+# A binary older than the tree it was built from is what a submodule bump plus a
+# cached build/ artifact looks like, and it packages clean: 2.7.0 shipped a
+# usb-proxy from before the bump this way.
+require_fresh() {
+    local artifact="$1" source_dir="$2" hint="$3" newer
+    newer=$(find "$source_dir" -name .git -prune -o -type f -newer "$artifact" -print 2>/dev/null | head -1)
+    if [ -n "$newer" ]; then
+        echo "[ERROR] ${artifact#"$ROOT"/} is older than ${newer#"$ROOT"/}" >&2
+        echo "        it was not built from the current source; run: $hint" >&2
+        exit 1
+    fi
+}
+
+# The gzipped seed is what ships; the uncompressed copy is what every check here
+# runs against. If the two ever differ, the checks proved nothing.
+require_same_gz() {
+    local gz="$1" binary="$2" hint="$3"
+    if ! gzip -dc "$gz" | cmp -s - "$binary"; then
+        echo "[ERROR] ${gz#"$ROOT"/} is not ${binary#"$ROOT"/}" >&2
+        echo "        the shipped seed is not the binary that was verified; run: $hint" >&2
+        exit 1
+    fi
+}
+
 require_file "$ROOT/server/NanoKVM-Server" "run: make app"
 require_file "$ROOT/kvmapp/kvm_system/kvm_system" "run: make support"
 require_file "$ROOT/web/dist/index.html" "run: make web"
@@ -131,6 +155,13 @@ require_riscv64 "$ROOT/server/dl_lib/libtinyalsa.so"
 require_riscv64 "$ROOT/build/tunnels/wstunnel"
 require_riscv64 "$ROOT/build/tunnels/newt"
 require_riscv64 "$ROOT/build/passthrough/usb-proxy"
+
+require_fresh "$ROOT/build/tunnels/wstunnel" "$ROOT/third_party/wstunnel" "make tunnels"
+require_fresh "$ROOT/build/tunnels/newt" "$ROOT/third_party/newt" "make tunnels"
+require_fresh "$ROOT/build/passthrough/usb-proxy" "$ROOT/third_party/usb-proxy" "make passthrough"
+require_same_gz "$ROOT/kvmapp/tunnels/wstunnel.gz" "$ROOT/build/tunnels/wstunnel" "make tunnels"
+require_same_gz "$ROOT/kvmapp/tunnels/newt.gz" "$ROOT/build/tunnels/newt" "make tunnels"
+require_same_gz "$ROOT/kvmapp/passthrough/usb-proxy.gz" "$ROOT/build/passthrough/usb-proxy" "make passthrough"
 
 echo "[INFO] staging nanokvm_$VERSION"
 # Clear the whole output directory: release.yml uploads build/release/nanokvm_*
