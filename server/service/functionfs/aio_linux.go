@@ -116,6 +116,10 @@ func (q *aioQueue) buffer(slot int) []byte {
 	return q.pool[slot*q.slotSize : (slot+1)*q.slotSize : (slot+1)*q.slotSize]
 }
 
+func (q *aioQueue) span(from, to int) []byte {
+	return q.pool[from*q.slotSize : to*q.slotSize : to*q.slotSize]
+}
+
 func (q *aioQueue) submit(requests []aioRequest) error {
 	if len(requests) == 0 {
 		return nil

@@ -2,8 +2,10 @@ package functionfs
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"io"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -12,13 +14,14 @@ import (
 )
 
 type fakeControl struct {
-	events chan Event
-	writes chan []byte
-	closed chan struct{}
-	once   sync.Once
-	mu     sync.Mutex
-	reads  int
-	stalls int
+	events  chan Event
+	writes  chan []byte
+	closed  chan struct{}
+	once    sync.Once
+	mu      sync.Mutex
+	reads   int
+	stalls  int
+	payload []byte
 }
 
 func newFakeControl() *fakeControl {
@@ -36,12 +39,17 @@ func (f *fakeControl) NextEvent() (Event, error) {
 
 func (f *fakeControl) ReadControl(data []byte) (int, error) {
 	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.reads++
-	f.mu.Unlock()
 	if len(data) == 0 {
 		return 0, nil
 	}
-	return 0, io.EOF
+	if len(f.payload) == 0 {
+		return 0, io.EOF
+	}
+	n := copy(data, f.payload)
+	f.payload = f.payload[n:]
+	return n, nil
 }
 func (f *fakeControl) WriteControl(data []byte) (int, error) {
 	f.writes <- append([]byte(nil), data...)
@@ -394,4 +402,125 @@ func outputRelayImage() Image {
 			{SourceAddress: 0x03, Address: 0x01, Transfer: presentation.EndpointBulk, MaxPacket: 512},
 		}},
 	}
+}
+
+type fakeStream struct {
+	*fakeEndpoint
+	mu       sync.Mutex
+	payloads []int
+	stops    int
+	err      error
+}
+
+func newFakeStream() *fakeStream { return &fakeStream{fakeEndpoint: newFakeEndpoint()} }
+
+func (f *fakeStream) Start(payload int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.payloads = append(f.payloads, payload)
+	return f.err
+}
+
+func (f *fakeStream) Stop() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.stops++
+	return nil
+}
+
+func streamRelayImage() Image {
+	return Image{
+		Interfaces: map[uint8]uint8{1: 0}, Endpoints: map[uint8]uint8{0x83: 0x81},
+		Alternates: map[uint8]uint8{1: 3}, EndpointOwners: map[uint8]uint8{0x81: 1},
+		Function: presentation.FunctionFS{Interfaces: 1, Endpoints: []presentation.FunctionFSEndpoint{
+			{SourceAddress: 0x83, Address: 0x81, Transfer: presentation.EndpointIsochronous, MaxPacket: 768, Interval: 1},
+		}},
+	}
+}
+
+func videoCommitPayload(size uint32) []byte {
+	data := make([]byte, 26)
+	data[2], data[3] = 1, 1
+	binary.LittleEndian.PutUint32(data[22:26], size)
+	return data
+}
+
+func TestRelayStartsTheStreamOnAVideoCommit(t *testing.T) {
+	control := newFakeControl()
+	control.payload = videoCommitPayload(768)
+	stream := newFakeStream()
+	device := &fakeDevice{}
+	relay, err := NewRelay(streamRelayImage(), control, map[uint8]DataEndpoint{0x81: stream}, device)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setup := Setup{RequestType: 0x21, Request: 0x01, Value: 0x0200, Index: 0, Length: 26}
+	if err := relay.handleSetup(context.Background(), setup); err != nil {
+		t.Fatal(err)
+	}
+	device.mu.Lock()
+	forwarded := device.setup
+	device.mu.Unlock()
+	if forwarded.Index != 1 || forwarded.Value != 0x0200 {
+		t.Fatalf("commit forwarded to the source as %+v, want interface 1 and VS_COMMIT_CONTROL", forwarded)
+	}
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+	if len(stream.payloads) != 1 || stream.payloads[0] != 768 {
+		t.Fatalf("stream starts = %v, want one at dwMaxPayloadTransferSize 768", stream.payloads)
+	}
+}
+
+func TestRelayLeavesTheStreamAloneOnAProbe(t *testing.T) {
+	control := newFakeControl()
+	control.payload = videoCommitPayload(768)
+	stream := newFakeStream()
+	relay, err := NewRelay(streamRelayImage(), control, map[uint8]DataEndpoint{0x81: stream}, &fakeDevice{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	setup := Setup{RequestType: 0x21, Request: 0x01, Value: 0x0100, Index: 0, Length: 26}
+	if err := relay.handleSetup(context.Background(), setup); err != nil {
+		t.Fatal(err)
+	}
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+	if len(stream.payloads) != 0 {
+		t.Fatalf("VS_PROBE_CONTROL started the stream: %v", stream.payloads)
+	}
+}
+
+func TestRelayRefusesAnIsochronousEndpointWithNoStream(t *testing.T) {
+	_, err := NewRelay(streamRelayImage(), newFakeControl(), map[uint8]DataEndpoint{0x81: newFakeEndpoint()}, &fakeDevice{})
+	if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "0x81") {
+		t.Fatalf("NewRelay() error = %v, want an ErrUnsupported naming endpoint 0x81", err)
+	}
+}
+
+func TestRelayStopsTheStreamWhenTheHostDeconfigures(t *testing.T) {
+	control := newFakeControl()
+	stream := newFakeStream()
+	relay, err := NewRelay(streamRelayImage(), control, map[uint8]DataEndpoint{0x81: stream}, &fakeDevice{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- relay.Run(context.Background()) }()
+	control.events <- Event{Type: EventEnable}
+	control.events <- Event{Type: EventDisable}
+	deadline := time.Now().Add(time.Second)
+	for {
+		stream.mu.Lock()
+		stops := stream.stops
+		stream.mu.Unlock()
+		if stops > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("a deconfigured host left the isochronous stream running")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	_ = relay.Close()
+	<-done
 }

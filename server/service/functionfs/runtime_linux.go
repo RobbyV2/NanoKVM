@@ -32,6 +32,7 @@ const (
 	iocRead  = 2
 
 	usbdevfsControl         = uint((iocRead|iocWrite)<<30 | 24<<16 | 'U'<<8)
+	usbdevfsSetInterface    = uint(iocRead<<30 | 8<<16 | 'U'<<8 | 4)
 	usbdevfsSubmitURB       = uint(iocRead<<30 | 56<<16 | 'U'<<8 | 10)
 	usbdevfsDiscardURB      = uint('U'<<8 | 11)
 	usbdevfsReapURBNoDelay  = uint(iocWrite<<30 | 8<<16 | 'U'<<8 | 13)
@@ -88,11 +89,33 @@ func Prepare(devicePath string, bus uint32, address uint32, caps presentation.Ca
 			_ = control.Close()
 		}
 	}()
+	attachStreams(image, endpoints, device)
 	relay, err := NewRelay(image, control, endpoints, device)
 	if err != nil {
 		return nil, err
 	}
 	return &Prepared{Image: image, Relay: relay}, nil
+}
+
+// Only a locally attached source can be driven with pipelined isochronous URBs,
+// so a remote transport keeps its endpoints unwrapped and NewRelay refuses the
+// image rather than presenting a camera that would never produce a frame.
+func attachStreams(image Image, endpoints map[uint8]DataEndpoint, device USBDevice) {
+	source, ok := device.(*linuxDevice)
+	if !ok {
+		return
+	}
+	for _, endpoint := range image.Function.Endpoints {
+		if endpoint.Transfer != presentation.EndpointIsochronous {
+			continue
+		}
+		file, ok := endpoints[endpoint.Address].(*linuxEndpoint)
+		if !ok {
+			continue
+		}
+		number := image.EndpointOwners[endpoint.Address]
+		endpoints[endpoint.Address] = newIsochronousEndpoint(file, source, endpoint, number, image.Alternates[number])
+	}
 }
 
 func PrepareRemote(raw []byte, fetcher Fetcher, device USBDevice, caps presentation.CapabilityTable) (_ *Prepared, err error) {
@@ -112,6 +135,7 @@ func PrepareRemote(raw []byte, fetcher Fetcher, device USBDevice, caps presentat
 			_ = control.Close()
 		}
 	}()
+	attachStreams(image, endpoints, device)
 	relay, err := NewRelay(image, control, endpoints, device)
 	if err != nil {
 		return nil, err
@@ -291,6 +315,24 @@ type usbURB struct {
 	UserContext  unsafe.Pointer
 }
 
+type setInterface struct {
+	Interface uint32
+	Alternate uint32
+}
+
+type usbISOPacket struct {
+	Length       uint32
+	ActualLength uint32
+	Status       uint32
+}
+
+// usbdevfs_urb ends in a flexible iso_frame_desc array, so the packet
+// descriptors have to be contiguous with the URB the ioctl is handed.
+type usbISORequest struct {
+	urb     usbURB
+	packets [maxISOPackets]usbISOPacket
+}
+
 type disconnectClaim struct {
 	Interface uint32
 	Flags     uint32
@@ -300,6 +342,8 @@ type disconnectClaim struct {
 type usbRequest struct {
 	ctx         context.Context
 	urb         usbURB
+	iso         *usbISORequest
+	packets     int
 	buffer      []byte
 	pinner      runtime.Pinner
 	done        chan transferResult
@@ -307,9 +351,17 @@ type usbRequest struct {
 	directionIn bool
 }
 
+func (r *usbRequest) block() *usbURB {
+	if r.iso != nil {
+		return &r.iso.urb
+	}
+	return &r.urb
+}
+
 type transferResult struct {
-	data []byte
-	err  error
+	data    []byte
+	lengths []int
+	err     error
 }
 
 type linuxDevice struct {
@@ -413,14 +465,8 @@ func (d *linuxDevice) Transfer(ctx context.Context, endpoint Endpoint, data []by
 	request.urb.Buffer = unsafe.Pointer(&request.buffer[0])
 	request.pinner.Pin(&request.urb)
 	request.pinner.Pin(&request.buffer[0])
-	select {
-	case d.requests <- request:
-	case <-ctx.Done():
-		request.pinner.Unpin()
-		return nil, ctx.Err()
-	case <-d.close:
-		request.pinner.Unpin()
-		return nil, ErrClosed
+	if err := d.enqueue(ctx, request); err != nil {
+		return nil, err
 	}
 	select {
 	case result := <-request.done:
@@ -442,6 +488,19 @@ func (d *linuxDevice) Transfer(ctx context.Context, endpoint Endpoint, data []by
 	}
 }
 
+func (d *linuxDevice) enqueue(ctx context.Context, request *usbRequest) error {
+	select {
+	case d.requests <- request:
+		return nil
+	case <-ctx.Done():
+		request.pinner.Unpin()
+		return ctx.Err()
+	case <-d.close:
+		request.pinner.Unpin()
+		return ErrClosed
+	}
+}
+
 func (d *linuxDevice) reactor() {
 	defer close(d.done)
 	pending := make(map[*usbURB]*usbRequest)
@@ -453,10 +512,10 @@ func (d *linuxDevice) reactor() {
 		case request := <-d.requests:
 			if dead != nil {
 				d.complete(request, nil, dead)
-			} else if err := ioctl(d.file.Fd(), usbdevfsSubmitURB, unsafe.Pointer(&request.urb)); err != nil {
+			} else if err := ioctl(d.file.Fd(), usbdevfsSubmitURB, unsafe.Pointer(request.block())); err != nil {
 				d.complete(request, nil, err)
 			} else {
-				pending[&request.urb] = request
+				pending[request.block()] = request
 			}
 		case <-ticker.C:
 			if dead != nil {
@@ -465,7 +524,7 @@ func (d *linuxDevice) reactor() {
 			for _, request := range pending {
 				if request.ctx.Err() != nil && !request.discard {
 					request.discard = true
-					if err := ioctl(d.file.Fd(), usbdevfsDiscardURB, unsafe.Pointer(&request.urb)); err != nil && !errors.Is(err, syscall.EINVAL) {
+					if err := ioctl(d.file.Fd(), usbdevfsDiscardURB, unsafe.Pointer(request.block())); err != nil && !errors.Is(err, syscall.EINVAL) {
 						dead = err
 						break
 					}
@@ -483,7 +542,7 @@ func (d *linuxDevice) reactor() {
 			}
 		case <-d.close:
 			for _, request := range pending {
-				_ = ioctl(d.file.Fd(), usbdevfsDiscardURB, unsafe.Pointer(&request.urb))
+				_ = ioctl(d.file.Fd(), usbdevfsDiscardURB, unsafe.Pointer(request.block()))
 			}
 			_ = d.file.Close()
 			for _, request := range pending {
@@ -521,6 +580,10 @@ func (d *linuxDevice) reap(pending map[*usbURB]*usbRequest) error {
 			d.complete(request, nil, err)
 			continue
 		}
+		if request.packets != 0 {
+			d.completeISO(request)
+			continue
+		}
 		if urb.ActualLength < 0 || int(urb.ActualLength) > len(request.buffer) {
 			d.complete(request, nil, fmt.Errorf("%w: source returned %d bytes", ErrTransfer, urb.ActualLength))
 			continue
@@ -536,6 +599,53 @@ func (d *linuxDevice) reap(pending map[*usbURB]*usbRequest) error {
 func (d *linuxDevice) complete(request *usbRequest, data []byte, err error) {
 	request.pinner.Unpin()
 	request.done <- transferResult{data: data, err: err}
+}
+
+// An isochronous URB carries its errors per packet, not in urb.status, and a
+// short or missing packet is ordinary rather than a failure of the transfer.
+func (d *linuxDevice) completeISO(request *usbRequest) {
+	lengths := make([]int, request.packets)
+	for index := range lengths {
+		packet := request.iso.packets[index]
+		if packet.Status != 0 || int(packet.ActualLength) > int(packet.Length) {
+			continue
+		}
+		lengths[index] = int(packet.ActualLength)
+	}
+	request.pinner.Unpin()
+	request.done <- transferResult{lengths: lengths}
+}
+
+// The source keeps every alternate setting the camera declared, so the one the
+// host asked for on the presented interface has to be translated back and set on
+// the imported device before its isochronous endpoint carries anything.
+func (d *linuxDevice) SetAlternate(number uint8, alternate uint8) error {
+	value := setInterface{Interface: uint32(number), Alternate: uint32(alternate)}
+	return ioctl(d.file.Fd(), usbdevfsSetInterface, unsafe.Pointer(&value))
+}
+
+func (d *linuxDevice) beginISO(ctx context.Context, endpoint Endpoint, buffer []byte, packets int, packet int) (*usbRequest, error) {
+	if packets <= 0 || packets > maxISOPackets || packet <= 0 || len(buffer) != packets*packet {
+		return nil, fmt.Errorf("%w: %d isochronous packets of %d in %d bytes", ErrEndpointSize, packets, packet, len(buffer))
+	}
+	request := &usbRequest{
+		ctx: ctx, iso: &usbISORequest{}, packets: packets, buffer: buffer,
+		done: make(chan transferResult, 1), directionIn: endpoint.SourceAddress&0x80 != 0,
+	}
+	request.iso.urb = usbURB{
+		Type: 0, Endpoint: endpoint.SourceAddress, Flags: urbISOASAP,
+		BufferLength: int32(len(buffer)), Buffer: unsafe.Pointer(&buffer[0]), StreamID: uint32(packets),
+	}
+	for index := range packets {
+		request.iso.packets[index].Length = uint32(packet)
+	}
+	// The buffer is the mlocked aio pool rather than Go memory, so only the URB
+	// and its packet descriptors need pinning.
+	request.pinner.Pin(request.iso)
+	if err := d.enqueue(ctx, request); err != nil {
+		return nil, err
+	}
+	return request, nil
 }
 
 func (d *linuxDevice) ClearHalt(endpoint uint8) error {

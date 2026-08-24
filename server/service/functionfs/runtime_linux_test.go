@@ -20,6 +20,32 @@ func TestUSBFSABI(t *testing.T) {
 	if usbdevfsControl != 0xc0185500 || usbdevfsSubmitURB != 0x8038550a || usbdevfsReapURBNoDelay != 0x4008550d {
 		t.Fatalf("USBFS ioctls = %#x/%#x/%#x", usbdevfsControl, usbdevfsSubmitURB, usbdevfsReapURBNoDelay)
 	}
+	if usbdevfsSetInterface != 0x80085504 || unsafe.Sizeof(setInterface{}) != 8 {
+		t.Fatalf("USBDEVFS_SETINTERFACE = %#x, struct %d", usbdevfsSetInterface, unsafe.Sizeof(setInterface{}))
+	}
+	// usbdevfs_urb ends in a flexible array, so the packet descriptors have to
+	// start exactly where the URB ends or the kernel reads the wrong lengths.
+	if unsafe.Offsetof(usbISORequest{}.packets) != 56 || unsafe.Sizeof(usbISOPacket{}) != 12 {
+		t.Fatalf("iso packets at offset %d, %d bytes each", unsafe.Offsetof(usbISORequest{}.packets), unsafe.Sizeof(usbISOPacket{}))
+	}
+}
+
+// A short or missing isochronous packet is ordinary. Its own status says so, and
+// urb.status stays zero, so a per-packet failure must not be read as a failure of
+// the transfer that carried it.
+func TestIsochronousCompletionKeepsTheGoodPackets(t *testing.T) {
+	request := &usbRequest{iso: &usbISORequest{}, packets: 3, done: make(chan transferResult, 1)}
+	request.iso.packets[0] = usbISOPacket{Length: 768, ActualLength: 512}
+	request.iso.packets[1] = usbISOPacket{Length: 768, ActualLength: 768, Status: 0xffffffb5}
+	request.iso.packets[2] = usbISOPacket{Length: 768, ActualLength: 768}
+	(&linuxDevice{}).completeISO(request)
+	result := <-request.done
+	if result.err != nil || len(result.lengths) != 3 {
+		t.Fatalf("completion = %+v", result)
+	}
+	if result.lengths[0] != 512 || result.lengths[1] != 0 || result.lengths[2] != 768 {
+		t.Fatalf("packet lengths = %v, want [512 0 768]", result.lengths)
+	}
 }
 
 func TestHIDDescriptorUsesInterfaceRecipient(t *testing.T) {

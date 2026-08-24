@@ -4,7 +4,15 @@ Hybrid keeps `hid.GS0` and `hid.GS1`, removes optional links, and adds only `ffs
 
 Treat imported descriptors, strings, reports, transfer lengths, statuses, and timing as hostile. Parse and account the full layout before mounting FunctionFS or changing ConfigFS. Keep descriptor, control, transfer, interface, endpoint, and aggregate in-flight limits load-bearing in tests.
 
-Supported transfers are control, bulk, and interrupt at alternate setting zero. Isochronous, hubs, device-level classes, nonempty BOS capabilities, ambiguous CDC/IAD ownership, fixed endpoints, and layouts outside the measured DWC2 endpoint/FIFO table are Exact-only.
+Supported transfers are control, bulk, interrupt, and isochronous. Hubs, audio, device-level classes, nonempty BOS capabilities, ambiguous CDC/IAD ownership, fixed endpoints, and layouts outside the measured DWC2 endpoint/FIFO table are Exact-only.
+
+An interface with alternate settings is presented as exactly two: its zero-bandwidth alternate 0 and the one streaming alternate whose `wMaxPacketSize * mult` is widest inside the controller's deepest dedicated IN FIFO. That is not a simplification, it is forced twice over. `f_fs` names an endpoint file after the address in the descriptor, so a second alternate carrying an endpoint at the same address collides on the same name, and `MAX_ALT_SETTINGS` is 2. `selectAlternates` refuses an interface whose alternate 0 is not zero-bandwidth rather than picking one anyway.
+
+`set_alt` enables every endpoint at once and hands userspace no alternate number, so stream start is **never** inferred from an event. UVC sends `SET_CUR` on `VS_COMMIT_CONTROL` immediately before `SET_INTERFACE`, `FUNCTIONFS_ALL_CTRL_RECIP` forwards it, and its `dwMaxPayloadTransferSize` sizes the slot. `Relay.videoCommit` is the only trigger.
+
+Isochronous endpoints do not go through `transferLoop`. `isochronousStream` keeps `isoTransfersInFlight` usbfs URBs of `isoPacketsPerTransfer` microframes each in flight on the source and submits their packets to the FunctionFS endpoint through `io_submit`, one iocb per microframe. The mmap'd, mlocked pool is simultaneously the usbfs transfer buffer and the aio buffer, so a payload is never copied. Neither loop frees anything: `stop` is the only release, and only after both loops have exited and the kernel has returned every URB and every iocb. A source transfer that outlives its cancellation leaks the whole stream — `ErrAIOLeaked` — rather than letting `munmap` race a DMA.
+
+Both loops block in a syscall, which is what makes `raiseRealtime` safe. `sched_rt_runtime_exceeded` sits outside `CONFIG_RT_GROUP_SCHED`, so SCHED_FIFO on a thread that spins costs 50 ms of every second, which is 400 lost microframes. Do not put a polling loop under it.
 
 USBFS retains URB and buffer pointers after `ioctl`. Pin both until reap or a synchronizing file close. Never complete or unpin a request merely because discard failed.
 

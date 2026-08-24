@@ -100,6 +100,9 @@ func NewRelay(image Image, control ControlEndpoint, endpoints map[uint8]DataEndp
 		if endpoints[endpoint.Address] == nil {
 			return nil, fmt.Errorf("%w: endpoint 0x%02x is missing", ErrMalformed, endpoint.Address)
 		}
+		if _, streams := endpoints[endpoint.Address].(Stream); endpoint.Transfer == presentation.EndpointIsochronous && !streams {
+			return nil, fmt.Errorf("%w: isochronous endpoint 0x%02x has no pipelined transport, which only a locally attached source provides", ErrUnsupported, endpoint.Address)
+		}
 	}
 	return &Relay{image: image, control: control, endpoints: endpoints, device: device, closed: make(chan struct{})}, nil
 }
@@ -179,6 +182,9 @@ func (r *Relay) Run(ctx context.Context) error {
 				start()
 			case EventDisable:
 				stop()
+				if err := r.stopStreams(); err != nil {
+					return err
+				}
 				if err := r.device.Reset(); err != nil {
 					return fmt.Errorf("reset imported device: %w", err)
 				}
@@ -195,6 +201,12 @@ func (r *Relay) Run(ctx context.Context) error {
 
 func (r *Relay) transferLoop(ctx context.Context, endpoint presentation.FunctionFSEndpoint, limit int) error {
 	file := r.endpoints[endpoint.Address]
+	// An isochronous endpoint is driven by its own pipeline from the moment the
+	// host commits a format, not by a transfer at a time from here.
+	if endpoint.Transfer == presentation.EndpointIsochronous {
+		<-ctx.Done()
+		return ctx.Err()
+	}
 	size := limit
 	if endpoint.Transfer == presentation.EndpointInterrupt {
 		size = int(endpoint.MaxPacket)
@@ -313,8 +325,56 @@ func (r *Relay) handleSetup(ctx context.Context, setup Setup) error {
 	if setup.RequestType == 0x02 && setup.Request == 1 && setup.Value == 0 && setup.Length == 0 && setup.Index&0xff00 == 0 {
 		return r.device.ClearHalt(uint8(setup.Index))
 	}
-	_, err := r.device.Control(ctx, setup, data)
-	return err
+	if _, err := r.device.Control(ctx, setup, data); err != nil {
+		return err
+	}
+	if number, payload, ok := r.videoCommit(setup, data); ok {
+		return r.startStream(number, payload)
+	}
+	return nil
+}
+
+// SET_INTERFACE never reaches userspace and set_alt carries no alternate number,
+// so the stream start is taken from the request UVC always sends immediately
+// before it: SET_CUR on VS_COMMIT_CONTROL, forwarded because the descriptor block
+// sets FUNCTIONFS_ALL_CTRL_RECIP. Its payload carries dwMaxPayloadTransferSize,
+// which is the per-microframe size the host and the source have just agreed on.
+func (r *Relay) videoCommit(setup Setup, data []byte) (uint8, int, bool) {
+	number := uint8(setup.Index)
+	if setup.RequestType != 0x21 || setup.Request != 0x01 || setup.Value != 0x0200 {
+		return 0, 0, false
+	}
+	if r.image.Alternates[number] == 0 {
+		return 0, 0, false
+	}
+	payload := 0
+	if len(data) >= 26 {
+		payload = int(binary.LittleEndian.Uint32(data[22:26]))
+	}
+	return number, payload, true
+}
+
+func (r *Relay) startStream(number uint8, payload int) error {
+	for address, owner := range r.image.EndpointOwners {
+		stream, ok := r.endpoints[address].(Stream)
+		if !ok || owner != number {
+			continue
+		}
+		if err := stream.Start(payload); err != nil {
+			return fmt.Errorf("functionfs endpoint 0x%02x: %w", address, err)
+		}
+	}
+	return nil
+}
+
+func (r *Relay) stopStreams() error {
+	var result error
+	for _, endpoint := range r.endpoints {
+		if stream, ok := endpoint.(Stream); ok {
+			result = errors.Join(result, stream.Stop())
+		}
+	}
+	return result
 }
 
 func waitStall(ctx context.Context) error {

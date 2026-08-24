@@ -43,6 +43,7 @@ type Image struct {
 	Interfaces     map[uint8]uint8
 	Endpoints      map[uint8]uint8
 	Alternates     map[uint8]uint8
+	EndpointOwners map[uint8]uint8
 	Function       presentation.FunctionFS
 	Descriptors    []byte
 	StringTable    []byte
@@ -98,6 +99,7 @@ func Import(raw []byte, fetcher Fetcher, caps presentation.CapabilityTable) (Ima
 		Interfaces:     make(map[uint8]uint8),
 		Endpoints:      make(map[uint8]uint8),
 		Alternates:     make(map[uint8]uint8),
+		EndpointOwners: make(map[uint8]uint8),
 	}
 	if err := image.importBOS(fetcher); err != nil {
 		return Image{}, err
@@ -482,6 +484,7 @@ func (image *Image) compile(all []descriptor, fetcher Fetcher, caps presentation
 				nextOut++
 			}
 			image.Endpoints[data[2]] = mapped
+			image.EndpointOwners[mapped] = item.interfaceNumber
 			endpointOwner[data[2]] = item.interfaceNumber
 			endpointCount[item.interfaceNumber]++
 			if data[2]&0x80 != 0 {
