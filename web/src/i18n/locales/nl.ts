@@ -292,7 +292,7 @@ const nl = {
     devices: {
       title: 'Apparaten',
       stale: 'De live status van de apparaten is niet beschikbaar. Bezig met opnieuw verbinden.',
-      empty: 'Er zijn geen camera- of microfoonplekken geconfigureerd.',
+      empty: 'Er zijn geen camera- of microfoonplaatsen ingesteld. Voeg er een toe bij Instellingen, Apparaat.',
       available: 'Beschikbaar',
       waiting: 'De host wacht op een bron',
       hostOpen: 'Host open',
@@ -758,6 +758,7 @@ const nl = {
         networkDesc: 'Koppel virtueel netwerk kaart aan de externe host',
         networkProtocol: 'Netwerkprotocol',
         networkProtocolDesc: 'NCM voor moderne hosts, RNDIS voor oudere Windows',
+        rebindNotice: 'Een van beide schakelaars omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
         media: {
           title: 'Camera- en microfoonplaatsen',
           desc: 'Geef aan welke media-apparaten browsers mogen invullen. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast. Bij opslaan wordt het apparaat opnieuw opgesomd en worden verbonden browsers verbroken.',
@@ -771,6 +772,7 @@ const nl = {
           cameraDefault: 'NanoKVM-camera {{index}}',
           microphoneDefault: 'NanoKVM-microfoon {{index}}',
           nameRequired: 'Elke plaats heeft een naam nodig.',
+          budgetHint: 'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hierboven de virtuele schijf of het USB-netwerk uit.',
           unsupported:
             'Deze kernel kan media-apparaten geen naam geven, dus computers tonen de standaardnaam.',
           save: 'Plaatsen opslaan',
@@ -1026,6 +1028,9 @@ const nl = {
             'Preview-updates zijn niet beschikbaar zolang een aangepaste updateserver is ingeschakeld.'
         },
         offline: {
+          kernelNotice: 'Dit pakket bevat een kernel. Die wordt naar het reserveslot geschreven en het apparaat start opnieuw op om hem te proberen; komt hij niet terug, dan keert het apparaat vanzelf terug naar de huidige kernel.',
+          kernelConfirm: 'Kernel installeren',
+          kernelCancel: 'Annuleren',
           title: 'Offline-updates',
           desc: 'Update via lokaal installatiepakket',
           upload: 'Uploaden',

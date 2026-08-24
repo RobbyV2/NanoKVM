@@ -140,6 +140,10 @@ export const VirtualDevices = () => {
         />
       </div>
 
+      {/* configfs only adds or removes a function with the UDC unbound, so
+          either switch re-enumerates the whole composite device. */}
+      <div className="text-xs text-amber-500">{t('settings.device.rebindNotice')}</div>
+
       {/* The protocol the gadget presents. It decides what the attached host
           binds whether or not a bridge exists, so it lives with the USB profile
           rather than on the bridge panel, which only names it. */}

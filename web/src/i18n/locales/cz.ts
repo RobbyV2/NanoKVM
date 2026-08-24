@@ -291,7 +291,7 @@ const cz = {
     devices: {
       title: 'Zařízení',
       stale: 'Živý stav zařízení není dostupný. Probíhá opětovné připojení.',
-      empty: 'Není nakonfigurován žádný slot pro kameru ani mikrofon.',
+      empty: 'Nejsou nastavené žádné sloty kamery ani mikrofonu. Přidejte je v Nastavení, Zařízení.',
       available: 'Dostupné',
       waiting: 'Hostitel čeká na zdroj',
       hostOpen: 'Hostitel otevřen',
@@ -750,6 +750,7 @@ const cz = {
         networkDesc: 'Připojit virtuální síťovou kartu na vzdáleném hostiteli',
         networkProtocol: 'Síťový protokol',
         networkProtocolDesc: 'NCM pro moderní systémy, RNDIS pro starší Windows',
+        rebindNotice: 'Přepnutí kteréhokoli z přepínačů znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
         media: {
           title: 'Sloty pro kameru a mikrofon',
           desc: 'Určete, která mediální zařízení smějí prohlížeče obsadit. Rozpočet koncových bodů se kontroluje při použití profilu USB. Uložení znovu vyčíslí zařízení a odpojí připojené prohlížeče.',
@@ -763,6 +764,7 @@ const cz = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Každý slot potřebuje název.',
+          budgetHint: 'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo výše vypněte virtuální disk či USB síť.',
           unsupported:
             'Toto jádro neumí pojmenovat mediální zařízení, takže počítače uvidí výchozí název.',
           save: 'Uložit sloty',
@@ -1013,6 +1015,9 @@ const cz = {
             'Testovací aktualizace nejsou při použití vlastního aktualizačního serveru dostupné.'
         },
         offline: {
+          kernelNotice: 'Tento balíček obsahuje jádro. Zapíše se do záložního slotu a zařízení se restartuje, aby ho vyzkoušelo; pokud nenaběhne, samo se vrátí k současnému jádru.',
+          kernelConfirm: 'Nainstalovat jádro',
+          kernelCancel: 'Zrušit',
           title: 'Offline aktualizace',
           desc: 'Aktualizace prostřednictvím místního instalačního balíčku',
           upload: 'Nahrát',

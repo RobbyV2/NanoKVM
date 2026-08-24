@@ -291,7 +291,7 @@ const es = {
     devices: {
       title: 'Dispositivos',
       stale: 'El estado en vivo de los dispositivos no está disponible. Reconectando.',
-      empty: 'No hay ninguna ranura de cámara o micrófono configurada.',
+      empty: 'No hay ranuras de cámara ni de micrófono configuradas. Añade una en Ajustes, Dispositivo.',
       available: 'Disponible',
       waiting: 'El host espera una fuente',
       hostOpen: 'Host abierto',
@@ -757,6 +757,7 @@ const es = {
         networkDesc: 'Montar tarjeta de red virtual en el host remoto',
         networkProtocol: 'Protocolo de red',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antiguos',
+        rebindNotice: 'Cambiar cualquiera de los dos interruptores vuelve a enumerar el dispositivo USB, así que el destino pierde un momento sus dispositivos virtuales y su red USB.',
         media: {
           title: 'Ranuras de cámara y micrófono',
           desc: 'Declare los dispositivos multimedia que los navegadores pueden ocupar. El presupuesto de endpoints se comprueba al aplicar el perfil USB. Al guardar, el dispositivo se vuelve a enumerar y se desconecta cualquier navegador conectado.',
@@ -770,6 +771,7 @@ const es = {
           cameraDefault: 'Cámara NanoKVM {{index}}',
           microphoneDefault: 'Micrófono NanoKVM {{index}}',
           nameRequired: 'Cada ranura necesita un nombre.',
+          budgetHint: 'Los seis endpoints USB IN son un límite fijo del hardware. Reúne teclado, ratón y puntero absoluto en una sola interfaz HID en Presentación USB, o desactiva arriba el disco virtual o la red USB.',
           unsupported:
             'Este kernel no puede nombrar los dispositivos multimedia, así que los equipos muestran el nombre predeterminado.',
           save: 'Guardar ranuras',
@@ -1023,6 +1025,9 @@ const es = {
             'Las actualizaciones preliminares no están disponibles mientras esté activado un servidor de actualizaciones personalizado.'
         },
         offline: {
+          kernelNotice: 'Este paquete contiene un kernel. Se escribe en la ranura de reserva y el dispositivo reinicia para probarlo; si no vuelve, regresa por sí solo al kernel actual.',
+          kernelConfirm: 'Instalar kernel',
+          kernelCancel: 'Cancelar',
           title: 'Actualizaciones sin conexión',
           desc: 'Actualización a través del paquete de instalación local',
           upload: 'Subir',

@@ -19,21 +19,30 @@ export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdatePro
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [sha256Checksum, setSha256Checksum] = useState('');
+  const [kernelFile, setKernelFile] = useState<File | null>(null);
 
   function handleClick() {
     inputRef.current?.click();
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) {
       return;
     }
     e.target.value = '';
+    setKernelFile(null);
 
     if (!validateFilename(file.name)) {
       setStatus('failed');
       setErrMsg(t('settings.update.offline.invalidName'));
+      return;
+    }
+
+    // A kernel reboots the device onto a trial slot, so it is the one package
+    // worth naming before it is sent rather than after it has been written.
+    if (await isKernelPackage(file)) {
+      setKernelFile(file);
       return;
     }
 
@@ -104,6 +113,12 @@ export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdatePro
     return regex.test(filename);
   }
 
+  function confirmKernel() {
+    const file = kernelFile;
+    setKernelFile(null);
+    upload(file);
+  }
+
   return (
     <>
       <div className="mt-8 flex flex-col gap-3">
@@ -144,7 +159,71 @@ export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdatePro
           placeholder={t('settings.update.offline.checksumPlaceholder')}
           onChange={(event) => setSha256Checksum(event.target.value)}
         />
+
+        {kernelFile && (
+          <div className="flex flex-col space-y-2">
+            <span className="text-xs text-amber-500">
+              {t('settings.update.offline.kernelNotice')}
+            </span>
+
+            <div className="flex gap-2">
+              <Button size="small" type="primary" onClick={confirmKernel}>
+                {t('settings.update.offline.kernelConfirm')}
+              </Button>
+              <Button size="small" onClick={() => setKernelFile(null)}>
+                {t('settings.update.offline.kernelCancel')}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
 };
+
+// An app release and a kernel release are both nanokvm_<version>.tar.gz, and the
+// server only discovers which it has after the package is written to the trial
+// slot. Reading the archive here is the only way to tell the operator what the
+// upload will do while it can still be cancelled. A kernel package carries
+// nothing but version and kernel/, so the walk stops at the first entry that
+// settles it either way and never decompresses the payload.
+async function isKernelPackage(file: File) {
+  if (typeof DecompressionStream === 'undefined') return false;
+
+  const reader = file.stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+  let buffer = new Uint8Array(0);
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return false;
+
+      const merged = new Uint8Array(buffer.length + value.length);
+      merged.set(buffer);
+      merged.set(value, buffer.length);
+      buffer = merged;
+
+      while (buffer.length >= 512) {
+        const name = tarString(buffer, 0, 100);
+        if (name === '') return false;
+
+        const size = parseInt(tarString(buffer, 124, 12).trim() || '0', 8) || 0;
+        const entry = name.replace(/^[^/]*\//, '');
+        if (entry !== '' && entry !== 'version') {
+          return entry.startsWith('kernel/');
+        }
+        buffer = buffer.subarray(512 + Math.ceil(size / 512) * 512);
+      }
+    }
+  } catch {
+    return false;
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
+
+function tarString(bytes: Uint8Array, offset: number, length: number) {
+  const field = bytes.subarray(offset, offset + length);
+  const end = field.indexOf(0);
+  return new TextDecoder().decode(end < 0 ? field : field.subarray(0, end));
+}

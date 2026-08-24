@@ -288,7 +288,7 @@ const ca = {
     devices: {
       title: 'Dispositius',
       stale: 'L’estat en directe dels dispositius no està disponible. S’està reconnectant.',
-      empty: 'No hi ha cap ranura de càmera ni de micròfon configurada.',
+      empty: 'No hi ha cap ranura de càmera ni de micròfon configurada. Afegeix-ne una a Configuració, Dispositiu.',
       available: 'Disponible',
       waiting: 'L’amfitrió espera una font',
       hostOpen: 'Amfitrió obert',
@@ -752,6 +752,7 @@ const ca = {
         networkDesc: 'Munta una targeta de xarxa virtual al dispositiu remot',
         networkProtocol: 'Protocol de xarxa',
         networkProtocolDesc: 'NCM per a amfitrions moderns, RNDIS per a Windows antics',
+        rebindNotice: 'Canviar qualsevol dels dos interruptors torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
         media: {
           title: 'Ranures de càmera i micròfon',
           desc: 'Declareu els dispositius multimèdia que els navegadors poden omplir. El pressupost de punts finals es comprova en aplicar el perfil USB. En desar, el dispositiu es torna a enumerar i es desconnecta qualsevol navegador connectat.',
@@ -765,6 +766,7 @@ const ca = {
           cameraDefault: 'Càmera NanoKVM {{index}}',
           microphoneDefault: 'Micròfon NanoKVM {{index}}',
           nameRequired: 'Cada ranura necessita un nom.',
+          budgetHint: 'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva a dalt el disc virtual o la xarxa USB.',
           unsupported:
             'Aquest nucli no pot anomenar els dispositius multimèdia, així que els amfitrions mostren el nom per defecte.',
           save: 'Desa les ranures',
@@ -1015,6 +1017,9 @@ const ca = {
             'Les actualitzacions de previsualització no estan disponibles mentre hi hagi activat un servidor d’actualitzacions personalitzat.'
         },
         offline: {
+          kernelNotice: 'Aquest paquet conté un nucli. S\'escriu a la ranura de reserva i el dispositiu es reinicia per provar-lo; si no torna, el dispositiu retorna tot sol al nucli actual.',
+          kernelConfirm: 'Instal·la el nucli',
+          kernelCancel: 'Cancel·la',
           title: 'Actualitzacions fora de línia',
           desc: "Actualització mitjançant el paquet d'instal·lació local",
           upload: 'Puja',

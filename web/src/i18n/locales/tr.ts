@@ -289,7 +289,7 @@ const tr = {
     devices: {
       title: 'Cihazlar',
       stale: 'Cihazların canlı durumu kullanılamıyor. Yeniden bağlanılıyor.',
-      empty: 'Yapılandırılmış kamera veya mikrofon yuvası yok.',
+      empty: 'Yapılandırılmış kamera veya mikrofon yuvası yok. Ayarlar, Aygıt bölümünden ekleyin.',
       available: 'Kullanılabilir',
       waiting: 'Host bir kaynak bekliyor',
       hostOpen: 'Host açık',
@@ -752,6 +752,7 @@ const tr = {
         networkDesc: 'Sanal ağ kartını uzak ana bilgisayara bağla',
         networkProtocol: 'Ağ protokolü',
         networkProtocolDesc: 'Modern ana bilgisayarlar için NCM, eski Windows için RNDIS',
+        rebindNotice: 'İki anahtardan birini değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
         media: {
           title: 'Kamera ve mikrofon yuvaları',
           desc: 'Tarayıcıların doldurabileceği medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir. Kaydetmek aygıtı yeniden numaralandırır ve bağlı tarayıcıların bağlantısını keser.',
@@ -765,6 +766,7 @@ const tr = {
           cameraDefault: 'NanoKVM Kamera {{index}}',
           microphoneDefault: 'NanoKVM Mikrofon {{index}}',
           nameRequired: 'Her yuvanın bir adı olmalı.',
+          budgetHint: 'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da yukarıdaki sanal diski veya USB ağını kapatın.',
           unsupported:
             'Bu çekirdek medya aygıtlarını adlandıramaz, bu yüzden makineler varsayılan adı gösterir.',
           save: 'Yuvaları kaydet',
@@ -1015,6 +1017,9 @@ const tr = {
             'Özel bir güncelleme sunucusu etkinken önizleme güncellemeleri kullanılamaz.'
         },
         offline: {
+          kernelNotice: 'Bu paket bir çekirdek içeriyor. Yedek yuvaya yazılır ve aygıt denemek için yeniden başlar; geri gelmezse aygıt kendiliğinden şu anki çekirdeğe döner.',
+          kernelConfirm: 'Çekirdeği kur',
+          kernelCancel: 'İptal',
           title: 'Çevrimdışı Güncellemeler',
           desc: 'Yerel kurulum paketi aracılığıyla güncelleme',
           upload: 'Yükle',

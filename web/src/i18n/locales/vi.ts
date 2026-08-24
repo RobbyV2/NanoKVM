@@ -288,7 +288,7 @@ const vi = {
     devices: {
       title: 'Thiết bị',
       stale: 'Không lấy được trạng thái trực tiếp của thiết bị. Đang kết nối lại.',
-      empty: 'Chưa cấu hình khe camera hoặc micrô nào.',
+      empty: 'Chưa cấu hình khe camera hay micrô nào. Hãy thêm một khe trong Cài đặt, Thiết bị.',
       available: 'Sẵn sàng',
       waiting: 'Máy chủ đang chờ một nguồn',
       hostOpen: 'Máy chủ đang mở',
@@ -746,6 +746,7 @@ const vi = {
         networkDesc: 'Gắn card mạng ảo trên máy chủ từ xa',
         networkProtocol: 'Giao thức mạng',
         networkProtocolDesc: 'NCM cho máy chủ hiện đại, RNDIS cho Windows cũ',
+        rebindNotice: 'Gạt một trong hai công tắc sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
         media: {
           title: 'Khe camera và micrô',
           desc: 'Khai báo các thiết bị đa phương tiện mà trình duyệt có thể lấp đầy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB. Việc lưu sẽ liệt kê lại thiết bị và ngắt kết nối các trình duyệt đang kết nối.',
@@ -759,6 +760,7 @@ const vi = {
           cameraDefault: 'Camera NanoKVM {{index}}',
           microphoneDefault: 'Micrô NanoKVM {{index}}',
           nameRequired: 'Mỗi khe cần một tên.',
+          budgetHint: 'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo hay mạng USB ở trên.',
           unsupported:
             'Nhân này không thể đặt tên cho thiết bị đa phương tiện, nên máy đích sẽ hiển thị tên mặc định.',
           save: 'Lưu các khe',
@@ -1011,6 +1013,9 @@ const vi = {
             'Không thể sử dụng Bản cập nhật xem trước khi máy chủ cập nhật tùy chỉnh đang được bật.'
         },
         offline: {
+          kernelNotice: 'Gói này chứa một nhân. Nhân được ghi vào khe dự phòng và thiết bị khởi động lại để thử; nếu không lên lại, thiết bị tự quay về nhân hiện tại.',
+          kernelConfirm: 'Cài đặt nhân',
+          kernelCancel: 'Hủy',
           title: 'Cập nhật ngoại tuyến',
           desc: 'Cập nhật thông qua gói cài đặt cục bộ',
           upload: 'Tải lên',

@@ -287,7 +287,7 @@ const se = {
     devices: {
       title: 'Enheter',
       stale: 'Enheternas livestatus är inte tillgänglig. Återansluter.',
-      empty: 'Inga kamera- eller mikrofonplatser är konfigurerade.',
+      empty: 'Inga kamera- eller mikrofonplatser är konfigurerade. Lägg till en under Inställningar, Enhet.',
       available: 'Tillgänglig',
       waiting: 'Värden väntar på en källa',
       hostOpen: 'Värden öppen',
@@ -752,6 +752,7 @@ const se = {
         networkDesc: 'Montera virtuell nätverkskort på fjärrvärden',
         networkProtocol: 'Nätverksprotokoll',
         networkProtocolDesc: 'NCM för moderna värdar, RNDIS för äldre Windows',
+        rebindNotice: 'Att slå om någon av brytarna räknar upp USB-enheten på nytt, så målet förlorar kort sina virtuella enheter och sitt USB-nätverk.',
         media: {
           title: 'Platser för kamera och mikrofon',
           desc: 'Ange vilka medieenheter webbläsare får fylla. Endpoint-budgeten kontrolleras när USB-profilen tillämpas. Att spara räknar upp enheten på nytt och kopplar från anslutna webbläsare.',
@@ -765,6 +766,7 @@ const se = {
           cameraDefault: 'NanoKVM-kamera {{index}}',
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Varje plats behöver ett namn.',
+          budgetHint: 'De sex USB IN-slutpunkterna är en fast hårdvarugräns. Samla tangentbord, mus och absolut pekdon på ett enda HID-gränssnitt under USB-presentation, eller stäng av den virtuella disken eller USB-nätverket ovan.',
           unsupported:
             'Den här kärnan kan inte namnge medieenheter, så värdar visar standardnamnet.',
           save: 'Spara platser',
@@ -1018,6 +1020,9 @@ const se = {
             'Förhandsuppdateringar är inte tillgängliga när en anpassad uppdateringsserver är aktiverad.'
         },
         offline: {
+          kernelNotice: 'Det här paketet innehåller en kärna. Den skrivs till reservplatsen och enheten startar om för att prova den; kommer den inte tillbaka återgår enheten själv till den nuvarande kärnan.',
+          kernelConfirm: 'Installera kärna',
+          kernelCancel: 'Avbryt',
           title: 'Offlineuppdateringar',
           desc: 'Uppdatera genom lokalt installationspaket',
           upload: 'Ladda upp',

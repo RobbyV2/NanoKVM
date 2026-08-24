@@ -290,7 +290,7 @@ const id = {
     devices: {
       title: 'Perangkat',
       stale: 'Status langsung perangkat tidak tersedia. Menyambung ulang.',
-      empty: 'Tidak ada slot kamera atau mikrofon yang dikonfigurasi.',
+      empty: 'Belum ada slot kamera atau mikrofon yang dikonfigurasi. Tambahkan di Pengaturan, Perangkat.',
       available: 'Tersedia',
       waiting: 'Host menunggu sebuah sumber',
       hostOpen: 'Host terbuka',
@@ -754,6 +754,7 @@ const id = {
         networkDesc: 'Pasang kartu jaringan virtual pada host jarak jauh',
         networkProtocol: 'Protokol jaringan',
         networkProtocolDesc: 'NCM untuk host modern, RNDIS untuk Windows lama',
+        rebindNotice: 'Mengubah salah satu sakelar akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
         media: {
           title: 'Slot kamera dan mikrofon',
           desc: 'Tetapkan perangkat media yang boleh diisi peramban. Anggaran endpoint diperiksa saat profil USB diterapkan. Menyimpan akan menghitung ulang perangkat dan memutuskan peramban yang terhubung.',
@@ -767,6 +768,7 @@ const id = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Setiap slot memerlukan nama.',
+          budgetHint: 'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual atau jaringan USB di atas.',
           unsupported:
             'Kernel ini tidak dapat menamai perangkat media, sehingga host menampilkan nama bawaan.',
           save: 'Simpan slot',
@@ -1020,6 +1022,9 @@ const id = {
             'Pembaruan Pratinjau tidak tersedia saat server pembaruan kustom diaktifkan.'
         },
         offline: {
+          kernelNotice: 'Paket ini berisi kernel. Kernel ditulis ke slot cadangan dan perangkat dinyalakan ulang untuk mencobanya; jika tidak kembali, perangkat pulih sendiri ke kernel saat ini.',
+          kernelConfirm: 'Pasang kernel',
+          kernelCancel: 'Batal',
           title: 'Pembaruan Offline',
           desc: 'Perbarui melalui paket instalasi lokal',
           upload: 'Mengunggah',

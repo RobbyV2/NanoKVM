@@ -288,7 +288,7 @@ const en = {
     devices: {
       title: 'Devices',
       stale: 'Live device state is unavailable. Reconnecting.',
-      empty: 'No camera or microphone slots are configured.',
+      empty: 'No camera or microphone slots are configured. Add one under Settings, Device.',
       available: 'Available',
       waiting: 'The host is waiting for a source',
       hostOpen: 'Host open',
@@ -743,6 +743,7 @@ const en = {
         networkDesc: 'Mount virtual network card on the remote host',
         networkProtocol: 'Network Protocol',
         networkProtocolDesc: 'NCM for modern hosts, RNDIS for older Windows',
+        rebindNotice: 'Changing either switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
         media: {
           title: 'Camera and microphone slots',
           desc: 'Declare the media devices browsers may fill. The endpoint budget is checked when the USB profile is applied. Saving re-enumerates the gadget and disconnects any connected browser.',
@@ -756,6 +757,7 @@ const en = {
           cameraDefault: 'NanoKVM Camera {{index}}',
           microphoneDefault: 'NanoKVM Microphone {{index}}',
           nameRequired: 'Every slot needs a name.',
+          budgetHint: 'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk or USB networking above.',
           unsupported: 'This kernel cannot name media devices, so hosts show the default name.',
           save: 'Save slots',
           disconnect: 'Disconnect',
@@ -1007,6 +1009,9 @@ const en = {
           previewDisabled: 'Preview Updates are unavailable while a custom update server is enabled'
         },
         offline: {
+          kernelNotice: 'This package contains a kernel. It is written to the spare slot and the device reboots to try it; if it does not come back, the device returns to the current kernel on its own.',
+          kernelConfirm: 'Install Kernel',
+          kernelCancel: 'Cancel',
           title: 'Offline Updates',
           desc: 'Update through local installation package',
           upload: 'Upload',

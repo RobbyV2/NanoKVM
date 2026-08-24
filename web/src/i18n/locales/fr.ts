@@ -293,7 +293,7 @@ const fr = {
     devices: {
       title: 'Appareils',
       stale: 'L’état en direct des appareils est indisponible. Reconnexion en cours.',
-      empty: 'Aucun emplacement de caméra ou de microphone n’est configuré.',
+      empty: 'Aucun emplacement de caméra ou de microphone n\'est configuré. Ajoutez-en un dans Paramètres, Appareil.',
       available: 'Disponible',
       waiting: 'L’hôte attend une source',
       hostOpen: 'Hôte ouvert',
@@ -760,6 +760,7 @@ const fr = {
         networkDesc: "Monter la carte réseau virtuelle sur l'hôte distant",
         networkProtocol: 'Protocole réseau',
         networkProtocolDesc: 'NCM pour les hôtes récents, RNDIS pour les anciens Windows',
+        rebindNotice: 'Basculer l\'un ou l\'autre interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.',
         media: {
           title: 'Emplacements caméra et micro',
           desc: 'Déclarez les périphériques média que les navigateurs peuvent occuper. Le budget de points de terminaison est vérifié lors de l’application du profil USB. L’enregistrement réénumère le périphérique et déconnecte les navigateurs connectés.',
@@ -773,6 +774,7 @@ const fr = {
           cameraDefault: 'Caméra NanoKVM {{index}}',
           microphoneDefault: 'Microphone NanoKVM {{index}}',
           nameRequired: 'Chaque emplacement doit avoir un nom.',
+          budgetHint: 'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez le disque virtuel ou le réseau USB ci-dessus.',
           unsupported:
             'Ce noyau ne peut pas nommer les périphériques média : les machines affichent donc le nom par défaut.',
           save: 'Enregistrer les emplacements',
@@ -1030,6 +1032,9 @@ const fr = {
             'Les mises à jour en préversion ne sont pas disponibles lorsqu’un serveur de mise à jour personnalisé est activé.'
         },
         offline: {
+          kernelNotice: 'Ce paquet contient un noyau. Il est écrit dans l\'emplacement de secours et l\'appareil redémarre pour l\'essayer ; s\'il ne revient pas, l\'appareil retourne seul au noyau actuel.',
+          kernelConfirm: 'Installer le noyau',
+          kernelCancel: 'Annuler',
           title: 'Mises à jour hors ligne',
           desc: "Mise à jour via le package d'installation local",
           upload: 'Téléverser',

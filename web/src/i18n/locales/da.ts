@@ -289,7 +289,7 @@ const da = {
     devices: {
       title: 'Enheder',
       stale: 'Enhedernes livestatus er ikke tilgængelig. Opretter forbindelse igen.',
-      empty: 'Der er ikke konfigureret nogen kamera- eller mikrofonpladser.',
+      empty: 'Der er ikke opsat nogen kamera- eller mikrofonpladser. Tilføj en under Indstillinger, Enhed.',
       available: 'Tilgængelig',
       waiting: 'Værten venter på en kilde',
       hostOpen: 'Vært åben',
@@ -749,6 +749,7 @@ const da = {
         networkDesc: 'Monter det virtuelle netværkskort på den eksterne vært',
         networkProtocol: 'Netværksprotokol',
         networkProtocolDesc: 'NCM til moderne værter, RNDIS til ældre Windows',
+        rebindNotice: 'At skifte en af kontakterne opregner USB-enheden igen, så målet kortvarigt mister sine virtuelle enheder og sit USB-netværk.',
         media: {
           title: 'Kamera- og mikrofonpladser',
           desc: 'Angiv de medieenheder, browsere må udfylde. Endepunktsbudgettet kontrolleres, når USB-profilen anvendes. Når du gemmer, opregnes enheden igen, og tilsluttede browsere afbrydes.',
@@ -762,6 +763,7 @@ const da = {
           cameraDefault: 'NanoKVM-kamera {{index}}',
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Hver plads skal have et navn.',
+          budgetHint: 'De seks USB IN-endepunkter er en fast hardwaregrænse. Saml tastatur, mus og absolut pegeredskab på én HID-grænseflade under USB-præsentation, eller slå den virtuelle disk eller USB-netværket fra ovenfor.',
           unsupported:
             'Denne kerne kan ikke navngive medieenheder, så værter viser standardnavnet.',
           save: 'Gem pladser',
@@ -1016,6 +1018,9 @@ const da = {
             'Forhåndsvisningsopdateringer er ikke tilgængelige, mens en brugerdefineret opdateringsserver er aktiveret.'
         },
         offline: {
+          kernelNotice: 'Denne pakke indeholder en kerne. Den skrives til reservepladsen, og enheden genstarter for at prøve den; kommer den ikke tilbage, vender enheden selv tilbage til den nuværende kerne.',
+          kernelConfirm: 'Installer kerne',
+          kernelCancel: 'Annuller',
           title: 'Offline opdateringer',
           desc: 'Opdatering via lokal installationspakke',
           upload: 'Upload',

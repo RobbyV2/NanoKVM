@@ -290,7 +290,7 @@ const nb = {
     devices: {
       title: 'Enheter',
       stale: 'Sanntidsstatusen for enhetene er utilgjengelig. Kobler til igjen.',
-      empty: 'Ingen kamera- eller mikrofonplasser er satt opp.',
+      empty: 'Ingen kamera- eller mikrofonplasser er satt opp. Legg til en under Innstillinger, Enhet.',
       available: 'Tilgjengelig',
       waiting: 'Verten venter på en kilde',
       hostOpen: 'Vert åpen',
@@ -751,6 +751,7 @@ const nb = {
         networkDesc: 'Monter virtuelt nettverkskort på den eksterne verten',
         networkProtocol: 'Nettverksprotokoll',
         networkProtocolDesc: 'NCM for moderne verter, RNDIS for eldre Windows',
+        rebindNotice: 'Å slå om en av bryterne teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
         media: {
           title: 'Kamera- og mikrofonplasser',
           desc: 'Angi hvilke medieenheter nettlesere kan fylle. Endepunktsbudsjettet kontrolleres når USB-profilen tas i bruk. Lagring opplister enheten på nytt og kobler fra tilkoblede nettlesere.',
@@ -764,6 +765,7 @@ const nb = {
           cameraDefault: 'NanoKVM-kamera {{index}}',
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Hver plass trenger et navn.',
+          budgetHint: 'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken eller USB-nettverket over.',
           unsupported:
             'Denne kjernen kan ikke navngi medieenheter, så verter viser standardnavnet.',
           save: 'Lagre plasser',
@@ -1017,6 +1019,9 @@ const nb = {
             'Forhåndsvisningsoppdateringer er ikke tilgjengelige mens en egendefinert oppdateringsserver er aktivert.'
         },
         offline: {
+          kernelNotice: 'Denne pakken inneholder en kjerne. Den skrives til reserveplassen og enheten starter på nytt for å prøve den; kommer den ikke tilbake, går enheten selv tilbake til den nåværende kjernen.',
+          kernelConfirm: 'Installer kjerne',
+          kernelCancel: 'Avbryt',
           title: 'Offline oppdateringer',
           desc: 'Oppdater gjennom lokal installasjonspakke',
           upload: 'Last opp',

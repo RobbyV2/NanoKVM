@@ -294,7 +294,7 @@ const de = {
     devices: {
       title: 'Geräte',
       stale: 'Der Live-Status der Geräte ist nicht verfügbar. Verbindung wird wiederhergestellt.',
-      empty: 'Es sind keine Kamera- oder Mikrofon-Slots eingerichtet.',
+      empty: 'Es sind keine Kamera- oder Mikrofonplätze eingerichtet. Unter Einstellungen, Gerät einen hinzufügen.',
       available: 'Verfügbar',
       waiting: 'Der Host wartet auf eine Quelle',
       hostOpen: 'Host geöffnet',
@@ -759,6 +759,7 @@ const de = {
         networkDesc: 'Binde die virtuelle Netzwerkkarte an den entfernten Host',
         networkProtocol: 'Netzwerkprotokoll',
         networkProtocolDesc: 'NCM für moderne Hosts, RNDIS für ältere Windows-Systeme',
+        rebindNotice: 'Das Umschalten eines der beiden Schalter meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
         media: {
           title: 'Kamera- und Mikrofonplätze',
           desc: 'Legen Sie fest, welche Mediengeräte Browser belegen dürfen. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft. Beim Speichern wird das Gerät neu erkannt und verbundene Browser werden getrennt.',
@@ -772,6 +773,7 @@ const de = {
           cameraDefault: 'NanoKVM-Kamera {{index}}',
           microphoneDefault: 'NanoKVM-Mikrofon {{index}}',
           nameRequired: 'Jeder Platz braucht einen Namen.',
+          budgetHint: 'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte oben die virtuelle Festplatte oder das USB-Netzwerk ab.',
           unsupported:
             'Dieser Kernel kann Mediengeräte nicht benennen, deshalb zeigen Hosts den Standardnamen.',
           save: 'Plätze speichern',
@@ -1028,6 +1030,9 @@ const de = {
             'Vorschau-Updates sind nicht verfügbar, solange ein benutzerdefinierter Update-Server aktiviert ist.'
         },
         offline: {
+          kernelNotice: 'Dieses Paket enthält einen Kernel. Er wird in den Reserveplatz geschrieben und das Gerät startet zum Test neu; kommt es nicht zurück, kehrt es von selbst zum aktuellen Kernel zurück.',
+          kernelConfirm: 'Kernel installieren',
+          kernelCancel: 'Abbrechen',
           title: 'Offline Aktualisierung',
           desc: 'Über lokales Installationspaket aktualisieren',
           upload: 'Hochladen',

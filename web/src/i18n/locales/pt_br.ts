@@ -290,7 +290,7 @@ const pt_br = {
     devices: {
       title: 'Dispositivos',
       stale: 'O estado ao vivo dos dispositivos está indisponível. Reconectando.',
-      empty: 'Nenhum slot de câmera ou microfone está configurado.',
+      empty: 'Nenhum slot de câmera ou microfone está configurado. Adicione um em Configurações, Dispositivo.',
       available: 'Disponível',
       waiting: 'O host está esperando uma fonte',
       hostOpen: 'Host aberto',
@@ -753,6 +753,7 @@ const pt_br = {
         networkDesc: 'Montar placa de rede virtual no host remoto',
         networkProtocol: 'Protocolo de rede',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antigos',
+        rebindNotice: 'Mudar qualquer um dos interruptores reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
         media: {
           title: 'Slots de câmera e microfone',
           desc: 'Declare os dispositivos de mídia que os navegadores podem ocupar. O orçamento de endpoints é verificado ao aplicar o perfil USB. Salvar reenumera o dispositivo e desconecta os navegadores conectados.',
@@ -766,6 +767,7 @@ const pt_br = {
           cameraDefault: 'Câmera NanoKVM {{index}}',
           microphoneDefault: 'Microfone NanoKVM {{index}}',
           nameRequired: 'Cada slot precisa de um nome.',
+          budgetHint: 'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue acima o disco virtual ou a rede USB.',
           unsupported:
             'Este kernel não consegue nomear dispositivos de mídia, então os hosts mostram o nome padrão.',
           save: 'Salvar slots',
@@ -1020,6 +1022,9 @@ const pt_br = {
             'As atualizações de prévia ficam indisponíveis enquanto um servidor de atualização personalizado estiver ativado.'
         },
         offline: {
+          kernelNotice: 'Este pacote contém um kernel. Ele é gravado no slot reserva e o dispositivo reinicia para testá-lo; se não voltar, retorna sozinho ao kernel atual.',
+          kernelConfirm: 'Instalar kernel',
+          kernelCancel: 'Cancelar',
           title: 'Atualizações off-line',
           desc: 'Atualização através do pacote de instalação local',
           upload: 'Upload',

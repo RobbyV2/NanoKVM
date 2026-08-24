@@ -280,7 +280,7 @@ const zh = {
     devices: {
       title: '设备',
       stale: '无法获取设备的实时状态，正在重新连接。',
-      empty: '尚未配置任何摄像头或麦克风插槽。',
+      empty: '尚未配置摄像头或麦克风插槽。请在“设置 - 设备”中添加。',
       available: '可用',
       waiting: '主机正在等待来源',
       hostOpen: '主机已开启',
@@ -715,6 +715,7 @@ const zh = {
         networkDesc: '在远程主机中挂载虚拟网卡',
         networkProtocol: '网络协议',
         networkProtocolDesc: '新主机使用 NCM，旧版 Windows 使用 RNDIS',
+        rebindNotice: '切换任一开关都会让 USB 设备重新枚举，目标主机会短暂失去虚拟设备和 USB 网络。',
         media: {
           title: '摄像头与麦克风插槽',
           desc: '声明浏览器可以占用的媒体设备。端点预算会在应用 USB 配置文件时检查。 保存会重新枚举设备，并断开已连接的浏览器。',
@@ -728,6 +729,7 @@ const zh = {
           cameraDefault: 'NanoKVM 摄像头 {{index}}',
           microphoneDefault: 'NanoKVM 麦克风 {{index}}',
           nameRequired: '每个插槽都需要名称。',
+          budgetHint: '六个 USB IN 端点是固定的硬件上限。请在“USB 呈现”中把键盘、鼠标和绝对定位放到同一个 HID 接口上，或关闭上面的虚拟磁盘或 USB 网络。',
           unsupported: '此内核无法为媒体设备命名，因此主机会显示默认名称。',
           save: '保存插槽',
           disconnect: '断开',
@@ -968,6 +970,9 @@ const zh = {
           previewDisabled: '启用自定义更新服务器时，预览更新不可用'
         },
         offline: {
+          kernelNotice: '该安装包包含内核。内核会写入备用槽位并重启试运行；若无法启动，设备会自动回退到当前内核。',
+          kernelConfirm: '安装内核',
+          kernelCancel: '取消',
           title: '离线更新',
           desc: '通过本地安装包进行更新',
           upload: '上传',

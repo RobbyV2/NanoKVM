@@ -292,7 +292,7 @@ const hu = {
     devices: {
       title: 'Eszközök',
       stale: 'Az eszközök élő állapota nem érhető el. Újracsatlakozás folyamatban.',
-      empty: 'Nincs beállítva kamera- vagy mikrofonhely.',
+      empty: 'Nincs beállítva kamera- vagy mikrofonhely. Adj hozzá egyet a Beállítások, Eszköz alatt.',
       available: 'Elérhető',
       waiting: 'A gazdagép forrásra vár',
       hostOpen: 'A gazdagép nyitva',
@@ -758,6 +758,7 @@ const hu = {
         networkDesc: 'Virtuális hálózati kártya csatlakoztatása a távoli gazdagépen',
         networkProtocol: 'Hálózati protokoll',
         networkProtocolDesc: 'NCM modern gazdagépekhez, RNDIS régebbi Windowshoz',
+        rebindNotice: 'Bármelyik kapcsoló átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
         media: {
           title: 'Kamera- és mikrofonhelyek',
           desc: 'Adja meg, mely médiaeszközöket tölthetik ki a böngészők. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi. A mentés újraszámlálja az eszközt, és lecsatlakoztatja a csatlakozott böngészőket.',
@@ -771,6 +772,7 @@ const hu = {
           cameraDefault: 'NanoKVM kamera {{index}}',
           microphoneDefault: 'NanoKVM mikrofon {{index}}',
           nameRequired: 'Minden helyhez név kell.',
+          budgetHint: 'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki fent a virtuális lemezt vagy az USB-hálózatot.',
           unsupported:
             'Ez a kernel nem tudja elnevezni a médiaeszközöket, ezért a gépek az alapértelmezett nevet mutatják.',
           save: 'Helyek mentése',
@@ -1024,6 +1026,9 @@ const hu = {
             'Az előzetes frissítések nem érhetők el, amíg egyéni frissítési kiszolgáló van engedélyezve.'
         },
         offline: {
+          kernelNotice: 'Ez a csomag kernelt tartalmaz. A tartalék helyre íródik, és az eszköz újraindul, hogy kipróbálja; ha nem jön vissza, magától visszatér a jelenlegi kernelhez.',
+          kernelConfirm: 'Kernel telepítése',
+          kernelCancel: 'Mégse',
           title: 'Offline frissítések',
           desc: 'Frissítés helyi telepítőcsomaggal',
           upload: 'Feltöltés',

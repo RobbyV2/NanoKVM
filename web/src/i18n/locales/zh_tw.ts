@@ -280,7 +280,7 @@ const zh_tw = {
     devices: {
       title: '設備',
       stale: '無法取得設備的即時狀態，正在重新連線。',
-      empty: '尚未設定任何攝影機或麥克風插槽。',
+      empty: '尚未設定攝影機或麥克風插槽。請在「設定 - 裝置」中新增。',
       available: '可用',
       waiting: '主機正在等待來源',
       hostOpen: '主機已開啟',
@@ -715,6 +715,7 @@ const zh_tw = {
         networkDesc: '在遠端主機上新增虛擬網卡',
         networkProtocol: '網路通訊協定',
         networkProtocolDesc: '新式主機使用 NCM，較舊的 Windows 使用 RNDIS',
+        rebindNotice: '切換任一開關都會讓 USB 裝置重新列舉，目標主機會短暫失去虛擬裝置與 USB 網路。',
         media: {
           title: '攝影機與麥克風插槽',
           desc: '宣告瀏覽器可以佔用的媒體裝置。端點預算會在套用 USB 設定檔時檢查。 儲存會重新列舉裝置，並中斷已連線的瀏覽器。',
@@ -728,6 +729,7 @@ const zh_tw = {
           cameraDefault: 'NanoKVM 攝影機 {{index}}',
           microphoneDefault: 'NanoKVM 麥克風 {{index}}',
           nameRequired: '每個插槽都需要名稱。',
+          budgetHint: '六個 USB IN 端點是固定的硬體上限。請在「USB 呈現」中把鍵盤、滑鼠與絕對定位放到同一個 HID 介面，或關閉上方的虛擬磁碟或 USB 網路。',
           unsupported: '此核心無法為媒體裝置命名，因此主機會顯示預設名稱。',
           save: '儲存插槽',
           disconnect: '中斷連線',
@@ -968,6 +970,9 @@ const zh_tw = {
           previewDisabled: '啟用自訂更新伺服器時，預覽更新無法使用'
         },
         offline: {
+          kernelNotice: '此安裝包含核心。核心會寫入備用插槽並重新開機試執行；若無法啟動，裝置會自動回復到目前的核心。',
+          kernelConfirm: '安裝核心',
+          kernelCancel: '取消',
           title: '離線更新',
           desc: '透過本地安裝包進行更新',
           upload: '上傳',

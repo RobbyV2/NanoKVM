@@ -292,7 +292,7 @@ const it = {
     devices: {
       title: 'Dispositivi',
       stale: 'Lo stato in tempo reale dei dispositivi non è disponibile. Riconnessione in corso.',
-      empty: 'Non è configurato alcuno slot per fotocamera o microfono.',
+      empty: 'Nessuno slot per fotocamera o microfono è configurato. Aggiungine uno in Impostazioni, Dispositivo.',
       available: 'Disponibile',
       waiting: 'L’host attende una sorgente',
       hostOpen: 'Host aperto',
@@ -758,6 +758,7 @@ const it = {
         networkDesc: 'Monta la scheda di rete virtuale sull’host remoto',
         networkProtocol: 'Protocollo di rete',
         networkProtocolDesc: 'NCM per host moderni, RNDIS per Windows datati',
+        rebindNotice: 'Cambiare uno dei due interruttori rienumera il dispositivo USB, quindi il target perde per un attimo i dispositivi virtuali e la rete USB.',
         media: {
           title: 'Slot per fotocamera e microfono',
           desc: 'Dichiara i dispositivi multimediali che i browser possono occupare. Il budget degli endpoint viene verificato quando si applica il profilo USB. Il salvataggio rienumera il dispositivo e disconnette i browser collegati.',
@@ -771,6 +772,7 @@ const it = {
           cameraDefault: 'Fotocamera NanoKVM {{index}}',
           microphoneDefault: 'Microfono NanoKVM {{index}}',
           nameRequired: 'Ogni slot richiede un nome.',
+          budgetHint: 'I sei endpoint USB IN sono un limite fisso dell\'hardware. Metti tastiera, mouse e puntatore assoluto su una sola interfaccia HID in Presentazione USB, oppure disattiva sopra il disco virtuale o la rete USB.',
           unsupported:
             'Questo kernel non può assegnare un nome ai dispositivi multimediali, quindi gli host mostrano il nome predefinito.',
           save: 'Salva slot',
@@ -1026,6 +1028,9 @@ const it = {
             'Gli aggiornamenti in anteprima non sono disponibili quando è attivo un server di aggiornamento personalizzato.'
         },
         offline: {
+          kernelNotice: 'Questo pacchetto contiene un kernel. Viene scritto nello slot di riserva e il dispositivo si riavvia per provarlo; se non torna, ritorna da solo al kernel attuale.',
+          kernelConfirm: 'Installa kernel',
+          kernelCancel: 'Annulla',
           title: 'Aggiornamenti offline',
           desc: 'Aggiornamento tramite pacchetto di installazione locale',
           upload: 'Carica',

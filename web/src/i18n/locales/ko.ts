@@ -286,7 +286,7 @@ const ko = {
     devices: {
       title: '장치',
       stale: '장치의 실시간 상태를 가져올 수 없습니다. 다시 연결하는 중입니다.',
-      empty: '구성된 카메라 또는 마이크 슬롯이 없습니다.',
+      empty: '카메라 또는 마이크 슬롯이 구성되지 않았습니다. 설정 - 장치에서 추가하세요.',
       available: '사용 가능',
       waiting: '호스트가 소스를 기다리는 중',
       hostOpen: '호스트 열림',
@@ -741,6 +741,7 @@ const ko = {
         networkDesc: '원격 호스트에서 가상 네트워크 카드를 마운트합니다.',
         networkProtocol: '네트워크 프로토콜',
         networkProtocolDesc: '최신 호스트는 NCM, 구형 Windows는 RNDIS',
+        rebindNotice: '어느 스위치를 바꾸든 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
         media: {
           title: '카메라 및 마이크 슬롯',
           desc: '브라우저가 채울 수 있는 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다. 저장하면 장치가 다시 열거되고 연결된 브라우저는 끊어집니다.',
@@ -754,6 +755,7 @@ const ko = {
           cameraDefault: 'NanoKVM 카메라 {{index}}',
           microphoneDefault: 'NanoKVM 마이크 {{index}}',
           nameRequired: '모든 슬롯에 이름이 필요합니다.',
+          budgetHint: 'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나 위의 가상 디스크 또는 USB 네트워크를 끄세요.',
           unsupported:
             '이 커널은 미디어 장치의 이름을 지정할 수 없으므로 호스트에는 기본 이름이 표시됩니다.',
           save: '슬롯 저장',
@@ -1000,6 +1002,9 @@ const ko = {
             '사용자 지정 업데이트 서버가 활성화되어 있는 동안에는 미리 보기 업데이트를 사용할 수 없습니다.'
         },
         offline: {
+          kernelNotice: '이 패키지에는 커널이 들어 있습니다. 예비 슬롯에 기록한 뒤 재부팅하여 시험 부팅하며, 살아나지 않으면 장치가 스스로 현재 커널로 되돌아갑니다.',
+          kernelConfirm: '커널 설치',
+          kernelCancel: '취소',
           title: '오프라인 업데이트',
           desc: '로컬 설치 패키지를 통한 업데이트',
           upload: '업로드',

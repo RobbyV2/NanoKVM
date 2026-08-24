@@ -291,7 +291,7 @@ const pl = {
     devices: {
       title: 'Urządzenia',
       stale: 'Stan urządzeń na żywo jest niedostępny. Trwa ponowne łączenie.',
-      empty: 'Nie skonfigurowano żadnego slotu kamery ani mikrofonu.',
+      empty: 'Nie skonfigurowano gniazd kamery ani mikrofonu. Dodaj je w Ustawieniach, Urządzenie.',
       available: 'Dostępny',
       waiting: 'Host czeka na źródło',
       hostOpen: 'Host otwarty',
@@ -755,6 +755,7 @@ const pl = {
         networkDesc: 'Zamontuj wirtualną kartę sieciową na zdalnym hoście',
         networkProtocol: 'Protokół sieciowy',
         networkProtocolDesc: 'NCM dla nowoczesnych hostów, RNDIS dla starszych systemów Windows',
+        rebindNotice: 'Przełączenie któregokolwiek z przełączników ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
         media: {
           title: 'Gniazda kamery i mikrofonu',
           desc: 'Zadeklaruj urządzenia multimedialne, które przeglądarki mogą zająć. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB. Zapis powoduje ponowne wyliczenie urządzenia i rozłączenie podłączonych przeglądarek.',
@@ -768,6 +769,7 @@ const pl = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Każde gniazdo wymaga nazwy.',
+          budgetHint: 'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz powyżej dysk wirtualny lub sieć USB.',
           unsupported:
             'To jądro nie potrafi nazwać urządzeń multimedialnych, więc komputery pokazują nazwę domyślną.',
           save: 'Zapisz gniazda',
@@ -1022,6 +1024,9 @@ const pl = {
             'Aktualizacje w wersji testowej są niedostępne, gdy włączony jest niestandardowy serwer aktualizacji.'
         },
         offline: {
+          kernelNotice: 'Ten pakiet zawiera jądro. Zostanie zapisane w zapasowym slocie, a urządzenie uruchomi się ponownie, aby je wypróbować; jeśli nie wstanie, samo wróci do bieżącego jądra.',
+          kernelConfirm: 'Zainstaluj jądro',
+          kernelCancel: 'Anuluj',
           title: 'Aktualizacje offline',
           desc: 'Aktualizacja poprzez lokalny pakiet instalacyjny',
           upload: 'Prześlij',
