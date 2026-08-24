@@ -28,6 +28,13 @@ type Hid struct {
 	ledReaderStartOnce     sync.Once
 	routeMutex             sync.RWMutex
 	routes                 map[presentation.HIDRole]presentation.HIDRoute
+	// The node each handle was actually opened on. A layout change moves a
+	// role to a different /dev/hidgN, and a handle that predates the change
+	// still points at the old one, so the path is not derivable from the
+	// role alone.
+	g0Path string
+	g1Path string
+	g2Path string
 }
 
 const (
@@ -54,6 +61,8 @@ type hidDevice struct {
 	mu       *sync.Mutex
 	get      func() *os.File
 	set      func(*os.File)
+	getPath  func() string
+	setPath  func(string)
 }
 
 // Until the manager pushes the active profile's layout every role keeps the
@@ -67,6 +76,27 @@ func (h *Hid) SetHIDRoutes(routes []presentation.HIDRoute) {
 	h.routeMutex.Lock()
 	h.routes = next
 	h.routeMutex.Unlock()
+
+	h.dropMovedHandles()
+}
+
+// Collapsing three HID interfaces onto one moves relative and absolute off
+// their own nodes and onto the keyboard's, and the nodes they left stop
+// existing. An open handle outlives that: writing through it still succeeds at
+// the VFS and reaches no interface, so the role goes silently dead with no
+// error on any path and no way to tell from the reports alone. Nothing else
+// closes these - a layout change is not a rebind - so the handles have to be
+// dropped here, at the one moment the mapping is known to have changed.
+func (h *Hid) dropMovedHandles() {
+	h.Lock()
+	defer h.Unlock()
+
+	for _, device := range h.devices() {
+		if device.get() == nil || device.getPath() == device.path {
+			continue
+		}
+		h.closeDeviceNoLock(device)
+	}
 }
 
 // The second result separates "no layout has been pushed yet", where every
@@ -91,8 +121,8 @@ func (h *Hid) rolePath(role presentation.HIDRole, fallback string) string {
 	return fallback
 }
 
-func (h *Hid) roleDevice(role presentation.HIDRole, path string, mu *sync.Mutex, get func() *os.File, set func(*os.File)) hidDevice {
-	device := hidDevice{path: path, role: role, mu: mu, get: get, set: set}
+func (h *Hid) roleDevice(role presentation.HIDRole, path string, mu *sync.Mutex, get func() *os.File, set func(*os.File), getPath func() string, setPath func(string)) hidDevice {
+	device := hidDevice{path: path, role: role, mu: mu, get: get, set: set, getPath: getPath, setPath: setPath}
 	route, wired := h.route(role)
 	if wired {
 		device.absent = route.Path == ""
@@ -126,19 +156,25 @@ func (h *Hid) Unlock() {
 func (h *Hid) keyboardDevice(path string) hidDevice {
 	return h.roleDevice(presentation.HIDRoleKeyboard, path, &h.kbMutex,
 		func() *os.File { return h.g0 },
-		func(file *os.File) { h.g0 = file })
+		func(file *os.File) { h.g0 = file },
+		func() string { return h.g0Path },
+		func(path string) { h.g0Path = path })
 }
 
 func (h *Hid) relativeMouseDevice(path string) hidDevice {
 	return h.roleDevice(presentation.HIDRoleRelative, path, &h.mouseMutex,
 		func() *os.File { return h.g1 },
-		func(file *os.File) { h.g1 = file })
+		func(file *os.File) { h.g1 = file },
+		func() string { return h.g1Path },
+		func(path string) { h.g1Path = path })
 }
 
 func (h *Hid) absoluteMouseDevice(path string) hidDevice {
 	return h.roleDevice(presentation.HIDRoleAbsolute, path, &h.mouseMutex,
 		func() *os.File { return h.g2 },
-		func(file *os.File) { h.g2 = file })
+		func(file *os.File) { h.g2 = file },
+		func() string { return h.g2Path },
+		func(path string) { h.g2Path = path })
 }
 
 func (h *Hid) devices() []hidDevice {
@@ -228,6 +264,7 @@ func (h *Hid) openDeviceNoLock(device hidDevice) error {
 	}
 
 	device.set(file)
+	device.setPath(device.path)
 	return nil
 }
 
@@ -238,6 +275,7 @@ func (h *Hid) closeDeviceNoLock(device hidDevice) {
 	}
 
 	device.set(nil)
+	device.setPath("")
 	if err := file.Close(); err != nil {
 		log.Debugf("close %s failed: %s", device.path, err)
 	}
