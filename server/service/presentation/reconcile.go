@@ -89,7 +89,7 @@ func liveFunctionsFrom(ops Ops, linked []string) []Function {
 		}
 		function := Function{Kind: kind, Instance: instance}
 		if kind == FunctionHID {
-			hid, ok := readLiveHID(ops, name, hidSeen)
+			hid, ok := readLiveHID(ops, name, hidNodeGuess(instance, hidSeen))
 			if !ok {
 				continue
 			}
@@ -99,6 +99,19 @@ func liveFunctionsFrom(ops Ops, linked []string) []Function {
 		live = append(live, function)
 	}
 	return live
+}
+
+// Where the node number comes from when f_hid does not publish dev. The
+// instance name is the better guess than the count of HID functions seen so
+// far, because the minor is handed out at mkdir in GS order and an unlinked
+// GS0 does not give its minor back - hidg_free_inst does that, and this package
+// never rmdirs a hid function. A gadget linking only GS1 and GS2 is therefore
+// on hidg1 and hidg2, not on hidg0 and hidg1.
+func hidNodeGuess(instance string, seen int) int {
+	if index := slices.Index(hidInstances[:], instance); index >= 0 {
+		return index
+	}
+	return seen
 }
 
 func splitFunctionName(name string) (FunctionKind, string, bool) {
