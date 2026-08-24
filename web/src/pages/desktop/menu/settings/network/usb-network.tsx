@@ -21,7 +21,7 @@ export const UsbNetwork = () => {
 
   const [isHidOnlyMode, setIsHidOnlyMode] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
-  const [protocol, setProtocol] = useState<NetworkProtocol>('rndis');
+  const [protocol, setProtocol] = useState<NetworkProtocol>('ncm');
   const [loading, setLoading] = useState<'' | 'adapter' | 'protocol'>('');
 
   const read = useCallback(async () => {

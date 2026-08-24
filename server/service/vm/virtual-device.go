@@ -155,15 +155,22 @@ func setNetwork(profile *presentation.Profile, kind presentation.FunctionKind) {
 	profile.Functions = append([]presentation.Function{presentation.NetworkFunction(kind)}, functions...)
 }
 
-// RNDIS is the fallback because it is what the shipping toggle has always
-// built, so a profile that never named a protocol keeps the gadget it had.
+// NCM is the fallback for a profile that never named a protocol. RNDIS was the
+// obvious choice while it was what the shipping toggle built, but Windows has
+// been withdrawing the driver and on 11 the adapter now installs and then
+// carries nothing: measured on a live target, the gadget NIC took 0 packets
+// from the host over an RNDIS link and passed ordinary traffic over an NCM one
+// with nothing else changed. NCM is native on Windows 10 1809 and later, macOS
+// and Linux, so it is the choice that works when no one has expressed a
+// preference. A profile that names RNDIS still gets RNDIS - this is only the
+// default, and older Windows still needs it.
 func profileNetworkKind(profile presentation.Profile) presentation.FunctionKind {
 	for _, f := range profile.Functions {
 		if deviceOf(f.Kind) == deviceNetwork {
 			return f.Kind
 		}
 	}
-	return presentation.FunctionRNDIS
+	return presentation.FunctionNCM
 }
 
 func deviceOn(snapshot presentation.Snapshot, device string) bool {
