@@ -21,6 +21,7 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
   const [currentVersion, setCurrentVersion] = useState('');
   const [latestVersion, setLatestVersion] = useState('');
   const [latestKernel, setLatestKernel] = useState('');
+  const [installedKernel, setInstalledKernel] = useState('');
   const [rolledBack, setRolledBack] = useState('');
   const [errMsg, setErrMsg] = useState('');
   const [isCustomServerEnabled, setIsCustomServerEnabled] = useState(false);
@@ -44,6 +45,7 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
     }
     if (requestId !== versionRequestRef.current) return;
     setRolledBack(rollbackWarning(kernel));
+    setInstalledKernel(kernel?.installed || '');
 
     try {
       const rsp: any = await api.getVersion();
@@ -174,7 +176,11 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
           <Result
             status="warning"
             icon={<RocketOutlined />}
-            title={`${currentVersion} -> ${latestVersion}`}
+            title={
+              latestKernel
+                ? `${installedKernel || '\u2014'} -> ${latestKernel}`
+                : `${currentVersion} -> ${latestVersion}`
+            }
             subTitle={
               latestKernel
                 ? t('settings.update.kernelUpdate', { version: latestKernel })
