@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -33,8 +35,9 @@ const (
 )
 
 var (
-	ErrNoState = errors.New("uEnv.txt carries no ab_state")
-	ErrState   = errors.New("unknown ab_state")
+	ErrNoState  = errors.New("uEnv.txt carries no ab_state")
+	ErrState    = errors.New("unknown ab_state")
+	ErrNotReady = errors.New("trial kernel never reached a serving state; the next boot rolls back")
 )
 
 type Paths struct {
@@ -238,4 +241,48 @@ func (p Paths) RolledBack() (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(string(data)), true
+}
+
+// Ready is the gate a trial kernel has to pass before it is committed.
+// Reaching userspace is not enough: a kernel that boots with no working NIC
+// leaves a device nobody can reach, and that has to roll back, so both probes
+// have to agree before Confirm runs.
+type Ready struct {
+	Serving  func() bool
+	Routable func() bool
+	Timeout  time.Duration
+	Interval time.Duration
+}
+
+func (p Paths) ConfirmWhenReady(ready Ready) error {
+	if p.Slot() != SlotTrial {
+		return nil
+	}
+	deadline := time.Now().Add(ready.Timeout)
+	for time.Now().Before(deadline) {
+		if ready.Serving() && ready.Routable() {
+			return p.Confirm()
+		}
+		time.Sleep(ready.Interval)
+	}
+	return ErrNotReady
+}
+
+// Routable reports whether any interface holds a non-loopback address, which
+// is what separates a working device from one nobody can reach.
+func Routable() bool {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return false
+	}
+	return routable(addrs)
+}
+
+func routable(addrs []net.Addr) bool {
+	for _, addr := range addrs {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && !ipNet.IP.IsLinkLocalUnicast() {
+			return true
+		}
+	}
+	return false
 }

@@ -58,19 +58,26 @@ func installKernelPayload(kernel *kernelPayload, slot bootslot.Paths) error {
 		return errors.New("a kernel trial is still unconfirmed; reboot before installing another")
 	}
 
-	if err := stageKernel(slot.Alt(), kernel.itb); err != nil {
-		return err
-	}
-	if err := slot.ResetBootCount(); err != nil {
-		return fmt.Errorf("reset boot counter: %w", err)
-	}
-	if err := slot.SetState(bootslot.StateTrial); err != nil {
-		return fmt.Errorf("arm trial slot: %w", err)
-	}
-	if err := slot.MarkPending(kernel.version); err != nil {
-		return fmt.Errorf("record pending kernel: %w", err)
+	for _, step := range kernelInstallSteps(kernel, slot) {
+		if err := step.run(); err != nil {
+			return fmt.Errorf("%s: %w", step.name, err)
+		}
 	}
 	return nil
+}
+
+type kernelStep struct {
+	name string
+	run  func() error
+}
+
+func kernelInstallSteps(kernel *kernelPayload, slot bootslot.Paths) []kernelStep {
+	return []kernelStep{
+		{"write trial kernel", func() error { return stageKernel(slot.Alt(), kernel.itb) }},
+		{"reset boot counter", slot.ResetBootCount},
+		{"arm trial slot", func() error { return slot.SetState(bootslot.StateTrial) }},
+		{"record pending kernel", func() error { return slot.MarkPending(kernel.version) }},
+	}
 }
 
 // stageKernel writes straight over the trial slot. /boot holds under 2 MiB
@@ -85,6 +92,10 @@ func stageKernel(dst, src string) error {
 	if err := writeKernel(dst, src); err != nil {
 		return fmt.Errorf("write trial kernel: %w", err)
 	}
+	return verifyStaged(dst, want)
+}
+
+func verifyStaged(dst string, want []byte) error {
 	got, err := digest(dst)
 	if err != nil {
 		return fmt.Errorf("re-read trial kernel: %w", err)

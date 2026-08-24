@@ -9,6 +9,11 @@
 #          one of those is present on a GitHub ubuntu-latest runner, so this
 #          tier runs there directly and costs seconds.
 #
+#   watchdog
+#          A VM of its own with softdog and a stopless dw_wdt-shaped stub, to
+#          settle what the watchdog core does when the process holding
+#          /dev/watchdog dies. See run_watchdog.
+#
 #   tier2  service/presentation, service/functionfs, service/passthrough
 #          Needs a UDC, which means dummy_hcd. No distro ships it
 #          (CONFIG_USB_DUMMY_HCD is not set anywhere, and it is in neither
@@ -21,7 +26,7 @@
 # by every container and machine, and it carries no vhci_hcd and no gadget
 # stack at all.
 #
-# Usage: scripts/kernelint.sh [tier1|tier2|all]
+# Usage: scripts/kernelint.sh [tier1|tier2|watchdog|all]
 
 set -euo pipefail
 
@@ -30,6 +35,7 @@ BUILD="$ROOT/build/kernelint"
 
 GO_IMAGE="${GO_IMAGE:-golang:1.25}"
 VM_IMAGE="${VM_IMAGE:-nanokvm-kernelint-vm:4}"
+WDT_IMAGE="${WDT_IMAGE:-nanokvm-watchdog-vm:1}"
 KVER="${KVER:-6.8.0-138-generic}"
 KTAG="${KTAG:-v6.8}"
 ARCH="${ARCH:-arm64}"
@@ -235,6 +241,229 @@ vm_run() {
     }
 }
 
+# The watchdog probe. The trial guard in S02abtrial exists because
+# /dev/watchdog was believed unable to notice the server dying: dw_wdt sets
+# WDIOF_MAGICCLOSE, and the claim was that a close without a "V" leaves the
+# kernel petting the device forever. That was read from source and never run,
+# so it is run here. softdog covers the watchdog core; stopless_wdt is a
+# dw_wdt-shaped stub whose stop() cannot stop (dw_wdt with no reset control
+# only sets WDOG_HW_RUNNING) and which reports a max_hw_heartbeat_ms, because
+# that pair is what decides whether the core's own keepalive worker takes over.
+write_watchdog_payload() {
+    cat > "$BUILD/watchdog/run.sh" <<EOF
+#!/bin/sh
+set -u
+driver=$1
+probe=$2
+EOF
+    cat >> "$BUILD/watchdog/run.sh" <<'EOF'
+mkdir -p /run /var/run
+if [ "$driver" = softdog ]; then
+    modprobe softdog soft_margin=5 nowayout=0
+else
+    modprobe stopless_wdt nowayout=0
+fi
+dev=/dev/watchdog0
+[ -e "$dev" ] || dev=/dev/watchdog
+echo "PROBE $driver $probe START"
+# The magic character has to come from the process that holds the fd: the
+# watchdog core allows one opener, so a second open only returns -EBUSY.
+if [ "$probe" = close-magic ]; then
+    { exec 3<>"$dev"; printf 1 >&3; printf V >&3; exec sleep 999; } &
+else
+    { exec 3<>"$dev"; printf 1 >&3; exec sleep 999; } &
+fi
+holder=$!
+sleep 2
+if [ "$probe" = freeze ]; then
+    kill -STOP "$holder"
+else
+    kill -9 "$holder"
+fi
+sleep 25
+echo "PROBE $driver $probe SURVIVED"
+dmesg | tail -n 20
+EOF
+    chmod +x "$BUILD/watchdog/run.sh"
+}
+
+wdt_image() {
+    docker image inspect "$WDT_IMAGE" >/dev/null 2>&1 && return 0
+
+    local context="$BUILD/wdtimg"
+    mkdir -p "$context"
+    cat > "$context/runvm.sh" <<'EOF'
+#!/bin/bash
+set -e
+work=$(mktemp -d)
+mkdir -p "$work/x"
+cp -a /script/. "$work/x/"
+chmod +x "$work/x/run.sh"
+( cd "$work/x" && find . | cpio -o -H newc --quiet | gzip -1 ) > "$work/extra.cpio.gz"
+cat /vm/initrd.img "$work/extra.cpio.gz" > "$work/combined.img"
+exec qemu-system-aarch64 \
+  -M virt -cpu max -smp "${VMCPUS:-2}" -m "${VMMEM:-4096}" \
+  -kernel /vm/vmlinuz -initrd "$work/combined.img" \
+  -append "console=ttyAMA0 panic=1 loglevel=7" \
+  -nographic -no-reboot
+EOF
+
+    cat > "$context/stopless_wdt.c" <<'EOF'
+#include <linux/module.h>
+#include <linux/reboot.h>
+#include <linux/timer.h>
+#include <linux/watchdog.h>
+
+static bool nowayout;
+module_param(nowayout, bool, 0444);
+
+static struct watchdog_device wdd;
+static struct timer_list ticker;
+
+static void stopless_fire(struct timer_list *unused)
+{
+	pr_emerg("stopless_wdt: expired, resetting\n");
+	emergency_restart();
+}
+
+static int stopless_start(struct watchdog_device *w)
+{
+	mod_timer(&ticker, jiffies + w->timeout * HZ);
+	return 0;
+}
+
+static int stopless_ping(struct watchdog_device *w)
+{
+	mod_timer(&ticker, jiffies + w->timeout * HZ);
+	return 0;
+}
+
+/* dw_wdt_stop() with no reset control: it cannot stop, so it tells the core
+ * the hardware is still running and returns success. */
+static int stopless_stop(struct watchdog_device *w)
+{
+	pr_info("stopless_wdt: stop() cannot stop, hardware keeps running\n");
+	set_bit(WDOG_HW_RUNNING, &w->status);
+	return 0;
+}
+
+static const struct watchdog_info stopless_info = {
+	.options = WDIOF_SETTIMEOUT | WDIOF_KEEPALIVEPING | WDIOF_MAGICCLOSE,
+	.identity = "stopless_wdt",
+};
+
+static const struct watchdog_ops stopless_ops = {
+	.owner = THIS_MODULE,
+	.start = stopless_start,
+	.stop = stopless_stop,
+	.ping = stopless_ping,
+};
+
+static int __init stopless_init(void)
+{
+	timer_setup(&ticker, stopless_fire, 0);
+	wdd.info = &stopless_info;
+	wdd.ops = &stopless_ops;
+	wdd.min_timeout = 1;
+	wdd.max_timeout = 60;
+	wdd.timeout = 5;
+	wdd.max_hw_heartbeat_ms = 10000;
+	watchdog_set_nowayout(&wdd, nowayout);
+	return watchdog_register_device(&wdd);
+}
+
+static void __exit stopless_exit(void)
+{
+	watchdog_unregister_device(&wdd);
+	timer_shutdown_sync(&ticker);
+}
+
+module_init(stopless_init);
+module_exit(stopless_exit);
+MODULE_LICENSE("GPL");
+EOF
+
+    cat > "$context/Dockerfile" <<'EOF'
+FROM ubuntu:24.04 AS build
+ARG KVER
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      linux-image-${KVER} linux-modules-${KVER} linux-headers-${KVER} \
+      build-essential kmod cpio \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src/wdt
+COPY stopless_wdt.c .
+RUN printf 'obj-m += stopless_wdt.o\n' > Makefile \
+ && make -C /lib/modules/${KVER}/build M=/src/wdt modules \
+ && install -m644 stopless_wdt.ko /lib/modules/${KVER}/kernel/drivers/watchdog/stopless_wdt.ko
+
+RUN mkdir -p /rootfs/lib/modules/${KVER} \
+ && cd /lib/modules/${KVER} \
+ && cp modules.builtin modules.builtin.modinfo modules.order /rootfs/lib/modules/${KVER}/ \
+ && tar cf - kernel/drivers/watchdog | (cd /rootfs/lib/modules/${KVER} && tar xf -) \
+ && depmod -b /rootfs ${KVER}
+
+RUN set -e; cd /rootfs \
+ && mkdir -p bin sbin usr/bin usr/sbin etc proc sys dev tmp run lib/aarch64-linux-gnu usr/lib/aarch64-linux-gnu \
+ && cp -a /bin/. bin/ && cp -a /sbin/. sbin/ && cp -a /usr/bin/. usr/bin/ && cp -a /usr/sbin/. usr/sbin/ \
+ && cp -a /lib/aarch64-linux-gnu/. lib/aarch64-linux-gnu/ \
+ && cp -a /usr/lib/aarch64-linux-gnu/. usr/lib/aarch64-linux-gnu/ \
+ && cp -a /lib/ld-linux-aarch64.so.1 lib/ \
+ && cp -a /etc/passwd /etc/group /etc/nsswitch.conf /etc/hosts etc/ \
+ && rm -rf usr/share/doc usr/share/man usr/share/locale \
+ && printf '%s\n' '#!/bin/sh' \
+      'mount -t proc none /proc' \
+      'mount -t sysfs none /sys' \
+      'mount -t devtmpfs none /dev 2>/dev/null' \
+      'mkdir -p /dev/pts && mount -t devpts none /dev/pts 2>/dev/null' \
+      'export PATH=/usr/sbin:/usr/bin:/sbin:/bin' \
+      '/run.sh; echo "RUNSH_EXIT=$?"' \
+      'sync; echo 1 > /proc/sys/kernel/sysrq; echo o > /proc/sysrq-trigger; sleep 5' > init \
+ && chmod +x init \
+ && find . | cpio -o -H newc --quiet | gzip -1 > /initrd.img \
+ && cp /boot/vmlinuz-${KVER} /vmlinuz
+
+FROM alpine:3.22
+RUN apk add --no-cache qemu-system-aarch64 cpio bash
+COPY --from=build /initrd.img /vm/initrd.img
+COPY --from=build /vmlinuz /vm/vmlinuz
+COPY runvm.sh /usr/local/bin/runvm
+RUN chmod +x /usr/local/bin/runvm
+ENTRYPOINT ["/usr/local/bin/runvm"]
+EOF
+
+    docker build --platform "linux/$ARCH" \
+        --build-arg "KVER=$KVER" \
+        -t "$WDT_IMAGE" "$context"
+}
+
+# A probe that reboots never reaches its SURVIVED line, so the verdict is read
+# from the transcript rather than from an exit status.
+run_watchdog() {
+    local log="$BUILD/watchdog.log"
+    mkdir -p "$BUILD/watchdog"
+    : > "$log"
+    wdt_image
+    local driver probe before verdict
+    for driver in softdog stopless_wdt; do
+        for probe in close-no-magic close-magic freeze; do
+            write_watchdog_payload "$driver" "$probe"
+            before=$(wc -l < "$log")
+            docker run --rm --platform "linux/$ARCH" \
+                -v "$BUILD/watchdog/run.sh:/script/run.sh:ro" \
+                "$WDT_IMAGE" 2>&1 | tee -a "$log"
+            if tail -n +$((before + 1)) "$log" | grep -q "PROBE $driver $probe SURVIVED"; then
+                verdict=survived
+            else
+                verdict=REBOOTED
+            fi
+            echo "watchdog: $driver $probe -> $verdict" >> "$BUILD/watchdog.verdict"
+            echo "watchdog: $driver $probe -> $verdict"
+        done
+    done
+}
+
 run_tier1() {
     local log="$BUILD/tier1.log"
     : > "$log"
@@ -270,12 +499,16 @@ tier2)
     compile tier2 "$ARCH" $TIER2_PACKAGES
     run_tier2
     ;;
+watchdog)
+    : > "$BUILD/watchdog.verdict"
+    run_watchdog
+    ;;
 all)
     "$0" tier1
     "$0" tier2
     ;;
 *)
-    echo "usage: $0 [tier1|tier2|all]" >&2
+    echo "usage: $0 [tier1|tier2|watchdog|all]" >&2
     exit 2
     ;;
 esac

@@ -194,22 +194,15 @@ func dispose() {
 // must still roll back, so this waits for the UI to answer on the loopback and
 // for a routable address to exist.
 func confirmKernel(port int) {
-	slot := bootslot.Default()
-	if slot.Slot() != bootslot.SlotTrial {
-		return
+	err := bootslot.Default().ConfirmWhenReady(bootslot.Ready{
+		Serving:  func() bool { return serving(port) },
+		Routable: bootslot.Routable,
+		Timeout:  confirmTimeout,
+		Interval: confirmInterval,
+	})
+	if err != nil {
+		log.Printf("commit trial kernel: %v", err)
 	}
-
-	deadline := time.Now().Add(confirmTimeout)
-	for time.Now().Before(deadline) {
-		if serving(port) && routable() {
-			if err := slot.Confirm(); err != nil {
-				log.Printf("commit trial kernel: %v", err)
-			}
-			return
-		}
-		time.Sleep(confirmInterval)
-	}
-	log.Printf("trial kernel never reached a serving state; the next boot rolls back")
 }
 
 func serving(port int) bool {
@@ -221,19 +214,4 @@ func serving(port int) bool {
 	defer rsp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(rsp.Body, 64<<10))
 	return err == nil && bytes.Contains(body, []byte("<title>NanoKVM</title>"))
-}
-
-// routable reports whether any interface holds a non-loopback address, which
-// is what separates a working device from one nobody can reach.
-func routable() bool {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return false
-	}
-	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && !ipNet.IP.IsLinkLocalUnicast() {
-			return true
-		}
-	}
-	return false
 }
