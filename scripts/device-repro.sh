@@ -116,5 +116,16 @@ case "$body" in
     *) echo "FAIL: listener bound but / did not serve the web UI"; echo "$body"; exit 1 ;;
 esac
 
+# The browser asks for the favicon while it paints the login page, so the route
+# has to answer without a token. This is also the only place the real router is
+# instantiated - a duplicate or conflicting route registration panics gin at
+# startup, which no host-side test can reach while router imports the cgo package.
+icon=$(wget -q -O - http://127.0.0.1/api/vm/favicon 2>/dev/null | wc -c)
+if [ "$icon" -gt 0 ]; then
+    echo "OK: favicon served unauthenticated, ${icon} bytes"
+else
+    echo "FAIL: /api/vm/favicon served nothing"; kill "$pid" 2>/dev/null; exit 1
+fi
+
 kill "$pid" 2>/dev/null
 EOF
