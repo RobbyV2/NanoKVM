@@ -1,10 +1,12 @@
 #!/bin/sh
 #
-# The stock script with one thing changed: the interface is resolved rather than
-# spelled. Everything else — the /boot/usb.rndis0 gate, the prefix derivation
-# from the chip UID, the udhcpd config it generates — is the stock logic
-# verbatim, because this file is copied over /etc/init.d at every update and a
-# rewrite here is a rewrite of the gadget NIC's addressing on every device.
+# The stock script with three things changed: the interface is resolved rather
+# than spelled, the gate admits an NCM profile as well as an RNDIS one, and the
+# stop path matches udhcpd by its config path because BusyBox writes no pidfile.
+# Everything else — the prefix derivation from the chip UID, the udhcpd config
+# it generates — is the stock logic verbatim, because this file is copied over
+# /etc/init.d at every update and a rewrite here is a rewrite of the gadget
+# NIC's addressing on every device.
 #
 # It is shipped at all because the bridge runs it: releasing the gadget NIC from
 # br0 leaves a standalone NIC, and this is what addresses one, so a copy that
@@ -51,7 +53,13 @@ gen_udhcpd_conf() {
 }
 
 start() {
-	if [ -e /boot/usb.rndis0 ]
+	# Either sentinel. mirrorSentinels writes /boot/usb.ncm and removes
+	# /boot/usb.rndis0 for an NCM profile, so a gate that names only RNDIS
+	# leaves an NCM gadget NIC with no address and no DHCP server at all -
+	# the target gets a network card that can reach nothing, including the
+	# NanoKVM itself. The addressing below is class-agnostic; it resolves
+	# whichever NIC is linked, so the class the host speaks is irrelevant.
+	if [ -e /boot/usb.rndis0 ] || [ -e /boot/usb.ncm ]
 	then
 		printf "start usb rndis: "
 		if [ ! -e /boot/rndis.nodhcpd ]
@@ -102,6 +110,18 @@ stop() {
 		read -r pid < "$pidfile"
 		[ -n "$pid" ] && kill "$pid" 2>/dev/null
 		rm -f "$pidfile"
+	done
+
+	# BusyBox udhcpd honours the pidfile directive by ignoring it: it writes no
+	# pidfile at all, so the loop above finds nothing and a second start leaves
+	# two servers answering the same segment with different leases. Match the
+	# process by the config path this script generates instead.
+	for proc in /proc/[0-9]*
+	do
+		[ -r "$proc/cmdline" ] || continue
+		case "$(tr '\0' ' ' < "$proc/cmdline")" in
+			*udhcpd*/etc/udhcpd.usb*.conf*) kill "${proc#/proc/}" 2>/dev/null ;;
+		esac
 	done
 }
 
