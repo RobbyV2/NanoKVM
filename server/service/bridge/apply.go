@@ -243,6 +243,7 @@ func (m *Manager) Disable(ctx context.Context) (proto.SetBridgeRsp, error) {
 			return m.rollback(ctx, dm, snapshot, proto.BridgeChecks{}, err.Error())
 		}
 	}
+	m.releaseGadgetAddressing(ctx)
 
 	// Step 4. Kill any running udhcpc and remove the pidfile.
 	if err := killUdhcpc(); err != nil {
@@ -576,7 +577,40 @@ func (m *Manager) enslaveGadget(ctx context.Context) error {
 		}
 		return err
 	}
+
+	claimGadgetAddressing(ctx, m.ip, nic)
 	return nil
+}
+
+// Enslavement and the standalone RNDIS addressing are mutually exclusive, and
+// this is the half that runs on a device already up: S30rndis addressed the NIC
+// and started its udhcpd back at boot, long before anything asked for a bridge.
+// The flag is what keeps the next boot from doing it again, and S29bridge reads
+// it before S30rndis runs. Every failure here is logged rather than returned:
+// the port is already forwarding, and the stale address is worth less than the
+// enslavement that just succeeded.
+func claimGadgetAddressing(ctx context.Context, ip *IPTool, nic string) {
+	if err := utils.WriteFileAtomic(rndisNoDHCPDPath, nil, 0o644); err != nil {
+		log.Warnf("bridge: mark %s: %s", rndisNoDHCPDPath, err)
+	}
+	killGadgetDHCPD()
+	if err := ip.FlushAddr(ctx, nic); err != nil {
+		log.Warnf("bridge: flush %s after enslaving it: %s", nic, err)
+	}
+}
+
+// The other half: a NIC the bridge has just released is a standalone gadget NIC
+// again, and S30rndis is what addresses one. Clearing the flag first is what
+// lets the script do its whole job rather than the half it does while bridged,
+// and running it here rather than leaving it to the next boot is what keeps a
+// disable from being a change that needs a reboot to finish.
+func (m *Manager) releaseGadgetAddressing(ctx context.Context) {
+	if err := os.Remove(rndisNoDHCPDPath); err != nil && !os.IsNotExist(err) {
+		log.Warnf("bridge: clear %s: %s", rndisNoDHCPDPath, err)
+	}
+	if err := m.scripts.StartRNDIS(ctx); err != nil {
+		log.Warnf("bridge: restore the gadget NIC's own addressing: %s", err)
+	}
 }
 
 // Registered with the presentation manager, which calls it after every apply.

@@ -9,6 +9,11 @@ STATE_DIR=/etc/kvm/presentation/network
 PENDING="$STATE_DIR/pending.json"
 RECOVERED="$STATE_DIR/recovered.json"
 LAST_GOOD="$STATE_DIR/last-known-good.json"
+# S30rndis runs after this script and, unless this flag is there, unconditionally
+# puts the standalone 10.x.y.1/24 on the gadget NIC and starts a udhcpd on it.
+# Bridged, that address sits on an enslaved port and the DHCP server answers the
+# target ahead of the LAN's, handing it a lease whose config names no router.
+NODHCPD=/boot/rndis.nodhcpd
 
 teardown() {
     ip link set dev "$GADGET" nomaster 2>/dev/null
@@ -53,11 +58,16 @@ create() {
     ip link set dev "$PORT" up || return 1
     ip link set dev "$BRIDGE" up || return 1
     enslave_gadget
+    touch "$NODHCPD" 2>/dev/null
     mkdir -p "$UPLINK_DIR"
     echo "$BRIDGE" > "$UPLINK"
 }
 
 start() {
+    # Cleared first and restored by create, so the flag tracks this boot rather
+    # than an earlier one that bridged.
+    rm -f "$NODHCPD"
+
     if [ -e "$PENDING" ]; then
         restore_stock
         return 0

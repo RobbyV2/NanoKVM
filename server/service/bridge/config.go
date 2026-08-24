@@ -42,6 +42,17 @@ const (
 
 	NoDHCPPath     = "/boot/eth.nodhcp"
 	SysClassNetDir = "/sys/class/net"
+
+	// S30rndis puts the standalone 10.x.y.1/24 on the gadget NIC and starts a
+	// udhcpd on it unless this flag exists. Both are wrong once the NIC is a
+	// bridge port: the address belongs to a subnet the bridge does not carry,
+	// and the DHCP server answers the target ahead of the LAN's with a lease
+	// whose config names no router, which is what strands the attached host.
+	RNDISNoDHCPDPath = "/boot/rndis.nodhcpd"
+
+	// S30rndis generates one of these per interface, and it is what identifies
+	// that udhcpd in the process table.
+	UdhcpdGadgetConf = "/etc/udhcpd." + GadgetName + ".conf"
 )
 
 const (
@@ -73,6 +84,10 @@ var (
 	udhcpcPidPath = UdhcpcPidPath
 	noDHCPPath    = NoDHCPPath
 	sysClassNet   = SysClassNetDir
+
+	rndisNoDHCPDPath = RNDISNoDHCPDPath
+	udhcpdGadgetConf = UdhcpdGadgetConf
+	procDir          = "/proc"
 )
 
 var (

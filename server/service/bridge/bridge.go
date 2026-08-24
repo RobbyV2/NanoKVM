@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,10 @@ const (
 	IptablesBinary = "iptables"
 	S30ethScript   = "/etc/init.d/S30eth"
 
+	// Owns the gadget NIC's standalone address and its udhcpd, so it is what
+	// puts them back when the bridge stops owning that NIC.
+	S30rndisScript = "/etc/init.d/S30rndis"
+
 	// Ships in the same iproute2 package as ip and reads the one thing ip
 	// cannot: which port a MAC was learned on.
 	BridgeBinary = "bridge"
@@ -43,6 +48,7 @@ var allowedBinaries = map[string]bool{
 	PingBinary:     true,
 	IptablesBinary: true,
 	S30ethScript:   true,
+	S30rndisScript: true,
 	BridgeBinary:   true,
 }
 
@@ -348,6 +354,7 @@ func (t *IPTool) Batch(ctx context.Context, lines []string) error {
 // when the pidfile is absent, which on a static device is always.
 type Scripts interface {
 	StartEth(ctx context.Context) error
+	StartRNDIS(ctx context.Context) error
 }
 
 type initScripts struct{ cmd Commander }
@@ -357,6 +364,11 @@ func NewScripts(cmd Commander) Scripts { return initScripts{cmd: cmd} }
 
 func (s initScripts) StartEth(ctx context.Context) error {
 	_, err := s.cmd.Run(ctx, []string{S30ethScript, "start"}, nil)
+	return err
+}
+
+func (s initScripts) StartRNDIS(ctx context.Context) error {
+	_, err := s.cmd.Run(ctx, []string{S30rndisScript, "start"}, nil)
 	return err
 }
 
@@ -850,6 +862,36 @@ func killUdhcpc() error {
 		return err
 	}
 	return nil
+}
+
+// The DHCP server S30rndis starts for the gadget NIC. BusyBox udhcpd never
+// writes the pidfile its own config names, so unlike udhcpc there is nothing to
+// read and the process table is the only place its pid exists. The match is that
+// interface's config path, so a udhcpd serving anything else is left alone.
+func killGadgetDHCPD() {
+	entries, err := os.ReadDir(procDir)
+	if err != nil {
+		log.Warnf("bridge: read %s: %s", procDir, err)
+		return
+	}
+
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+		raw, err := os.ReadFile(filepath.Join(procDir, entry.Name(), "cmdline"))
+		if err != nil {
+			continue
+		}
+		args := strings.Split(strings.TrimSuffix(string(raw), "\x00"), "\x00")
+		if !strings.HasSuffix(args[0], "udhcpd") || !slices.Contains(args, udhcpdGadgetConf) {
+			continue
+		}
+		if err := killProcess(pid); err != nil {
+			log.Warnf("bridge: kill udhcpd %d: %s", pid, err)
+		}
+	}
 }
 
 // Whether a udhcpc is holding the uplink's address. An address in "ip addr"

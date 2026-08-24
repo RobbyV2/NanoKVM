@@ -112,7 +112,8 @@ func (f *netFixture) manager() *Manager {
 
 type noopScripts struct{}
 
-func (noopScripts) StartEth(context.Context) error { return nil }
+func (noopScripts) StartEth(context.Context) error   { return nil }
+func (noopScripts) StartRNDIS(context.Context) error { return nil }
 
 type noopFirewall struct{}
 
