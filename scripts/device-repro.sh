@@ -23,14 +23,18 @@ CANDIDATE="${2:-}"
 
 mkdir -p "$WORK"
 
-if [ ! -f "$WORK/rvroot.tar.gz" ] && { [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; }; then
+# The tar is only the intermediate the import consumed; once nanokvm-rvroot:repro
+# exists the tar can be deleted and the harness still has its rootfs.
+cached() { [ -f "$WORK/rvroot.tar.gz" ] || docker image inspect nanokvm-rvroot:repro >/dev/null 2>&1; }
+
+if ! cached && { [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; }; then
     echo "usage: $0 <image.img> [NanoKVM-Server]" >&2
     exit 2
 fi
 
 # Partition 2 is the ext4 rootfs, partition 1 the FAT /boot the init scripts and
 # the presentation migration read their sentinels from.
-if [ ! -f "$WORK/rvroot.tar.gz" ]; then
+if ! cached; then
     docker run --rm --privileged -v "$(cd "$(dirname "$IMAGE")" && pwd):/img:ro" -v "$WORK:/out" alpine:3 sh -euc "
         mkdir -p /mnt/r /mnt/b /rv
         start=\$(fdisk -l /img/$(basename "$IMAGE") | awk '\$1 ~ /2\$/ && \$1 ~ /img/ { print \$(NF-5) }')
