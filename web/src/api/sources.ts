@@ -82,6 +82,9 @@ export type SourceSink = {
   id: string;
   kind: SourceKind;
   label: string;
+  // The interface string the target host reads. Absent when the kernel has no
+  // writable function_name for this slot, so the host shows its own default.
+  host_name?: string;
   slot: number;
   demand: Demand;
   output: OutputState;

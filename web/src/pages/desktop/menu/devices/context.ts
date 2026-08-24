@@ -1,7 +1,13 @@
 import { createContext, useContext } from 'react';
 
 import type { PassthroughStatus } from '@/api/passthrough.ts';
-import type { ClaimRefusal, SourceKind, SourceSink, SourcesSnapshot } from '@/api/sources.ts';
+import type {
+  ClaimRefusal,
+  SourceKind,
+  SourceSink,
+  SourceSlot,
+  SourcesSnapshot
+} from '@/api/sources.ts';
 
 import type { DeviceOffer, SourceConnection } from './client.ts';
 
@@ -27,7 +33,7 @@ export type DevicesState = {
   release: (sinkID: string) => Promise<void>;
   choose: (sinkID: string, deviceID: string) => void;
   setMuted: (sinkID: string, muted: boolean) => void;
-  setCounts: (cameras: number, microphones: number) => Promise<void>;
+  setSlots: (slots: SourceSlot[]) => Promise<void>;
   disconnectAll: () => Promise<void>;
   refresh: () => void;
 };

@@ -4,7 +4,7 @@ import test from 'node:test';
 import type { ClaimRefusal, SourceSink, SourcesSnapshot } from '../../../../api/sources.ts';
 import { BrowserSourceClient, type DeviceOffer } from './client.ts';
 import { PcmPacketizer } from './pcm.ts';
-import { reduceSources } from './state.ts';
+import { mediaSlotRows, mediaSlots, reduceSources } from './state.ts';
 import { encodeMediaFrame } from './transport.ts';
 
 test('NKMF frame uses network byte order and bounded identifiers', () => {
@@ -332,4 +332,58 @@ test('an owned release is not reported as a revocation', { timeout: 1000 }, asyn
   await releasing;
   assert.deepEqual(revocations, []);
   client.close();
+});
+
+test('slot rows carry the name the host reads apart from the editable label', () => {
+  const sinks: SourceSink[] = [
+    {
+      id: 'uvc.cam0',
+      kind: 'camera',
+      label: 'NanoKVM Camera 1',
+      host_name: 'UVC Camera',
+      slot: 0,
+      demand: { streaming: false },
+      output: 'idle',
+      binding: null
+    },
+    {
+      id: 'uac2.mic0',
+      kind: 'microphone',
+      label: 'NanoKVM Microphone 1',
+      slot: 0,
+      demand: { streaming: false },
+      output: 'idle',
+      binding: null
+    },
+    {
+      id: 'usb.hybrid',
+      kind: 'usb_device',
+      label: 'Browser USB',
+      slot: 0,
+      demand: { streaming: false },
+      output: 'idle',
+      binding: null
+    }
+  ];
+  const rows = mediaSlotRows(sinks);
+  assert.deepEqual(
+    rows.map((row) => [row.kind, row.label, row.hostName]),
+    [
+      ['camera', 'NanoKVM Camera 1', 'UVC Camera'],
+      ['microphone', 'NanoKVM Microphone 1', '']
+    ]
+  );
+});
+
+test('slot rows renumber contiguously from zero within each kind', () => {
+  const rows = [
+    { key: 'a', kind: 'microphone' as const, label: 'Podcast', hostName: '' },
+    { key: 'b', kind: 'camera' as const, label: 'Desk', hostName: '' },
+    { key: 'c', kind: 'camera' as const, label: 'Rack', hostName: '' }
+  ];
+  assert.deepEqual(mediaSlots(rows), [
+    { id: 'uac2.mic0', kind: 'microphone', label: 'Podcast' },
+    { id: 'uvc.cam0', kind: 'camera', label: 'Desk' },
+    { id: 'uvc.cam1', kind: 'camera', label: 'Rack' }
+  ]);
 });

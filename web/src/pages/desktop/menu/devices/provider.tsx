@@ -514,19 +514,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     [account.username]
   );
 
-  const setCounts = useCallback(async (cameras: number, microphones: number) => {
-    const slots: api.SourceSlot[] = [
-      ...Array.from({ length: cameras }, (_, slot) => ({
-        id: `uvc.cam${slot}`,
-        kind: 'camera' as const,
-        label: `NanoKVM Camera ${slot + 1}`
-      })),
-      ...Array.from({ length: microphones }, (_, slot) => ({
-        id: `uac2.mic${slot}`,
-        kind: 'microphone' as const,
-        label: `NanoKVM Microphone ${slot + 1}`
-      }))
-    ];
+  const setSlots = useCallback(async (slots: api.SourceSlot[]) => {
     const response = await api.setSourceSlots(slots);
     if (response.code !== 0) throw new Error(response.msg);
     setSnapshot(response.data as SourcesSnapshot);
@@ -576,7 +564,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     release,
     choose,
     setMuted: setSinkMuted,
-    setCounts,
+    setSlots,
     disconnectAll,
     refresh
   };
