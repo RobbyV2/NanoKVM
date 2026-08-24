@@ -3,6 +3,7 @@ package functionfs
 import (
 	"encoding/binary"
 	"errors"
+	"strings"
 	"testing"
 
 	"NanoKVM-Server/service/presentation"
@@ -48,6 +49,42 @@ func bulkEndpoint(address uint8, packet uint16) []byte {
 	return value
 }
 
+func isoEndpoint(address uint8, packet uint16, mult uint8) []byte {
+	value := []byte{7, 5, address, 0x05, 0, 0, 1}
+	binary.LittleEndian.PutUint16(value[4:6], packet|uint16(mult)<<11)
+	return value
+}
+
+// One vendor interface with a zero-bandwidth alternate 0 and one streaming
+// alternate per endpoint given, numbered 1..N in order, which is the shape a UVC
+// VideoStreaming interface has.
+func streamingFixture(alternates ...[]byte) []byte {
+	device := []byte{18, 1, 0x00, 0x02, 0, 0, 0, 64, 0x34, 0x12, 0x78, 0x56, 0, 1, 0, 0, 0, 1}
+	config := []byte{9, 2, 0, 0, 1, 1, 0, 0x80, 50}
+	config = append(config, []byte{9, 4, 0, 0, 0, 0xff, 0, 0, 0}...)
+	for index, endpoint := range alternates {
+		config = append(config, []byte{9, 4, 0, uint8(index + 1), 1, 0xff, 0, 0, 0}...)
+		config = append(config, endpoint...)
+	}
+	binary.LittleEndian.PutUint16(config[2:4], uint16(len(config)))
+	return append(device, config...)
+}
+
+func blockDescriptors(block []byte, kind uint8) [][]byte {
+	var out [][]byte
+	for offset := 20; offset < len(block); {
+		length := int(block[offset])
+		if block[offset+1] == kind {
+			out = append(out, block[offset:offset+length])
+		}
+		offset += length
+	}
+	return out
+}
+
+func interfaceDescriptors(block []byte) [][]byte { return blockDescriptors(block, 4) }
+func endpointDescriptors(block []byte) [][]byte  { return blockDescriptors(block, 5) }
+
 func TestImportVendorBulk(t *testing.T) {
 	raw := vendorFixture(bulkEndpoint(0x02, 512), bulkEndpoint(0x81, 512))
 	image, err := Import(raw, fixtureFetcher{}, testCapabilities())
@@ -72,7 +109,8 @@ func TestImportRefusesUnsafeLayouts(t *testing.T) {
 		want   error
 	}{
 		"hub":                {func(raw []byte) { raw[32] = 0x09 }, ErrProtected},
-		"isochronous":        {func(raw []byte) { raw[39] = 0x01 }, ErrIsochronous},
+		"isochronous":        {func(raw []byte) { raw[39] = 0x01 }, ErrEndpointSize},
+		"iso feedback":       {func(raw []byte) { raw[39], raw[42] = 0x11, 1 }, ErrUnsupported},
 		"alternate":          {func(raw []byte) { raw[30] = 1 }, ErrAmbiguous},
 		"oversize":           {func(raw []byte) { binary.LittleEndian.PutUint16(raw[40:42], 513) }, ErrEndpointSize},
 		"unknown descriptor": {func(raw []byte) { raw[37] = 0x30 }, ErrUnsupported},
@@ -203,5 +241,89 @@ func TestHybridImportNeverBudgetsFewerEndpointsThanTheLayoutEditorCanBuild(t *te
 			t.Fatalf("a %d interface layout costs %+v but Import budgets only %+v",
 				len(groups), actual, model)
 		}
+	}
+}
+
+func TestImportPresentsAZeroBandwidthAndOneStreamingAlternate(t *testing.T) {
+	raw := streamingFixture(isoEndpoint(0x81, 192, 0), isoEndpoint(0x81, 384, 0), isoEndpoint(0x81, 768, 0), isoEndpoint(0x81, 1024, 0))
+	image, err := Import(raw, fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.Alternates[0] != 3 {
+		t.Fatalf("selected alternate %d, want 3: 1024 is over the 768 byte controller ceiling", image.Alternates[0])
+	}
+	endpoints := image.Function.Endpoints
+	if len(endpoints) != 1 || endpoints[0].Transfer != presentation.EndpointIsochronous ||
+		endpoints[0].MaxPacket != 768 || endpoints[0].Mult != 0 || endpoints[0].Interval != 1 {
+		t.Fatalf("function endpoints = %#v", endpoints)
+	}
+
+	// Two alternates per speed, renumbered 0 and 1, and one endpoint descriptor
+	// per speed: f_fs names an endpoint file after its address, so a second
+	// endpoint descriptor at 0x81 would collide with the first.
+	var settings []uint8
+	for _, iface := range interfaceDescriptors(image.Descriptors) {
+		settings = append(settings, iface[3])
+	}
+	if len(settings) != 4 || settings[0] != 0 || settings[1] != 1 || settings[2] != 0 || settings[3] != 1 {
+		t.Fatalf("presented alternate settings = %v, want [0 1 0 1]", settings)
+	}
+	if got := endpointDescriptors(image.Descriptors); len(got) != 2 {
+		t.Fatalf("presented %d endpoint descriptors, want 2 (one per speed)", len(got))
+	}
+}
+
+func TestImportKeepsHighBandwidthOnlyAtHighSpeed(t *testing.T) {
+	image, err := Import(streamingFixture(isoEndpoint(0x81, 384, 1)), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := image.Function.Endpoints[0]; got.MaxPacket != 384 || got.Mult != 1 {
+		t.Fatalf("function endpoint = %#v, want 384 bytes with one additional transaction", got)
+	}
+	got := endpointDescriptors(image.Descriptors)
+	if len(got) != 2 {
+		t.Fatalf("presented %d endpoint descriptors, want 2", len(got))
+	}
+	if packet := binary.LittleEndian.Uint16(got[0][4:6]); packet != 384 {
+		t.Fatalf("full speed wMaxPacketSize = 0x%04x, want 384 with the mult bits cleared", packet)
+	}
+	if packet := binary.LittleEndian.Uint16(got[1][4:6]); packet != 384|1<<11 {
+		t.Fatalf("high speed wMaxPacketSize = 0x%04x, want 0x%04x", packet, 384|1<<11)
+	}
+}
+
+func TestImportRefusesAlternatesThatOverrunTheController(t *testing.T) {
+	_, err := Import(streamingFixture(isoEndpoint(0x81, 1024, 0), isoEndpoint(0x81, 1024, 2)), fixtureFetcher{}, testCapabilities())
+	if !errors.Is(err, ErrEndpointSize) || !strings.Contains(err.Error(), "interface 0 offers IN packets [1024 3072]") {
+		t.Fatalf("Import() error = %v, want an ErrEndpointSize naming interface 0 and the packet sizes it offered", err)
+	}
+}
+
+func TestImportRefusesAStreamingAlternateZero(t *testing.T) {
+	device := []byte{18, 1, 0x00, 0x02, 0, 0, 0, 64, 0x34, 0x12, 0x78, 0x56, 0, 1, 0, 0, 0, 1}
+	config := []byte{9, 2, 0, 0, 1, 1, 0, 0x80, 50}
+	config = append(config, []byte{9, 4, 0, 0, 1, 0xff, 0, 0, 0}...)
+	config = append(config, isoEndpoint(0x81, 192, 0)...)
+	config = append(config, []byte{9, 4, 0, 1, 1, 0xff, 0, 0, 0}...)
+	config = append(config, isoEndpoint(0x81, 768, 0)...)
+	binary.LittleEndian.PutUint16(config[2:4], uint16(len(config)))
+	_, err := Import(append(device, config...), fixtureFetcher{}, testCapabilities())
+	if !errors.Is(err, ErrAmbiguous) || !strings.Contains(err.Error(), "alternate setting 0 declares 1 endpoints") {
+		t.Fatalf("Import() error = %v, want an ErrAmbiguous naming the non-zero-bandwidth alternate 0", err)
+	}
+}
+
+func TestImportAcceptsAnIsochronousEndpointWithoutAlternates(t *testing.T) {
+	image, err := Import(vendorFixture(isoEndpoint(0x81, 512, 0)), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(image.Alternates) != 0 {
+		t.Fatalf("alternates = %v, want none", image.Alternates)
+	}
+	if got := image.Function.Endpoints[0]; got.Transfer != presentation.EndpointIsochronous {
+		t.Fatalf("function endpoint = %#v", got)
 	}
 }

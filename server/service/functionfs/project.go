@@ -64,9 +64,6 @@ func Project(device, configuration []byte, selected []uint8) ([]byte, error) {
 			if len(data) < 7 || !hasCurrent {
 				return nil, fmt.Errorf("%w: endpoint without interface", ErrMalformed)
 			}
-			if data[3]&3 == 1 && wanted[current] {
-				return nil, fmt.Errorf("%w: endpoint 0x%02x", ErrIsochronous, data[2])
-			}
 		case 11:
 			if len(data) < 8 || data[3] == 0 {
 				return nil, fmt.Errorf("%w: interface association", ErrMalformed)

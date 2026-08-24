@@ -204,7 +204,7 @@ func (m *Manager) startMode(ctx context.Context, exporter string, busID string, 
 		mode = ModeHybrid
 	}
 	if mode == ModeHybrid {
-		return m.startHybrid(ctx, exporter, busID)
+		return m.startHybrid(ctx, exporter, busID, allowIso)
 	}
 	if mode != ModeExact {
 		return nil, fmt.Errorf("%w: mode %q", ErrDescriptors, mode)
@@ -291,7 +291,7 @@ func (m *Manager) startExact(ctx context.Context, exporter string, busID string,
 	return session, nil
 }
 
-func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string) (*Session, error) {
+func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string, allowIso bool) (*Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -306,7 +306,7 @@ func (m *Manager) startHybrid(ctx context.Context, exporter string, busID string
 	if err := m.modules.Load(ModuleUSBIPCore, ModuleVHCI); err != nil {
 		return nil, err
 	}
-	attachment, err := m.vhci.Attach(ctx, exporter, busID, false)
+	attachment, err := m.vhci.Attach(ctx, exporter, busID, allowIso)
 	if err != nil {
 		return nil, err
 	}

@@ -174,8 +174,9 @@ type Function struct {
 type EndpointTransfer string
 
 const (
-	EndpointBulk      EndpointTransfer = "bulk"
-	EndpointInterrupt EndpointTransfer = "interrupt"
+	EndpointBulk        EndpointTransfer = "bulk"
+	EndpointInterrupt   EndpointTransfer = "interrupt"
+	EndpointIsochronous EndpointTransfer = "isochronous"
 )
 
 type FunctionFS struct {
@@ -189,6 +190,7 @@ type FunctionFSEndpoint struct {
 	Transfer      EndpointTransfer `json:"transfer"`
 	MaxPacket     uint16           `json:"max_packet"`
 	Interval      uint8            `json:"interval,omitempty"`
+	Mult          uint8            `json:"mult,omitempty"`
 }
 
 type HIDFunction struct {
@@ -562,6 +564,10 @@ func (e FunctionFSEndpoint) validate() error {
 	case EndpointInterrupt:
 		if e.MaxPacket == 0 || e.MaxPacket > 1024 || e.Interval == 0 || e.Interval > 16 {
 			return fmt.Errorf("interrupt packet %d interval %d", e.MaxPacket, e.Interval)
+		}
+	case EndpointIsochronous:
+		if e.MaxPacket == 0 || e.MaxPacket > 1024 || e.Interval == 0 || e.Interval > 16 || e.Mult > 2 {
+			return fmt.Errorf("isochronous packet %d interval %d mult %d", e.MaxPacket, e.Interval, e.Mult)
 		}
 	default:
 		return fmt.Errorf("transfer %q", e.Transfer)

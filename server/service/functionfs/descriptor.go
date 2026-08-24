@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"unicode/utf16"
@@ -24,7 +25,6 @@ var (
 	ErrMalformed    = errors.New("functionfs: malformed descriptors")
 	ErrUnsupported  = errors.New("functionfs: unsupported device")
 	ErrProtected    = errors.New("functionfs: protected device class")
-	ErrIsochronous  = errors.New("functionfs: isochronous endpoint")
 	ErrAmbiguous    = errors.New("functionfs: ambiguous descriptor layout")
 	ErrEndpointSize = errors.New("functionfs: endpoint transfer is too large")
 )
@@ -42,6 +42,7 @@ type Image struct {
 	HIDDescriptors map[uint8][]byte
 	Interfaces     map[uint8]uint8
 	Endpoints      map[uint8]uint8
+	Alternates     map[uint8]uint8
 	Function       presentation.FunctionFS
 	Descriptors    []byte
 	StringTable    []byte
@@ -51,6 +52,9 @@ type descriptor struct {
 	offset          int
 	data            []byte
 	interfaceNumber uint8
+	alternate       uint8
+	class           uint8
+	subClass        uint8
 	hasInterface    bool
 }
 
@@ -60,7 +64,6 @@ var protectedClasses = map[uint8]string{
 	0x09: "hub",
 	0x0b: "smart card",
 	0x0d: "content security",
-	0x0e: "video",
 	0x10: "audio/video",
 	0xe0: "wireless controller",
 }
@@ -70,6 +73,7 @@ var supportedClasses = map[uint8]bool{
 	0x03: true,
 	0x07: true,
 	0x0a: true,
+	0x0e: true,
 	0xff: true,
 }
 
@@ -93,6 +97,7 @@ func Import(raw []byte, fetcher Fetcher, caps presentation.CapabilityTable) (Ima
 		HIDDescriptors: make(map[uint8][]byte),
 		Interfaces:     make(map[uint8]uint8),
 		Endpoints:      make(map[uint8]uint8),
+		Alternates:     make(map[uint8]uint8),
 	}
 	if err := image.importBOS(fetcher); err != nil {
 		return Image{}, err
@@ -100,14 +105,15 @@ func Import(raw []byte, fetcher Fetcher, caps presentation.CapabilityTable) (Ima
 	if err := image.importStrings(fetcher, descriptors); err != nil {
 		return Image{}, err
 	}
-	if err := image.compile(descriptors, fetcher); err != nil {
+	if err := image.compile(descriptors, fetcher, caps); err != nil {
 		return Image{}, err
 	}
 	if _, err := presentation.AccountEndpoints(hybridFunctions(image.Function), caps); err != nil {
 		return Image{}, err
 	}
-	image.Descriptors = descriptorBlock(image.Configuration, descriptors, image.Interfaces, image.Endpoints, image.Strings)
-	image.StringTable = stringBlock(image.Strings, descriptors)
+	presented := presentedDescriptors(descriptors, image.Alternates)
+	image.Descriptors = descriptorBlock(presented, image.Interfaces, image.Endpoints, image.Strings)
+	image.StringTable = stringBlock(image.Strings, presented)
 	return image, nil
 }
 
@@ -129,6 +135,7 @@ func splitDescriptors(raw []byte) ([]byte, []byte, []descriptor, error) {
 
 	var descriptors []descriptor
 	current := -1
+	var alternate, class, subClass uint8
 	for offset := 9; offset < len(config); {
 		length := int(config[offset])
 		if length < 2 || offset+length > len(config) {
@@ -139,11 +146,12 @@ func splitDescriptors(raw []byte) ([]byte, []byte, []descriptor, error) {
 			if length < 9 {
 				return nil, nil, nil, fmt.Errorf("%w: short interface at %d", ErrMalformed, offset)
 			}
-			current = int(data[2])
+			current, alternate, class, subClass = int(data[2]), data[3], data[5], data[6]
 		}
 		item := descriptor{offset: offset, data: slices.Clone(data)}
 		if current >= 0 {
 			item.interfaceNumber = uint8(current)
+			item.alternate, item.class, item.subClass = alternate, class, subClass
 			item.hasInterface = true
 		}
 		descriptors = append(descriptors, item)
@@ -251,7 +259,121 @@ func decodeUSBString(raw []byte) (string, error) {
 	return value, nil
 }
 
-func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
+type alternateSetting struct {
+	endpoints int
+	widestIn  int
+	widestOut int
+}
+
+// dwc2_hsotg_ep_enable compares maxpacket*mc in bytes against the depth field of
+// DPTXFSIZN in words, so the widest IN packet the controller can ever seat is the
+// deepest dedicated FIFO the capability table reports.
+func isochronousCeiling(caps presentation.CapabilityTable) int {
+	ceiling := 0
+	for _, words := range caps.InFIFOWords {
+		if words > ceiling {
+			ceiling = words
+		}
+	}
+	if ceiling == 0 || ceiling > 3*1024 {
+		ceiling = 3 * 1024
+	}
+	return ceiling
+}
+
+// FunctionFS creates one endpoint file per endpoint descriptor and names it after
+// the address, so two alternate settings that both carry an endpoint collide on the
+// same name. MAX_ALT_SETTINGS is 2 either way. A camera that exposes six streaming
+// alternates is therefore presented as its zero-bandwidth alternate 0 plus the one
+// widest streaming alternate the controller can seat.
+func selectAlternates(descriptors []descriptor, caps presentation.CapabilityTable) (map[uint8]uint8, error) {
+	settings := make(map[uint8]map[uint8]*alternateSetting)
+	for _, item := range descriptors {
+		switch item.data[1] {
+		case 4:
+			byAlt := settings[item.data[2]]
+			if byAlt == nil {
+				byAlt = make(map[uint8]*alternateSetting)
+				settings[item.data[2]] = byAlt
+			}
+			if _, exists := byAlt[item.data[3]]; exists {
+				return nil, fmt.Errorf("%w: interface %d repeats alternate setting %d", ErrAmbiguous, item.data[2], item.data[3])
+			}
+			byAlt[item.data[3]] = &alternateSetting{endpoints: int(item.data[4])}
+		case 5:
+			if !item.hasInterface || len(item.data) < 7 {
+				continue
+			}
+			setting := settings[item.interfaceNumber][item.alternate]
+			if setting == nil {
+				return nil, fmt.Errorf("%w: endpoint precedes an interface", ErrMalformed)
+			}
+			raw := binary.LittleEndian.Uint16(item.data[4:6])
+			size := int(raw&0x07ff) * (int(raw>>11&3) + 1)
+			if item.data[2]&0x80 != 0 {
+				setting.widestIn = max(setting.widestIn, size)
+			} else {
+				setting.widestOut = max(setting.widestOut, size)
+			}
+		}
+	}
+
+	ceiling := isochronousCeiling(caps)
+	chosen := make(map[uint8]uint8)
+	for _, number := range slices.Sorted(maps.Keys(settings)) {
+		byAlt := settings[number]
+		if len(byAlt) == 1 {
+			continue
+		}
+		zero, ok := byAlt[0]
+		if !ok {
+			return nil, fmt.Errorf("%w: interface %d has no alternate setting 0", ErrMalformed, number)
+		}
+		if zero.endpoints != 0 {
+			return nil, fmt.Errorf("%w: interface %d alternate setting 0 declares %d endpoints, Hybrid presents a zero-bandwidth alternate 0 and one streaming alternate", ErrAmbiguous, number, zero.endpoints)
+		}
+		best, widest, found := uint8(0), -1, false
+		var offered []int
+		for _, alt := range slices.Sorted(maps.Keys(byAlt)) {
+			if alt == 0 {
+				continue
+			}
+			setting := byAlt[alt]
+			offered = append(offered, setting.widestIn)
+			if setting.widestIn > ceiling || setting.widestOut > 3*1024 {
+				continue
+			}
+			if setting.widestIn > widest {
+				best, widest, found = alt, setting.widestIn, true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("%w: interface %d offers IN packets %v, none of which fits the %d byte controller ceiling", ErrEndpointSize, number, offered, ceiling)
+		}
+		chosen[number] = best
+	}
+	return chosen, nil
+}
+
+func presentedDescriptors(descriptors []descriptor, alternates map[uint8]uint8) []descriptor {
+	presented := make([]descriptor, 0, len(descriptors))
+	for _, item := range descriptors {
+		if item.hasInterface && item.alternate != 0 && item.alternate != alternates[item.interfaceNumber] {
+			continue
+		}
+		presented = append(presented, item)
+	}
+	return presented
+}
+
+func (image *Image) compile(all []descriptor, fetcher Fetcher, caps presentation.CapabilityTable) error {
+	alternates, err := selectAlternates(all, caps)
+	if err != nil {
+		return err
+	}
+	image.Alternates = alternates
+	descriptors := presentedDescriptors(all, alternates)
+
 	interfaces := make(map[uint8]descriptor)
 	endpointOwner := make(map[uint8]uint8)
 	endpointCount := make(map[uint8]int)
@@ -261,15 +383,23 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 	cdcReferences := make(map[uint8]uint8)
 	cdcOwnerReferences := make(map[uint8]bool)
 	cdcFeatures := make(map[uint8]uint8)
+	declared := make(map[uint8]int)
 	var associations [][2]uint8
 	nextIn, nextOut := uint8(1), uint8(1)
+	ceiling := isochronousCeiling(caps)
 
 	for _, item := range descriptors {
 		data := item.data
 		switch data[1] {
 		case 4:
+			if data[3] == alternates[data[2]] {
+				declared[data[2]] = int(data[4])
+			}
 			if data[3] != 0 {
-				return fmt.Errorf("%w: interface %d has alternate setting %d", ErrAmbiguous, data[2], data[3])
+				if base := interfaces[data[2]]; base.data == nil || !slices.Equal(base.data[5:8], data[5:8]) {
+					return fmt.Errorf("%w: interface %d alternate setting %d changes class 0x%02x/0x%02x/0x%02x", ErrAmbiguous, data[2], data[3], data[5], data[6], data[7])
+				}
+				continue
 			}
 			if _, exists := interfaces[data[2]]; exists {
 				return fmt.Errorf("%w: duplicate interface %d", ErrAmbiguous, data[2])
@@ -295,6 +425,9 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 				}
 				dataInterfaces[data[2]] = true
 			}
+			if data[5] == 0x0e && (data[6] < 1 || data[6] > 2 || data[7] > 1) {
+				return fmt.Errorf("%w: interface %d video subclass %d protocol %d", ErrUnsupported, data[2], data[6], data[7])
+			}
 			interfaces[data[2]] = item
 			image.Interfaces[data[2]] = uint8(len(image.Interfaces))
 		case 5:
@@ -305,28 +438,41 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 				return fmt.Errorf("%w: short endpoint at %d", ErrMalformed, item.offset)
 			}
 			kind := data[3] & 3
-			if kind == 1 {
-				return fmt.Errorf("%w: endpoint 0x%02x", ErrIsochronous, data[2])
-			}
-			if kind != 2 && kind != 3 {
+			if kind != 1 && kind != 2 && kind != 3 {
 				return fmt.Errorf("%w: endpoint 0x%02x type %d", ErrUnsupported, data[2], kind)
 			}
-			class := interfaces[item.interfaceNumber].data[5]
-			if class == 0x03 && kind != 3 || class == 0x07 && kind != 2 || class == 0x02 && kind != 3 || class == 0x0a && kind != 2 {
+			// Usage type 0 is a data endpoint. Feedback and implicit-feedback
+			// endpoints come with a companion the relay has no pairing for.
+			if kind == 1 && data[3]&0x30 != 0 {
+				return fmt.Errorf("%w: isochronous endpoint 0x%02x has usage type %d, only a data endpoint is relayed", ErrUnsupported, data[2], data[3]>>4&3)
+			}
+			class, subClass := interfaces[item.interfaceNumber].data[5], interfaces[item.interfaceNumber].data[6]
+			if class == 0x03 && kind != 3 || class == 0x07 && kind != 2 || class == 0x02 && kind != 3 || class == 0x0a && kind != 2 ||
+				class == 0x0e && subClass == 1 && kind != 3 || class == 0x0e && subClass == 2 && kind == 3 {
 				return fmt.Errorf("%w: interface %d class 0x%02x endpoint type %d", ErrUnsupported, item.interfaceNumber, class, kind)
 			}
 			if _, exists := endpointOwner[data[2]]; exists {
 				return fmt.Errorf("%w: endpoint 0x%02x is reused", ErrAmbiguous, data[2])
 			}
 			rawPacket := binary.LittleEndian.Uint16(data[4:6])
-			if rawPacket&0xf800 != 0 {
-				return fmt.Errorf("%w: endpoint 0x%02x uses high-bandwidth transactions", ErrEndpointSize, data[2])
+			if rawPacket&0xe000 != 0 {
+				return fmt.Errorf("%w: endpoint 0x%02x sets reserved wMaxPacketSize bits 0x%04x", ErrMalformed, data[2], rawPacket)
+			}
+			mult := uint8(rawPacket >> 11 & 3)
+			if mult == 3 {
+				return fmt.Errorf("%w: endpoint 0x%02x asks for 4 transactions per microframe", ErrEndpointSize, data[2])
+			}
+			if mult != 0 && kind != 1 && kind != 3 {
+				return fmt.Errorf("%w: endpoint 0x%02x type %d asks for %d additional transactions per microframe", ErrEndpointSize, data[2], kind, mult)
 			}
 			packet := rawPacket & 0x07ff
-			if packet == 0 || kind == 2 && packet > 512 || kind == 3 && packet > 1024 {
+			if packet == 0 || kind == 2 && packet > 512 || kind == 3 && packet > 1024 || kind == 1 && packet > 1024 {
 				return fmt.Errorf("%w: endpoint 0x%02x packet %d", ErrEndpointSize, data[2], packet)
 			}
-			if kind == 3 && (data[6] == 0 || data[6] > 16) {
+			if kind == 1 && data[2]&0x80 != 0 && int(packet)*(int(mult)+1) > ceiling {
+				return fmt.Errorf("%w: isochronous endpoint 0x%02x asks for %d bytes per microframe, the controller seats at most %d", ErrEndpointSize, data[2], int(packet)*(int(mult)+1), ceiling)
+			}
+			if (kind == 3 || kind == 1) && (data[6] == 0 || data[6] > 16) {
 				return fmt.Errorf("%w: endpoint 0x%02x interval %d", ErrEndpointSize, data[2], data[6])
 			}
 			mapped := nextOut
@@ -345,11 +491,14 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 			}
 			transfer := presentation.EndpointBulk
 			interval := uint8(0)
-			if kind == 3 {
+			switch kind {
+			case 1:
+				transfer, interval = presentation.EndpointIsochronous, data[6]
+			case 3:
 				transfer, interval = presentation.EndpointInterrupt, data[6]
 			}
 			image.Function.Endpoints = append(image.Function.Endpoints, presentation.FunctionFSEndpoint{
-				SourceAddress: data[2], Address: mapped, Transfer: transfer, MaxPacket: packet, Interval: interval,
+				SourceAddress: data[2], Address: mapped, Transfer: transfer, MaxPacket: packet, Interval: interval, Mult: mult,
 			})
 		case 11:
 			if len(data) < 8 || data[3] == 0 {
@@ -380,13 +529,26 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 			image.HIDReports[mapped] = slices.Clone(report)
 			image.HIDDescriptors[mapped] = slices.Clone(data)
 		case 0x24:
-			if !item.hasInterface || interfaces[item.interfaceNumber].data[5] != 0x02 {
+			if !item.hasInterface || interfaces[item.interfaceNumber].data == nil {
+				return fmt.Errorf("%w: class descriptor precedes an interface", ErrAmbiguous)
+			}
+			switch interfaces[item.interfaceNumber].data[5] {
+			case 0x02:
+				if err := validateCDC(data, item.interfaceNumber, cdcReferences, cdcOwnerReferences, cdcFeatures); err != nil {
+					return err
+				}
+			case 0x0e:
+				if err := validateVideoClass(data, item.subClass, item.interfaceNumber); err != nil {
+					return err
+				}
+			default:
 				return fmt.Errorf("%w: CDC descriptor outside ACM interface", ErrAmbiguous)
 			}
-			if err := validateCDC(data, item.interfaceNumber, cdcReferences, cdcOwnerReferences, cdcFeatures); err != nil {
-				return err
+		case 0x25:
+			if !item.hasInterface || interfaces[item.interfaceNumber].data == nil || interfaces[item.interfaceNumber].data[5] != 0x0e || len(data) < 3 {
+				return fmt.Errorf("%w: descriptor type 0x%02x at %d", ErrUnsupported, data[1], item.offset)
 			}
-		case 0x25, 0x30:
+		case 0x30:
 			return fmt.Errorf("%w: descriptor type 0x%02x at %d", ErrUnsupported, data[1], item.offset)
 		default:
 			return fmt.Errorf("%w: descriptor type 0x%02x at %d", ErrUnsupported, data[1], item.offset)
@@ -400,8 +562,8 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 		return fmt.Errorf("%w: %d endpoints", ErrAmbiguous, len(image.Function.Endpoints))
 	}
 	for number, iface := range interfaces {
-		if endpointCount[number] != int(iface.data[4]) {
-			return fmt.Errorf("%w: interface %d declares %d endpoints, has %d", ErrMalformed, number, iface.data[4], endpointCount[number])
+		if endpointCount[number] != declared[number] {
+			return fmt.Errorf("%w: interface %d declares %d endpoints, has %d", ErrMalformed, number, declared[number], endpointCount[number])
 		}
 		switch iface.data[5] {
 		case 0x02:
@@ -426,6 +588,13 @@ func (image *Image) compile(descriptors []descriptor, fetcher Fetcher) error {
 		case 0x0a:
 			if inEndpoints[number] != 1 || outEndpoints[number] != 1 {
 				return fmt.Errorf("%w: CDC data interface %d endpoint layout", ErrAmbiguous, number)
+			}
+		case 0x0e:
+			if iface.data[6] == 1 && (inEndpoints[number] > 1 || outEndpoints[number] != 0) {
+				return fmt.Errorf("%w: video control interface %d endpoint layout", ErrAmbiguous, number)
+			}
+			if iface.data[6] == 2 && inEndpoints[number]+outEndpoints[number] > 1 {
+				return fmt.Errorf("%w: video streaming interface %d endpoint layout", ErrAmbiguous, number)
 			}
 		}
 	}
@@ -509,6 +678,21 @@ func validateCDC(data []byte, owner uint8, references map[uint8]uint8, ownerRefe
 	return nil
 }
 
+func validateVideoClass(data []byte, subClass uint8, number uint8) error {
+	if len(data) < 3 {
+		return fmt.Errorf("%w: short video class descriptor on interface %d", ErrMalformed, number)
+	}
+	if subClass == 1 && data[2] == 0x01 {
+		if len(data) < 12 || len(data) != 12+int(data[11]) {
+			return fmt.Errorf("%w: video control header on interface %d is %d bytes for %d collected interfaces", ErrMalformed, number, len(data), data[11])
+		}
+	}
+	if subClass == 2 && (data[2] == 0x01 || data[2] == 0x02) && len(data) < 7 {
+		return fmt.Errorf("%w: video streaming header on interface %d is %d bytes", ErrMalformed, number, len(data))
+	}
+	return nil
+}
+
 func addCDCReference(owner uint8, target uint8, references map[uint8]uint8, ownerReferences map[uint8]bool) error {
 	if previous, exists := references[target]; exists && previous != owner {
 		return fmt.Errorf("%w: CDC data interface %d has multiple owners", ErrAmbiguous, target)
@@ -535,7 +719,7 @@ func hybridFunctions(function presentation.FunctionFS) []presentation.Function {
 	}
 }
 
-func descriptorBlock(_ []byte, descriptors []descriptor, interfaces map[uint8]uint8, endpoints map[uint8]uint8, strings map[uint8]string) []byte {
+func descriptorBlock(descriptors []descriptor, interfaces map[uint8]uint8, endpoints map[uint8]uint8, strings map[uint8]string) []byte {
 	hs := rewriteDescriptors(descriptors, interfaces, endpoints, stringOrder(strings, descriptors), false)
 	fs := rewriteDescriptors(descriptors, interfaces, endpoints, stringOrder(strings, descriptors), true)
 	count := uint32(len(descriptors))
@@ -558,21 +742,38 @@ func rewriteDescriptors(descriptors []descriptor, interfaces map[uint8]uint8, en
 		switch data[1] {
 		case 4:
 			data[2], data[8] = interfaces[data[2]], strings[data[8]]
+			if data[3] != 0 {
+				data[3] = 1
+			}
 		case 5:
 			data[2] = endpoints[data[2]]
+			// Full speed has no high-bandwidth transactions, so the mult bits go
+			// with the clamp rather than surviving into the FS descriptor.
 			if fullSpeed {
 				packet := binary.LittleEndian.Uint16(data[4:6]) & 0x07ff
 				limit := uint16(64)
-				if data[3]&3 == 3 && limit > packet {
-					limit = packet
+				if data[3]&3 == 1 {
+					limit = 1023
 				}
 				if packet > limit {
-					binary.LittleEndian.PutUint16(data[4:6], limit)
+					packet = limit
 				}
+				binary.LittleEndian.PutUint16(data[4:6], packet)
 			}
 		case 11:
 			data[2], data[7] = interfaces[data[2]], strings[data[7]]
 		case 0x24:
+			if item.class == 0x0e {
+				if item.subClass == 1 && data[2] == 0x01 && len(data) >= 12 {
+					for i := 12; i < len(data); i++ {
+						data[i] = interfaces[data[i]]
+					}
+				}
+				if item.subClass == 2 && (data[2] == 0x01 || data[2] == 0x02) && len(data) >= 7 && data[6] != 0 {
+					data[6] = endpoints[data[6]]
+				}
+				break
+			}
 			switch data[2] {
 			case 0x01:
 				data[4] = interfaces[data[4]]

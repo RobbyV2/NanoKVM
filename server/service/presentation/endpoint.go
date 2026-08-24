@@ -130,7 +130,7 @@ func inPackets(function Function, caps FunctionCaps) []int {
 			packets := make([]int, 0, len(function.FFS.Endpoints))
 			for _, endpoint := range function.FFS.Endpoints {
 				if endpoint.Address&0x80 != 0 {
-					packets = append(packets, int(endpoint.MaxPacket))
+					packets = append(packets, int(endpoint.MaxPacket)*(int(endpoint.Mult)+1))
 				}
 			}
 			return packets

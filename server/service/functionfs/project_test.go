@@ -27,7 +27,7 @@ func TestProjectKeepsOnlyEligibleInterfaces(t *testing.T) {
 	}
 }
 
-func TestProjectRefusesPartialAssociationAndIsochronous(t *testing.T) {
+func TestProjectRefusesPartialAssociation(t *testing.T) {
 	device := []byte{18, 1, 0, 2, 0, 0, 0, 64, 1, 0, 2, 0, 0, 1, 0, 0, 0, 1}
 	config := []byte{9, 2, 0, 0, 2, 1, 0, 0x80, 50}
 	config = append(config, []byte{8, 11, 0, 2, 0xff, 0, 0, 0}...)
@@ -40,7 +40,7 @@ func TestProjectRefusesPartialAssociationAndIsochronous(t *testing.T) {
 	}
 	iso := append([]byte(nil), config...)
 	iso[29] = 1
-	if _, err := Project(device, iso, []uint8{0, 1}); !errors.Is(err, ErrIsochronous) {
+	if _, err := Project(device, iso, []uint8{0, 1}); err != nil {
 		t.Fatalf("isochronous endpoint returned %v", err)
 	}
 }
