@@ -1141,13 +1141,24 @@ func TestKillUdhcpcRemovesThePidfile(t *testing.T) {
 // every command, argument and branch below is the script's own.
 func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 	tests := []struct {
-		name   string
-		gadget bool
+		name string
+
+		// linked is the net function the profile has in configs/c.1 and nic is
+		// the name its ifname attribute reports, which is the pair the script
+		// has to resolve. orphan is a function left in functions/ but not
+		// linked, the thing that pushes the live NIC off usb0 in the first
+		// place; it is here as the interface that must not be enslaved.
+		linked string
+		nic    string
+		orphan string
+
 		want   []string
+		absent []string
 	}{
 		{
 			name:   "gadget NIC present",
-			gadget: true,
+			linked: "ncm.usb0",
+			nic:    "usb0",
 			want: []string{
 				"link add name br0 type bridge stp_state 0 forward_delay 0",
 				"link set dev br0 address " + testMAC,
@@ -1158,16 +1169,34 @@ func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 				"link set dev usb0 up",
 			},
 		},
-		// A profile with no network function leaves no usb0 to enslave, and a
-		// bridge with one port is the legitimate state there rather than a
-		// failed boot.
+		// The device this whole resolution exists for. An rndis.usb0 that was
+		// unlinked from the config but never removed from functions/ still
+		// holds the netdev, so the linked ncm.usb0 came up as usb1. Enslaving
+		// usb0 here puts a NO-CARRIER interface into br0 and the attached host
+		// gets nothing, with a bridge that looks two-ported in the status.
 		{
-			name:   "no gadget NIC",
-			gadget: false,
+			name:   "an orphaned function still holds usb0",
+			linked: "ncm.usb0",
+			nic:    "usb1",
+			orphan: "usb0",
+			want: []string{
+				"link add name br0 type bridge stp_state 0 forward_delay 0",
+				"link set dev eth0 master br0",
+				"link set dev usb1 master br0",
+				"link set dev usb1 up",
+			},
+			absent: []string{"usb0"},
+		},
+		// A profile with no network function leaves no gadget NIC to enslave,
+		// and a bridge with one port is the legitimate state there rather than
+		// a failed boot.
+		{
+			name: "no gadget NIC",
 			want: []string{
 				"link add name br0 type bridge stp_state 0 forward_delay 0",
 				"link set dev eth0 master br0",
 			},
+			absent: []string{"usb"},
 		},
 	}
 
@@ -1175,8 +1204,16 @@ func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
 			writeFile(t, filepath.Join(root, "sys/class/net/eth0/address"), testMAC+"\n")
-			if test.gadget {
-				writeFile(t, filepath.Join(root, "sys/class/net/usb0/address"), "48:da:35:6e:11:22\n")
+			if test.nic != "" {
+				writeFile(t, filepath.Join(root, "sys/class/net", test.nic, "address"),
+					"48:da:35:6e:11:22\n")
+				writeFile(t, filepath.Join(root,
+					"sys/kernel/config/usb_gadget/g0/configs/c.1", test.linked, "ifname"),
+					test.nic+"\n")
+			}
+			if test.orphan != "" {
+				writeFile(t, filepath.Join(root, "sys/class/net", test.orphan, "address"),
+					"48:da:35:6e:11:22\n")
 			}
 			writeFile(t, filepath.Join(root, "etc/kvm/presentation/network/last-known-good.json"),
 				`{"state":"enabled","enabled":true}`)
@@ -1194,6 +1231,8 @@ func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 			}
 			body := strings.ReplaceAll(string(source), "/etc/kvm", filepath.Join(root, "etc/kvm"))
 			body = strings.ReplaceAll(body, "/sys/class/net", filepath.Join(root, "sys/class/net"))
+			body = strings.ReplaceAll(body, "/sys/kernel/config",
+				filepath.Join(root, "sys/kernel/config"))
 			script := filepath.Join(root, "S29bridge")
 			writeFile(t, script, body)
 
@@ -1210,8 +1249,8 @@ func TestBridgeBootScriptEnslavesBothPorts(t *testing.T) {
 			}
 			lines := strings.Split(strings.TrimSpace(string(recorded)), "\n")
 			requireOrder(t, lines, test.want...)
-			if !test.gadget {
-				notInTrace(t, lines, "usb0")
+			for _, name := range test.absent {
+				notInTrace(t, lines, name)
 			}
 
 			// create() returned success, so start never fell through to the

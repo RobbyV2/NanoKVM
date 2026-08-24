@@ -2,7 +2,9 @@
 
 BRIDGE=br0
 PORT=eth0
-GADGET=usb0
+# The gadget NIC's name is runtime state, so it is resolved rather than spelled.
+# See gadget_nic below.
+GADGET_CONFIG=/sys/kernel/config/usb_gadget/g0/configs/c.1
 UPLINK_DIR=/etc/kvm/network
 UPLINK="$UPLINK_DIR/l2-uplink"
 STATE_DIR=/etc/kvm/presentation/network
@@ -16,8 +18,17 @@ LAST_GOOD="$STATE_DIR/last-known-good.json"
 # a lease whose config names no router and no DNS.
 NODHCPD=/boot/rndis.nodhcpd
 
+# Every port is released by reading them out of sysfs rather than by naming
+# them, because the gadget half of the pair is whatever the last profile left
+# behind and this may be running to clean up after a boot that named something
+# else. eth0 is released again afterwards for the case where brif is unreadable:
+# it is the one port whose release matters to the management address.
 teardown() {
-    ip link set dev "$GADGET" nomaster 2>/dev/null
+    for port in "/sys/class/net/$BRIDGE/brif/"*
+    do
+        [ -e "$port" ] || continue
+        ip link set dev "${port##*/}" nomaster 2>/dev/null
+    done
     ip link set dev "$PORT" nomaster 2>/dev/null
     ip link set dev "$BRIDGE" down 2>/dev/null
     ip link del "$BRIDGE" 2>/dev/null
@@ -39,14 +50,40 @@ restore_stock() {
     sync
 }
 
+# The live gadget NIC, or nothing.
+#
+# It is not usb0. gether_setup allocates the netdev name from "usb%d", and
+# unlinking a net function from configs/c.1 does not destroy it: only removing
+# its functions/ directory does, and until then it keeps the name. So a device
+# whose profile switched from RNDIS to NCM has an orphaned rndis.usb0 sitting on
+# usb0 with no carrier while the live ncm.usb0 came up as usb1, and a script
+# that spells usb0 bridges the dead one.
+#
+# The authority is the ifname attribute of whichever net function is linked into
+# the config, which is readable on both ncm.* and rndis.*. Only one is ever
+# linked, so the first hit is the answer.
+gadget_nic() {
+    for fn in "$GADGET_CONFIG"/ncm.* "$GADGET_CONFIG"/rndis.* "$GADGET_CONFIG"/eem.*
+    do
+        [ -r "$fn/ifname" ] || continue
+        read -r name < "$fn/ifname"
+        [ -n "$name" ] || continue
+        echo "$name"
+        return 0
+    done
+    return 0
+}
+
 # The gadget NIC exists only once the gadget is bound with a network function,
 # and a bridge with no gadget port is a legitimate state, so its absence is not
 # a failure. Nor is failing to enslave it: the worst case there is an attached
 # host with no network, where returning non-zero costs the management address.
 enslave_gadget() {
-    [ -e "/sys/class/net/$GADGET" ] || return 0
-    ip link set dev "$GADGET" master "$BRIDGE" || return 0
-    ip link set dev "$GADGET" up || ip link set dev "$GADGET" nomaster
+    gadget=$(gadget_nic)
+    [ -n "$gadget" ] || return 0
+    [ -e "/sys/class/net/$gadget" ] || return 0
+    ip link set dev "$gadget" master "$BRIDGE" || return 0
+    ip link set dev "$gadget" up || ip link set dev "$gadget" nomaster
     return 0
 }
 
