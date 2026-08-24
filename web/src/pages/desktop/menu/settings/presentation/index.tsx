@@ -5,7 +5,6 @@ import {
   CopyIcon,
   DownloadIcon,
   LoaderCircleIcon,
-  SaveIcon,
   Trash2Icon,
   TriangleAlertIcon,
   Undo2Icon,
@@ -158,16 +157,30 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
       const rsp = await api.previewHIDLayout(base, groups);
       if (rsp.code !== 0) throw new Error(rsp.msg);
       const data = rsp.data as { profile: PresentationProfile; preview: PresentationPreview };
-      setProfile(data.profile);
-      setFields(identityFields(data.profile));
-      setLayout(hidAssignment(data.profile));
+      // the layout is a setting, so it is written where it is changed
+      let saved = data.profile;
+      if (!saved.built_in) {
+        const saveRsp = await api.updateProfile(saved);
+        if (saveRsp.code !== 0) throw new Error(saveRsp.msg);
+        saved = saveRsp.data as PresentationProfile;
+      }
+      setProfile(saved);
+      setFields(identityFields(saved));
+      setLayout(hidAssignment(saved));
       setPreview(data.preview);
     });
   }
 
-  async function save() {
-    const next = candidate();
-    if (!next || next.built_in) return;
+  // every field commits itself: an edit that leaves the control is written to
+  // the profile, so nothing here needs a save button
+  async function commit(edited?: IdentityFields) {
+    const source = edited ?? fields;
+    if (!profile || !source) return;
+    if (profile.built_in || !identityChanged(profile, source)) {
+      await inspect();
+      return;
+    }
+    const next = editIdentity(profile, source);
     await act(async () => {
       const rsp = await api.updateProfile(next);
       if (rsp.code !== 0) throw new Error(rsp.msg);
@@ -502,7 +515,10 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                       }))}
                       onChange={(id) => {
                         const picked = presets.find((item) => item.id === id);
-                        if (picked) setFields(applyPreset(fields, picked));
+                        if (!picked) return;
+                        const edited = applyPreset(fields, picked);
+                        setFields(edited);
+                        void commit(edited);
                       }}
                     />
                     <span className="block text-xs text-neutral-500">
@@ -519,6 +535,7 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                       value={fields.vendorId}
                       disabled={readOnly}
                       onChange={(vendorId) => setFields({ ...fields, vendorId })}
+                      onCommit={() => void commit()}
                     />
                     {preview?.device.foreign_vendor && (
                       <div className="flex items-center space-x-1 text-xs text-amber-500">
@@ -532,18 +549,21 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                     value={fields.productId}
                     disabled={readOnly}
                     onChange={(productId) => setFields({ ...fields, productId })}
+                    onCommit={() => void commit()}
                   />
                   <Field
                     label={t('settings.presentation.bcdUSB')}
                     value={fields.bcdUSB}
                     disabled={readOnly}
                     onChange={(bcdUSB) => setFields({ ...fields, bcdUSB })}
+                    onCommit={() => void commit()}
                   />
                   <Field
                     label={t('settings.presentation.bcdDevice')}
                     value={fields.bcdDevice}
                     disabled={readOnly}
                     onChange={(bcdDevice) => setFields({ ...fields, bcdDevice })}
+                    onCommit={() => void commit()}
                   />
                 </div>
                 <Field
@@ -551,24 +571,28 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                   value={fields.manufacturer}
                   disabled={readOnly}
                   onChange={(manufacturer) => setFields({ ...fields, manufacturer })}
+                  onCommit={() => void commit()}
                 />
                 <Field
                   label={t('settings.presentation.product')}
                   value={fields.product}
                   disabled={readOnly}
                   onChange={(product) => setFields({ ...fields, product })}
+                  onCommit={() => void commit()}
                 />
                 <Field
                   label={t('settings.presentation.serial')}
                   value={fields.serial}
                   disabled={readOnly}
                   onChange={(serial) => setFields({ ...fields, serial })}
+                  onCommit={() => void commit()}
                 />
                 <Field
                   label={t('settings.presentation.configuration')}
                   value={fields.configuration}
                   disabled={readOnly}
                   onChange={(configuration) => setFields({ ...fields, configuration })}
+                  onCommit={() => void commit()}
                 />
               </div>
 
@@ -649,15 +673,11 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
               )}
               {error && <Alert type="error" showIcon message={error} />}
 
-              <div className="flex justify-end gap-2">
-                <Button disabled={working} onClick={inspect}>
-                  {t('settings.presentation.preview')}
-                </Button>
-                {!readOnly && (
-                  <Button icon={<SaveIcon size={14} />} disabled={working} onClick={save}>
-                    {t('settings.presentation.save')}
-                  </Button>
-                )}
+              {/* the only button left: applying rebuilds the gadget and
+                  re-enumerates it, which drops the target's keyboard and mouse,
+                  so it keeps its confirmation. It saves as part of the same
+                  action, so nothing can be applied and left unsaved. */}
+              <div className="flex justify-end">
                 <Button type="primary" loading={working} onClick={apply}>
                   {t('settings.presentation.apply')}
                 </Button>
@@ -705,9 +725,10 @@ type FieldProps = {
   value: string;
   disabled: boolean;
   onChange: (value: string) => void;
+  onCommit: () => void;
 };
 
-const Field = ({ label, value, disabled, onChange }: FieldProps) => (
+const Field = ({ label, value, disabled, onChange, onCommit }: FieldProps) => (
   <label className="block space-y-1">
     <span className="text-xs text-neutral-400">{label}</span>
     <Input
@@ -715,6 +736,8 @@ const Field = ({ label, value, disabled, onChange }: FieldProps) => (
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
+      onPressEnter={onCommit}
+      onBlur={onCommit}
     />
   </label>
 );
