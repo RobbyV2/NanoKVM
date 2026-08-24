@@ -27,12 +27,17 @@ func TestManagementPathRejectsTheGadgetAndBridge(t *testing.T) {
 		return []localInterface{
 			{name: "eth0", addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.168.1.8"), Mask: net.CIDRMask(24, 32)}}},
 			{name: "usb0", addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.168.90.1"), Mask: net.CIDRMask(22, 32)}}},
+			// The renamed gadget NIC. An orphaned net function keeps usb0
+			// after a protocol switch, so the live one is usb1 and a check
+			// spelling usb0 lets the request that cuts this very connection
+			// through.
+			{name: "usb1", addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.168.91.1"), Mask: net.CIDRMask(22, 32)}}},
 			{name: "br0", addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("10.0.0.8"), Mask: net.CIDRMask(24, 32)}}},
 		}, nil
 	}
 	t.Cleanup(func() { managementInterfaces = previous })
 
-	for _, ip := range []string{"192.168.90.1", "10.0.0.8"} {
+	for _, ip := range []string{"192.168.90.1", "192.168.91.1", "10.0.0.8"} {
 		if err := validateManagementPath(requestFrom(ip)); !errors.Is(err, ErrGadgetManagement) {
 			t.Fatalf("validate %s = %v, want %v", ip, err, ErrGadgetManagement)
 		}

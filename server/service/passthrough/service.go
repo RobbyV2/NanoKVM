@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"NanoKVM-Server/middleware"
@@ -27,6 +28,12 @@ func NewService() *Service {
 }
 
 var ErrGadgetManagement = errors.New("passthrough: use Ethernet or Wi-Fi before starting; the USB network will disconnect")
+
+// The gadget NIC, matched by shape rather than by name. gether_setup allocates
+// the netdev from "usb%d", so a device whose previous net function was unlinked
+// without being removed holds the live one on usb1, and a check that only knows
+// usb0 waves through the very request that cuts the operator's own connection.
+var gadgetNIC = regexp.MustCompile(`^usb[0-9]+$`)
 
 type localInterface struct {
 	name  string
@@ -82,7 +89,9 @@ func validateManagementPath(req *http.Request) error {
 			if network == nil || !network.Contains(ip) {
 				continue
 			}
-			if iface.name == "usb0" || iface.name == "br0" {
+			// br0 counts because the gadget NIC is one of its ports: an
+			// address on the bridge is reachable over the USB network too.
+			if iface.name == "br0" || gadgetNIC.MatchString(iface.name) {
 				return ErrGadgetManagement
 			}
 			return nil
