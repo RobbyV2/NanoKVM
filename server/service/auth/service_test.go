@@ -334,11 +334,11 @@ func TestLoginRejectsMalformedCiphertextConcurrently(t *testing.T) {
 		group.Add(1)
 		go func(worker int) {
 			defer group.Done()
-			password := payloads[worker%len(payloads)]
+			index := worker % len(payloads)
 			recorder := httptest.NewRecorder()
 			request := jsonRequest(http.MethodPost, "/login", map[string]any{
 				"username": "admin",
-				"password": password,
+				"password": payloads[index],
 			})
 			request.RemoteAddr = fmt.Sprintf("10.0.0.%d:4000", worker%3)
 			router.ServeHTTP(recorder, request)
@@ -349,6 +349,16 @@ func TestLoginRejectsMalformedCiphertextConcurrently(t *testing.T) {
 			var response proto.Response
 			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 				t.Errorf("worker %d: decode response %q: %v", worker, recorder.Body.String(), err)
+				return
+			}
+			// Index 0 is the real password. Rejecting it because a malformed
+			// ciphertext was decrypted alongside it is the other half of the
+			// bug, and a status check alone cannot see it.
+			if index == 0 && response.Code != 0 {
+				t.Errorf("worker %d: correct password rejected: code = %d, msg = %q", worker, response.Code, response.Msg)
+			}
+			if index != 0 && response.Code == 0 {
+				t.Errorf("worker %d: payload %d was accepted as a login", worker, index)
 			}
 		}(worker)
 	}
