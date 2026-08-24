@@ -641,3 +641,133 @@ func TestSlotsCarryTheNameTheHostWillRead(t *testing.T) {
 		t.Fatalf("microphone host name = %q, want empty where the kernel cannot carry one", registry.slots[1].HostName)
 	}
 }
+
+// The gadget the operator actually runs: three HID functions, a NIC and the
+// virtual disk, plus one camera. f_uvc deactivates the whole composite device
+// on bind, so this profile is the one that proves adding a camera does not cost
+// the keyboard, the network and the disk.
+func compositeProfile() presentation.Profile {
+	return presentation.Profile{Functions: []presentation.Function{
+		{Kind: presentation.FunctionHID, Instance: "GS0"},
+		{Kind: presentation.FunctionHID, Instance: "GS1"},
+		{Kind: presentation.FunctionHID, Instance: "GS2"},
+		{Kind: presentation.FunctionNCM, Instance: "usb0"},
+		{Kind: presentation.FunctionMassStorage, Instance: "disk0"},
+		cameraFunction("cam0"),
+	}}
+}
+
+func TestCameraNodeIsHeldOnceForTheLifetimeOfTheFunction(t *testing.T) {
+	registry := &fakeRegistry{}
+	factory := &fakeFactory{}
+	holds := newFakeHolds()
+	manager := newManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory, holds.open)
+	if err := manager.Reconcile(context.Background(), compositeProfile(), presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 0 {
+		t.Fatalf("after apply the node was opened %d times and closed %d, want 1 and 0", opens, closes)
+	}
+	if fd := factory.spec("uvc.cam0").FD; fd == 0 {
+		t.Fatal("the camera output was opened without the held descriptor, so it opened the node itself")
+	}
+	// usb_function_activate refuses to decrement cdev->deactivations past zero
+	// while uvc_v4l2_release always increments it, so a second open of a node
+	// that is already held leaks a deactivation no later open can pay back.
+	if err := manager.Reconcile(context.Background(), compositeProfile(), presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 0 {
+		t.Fatalf("reapplying the same profile opened the node %d times and closed it %d, want 1 and 0", opens, closes)
+	}
+	manager.Suspend()
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 1 {
+		t.Fatalf("after suspend the node was opened %d times and closed %d, want 1 and 1", opens, closes)
+	}
+}
+
+type listResolver struct {
+	mu    sync.Mutex
+	nodes []string
+	video map[string]string
+	err   error
+}
+
+func (r *listResolver) ResolveVideo(id string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return "", r.err
+	}
+	return r.video[id], nil
+}
+
+func (r *listResolver) ResolveAudio(string) (string, error) { return "", ErrNodeNotFound }
+
+func (r *listResolver) GadgetVideoNodes() ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.nodes...), nil
+}
+
+func (r *listResolver) set(nodes ...string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.nodes = nodes
+}
+
+func TestUnresolvableCameraStillHoldsItsNode(t *testing.T) {
+	registry := &fakeRegistry{}
+	holds := newFakeHolds()
+	resolver := &listResolver{nodes: []string{"/dev/video0", "/dev/video1"}, err: ErrNodeIdentityAmbiguous}
+	manager := newManagerWith(registry, resolver, &fakeFactory{}, holds.open)
+	defer manager.Suspend()
+	err := manager.Reconcile(context.Background(), presentation.Profile{
+		Functions: []presentation.Function{cameraFunction("cam0"), cameraFunction("cam1")},
+	}, presentation.Plan{})
+	if !errors.Is(err, ErrNodeIdentityAmbiguous) {
+		t.Fatalf("err = %v, want the ambiguous identity reported", err)
+	}
+	for _, node := range []string{"/dev/video0", "/dev/video1"} {
+		if opens, closes := holds.count(node); opens != 1 || closes != 0 {
+			t.Fatalf("%s was opened %d times and closed %d, want 1 and 0: an unheld node keeps the whole gadget deactivated", node, opens, closes)
+		}
+	}
+}
+
+func TestNodesAreReleasedWhenTheirFunctionIsUnlinked(t *testing.T) {
+	registry := &fakeRegistry{}
+	holds := newFakeHolds()
+	resolver := &listResolver{nodes: []string{"/dev/video0"}, video: map[string]string{"uvc.cam0": "/dev/video0"}}
+	manager := newManagerWith(registry, resolver, &fakeFactory{}, holds.open)
+	if err := manager.Reconcile(context.Background(), compositeProfile(), presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 0 {
+		t.Fatalf("node opened %d times and closed %d, want 1 and 0", opens, closes)
+	}
+	resolver.set()
+	if err := manager.Reconcile(context.Background(), presentation.Profile{}, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 1 {
+		t.Fatalf("after the camera was dropped the node was opened %d times and closed %d, want 1 and 1: configfs refuses to unlink a function whose node is still open", opens, closes)
+	}
+}
+
+func TestAHoldThatNeverReturnsFailsInsteadOfHanging(t *testing.T) {
+	registry := &fakeRegistry{}
+	holds := newFakeHolds()
+	holds.block = make(chan struct{})
+	defer close(holds.block)
+	manager := newManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, &fakeFactory{}, holds.open)
+	manager.holds.settle = 50 * time.Millisecond
+	started := time.Now()
+	err := manager.Reconcile(context.Background(), compositeProfile(), presentation.Plan{})
+	if err == nil {
+		t.Fatal("a node that never opens must be reported, not waited on")
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("reconcile blocked for %s on a node that never opens", elapsed)
+	}
+}
