@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +18,18 @@ import (
 const (
 	BridgeName  = "br0"
 	StockUplink = "eth0"
-	GadgetName  = "usb0"
+
+	// The name the gadget NIC has on a device where nothing else is holding it,
+	// and nothing more than that. It is a default for a script that has no other
+	// answer, never the authority for the live name.
+	//
+	// gether_setup names the netdev with "usb%d". Applying a profile unlinks the
+	// outgoing net function from configs/c.1, but unlinking does not destroy an
+	// f_ncm or f_rndis: only rmdir does, and gether_setup holds the netdev until
+	// then. An orphaned function therefore keeps usb0 and the live one comes up
+	// as usb1. presentation.Manager.NIC reads the linked function's configfs
+	// ifname and is the only authority for which name is live.
+	StockGadgetName = "usb0"
 
 	// wlan0 is the out-of-band recovery path and is never enslaved.
 	RecoveryName = "wlan0"
@@ -51,9 +63,12 @@ const (
 	// names no router and no DNS.
 	RNDISNoDHCPDPath = "/boot/rndis.nodhcpd"
 
-	// S30rndis generates one of these per interface, and it is what identifies
-	// that udhcpd in the process table.
-	UdhcpdGadgetConf = "/etc/udhcpd." + GadgetName + ".conf"
+	// S30rndis generates one of these per interface and names it in the argv of
+	// the udhcpd it starts, which is the only handle this package has on that
+	// process. The name is derived from the interface rather than fixed: a
+	// device whose NIC came up as usb1 has /etc/udhcpd.usb1.conf, and a match
+	// that only knows usb0 leaves a DHCP server running on the bridged segment.
+	UdhcpdConfDir = "/etc"
 )
 
 const (
@@ -87,7 +102,7 @@ var (
 	sysClassNet   = SysClassNetDir
 
 	rndisNoDHCPDPath = RNDISNoDHCPDPath
-	udhcpdGadgetConf = UdhcpdGadgetConf
+	udhcpdConfDir    = UdhcpdConfDir
 	procDir          = "/proc"
 )
 
@@ -99,13 +114,26 @@ var (
 	ErrNoSnapshot        = errors.New("bridge: snapshot not found")
 )
 
-// The closed set of interfaces ever passed to "ip link set <dev> master br0".
-// wlan0 is absent by construction, so the rule is enforced by the data rather
-// than by a check every call site has to remember.
+// The fixed half of the set of interfaces ever passed to
+// "ip link set <dev> master br0". eth0 can stay data because WriteUplink
+// refuses to name anything but br0 or eth0, so the uplink is never something
+// else.
 var enslavable = map[string]bool{
 	StockUplink: true,
-	GadgetName:  true,
 }
+
+// The moving half. The gadget NIC used to be the constant usb0 and sat in the
+// map beside eth0; it cannot, now that an orphaned net function can push the
+// live one to usb1. What survives of "a closed set enforced by data" is the
+// shape: gether_setup allocates the netdev name from "usb%d" and nothing else
+// on this device is called usbN, so wlan0 is still absent by construction and
+// so is every other interface an operator might be reached over.
+//
+// The shape is the floor, not the whole rule. The only caller that can put a
+// usbN through it is enslaveGadget, which enslaves what presentation.Manager
+// named as the live NIC a moment earlier and nothing else, so in practice the
+// set is eth0 plus exactly that name.
+var gadgetNIC = regexp.MustCompile(`^usb[0-9]+$`)
 
 // IFNAMSIZ is 16 including the NUL. Names read back out of a snapshot pass
 // through this before they can reach an argv.
@@ -117,10 +145,37 @@ func checkEnslavable(name string) error {
 	if name == RecoveryName {
 		return ErrRecoveryInterface
 	}
-	if !enslavable[name] {
+	if !enslavable[name] && !gadgetNIC.MatchString(name) {
 		return fmt.Errorf("%w: %q", ErrNotEnslavable, name)
 	}
 	return nil
+}
+
+// The config S30rndis writes for a gadget NIC, and the string that identifies
+// its udhcpd in the process table.
+func udhcpdGadgetConf(nic string) string {
+	return filepath.Join(udhcpdConfDir, "udhcpd."+nic+".conf")
+}
+
+// Whether an argv names any gadget NIC's udhcpd config. The whole usbN family
+// is matched rather than one name: a protocol switch renames the NIC without
+// stopping the udhcpd the previous boot started, so the process still to kill
+// before enslaving usb1 is very often the one holding /etc/udhcpd.usb0.conf.
+func namesGadgetDHCPDConf(args []string) bool {
+	for _, arg := range args {
+		dir, file := filepath.Split(arg)
+		if filepath.Clean(dir) != filepath.Clean(udhcpdConfDir) {
+			continue
+		}
+		name, ok := strings.CutPrefix(file, "udhcpd.")
+		if !ok {
+			continue
+		}
+		if name, ok = strings.CutSuffix(name, ".conf"); ok && gadgetNIC.MatchString(name) {
+			return true
+		}
+	}
+	return false
 }
 
 func safeDevice(name string) bool {

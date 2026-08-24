@@ -32,8 +32,15 @@ const (
 // names the active one and offers no control that would duplicate the one under
 // Settings, Device.
 //
-// OnRebind is the durability half. usb0 does not survive a presentation apply,
-// so the bridge hands the presentation manager the callback that puts it back.
+// OnRebind is the durability half. The gadget NIC does not survive a
+// presentation apply, so the bridge hands the presentation manager the callback
+// that puts it back.
+//
+// NIC returns the live name and not a constant. gether_setup allocates the
+// netdev from "usb%d", and a net function that was unlinked from configs/c.1
+// but never removed from functions/ holds usb0 until it is, so the live NIC is
+// usb1 on any device that has been through such an apply. Nothing here may
+// spell the name itself.
 type Gadget interface {
 	NIC(ctx context.Context) (string, error)
 	NetworkProtocol(ctx context.Context) (string, error)
@@ -109,8 +116,8 @@ func (m *Manager) begin(ctx context.Context, operation string) (*Snapshot, *dead
 }
 
 // Steps 1 through 12 hold the management address and are all inside the armed
-// window. Step 13 runs after the disarm: enslaving usb0 is reversible and never
-// touches the address the caller is talking to.
+// window. Step 13 runs after the disarm: enslaving the gadget NIC is reversible
+// and never touches the address the caller is talking to.
 func (m *Manager) Enable(ctx context.Context) (proto.SetBridgeRsp, error) {
 	if err := m.lock(); err != nil {
 		return proto.SetBridgeRsp{State: proto.BridgePending, Message: err.Error()}, err
@@ -211,10 +218,10 @@ func (m *Manager) Enable(ctx context.Context) (proto.SetBridgeRsp, error) {
 		return rsp, err
 	}
 
-	// Step 13. Enslave usb0, outside the armed window. Its worst case is an
-	// attached host with no network, not a device with no management plane, so
-	// a failure here is logged and reported rather than rolled back onto the
-	// address the caller is using.
+	// Step 13. Enslave the gadget NIC, outside the armed window. Its worst case
+	// is an attached host with no network, not a device with no management
+	// plane, so a failure here is logged and reported rather than rolled back
+	// onto the address the caller is using.
 	if err := m.enslaveGadget(ctx); err != nil {
 		rsp.Message = fmt.Sprintf("bridge enabled; gadget NIC not enslaved: %s", err)
 	}
@@ -236,10 +243,16 @@ func (m *Manager) Disable(ctx context.Context) (proto.SetBridgeRsp, error) {
 	}
 	armedAt := m.now()
 
-	// Step 3. Release usb0 first, leaving the gadget function itself as the
-	// profile has it: an unbridged usb0 is the stock state.
-	if _, enslaved := snapshot.Master(GadgetName); enslaved {
-		if err := m.ip.SetNoMaster(ctx, GadgetName); err != nil {
+	// Step 3. Release the gadget port first, leaving the gadget function itself
+	// as the profile has it: an unbridged gadget NIC is the stock state.
+	//
+	// The capture names the port rather than a constant. Step 1 ran a moment
+	// ago against this device, so whatever it recorded as a usbN port of br0 is
+	// what is actually enslaved, whether the profile in force calls it usb0 or
+	// usb1. Asking the presentation manager instead would name only the NIC
+	// that is live now and miss a port left behind under an older name.
+	for _, dev := range snapshot.GadgetPorts() {
+		if err := m.ip.SetNoMaster(ctx, dev); err != nil {
 			return m.rollback(ctx, dm, snapshot, proto.BridgeChecks{}, err.Error())
 		}
 	}
@@ -615,8 +628,10 @@ func (m *Manager) releaseGadgetAddressing(ctx context.Context) {
 
 // Registered with the presentation manager, which calls it after every apply.
 // An apply unbinds the UDC and binds it again, and the kernel destroys and
-// recreates usb0 with no memory of br0, so without this a two-port transparent
-// bridge silently becomes one-ported until the next enable.
+// recreates the gadget NIC with no memory of br0, so without this a two-port
+// transparent bridge silently becomes one-ported until the next enable. The
+// name can differ from the one enable enslaved, which is the other reason the
+// manager is asked again rather than the old name being reused.
 //
 // br0's existence is read live rather than from last-known-good, because the
 // membership only makes sense against a bridge that is actually there, and it

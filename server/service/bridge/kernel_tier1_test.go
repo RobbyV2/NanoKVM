@@ -21,6 +21,14 @@ const (
 	uplinkCIDR  = "10.9.9.2/24"
 	gatewayAddr = "10.9.9.1"
 	peerNS      = "kernelint-peer"
+
+	// Not usb0. gether_setup allocates the gadget netdev from "usb%d", so a
+	// device whose previous net function was unlinked without being removed
+	// brings the live one up as usb1, and that is the case the whole gadget half
+	// of this package exists to follow. Driving the real kernel under the renamed
+	// name is what proves "ip link set dev usb1 master br0" is reachable rather
+	// than refused by a stale closed set.
+	gadgetDev = "usb1"
 )
 
 type netFixture struct {
@@ -70,9 +78,9 @@ func newNetFixture(t *testing.T) *netFixture {
 	ip(t, "netns", "add", peerNS)
 	t.Cleanup(func() { _ = exec.Command("ip", "netns", "del", peerNS).Run() })
 	ip(t, "link", "add", StockUplink, "type", "veth", "peer", "name", "wan0")
-	ip(t, "link", "add", GadgetName, "type", "veth", "peer", "name", "host0")
+	ip(t, "link", "add", gadgetDev, "type", "veth", "peer", "name", "host0")
 	t.Cleanup(func() {
-		for _, dev := range []string{BridgeName, StockUplink, GadgetName} {
+		for _, dev := range []string{BridgeName, StockUplink, gadgetDev} {
 			_ = exec.Command("ip", "link", "del", dev).Run()
 		}
 	})
@@ -80,7 +88,7 @@ func newNetFixture(t *testing.T) *netFixture {
 	ip(t, "netns", "exec", peerNS, "ip", "addr", "add", gatewayAddr+"/24", "dev", "wan0")
 	ip(t, "netns", "exec", peerNS, "ip", "link", "set", "wan0", "up")
 	ip(t, "addr", "add", uplinkCIDR, "dev", StockUplink)
-	for _, dev := range []string{StockUplink, GadgetName, "host0"} {
+	for _, dev := range []string{StockUplink, gadgetDev, "host0"} {
 		ip(t, "link", "set", dev, "up")
 	}
 	ip(t, "route", "add", "default", "via", gatewayAddr, "dev", StockUplink)
@@ -256,32 +264,32 @@ func TestKernelTier1BridgeRollbackReleasesTheRealPort(t *testing.T) {
 func TestKernelTier1BridgeReattachesTheGadgetPort(t *testing.T) {
 	kernelint.RequireTier1(t)
 	fixture := newNetFixture(t)
-	fixture.gadget = staticGadget(GadgetName)
+	fixture.gadget = staticGadget(gadgetDev)
 	manager := fixture.manager()
 	ctx := context.Background()
 
 	if rsp, err := manager.Enable(ctx); err != nil {
 		t.Fatalf("enable: %v (%s)", err, rsp.Message)
 	}
-	if master := links(t)[GadgetName].Master; master != BridgeName {
-		t.Fatalf("%s master = %q after enable", GadgetName, master)
+	if master := links(t)[gadgetDev].Master; master != BridgeName {
+		t.Fatalf("%s master = %q after enable", gadgetDev, master)
 	}
 
-	ip(t, "link", "set", GadgetName, "nomaster")
-	if master := links(t)[GadgetName].Master; master != "" {
-		t.Fatalf("%s is still enslaved to %q", GadgetName, master)
+	ip(t, "link", "set", gadgetDev, "nomaster")
+	if master := links(t)[gadgetDev].Master; master != "" {
+		t.Fatalf("%s is still enslaved to %q", gadgetDev, master)
 	}
 
 	manager.ReattachGadget(ctx)
-	if master := links(t)[GadgetName].Master; master != BridgeName {
-		t.Fatalf("%s master = %q after ReattachGadget", GadgetName, master)
+	if master := links(t)[gadgetDev].Master; master != BridgeName {
+		t.Fatalf("%s master = %q after ReattachGadget", gadgetDev, master)
 	}
 
 	if rsp, err := manager.Disable(ctx); err != nil {
 		t.Fatalf("disable: %v (%s)", err, rsp.Message)
 	}
-	if master := links(t)[GadgetName].Master; master != "" {
-		t.Fatalf("%s master = %q after disable", GadgetName, master)
+	if master := links(t)[gadgetDev].Master; master != "" {
+		t.Fatalf("%s master = %q after disable", gadgetDev, master)
 	}
 }
 

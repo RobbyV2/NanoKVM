@@ -386,6 +386,9 @@ func newHarness(t *testing.T, gadget ...Gadget) *harness {
 	swap(t, &udhcpcPidPath, filepath.Join(root, "run/udhcpc.eth0.pid"))
 	swap(t, &noDHCPPath, filepath.Join(root, "boot/eth.nodhcp"))
 	swap(t, &sysClassNet, filepath.Join(root, "sys/class/net"))
+	swap(t, &rndisNoDHCPDPath, filepath.Join(root, "boot/rndis.nodhcpd"))
+	swap(t, &udhcpdConfDir, filepath.Join(root, "etc"))
+	swap(t, &procDir, filepath.Join(root, "proc"))
 
 	writeFile(t, filepath.Join(root, "sys/class/net/eth0/address"), testMAC+"\n")
 	writeFile(t, filepath.Join(root, "etc/resolv.conf"), "nameserver 192.168.1.1\n")
@@ -466,11 +469,25 @@ func TestWlan0IsNeverEnslaved(t *testing.T) {
 		if enslavable[RecoveryName] {
 			t.Fatal("wlan0 is in the enslavable set")
 		}
-		if !enslavable[StockUplink] || !enslavable[GadgetName] {
-			t.Fatal("the enslavable set must contain exactly eth0 and usb0")
+		if !enslavable[StockUplink] || len(enslavable) != 1 {
+			t.Fatalf("the fixed enslavable set is %v, want exactly eth0", enslavable)
 		}
-		if len(enslavable) != 2 {
-			t.Fatalf("enslavable set has %d entries, want exactly eth0 and usb0", len(enslavable))
+
+		// The moving half. The gadget NIC left the map when it stopped being a
+		// constant, and what replaces it has to stay narrow enough that no
+		// interface an operator could be reached over matches it.
+		if gadgetNIC.MatchString(RecoveryName) {
+			t.Fatal("wlan0 matches the gadget NIC shape")
+		}
+		for _, name := range []string{"usb0", "usb1", "usb12"} {
+			if !gadgetNIC.MatchString(name) {
+				t.Fatalf("%q is not recognised as a gadget NIC", name)
+			}
+		}
+		for _, name := range []string{"eth1", "wlan1", "br0", "usb", "usbx", "usb0.1", "lo"} {
+			if gadgetNIC.MatchString(name) {
+				t.Fatalf("%q matches the gadget NIC shape and must not", name)
+			}
 		}
 	})
 
@@ -498,7 +515,7 @@ func TestWlan0IsNeverEnslaved(t *testing.T) {
 		net := newFakeNet()
 		ip := NewIPTool(net)
 
-		for _, name := range []string{"br0", "lo", "eth1", "wlan1", "", "eth0 wlan0"} {
+		for _, name := range []string{"br0", "lo", "eth1", "wlan1", "", "eth0 wlan0", "usb", "usbx"} {
 			if err := ip.SetMaster(context.Background(), name, BridgeName); err == nil {
 				t.Fatalf("SetMaster(%q) was allowed", name)
 			}

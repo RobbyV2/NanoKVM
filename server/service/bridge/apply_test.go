@@ -77,7 +77,7 @@ func requireOrder(t *testing.T, trace []string, steps ...string) {
 //   - step 13 runs after the disarm.
 func TestEnableStepOrder(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = &fakeGadget{nic: GadgetName}
+	h.mgr.gadget = &fakeGadget{nic: StockGadgetName}
 
 	var killed []int
 	swap(t, &killProcess, func(pid int) error {
@@ -168,7 +168,7 @@ func TestEnableStepOrder(t *testing.T) {
 // black hole for the attached host's frames.
 func TestGadgetIsReleasedIfItCannotBeBroughtUp(t *testing.T) {
 	h := newHarness(t)
-	h.mgr.gadget = &fakeGadget{nic: GadgetName}
+	h.mgr.gadget = &fakeGadget{nic: StockGadgetName}
 	h.net.failOn("link set dev usb0 up", errors.New("RTNETLINK answers: No such device"))
 
 	rsp, err := h.mgr.Enable(context.Background())
@@ -183,7 +183,7 @@ func TestGadgetIsReleasedIfItCannotBeBroughtUp(t *testing.T) {
 	if !strings.Contains(rsp.Message, "gadget NIC not enslaved") {
 		t.Errorf("message %q does not report the gadget failure", rsp.Message)
 	}
-	if master := h.net.links[GadgetName].Master; master != "" {
+	if master := h.net.links[StockGadgetName].Master; master != "" {
 		t.Fatalf("usb0 is enslaved to %q but was never brought up", master)
 	}
 }
@@ -209,7 +209,7 @@ func TestEnableWithNoGadgetNIC(t *testing.T) {
 // without the rebind hook a two-port transparent bridge silently drops to one
 // port on the first profile change after it was enabled, and stays there.
 func TestAPresentationApplyReEnslavesTheGadget(t *testing.T) {
-	gadget := &fakeGadget{nic: GadgetName}
+	gadget := &fakeGadget{nic: StockGadgetName}
 	h := newHarness(t, gadget)
 
 	if _, err := h.mgr.Enable(context.Background()); err != nil {
@@ -220,15 +220,15 @@ func TestAPresentationApplyReEnslavesTheGadget(t *testing.T) {
 	}
 
 	// What an apply leaves behind: a fresh interface, no master, down.
-	h.net.links[GadgetName].Master = ""
-	h.net.links[GadgetName].Flags = nil
+	h.net.links[StockGadgetName].Master = ""
+	h.net.links[StockGadgetName].Flags = nil
 
 	gadget.rebound(context.Background())
 
-	if master := h.net.links[GadgetName].Master; master != BridgeName {
+	if master := h.net.links[StockGadgetName].Master; master != BridgeName {
 		t.Fatalf("usb0 master = %q after a presentation apply, want br0", master)
 	}
-	if !h.net.links[GadgetName].Up() {
+	if !h.net.links[StockGadgetName].Up() {
 		t.Fatal("usb0 is enslaved but down, which is a black hole for the host's frames")
 	}
 
@@ -251,7 +251,7 @@ func TestAPresentationApplyReEnslavesTheGadget(t *testing.T) {
 // Firing twice is what a second apply does, and the second one must be as
 // harmless as the first.
 func TestReattachingTheGadgetIsIdempotent(t *testing.T) {
-	gadget := &fakeGadget{nic: GadgetName}
+	gadget := &fakeGadget{nic: StockGadgetName}
 	h := newHarness(t, gadget)
 
 	if _, err := h.mgr.Enable(context.Background()); err != nil {
@@ -260,7 +260,7 @@ func TestReattachingTheGadgetIsIdempotent(t *testing.T) {
 	h.mgr.ReattachGadget(context.Background())
 	h.mgr.ReattachGadget(context.Background())
 
-	if master := h.net.links[GadgetName].Master; master != BridgeName {
+	if master := h.net.links[StockGadgetName].Master; master != BridgeName {
 		t.Fatalf("usb0 master = %q, want br0", master)
 	}
 }
@@ -270,7 +270,7 @@ func TestReattachingTheGadgetIsIdempotent(t *testing.T) {
 // exist. Nor must a profile with no network function turn into an enslavement.
 func TestReattachingTheGadgetWithoutABridgeDoesNothing(t *testing.T) {
 	t.Run("no br0", func(t *testing.T) {
-		gadget := &fakeGadget{nic: GadgetName}
+		gadget := &fakeGadget{nic: StockGadgetName}
 		h := newHarness(t, gadget)
 
 		h.mgr.ReattachGadget(context.Background())
@@ -286,6 +286,118 @@ func TestReattachingTheGadgetWithoutABridgeDoesNothing(t *testing.T) {
 		}
 		h.mgr.ReattachGadget(context.Background())
 		notInTrace(t, h.net.trace(), "usb0")
+	})
+}
+
+// The gadget NIC is not always usb0, and nothing on this side may assume it is.
+//
+// Applying a profile unlinks the outgoing net function from configs/c.1, but
+// unlinking does not destroy an f_ncm or f_rndis: only rmdir does, and
+// gether_setup holds the netdev until then. So an orphaned rndis.usb0 keeps the
+// name usb0 with NO-CARRIER, and the kernel's "usb%d" allocation hands the new
+// ncm.usb0 the next free name, usb1. The presentation manager reads the linked
+// function's configfs ifname and reports usb1; a bridge that enslaves the
+// literal usb0 puts a dead interface into br0 and the attached host's frames go
+// nowhere, with nothing in the status output to say so.
+func TestGadgetPortFollowsTheRenamedNIC(t *testing.T) {
+	// The device this exists for: an orphan still holding usb0 and the live
+	// function up as usb1.
+	orphaned := func(t *testing.T) *harness {
+		t.Helper()
+
+		h := newHarness(t, &fakeGadget{nic: "usb1", protocol: "ncm"})
+		h.net.links["usb0"].Flags = nil
+		h.net.links["usb1"] = &Link{
+			Index: 5, Name: "usb1", Flags: []string{"UP"}, Address: "48:da:35:6e:11:22",
+		}
+		return h
+	}
+
+	t.Run("step 13 enslaves the live NIC and not the orphan", func(t *testing.T) {
+		h := orphaned(t)
+
+		rsp, err := h.mgr.Enable(context.Background())
+		if err != nil {
+			t.Fatalf("Enable: %v", err)
+		}
+		if master := h.net.links["usb1"].Master; master != BridgeName {
+			t.Fatalf("usb1 master = %q, want br0 (%s)", master, rsp.Message)
+		}
+		if !h.net.links["usb1"].Up() {
+			t.Fatal("usb1 is enslaved but down, a black hole for the host's frames")
+		}
+		if master := h.net.links["usb0"].Master; master != "" {
+			t.Fatalf("the orphaned usb0 was enslaved to %q", master)
+		}
+	})
+
+	t.Run("a rebind re-enslaves the live NIC", func(t *testing.T) {
+		gadget := &fakeGadget{nic: "usb1", protocol: "ncm"}
+		h := newHarness(t, gadget)
+		h.net.links["usb0"].Flags = nil
+		h.net.links["usb1"] = &Link{
+			Index: 5, Name: "usb1", Flags: []string{"UP"}, Address: "48:da:35:6e:11:22",
+		}
+
+		if _, err := h.mgr.Enable(context.Background()); err != nil {
+			t.Fatalf("Enable: %v", err)
+		}
+		h.net.links["usb1"].Master = ""
+		h.net.links["usb1"].Flags = nil
+
+		if gadget.rebound == nil {
+			t.Fatal("the bridge registered no rebind hook")
+		}
+		gadget.rebound(context.Background())
+
+		if master := h.net.links["usb1"].Master; master != BridgeName {
+			t.Fatalf("usb1 master = %q after a presentation apply, want br0", master)
+		}
+	})
+
+	// The release half. A disable that only ever names usb0 leaves the real
+	// port enslaved to a bridge it is about to delete.
+	t.Run("disable releases the gadget port the capture names", func(t *testing.T) {
+		h := orphaned(t)
+
+		if _, err := h.mgr.Enable(context.Background()); err != nil {
+			t.Fatalf("Enable: %v", err)
+		}
+		// Set directly, so this subtest fails for the release half rather than
+		// inheriting the enslave half's outcome.
+		h.net.links["usb1"].Master = BridgeName
+
+		if _, err := h.mgr.Disable(context.Background()); err != nil {
+			t.Fatalf("Disable: %v", err)
+		}
+		if master := h.net.links["usb1"].Master; master != "" {
+			t.Fatalf("usb1 is still enslaved to %q after a disable", master)
+		}
+	})
+
+	// A restore runs against a device whose gadget NIC may have been renamed
+	// since the capture, so it has to release the port br0 actually holds.
+	t.Run("a rollback releases the gadget port the capture never saw", func(t *testing.T) {
+		h := orphaned(t)
+		h.live.observed = false
+		h.live.selfConnects = false
+
+		// The rollback runs after step 13 has not yet happened, so arrange the
+		// port the way a dead-man restore finds it: enslaved under a name the
+		// snapshot has no record of.
+		h.net.onCall = func(line string) {
+			if strings.Contains(line, "link set dev eth0 master br0") {
+				h.net.links["usb1"].Master = BridgeName
+			}
+		}
+
+		rsp, _ := h.mgr.Enable(context.Background())
+		if rsp.State != proto.BridgeRolledBack {
+			t.Fatalf("state = %q (%s), want rolled back", rsp.State, rsp.Message)
+		}
+		if master := h.net.links["usb1"].Master; master != "" {
+			t.Fatalf("usb1 is still enslaved to %q after a rollback", master)
+		}
 	})
 }
 
@@ -721,7 +833,7 @@ func enabled(t *testing.T, h *harness) {
 	if _, err := h.mgr.Enable(context.Background()); err != nil {
 		t.Fatalf("Enable: %v", err)
 	}
-	if err := h.mgr.ip.SetMaster(context.Background(), GadgetName, BridgeName); err != nil {
+	if err := h.mgr.ip.SetMaster(context.Background(), StockGadgetName, BridgeName); err != nil {
 		t.Fatalf("enslave usb0: %v", err)
 	}
 
@@ -925,8 +1037,8 @@ func TestStatusReportsTheActiveGadgetProtocol(t *testing.T) {
 		gadget Gadget
 		want   string
 	}{
-		{name: "ncm", gadget: &fakeGadget{nic: GadgetName, protocol: "ncm"}, want: "ncm"},
-		{name: "rndis", gadget: &fakeGadget{nic: GadgetName, protocol: "rndis"}, want: "rndis"},
+		{name: "ncm", gadget: &fakeGadget{nic: StockGadgetName, protocol: "ncm"}, want: "ncm"},
+		{name: "rndis", gadget: &fakeGadget{nic: StockGadgetName, protocol: "rndis"}, want: "rndis"},
 		{name: "no network function", gadget: &fakeGadget{}, want: ""},
 		{name: "no gadget at all", gadget: nil, want: ""},
 	}
@@ -954,7 +1066,7 @@ func TestStatusReportsTheActiveGadgetProtocol(t *testing.T) {
 // bridge with a dead gadget port is a working device with a host that cannot
 // reach the network.
 func TestStatusReportsLinkState(t *testing.T) {
-	h := newHarness(t, &fakeGadget{nic: GadgetName})
+	h := newHarness(t, &fakeGadget{nic: StockGadgetName})
 
 	if _, err := h.mgr.Enable(context.Background()); err != nil {
 		t.Fatalf("Enable: %v", err)
@@ -988,7 +1100,7 @@ func TestStatusReportsLinkState(t *testing.T) {
 		t.Fatalf("ports = %+v, want eth0 and usb0", status.Ports)
 	}
 	for _, port := range status.Ports {
-		if port.Carrier != (port.Name == GadgetName) {
+		if port.Carrier != (port.Name == StockGadgetName) {
 			t.Errorf("port %+v carrier is wrong", port)
 		}
 		if !port.Up {
@@ -1013,9 +1125,9 @@ func TestStatusWarnsAboutASecondPathToTheSegment(t *testing.T) {
 		{
 			name: "the gateway is learned on the gadget port",
 			fdb: []FDBEntry{
-				{MAC: gatewayMAC, Ifname: GadgetName, Master: BridgeName},
+				{MAC: gatewayMAC, Ifname: StockGadgetName, Master: BridgeName},
 			},
-			want: GadgetName,
+			want: StockGadgetName,
 		},
 		{
 			// Where it belongs. This is every correctly wired device, and a
@@ -1030,7 +1142,7 @@ func TestStatusWarnsAboutASecondPathToTheSegment(t *testing.T) {
 			// working gadget NIC looks like.
 			name: "some other address on the gadget port",
 			fdb: []FDBEntry{
-				{MAC: "48:da:35:6e:11:33", Ifname: GadgetName, Master: BridgeName},
+				{MAC: "48:da:35:6e:11:33", Ifname: StockGadgetName, Master: BridgeName},
 			},
 		},
 		{
@@ -1038,7 +1150,7 @@ func TestStatusWarnsAboutASecondPathToTheSegment(t *testing.T) {
 			// says nothing about where a frame came from.
 			name: "a permanent entry is not a learned one",
 			fdb: []FDBEntry{
-				{MAC: gatewayMAC, Ifname: GadgetName, Master: BridgeName, State: "permanent"},
+				{MAC: gatewayMAC, Ifname: StockGadgetName, Master: BridgeName, State: "permanent"},
 			},
 		},
 		{
@@ -1048,7 +1160,7 @@ func TestStatusWarnsAboutASecondPathToTheSegment(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			h := newHarness(t, &fakeGadget{nic: GadgetName})
+			h := newHarness(t, &fakeGadget{nic: StockGadgetName})
 			h.net.neighbours = []Neigh{{Dst: "192.168.1.1", Dev: BridgeName, LLAddr: gatewayMAC}}
 			h.net.fdb = test.fdb
 

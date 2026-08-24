@@ -157,6 +157,22 @@ func (s *Snapshot) Link(dev string) (Link, bool) {
 	return Link{}, false
 }
 
+// GadgetPorts is every gadget-shaped device the capture found enslaved to br0,
+// in capture order. It is what a disable releases and what a restore has to
+// undo, and it is read off the record rather than asked of the presentation
+// manager because the manager names only the NIC that is live now: a port left
+// enslaved under a name a later profile stopped using is invisible to it and
+// very visible to the bridge.
+func (s *Snapshot) GadgetPorts() []string {
+	var out []string
+	for _, link := range s.Links {
+		if link.Master == BridgeName && gadgetNIC.MatchString(link.Name) {
+			out = append(out, link.Name)
+		}
+	}
+	return out
+}
+
 func (s *Snapshot) Master(dev string) (string, bool) {
 	link, ok := s.Link(dev)
 	if !ok || link.Master == "" {
@@ -279,13 +295,7 @@ func (m *Manager) Restore(ctx context.Context, snapshot *Snapshot) error {
 
 	// Release every device the capture shows had no master, so a port enslaved
 	// during the apply goes back to being a plain interface.
-	for _, dev := range []string{GadgetName, StockUplink} {
-		if _, wasEnslaved := snapshot.Master(dev); wasEnslaved {
-			continue
-		}
-		if _, existed := snapshot.Link(dev); !existed {
-			continue
-		}
+	for _, dev := range releasable(snapshot, live) {
 		if unknown {
 			_ = m.ip.SetNoMaster(ctx, dev)
 			_ = m.ip.SetUp(ctx, dev)
@@ -332,6 +342,53 @@ func (m *Manager) Restore(ctx context.Context, snapshot *Snapshot) error {
 	errs = append(errs, wrap("firewall", m.firewall.Install(ctx, uplink)))
 
 	return errors.Join(errs...)
+}
+
+// The devices a restore may have to release, gadget half first so the order
+// matches disable's. eth0 is fixed; the gadget half is not, and a snapshot
+// captured under one name and restored once the name has changed is a real
+// hazard rather than a theoretical one: the record says usb0 and the live NIC
+// is usb1.
+//
+// Both directions of that drift are covered, and neither list is trusted to
+// contain the other. The captured names are released because the record is what
+// the device is being put back to, and a name it no longer has is simply absent
+// from the live map and skipped. Any gadget-shaped port br0 holds now is
+// released as well even when the capture never saw it, because the state being
+// restored to had no such port at all — that is the case where an apply
+// enslaved usb1 and the snapshot only knows usb0.
+//
+// live is empty when the live read failed. The caller issues the commands
+// blindly in that case and does not escalate their errors, so the captured
+// names are all there is to go on.
+func releasable(snapshot *Snapshot, live []Link) []string {
+	var out []string
+	seen := make(map[string]bool, len(live)+1)
+
+	add := func(name string) {
+		if !seen[name] {
+			seen[name] = true
+			out = append(out, name)
+		}
+	}
+
+	for _, link := range snapshot.Links {
+		if link.Master == "" && gadgetNIC.MatchString(link.Name) {
+			add(link.Name)
+		}
+	}
+	for _, link := range live {
+		if link.Master == BridgeName && gadgetNIC.MatchString(link.Name) {
+			add(link.Name)
+		}
+	}
+
+	if _, existed := snapshot.Link(StockUplink); existed {
+		if _, wasEnslaved := snapshot.Master(StockUplink); !wasEnslaved {
+			add(StockUplink)
+		}
+	}
+	return out
 }
 
 // replay puts the captured IPv4 addresses and default route back on a device in

@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -251,8 +250,8 @@ func (t *IPTool) AddBridge(ctx context.Context, name string) error {
 //
 // An explicit address marks the bridge address static, so
 // br_stp_recalculate_bridge_id() stops re-electing the numerically lowest port
-// address every time a port is added or removed. Without it, enslaving usb0 at
-// its deterministic 48:da:35:6e:xx:xx can win that election, the bridge's L2
+// address every time a port is added or removed. Without it, enslaving the
+// gadget NIC at its deterministic 48:da:35:6e:xx:xx can win that election, the bridge's L2
 // identity changes under a live DHCP lease, and the reservation the operator
 // configured against the old address stops matching.
 func (t *IPTool) SetMAC(ctx context.Context, dev, mac string) error {
@@ -284,8 +283,9 @@ func (t *IPTool) SetDown(ctx context.Context, dev string) error {
 
 // SetMaster enslaves a device. It is the only path to "ip link set ... master",
 // and checkEnslavable is the reason wlan0 can never reach one: the set is
-// closed to eth0 and usb0, and wlan0 is rejected by name with its own error so
-// the refusal is legible rather than a generic validation failure.
+// closed to eth0 and a name of the gadget NIC's own usbN shape, and wlan0 is
+// rejected by name with its own error so the refusal is legible rather than a
+// generic validation failure.
 func (t *IPTool) SetMaster(ctx context.Context, dev, master string) error {
 	if err := checkEnslavable(dev); err != nil {
 		return err
@@ -676,8 +676,9 @@ func New(cfg Config) *Manager {
 		m.now = time.Now
 	}
 
-	// The gadget half of the wiring. Step 13 enslaves usb0 once; this is what
-	// keeps it enslaved across the applies that rebuild it.
+	// The gadget half of the wiring. Step 13 enslaves the gadget NIC once; this
+	// is what keeps it enslaved across the applies that rebuild it, under
+	// whatever name each rebuild leaves it with.
 	if m.gadget != nil {
 		m.gadget.OnRebind(m.ReattachGadget)
 	}
@@ -866,8 +867,8 @@ func killUdhcpc() error {
 
 // The DHCP server S30rndis starts for the gadget NIC. BusyBox udhcpd never
 // writes the pidfile its own config names, so unlike udhcpc there is nothing to
-// read and the process table is the only place its pid exists. The match is that
-// interface's config path, so a udhcpd serving anything else is left alone.
+// read and the process table is the only place its pid exists. The match is a
+// gadget NIC's config path, so a udhcpd serving anything else is left alone.
 func killGadgetDHCPD() {
 	entries, err := os.ReadDir(procDir)
 	if err != nil {
@@ -885,7 +886,7 @@ func killGadgetDHCPD() {
 			continue
 		}
 		args := strings.Split(strings.TrimSuffix(string(raw), "\x00"), "\x00")
-		if !strings.HasSuffix(args[0], "udhcpd") || !slices.Contains(args, udhcpdGadgetConf) {
+		if !strings.HasSuffix(args[0], "udhcpd") || !namesGadgetDHCPDConf(args) {
 			continue
 		}
 		if err := killProcess(pid); err != nil {
