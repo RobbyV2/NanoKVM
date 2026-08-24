@@ -84,6 +84,13 @@ attributes have no refcnt check, and `S03usbdev:135` relies on that. `lun.0/ro` 
 `lun.0/cdrom` still return `-EBUSY` while `lun.0/file` is open, which is why
 `setLUN` closes the file first.
 
+`compiler.uvc` links the SuperSpeed control and streaming class groups as well as the
+full- and high-speed ones the init script wrote, even though the device's dwc2 is
+high-speed only. A 5.10 `f_uvc` guards its SuperSpeed descriptor copy behind
+`gadget_is_superspeed` and ignores them; from 5.15 that guard is gone and
+`uvc_function_bind` fails with a bare `-ENODEV` and no log line when the ss class links
+are missing. Two extra symlinks are the whole cost.
+
 The link order in `configs/c.1` fixes `bInterfaceNumber` assignment and therefore
 host-side driver binding, so `Profile.Functions` order is the link order and is
 reproduced exactly: net function, then hid.GS0, GS1, GS2, then mass_storage.disk0.
@@ -190,14 +197,25 @@ a table no device runs, and in particular were seating no FIFOs at all for `ncm`
 `rndis` and `mass_storage`, whose IN packet sizes live only in `INPackets`. Every test
 compiles against `staticV1`. Do not reintroduce a second table that ships nowhere.
 
-`FunctionCaps.Attributes` is how a kernel option that changes a function's endpoint cost
-reaches the allocator. `UVCAttrInterruptEP` is the one that exists: `f_uvc` autoconfigures
+`FunctionCaps.Attributes` is how a kernel option a profile may count on reaches the
+allocator. `UVCAttrInterruptEP` is the one that changes an endpoint cost: `f_uvc` autoconfigures
 a control interrupt IN endpoint and never queues a request to it, since every UVC event
 reaches userspace through `v4l2_event_queue`, so the endpoint costs a dedicated FIFO to
 advertise a channel nothing writes to. The kernel fork adds `enable_interrupt_ep` to the
 uvc function group; `probeAvailability` stats it on the scratch gadget, and a profile that
 sets `Video.InterruptEndpoint` to false is refused outright on a kernel without it rather
 than silently under-counting and failing at bind.
+
+`UVCAttrFunctionName` and `UAC2AttrFunctionName` are the other two, and they are a
+different `function_name` from the read-only sysfs attribute `service/media/resolver.go`
+maps a `/dev/videoN` or `hw:N,0` back through. The writable configfs one sets the string a
+target host displays for that camera or microphone, which is what stops eight browser
+sources from all reading "UVC Camera". `Video.HostName` and `Audio.HostName` are nilable
+for the same reason `InterruptEndpoint` is: nil means the attribute is not written at all,
+so every profile stored before this existed keeps whatever name the kernel picked and an
+upgrade renames nobody's camera. `supportsMedia` requires the two keys to be *present*
+rather than true, so a `probe-v1` table written before they were probed is discarded and
+re-probed instead of reading as "this kernel cannot name media devices".
 
 `InFIFOWords` is the six dedicated dwc2 IN FIFOs in words, and `SeatFIFOs` assigns the
 smallest FIFO that holds each IN packet, so a plan is refused when a packet fits no
