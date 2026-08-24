@@ -23,6 +23,11 @@
 #   web/dist/                       built frontend
 #
 # Usage: scripts/package.sh <version>
+#        KERNEL_ITB=<path to boot.itb> scripts/package.sh <version>
+#
+# The second form builds a kernel-only package: kernel/boot.itb plus
+# kernel/kernel.version, and a manifest carrying kernel_version and
+# kernel_sha512. The device stages it into the A/B trial slot and reboots.
 
 set -euo pipefail
 
@@ -129,127 +134,153 @@ require_same_gz() {
     fi
 }
 
-require_file "$ROOT/server/NanoKVM-Server" "run: make app"
-require_file "$ROOT/kvmapp/kvm_system/kvm_system" "run: make support"
-require_file "$ROOT/web/dist/index.html" "run: make web"
-# libkvm.so is the one runtime library that must come from the build: the copy
-# tracked in server/dl_lib/ exists for cgo link time and lags far behind. If it
-# were optional here, "make package" on its own would quietly ship the stale one.
-require_file "$ROOT/kvmapp/server/dl_lib/libkvm.so" "run: make vision"
-require_file "$ROOT/server/dl_lib/libtinyalsa.so" "tracked media runtime is missing"
-# The tunnel seeds ship as gzip, so the arch check has to run against the
-# uncompressed binaries the "tunnels" target stages alongside them.
-require_file "$ROOT/build/tunnels/wstunnel" "run: make tunnels"
-require_file "$ROOT/build/tunnels/newt" "run: make tunnels"
-require_file "$ROOT/kvmapp/tunnels/wstunnel.gz" "run: make tunnels"
-require_file "$ROOT/kvmapp/tunnels/newt.gz" "run: make tunnels"
-# Same for the usb-proxy seed the passthrough manager extracts on first use.
-require_file "$ROOT/build/passthrough/usb-proxy" "run: make passthrough"
-require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
+# A kernel release ships on its own. A/B protects the kernel and not the
+# application, so a package carrying both would put a new application on the
+# old kernel whenever the trial rolls back; archive.go rejects such a package
+# outright, and this is the producing half of that rule.
+KERNEL_ITB="${KERNEL_ITB:-}"
 
-require_riscv64 "$ROOT/server/NanoKVM-Server"
-require_runpath "$ROOT/server/NanoKVM-Server"
-require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
-require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
-require_riscv64 "$ROOT/server/dl_lib/libtinyalsa.so"
-require_riscv64 "$ROOT/build/tunnels/wstunnel"
-require_riscv64 "$ROOT/build/tunnels/newt"
-require_riscv64 "$ROOT/build/passthrough/usb-proxy"
+if [ -n "$KERNEL_ITB" ]; then
 
-require_fresh "$ROOT/build/tunnels/wstunnel" "$ROOT/third_party/wstunnel" "make tunnels"
-require_fresh "$ROOT/build/tunnels/newt" "$ROOT/third_party/newt" "make tunnels"
-require_fresh "$ROOT/build/passthrough/usb-proxy" "$ROOT/third_party/usb-proxy" "make passthrough"
-require_same_gz "$ROOT/kvmapp/tunnels/wstunnel.gz" "$ROOT/build/tunnels/wstunnel" "make tunnels"
-require_same_gz "$ROOT/kvmapp/tunnels/newt.gz" "$ROOT/build/tunnels/newt" "make tunnels"
-require_same_gz "$ROOT/kvmapp/passthrough/usb-proxy.gz" "$ROOT/build/passthrough/usb-proxy" "make passthrough"
+require_file "$KERNEL_ITB" "build boot.itb in LicheeRV-Nano-Build first"
+if ! head -c 4 "$KERNEL_ITB" | od -An -tx1 | tr -d ' \n' | grep -q '^d00dfeed$'; then
+    echo "[ERROR] $KERNEL_ITB does not start with the FDT magic d00dfeed" >&2
+    exit 1
+fi
 
-echo "[INFO] staging nanokvm_$VERSION"
-# Clear the whole output directory: release.yml uploads build/release/nanokvm_*
-# by glob, and a leftover tarball from an earlier version would ride along.
+echo "[INFO] staging kernel package nanokvm_$VERSION"
 rm -rf "$OUT"
-mkdir -p "$STAGE"
-
-# 1. Everything tracked under kvmapp/ (init scripts, picoclaw bundle, kernel
-#    module, jpg_stream, kvm_stream) plus whatever the support build dropped in
-#    (kvm_system, server/dl_lib). -a carries the exec bits over from git, which
-#    only matters for reading the archive by hand: install.go chmods the whole
-#    tree to 0755 on the device regardless.
-cp -a "$ROOT/kvmapp/." "$STAGE/"
-
-# 2. Version marker. The updater reads /kvmapp/version to report the currently
-#    installed version (version.go).
+mkdir -p "$STAGE/kernel"
 printf '%s\n' "$VERSION" > "$STAGE/version"
+printf '%s\n' "$VERSION" > "$STAGE/kernel/kernel.version"
+cp -a "$KERNEL_ITB" "$STAGE/kernel/boot.itb"
 
-# 3. Go server binary.
-mkdir -p "$STAGE/server"
-cp -a "$ROOT/server/NanoKVM-Server" "$STAGE/server/NanoKVM-Server"
+else
 
-# 4. Runtime shared libraries. "build kvm_vision add_to_kvmapp" copies its whole
-#    dist/dl_lib into kvmapp/server/dl_lib, so freshly built libraries are
-#    already staged; the tracked server/dl_lib/ backfills the rest. Never
-#    clobber a fresh library with the tracked (link-time) copy.
-mkdir -p "$STAGE/server/dl_lib"
-for lib in "$ROOT"/server/dl_lib/*; do
-    [ -e "$lib" ] || continue
-    name="$(basename "$lib")"
-    if [ ! -e "$STAGE/server/dl_lib/$name" ]; then
-        cp -a "$lib" "$STAGE/server/dl_lib/$name"
+    require_file "$ROOT/server/NanoKVM-Server" "run: make app"
+    require_file "$ROOT/kvmapp/kvm_system/kvm_system" "run: make support"
+    require_file "$ROOT/web/dist/index.html" "run: make web"
+    # libkvm.so is the one runtime library that must come from the build: the copy
+    # tracked in server/dl_lib/ exists for cgo link time and lags far behind. If it
+    # were optional here, "make package" on its own would quietly ship the stale one.
+    require_file "$ROOT/kvmapp/server/dl_lib/libkvm.so" "run: make vision"
+    require_file "$ROOT/server/dl_lib/libtinyalsa.so" "tracked media runtime is missing"
+    # The tunnel seeds ship as gzip, so the arch check has to run against the
+    # uncompressed binaries the "tunnels" target stages alongside them.
+    require_file "$ROOT/build/tunnels/wstunnel" "run: make tunnels"
+    require_file "$ROOT/build/tunnels/newt" "run: make tunnels"
+    require_file "$ROOT/kvmapp/tunnels/wstunnel.gz" "run: make tunnels"
+    require_file "$ROOT/kvmapp/tunnels/newt.gz" "run: make tunnels"
+    # Same for the usb-proxy seed the passthrough manager extracts on first use.
+    require_file "$ROOT/build/passthrough/usb-proxy" "run: make passthrough"
+    require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
+
+    require_riscv64 "$ROOT/server/NanoKVM-Server"
+    require_runpath "$ROOT/server/NanoKVM-Server"
+    require_riscv64 "$ROOT/kvmapp/kvm_system/kvm_system"
+    require_riscv64 "$ROOT/kvmapp/server/dl_lib/libkvm.so"
+    require_riscv64 "$ROOT/server/dl_lib/libtinyalsa.so"
+    require_riscv64 "$ROOT/build/tunnels/wstunnel"
+    require_riscv64 "$ROOT/build/tunnels/newt"
+    require_riscv64 "$ROOT/build/passthrough/usb-proxy"
+
+    require_fresh "$ROOT/build/tunnels/wstunnel" "$ROOT/third_party/wstunnel" "make tunnels"
+    require_fresh "$ROOT/build/tunnels/newt" "$ROOT/third_party/newt" "make tunnels"
+    require_fresh "$ROOT/build/passthrough/usb-proxy" "$ROOT/third_party/usb-proxy" "make passthrough"
+    require_same_gz "$ROOT/kvmapp/tunnels/wstunnel.gz" "$ROOT/build/tunnels/wstunnel" "make tunnels"
+    require_same_gz "$ROOT/kvmapp/tunnels/newt.gz" "$ROOT/build/tunnels/newt" "make tunnels"
+    require_same_gz "$ROOT/kvmapp/passthrough/usb-proxy.gz" "$ROOT/build/passthrough/usb-proxy" "make passthrough"
+
+    echo "[INFO] staging nanokvm_$VERSION"
+    # Clear the whole output directory: release.yml uploads build/release/nanokvm_*
+    # by glob, and a leftover tarball from an earlier version would ride along.
+    rm -rf "$OUT"
+    mkdir -p "$STAGE"
+
+    # 1. Everything tracked under kvmapp/ (init scripts, picoclaw bundle, kernel
+    #    module, jpg_stream, kvm_stream) plus whatever the support build dropped in
+    #    (kvm_system, server/dl_lib). -a carries the exec bits over from git, which
+    #    only matters for reading the archive by hand: install.go chmods the whole
+    #    tree to 0755 on the device regardless.
+    cp -a "$ROOT/kvmapp/." "$STAGE/"
+
+    # 2. Version marker. The updater reads /kvmapp/version to report the currently
+    #    installed version (version.go).
+    printf '%s\n' "$VERSION" > "$STAGE/version"
+
+    # 3. Go server binary.
+    mkdir -p "$STAGE/server"
+    cp -a "$ROOT/server/NanoKVM-Server" "$STAGE/server/NanoKVM-Server"
+
+    # 4. Runtime shared libraries. "build kvm_vision add_to_kvmapp" copies its whole
+    #    dist/dl_lib into kvmapp/server/dl_lib, so freshly built libraries are
+    #    already staged; the tracked server/dl_lib/ backfills the rest. Never
+    #    clobber a fresh library with the tracked (link-time) copy.
+    mkdir -p "$STAGE/server/dl_lib"
+    for lib in "$ROOT"/server/dl_lib/*; do
+        [ -e "$lib" ] || continue
+        name="$(basename "$lib")"
+        if [ ! -e "$STAGE/server/dl_lib/$name" ]; then
+            cp -a "$lib" "$STAGE/server/dl_lib/$name"
+        fi
+    done
+
+    if ! cmp -s "$ROOT/server/dl_lib/libtinyalsa.so" "$STAGE/server/dl_lib/libtinyalsa.so"; then
+        echo "[ERROR] packaged libtinyalsa.so differs from the ABI-checked tracked runtime" >&2
+        exit 1
     fi
-done
 
-if ! cmp -s "$ROOT/server/dl_lib/libtinyalsa.so" "$STAGE/server/dl_lib/libtinyalsa.so"; then
-    echo "[ERROR] packaged libtinyalsa.so differs from the ABI-checked tracked runtime" >&2
-    exit 1
+    #    The SDK is built from an unpinned MaixCDK checkout, so its dist could one
+    #    day add or rename a library (e.g. an soname bump leaving both .409 and
+    #    .410 behind) and we would ship a library set nobody reviewed. Require the
+    #    shipped names to be exactly the tracked set, and fail loudly otherwise.
+    staged_libs=$(cd "$STAGE/server/dl_lib" && ls -1 | LC_ALL=C sort)
+    tracked_libs=$(cd "$ROOT/server/dl_lib" && ls -1 | LC_ALL=C sort)
+    if [ "$staged_libs" != "$tracked_libs" ]; then
+        echo "[ERROR] shipped server/dl_lib does not match the tracked library set" >&2
+        echo "        unexpected (in package, not tracked):" >&2
+        comm -23 <(printf '%s\n' "$staged_libs") <(printf '%s\n' "$tracked_libs") \
+            | sed 's/^/          + /' >&2
+        echo "        absent (tracked, not in package):" >&2
+        comm -13 <(printf '%s\n' "$staged_libs") <(printf '%s\n' "$tracked_libs") \
+            | sed 's/^/          - /' >&2
+        echo "        if this change is intended, update server/dl_lib/ to match." >&2
+        exit 1
+    fi
+
+    #    A library arrives either from the SDK dist (mode 755) or from the tracked
+    #    backfill (git stores them 644), so without this the archive would depend on
+    #    which path populated each file. 644 is what published releases have always
+    #    carried, and install.go chmods the installed tree to 0755 anyway.
+    chmod 644 "$STAGE"/server/dl_lib/*
+
+    # 5. Frontend. router.go serves <dir of executable>/web.
+    rm -rf "$STAGE/server/web"
+    mkdir -p "$STAGE/server/web"
+    cp -a "$ROOT/web/dist/." "$STAGE/server/web/"
+
+    # 6. EDID helper shipped under system/tool/ (prebuilt riscv64 binary in tools/).
+    mkdir -p "$STAGE/system/tool"
+    cp -a "$ROOT/tools/nanokvm_update_edid/nanokvm_update_edid" "$STAGE/system/tool/"
+    cp -a "$ROOT/tools/nanokvm_update_edid/E21_NanoKVM.bin" "$STAGE/system/tool/"
+
+    # 7. Default runtime state read by common.GetScreen() on first boot.
+    mkdir -p "$STAGE/kvm"
+    printf '30\n'    > "$STAGE/kvm/fps"
+    printf '0\n'     > "$STAGE/kvm/now_fps"
+    printf '60\n'    > "$STAGE/kvm/qlty"
+    printf '1920\n'  > "$STAGE/kvm/width"
+    printf '1080\n'  > "$STAGE/kvm/height"
+    printf '0\n'     > "$STAGE/kvm/state"
+    printf 'mjpeg\n' > "$STAGE/kvm/type"
+    printf '0'       > "$STAGE/kvm/res"
+
+    # 8. Directories the released package has always carried, kept so the layout
+    #    matches previous releases exactly (system_init.cpp probes inside them).
+    mkdir -p "$STAGE/jpg_stream/dl_lib" "$STAGE/kvm_system/dl_lib"
+
 fi
 
-#    The SDK is built from an unpinned MaixCDK checkout, so its dist could one
-#    day add or rename a library (e.g. an soname bump leaving both .409 and
-#    .410 behind) and we would ship a library set nobody reviewed. Require the
-#    shipped names to be exactly the tracked set, and fail loudly otherwise.
-staged_libs=$(cd "$STAGE/server/dl_lib" && ls -1 | LC_ALL=C sort)
-tracked_libs=$(cd "$ROOT/server/dl_lib" && ls -1 | LC_ALL=C sort)
-if [ "$staged_libs" != "$tracked_libs" ]; then
-    echo "[ERROR] shipped server/dl_lib does not match the tracked library set" >&2
-    echo "        unexpected (in package, not tracked):" >&2
-    comm -23 <(printf '%s\n' "$staged_libs") <(printf '%s\n' "$tracked_libs") \
-        | sed 's/^/          + /' >&2
-    echo "        absent (tracked, not in package):" >&2
-    comm -13 <(printf '%s\n' "$staged_libs") <(printf '%s\n' "$tracked_libs") \
-        | sed 's/^/          - /' >&2
-    echo "        if this change is intended, update server/dl_lib/ to match." >&2
-    exit 1
-fi
-
-#    A library arrives either from the SDK dist (mode 755) or from the tracked
-#    backfill (git stores them 644), so without this the archive would depend on
-#    which path populated each file. 644 is what published releases have always
-#    carried, and install.go chmods the installed tree to 0755 anyway.
-chmod 644 "$STAGE"/server/dl_lib/*
-
-# 5. Frontend. router.go serves <dir of executable>/web.
-rm -rf "$STAGE/server/web"
-mkdir -p "$STAGE/server/web"
-cp -a "$ROOT/web/dist/." "$STAGE/server/web/"
-
-# 6. EDID helper shipped under system/tool/ (prebuilt riscv64 binary in tools/).
-mkdir -p "$STAGE/system/tool"
-cp -a "$ROOT/tools/nanokvm_update_edid/nanokvm_update_edid" "$STAGE/system/tool/"
-cp -a "$ROOT/tools/nanokvm_update_edid/E21_NanoKVM.bin" "$STAGE/system/tool/"
-
-# 7. Default runtime state read by common.GetScreen() on first boot.
-mkdir -p "$STAGE/kvm"
-printf '30\n'    > "$STAGE/kvm/fps"
-printf '0\n'     > "$STAGE/kvm/now_fps"
-printf '60\n'    > "$STAGE/kvm/qlty"
-printf '1920\n'  > "$STAGE/kvm/width"
-printf '1080\n'  > "$STAGE/kvm/height"
-printf '0\n'     > "$STAGE/kvm/state"
-printf 'mjpeg\n' > "$STAGE/kvm/type"
-printf '0'       > "$STAGE/kvm/res"
-
-# 8. Directories the released package has always carried, kept so the layout
-#    matches previous releases exactly (system_init.cpp probes inside them).
-mkdir -p "$STAGE/jpg_stream/dl_lib" "$STAGE/kvm_system/dl_lib"
 
 # --- archive -----------------------------------------------------------------
 # Normalise owner and timestamps so the same source tree yields the same
@@ -299,6 +330,14 @@ print(total)
 PY
 )"
 
+KERNEL_FIELDS=""
+if [ -n "$KERNEL_ITB" ]; then
+    KERNEL_SHA512="$(openssl dgst -sha512 -binary "$STAGE/kernel/boot.itb" | openssl base64 -A)"
+    KERNEL_FIELDS=",
+  \"kernel_version\": \"$VERSION\",
+  \"kernel_sha512\": \"$KERNEL_SHA512\""
+fi
+
 cat > "$MANIFEST" <<EOF
 {
   "manifest_version": 2,
@@ -307,7 +346,7 @@ cat > "$MANIFEST" <<EOF
   "sha512": "$SHA512",
   "size": $SIZE_BYTES,
   "size_bytes": $SIZE_BYTES,
-  "unpacked_size_bytes": $UNPACKED_SIZE_BYTES
+  "unpacked_size_bytes": $UNPACKED_SIZE_BYTES$KERNEL_FIELDS
 }
 EOF
 

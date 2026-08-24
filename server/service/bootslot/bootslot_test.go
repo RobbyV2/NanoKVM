@@ -128,7 +128,7 @@ func TestATrialWithNoRoutableAddressIsNotCommitted(t *testing.T) {
 		Interval: time.Millisecond,
 	})
 	if !errors.Is(err, ErrNotReady) {
-		t.Fatalf("ConfirmWhenReady = %v, want ErrNotReady", err)
+		t.Errorf("ConfirmWhenReady = %v, want ErrNotReady", err)
 	}
 	good, _ := os.ReadFile(filepath.Join(p.Root, "boot.sd"))
 	if string(good) != "boot.sd" {
