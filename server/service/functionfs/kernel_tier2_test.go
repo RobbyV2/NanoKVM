@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -110,6 +111,48 @@ func TestKernelTier2FunctionFSMountRequiresTheConfigFSInstance(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(functionFSMount, name)); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
+	}
+	for _, endpoint := range endpoints {
+		_ = endpoint.Close()
+	}
+	_ = control.Close()
+	if err := Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// f_fs parses the whole descriptor block on the ep0 write and creates one
+// endpoint file per endpoint descriptor, named by address because
+// FUNCTIONFS_VIRTUAL_ADDR is set. That is the parser that decides whether a
+// two-alternate isochronous interface is presentable at all, and it runs long
+// before any endpoint is autoconfigured, so the answer does not depend on the
+// UDC having an isochronous endpoint to give.
+func TestKernelTier2FunctionFSAcceptsTwoAlternatesOverOneEndpointFile(t *testing.T) {
+	kernelint.RequireTier2(t)
+	gadget := kernelGadget(t)
+	if err := gadget.CreateFunctionFS(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	image, err := Import(streamingFixture(isoEndpoint(0x81, 192, 0), isoEndpoint(0x81, 768, 0)), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	control, endpoints, err := openFunctionFS(image)
+	if err != nil {
+		t.Fatalf("write a two-alternate isochronous descriptor block: %v", err)
+	}
+	entries, err := os.ReadDir(functionFSMount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, []string{"ep0", "ep81"}) {
+		t.Fatalf("FunctionFS created %v, want exactly ep0 and ep81: a second endpoint descriptor at 0x81 would collide on the name", names)
 	}
 	for _, endpoint := range endpoints {
 		_ = endpoint.Close()
