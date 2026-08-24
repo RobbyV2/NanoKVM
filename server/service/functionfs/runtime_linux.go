@@ -217,7 +217,7 @@ func openFunctionFS(image Image) (*linuxControl, map[uint8]DataEndpoint, error) 
 	control := &linuxControl{file: ep0}
 	if _, err := writeAll(ep0, image.Descriptors); err != nil {
 		_ = ep0.Close()
-		return fail(fmt.Errorf("write FunctionFS descriptors: %w", err))
+		return fail(fmt.Errorf("write FunctionFS descriptors: %w", diagnoseDescriptorWrite(err, image.Descriptors)))
 	}
 	if _, err := writeAll(ep0, image.StringTable); err != nil {
 		_ = ep0.Close()
@@ -237,6 +237,27 @@ func openFunctionFS(image Image) (*linuxControl, map[uint8]DataEndpoint, error) 
 		endpoints[endpoint.Address] = &linuxEndpoint{file: file, address: endpoint.Address}
 	}
 	return control, endpoints, nil
+}
+
+// ffs_do_single_desc switches on bDescriptorType and has no case for
+// USB_DT_CS_INTERFACE or USB_DT_CS_ENDPOINT, so a block carrying either falls
+// through to its default and the ep0 write is EINVAL with nothing but a
+// pr_vdebug line to say why. Every CDC and every video function is made of them.
+func diagnoseDescriptorWrite(err error, block []byte) error {
+	if !errors.Is(err, syscall.EINVAL) {
+		return err
+	}
+	for offset := 20; offset+1 < len(block); {
+		length := int(block[offset])
+		if length < 2 {
+			break
+		}
+		if block[offset+1] == 0x24 || block[offset+1] == 0x25 {
+			return fmt.Errorf("%w: this kernel's ffs_do_single_desc has no case for class-specific descriptor type 0x%02x, so a CDC or video function cannot be presented through FunctionFS: %w", ErrUnsupported, block[offset+1], err)
+		}
+		offset += length
+	}
+	return err
 }
 
 func functionFSEndpointName(address uint8) string {

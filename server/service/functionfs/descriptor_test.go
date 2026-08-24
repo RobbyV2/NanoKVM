@@ -320,3 +320,62 @@ func TestImportRefusesAnIsochronousEndpointAtAlternateZero(t *testing.T) {
 		t.Fatalf("Import() error = %v, want an ErrUnsupported naming the endpoint and its alternate setting", err)
 	}
 }
+
+// The shape a real UVC camera enumerates as: an IAD whose function subclass is
+// SC_VIDEO_INTERFACE_COLLECTION over a VideoControl interface with a status
+// interrupt endpoint and a VideoStreaming interface with a zero-bandwidth
+// alternate 0 and two streaming alternates sharing one isochronous address.
+func cameraFixture() []byte {
+	device := []byte{18, 1, 0x00, 0x02, 0xef, 0x02, 0x01, 64, 0x34, 0x12, 0x78, 0x56, 0, 1, 0, 0, 0, 1}
+	config := []byte{9, 2, 0, 0, 2, 1, 0, 0x80, 50}
+	config = append(config, []byte{8, 11, 3, 2, 0x0e, 0x03, 0x00, 0}...)
+	config = append(config, []byte{9, 4, 3, 0, 1, 0x0e, 0x01, 0x00, 0}...)
+	config = append(config, []byte{13, 0x24, 0x01, 0x10, 0x01, 13, 0, 0x80, 0x8d, 0x5b, 0x00, 1, 4}...)
+	config = append(config, []byte{7, 5, 0x87, 3, 16, 0, 6}...)
+	config = append(config, []byte{5, 0x25, 0x03, 16, 0}...)
+	config = append(config, []byte{9, 4, 4, 0, 0, 0x0e, 0x02, 0x00, 0}...)
+	config = append(config, []byte{13, 0x24, 0x01, 1, 13, 0, 0x83, 0x00, 1, 0, 0, 0, 0}...)
+	config = append(config, []byte{9, 4, 4, 1, 1, 0x0e, 0x02, 0x00, 0}...)
+	config = append(config, isoEndpoint(0x83, 192, 0)...)
+	config = append(config, []byte{9, 4, 4, 2, 1, 0x0e, 0x02, 0x00, 0}...)
+	config = append(config, isoEndpoint(0x83, 768, 0)...)
+	binary.LittleEndian.PutUint16(config[2:4], uint16(len(config)))
+	return append(device, config...)
+}
+
+func TestImportCamera(t *testing.T) {
+	image, err := Import(cameraFixture(), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.Alternates[4] != 2 || image.EndpointOwners[0x82] != 4 {
+		t.Fatalf("alternates = %v, endpoint owners = %v", image.Alternates, image.EndpointOwners)
+	}
+	endpoints := image.Function.Endpoints
+	if len(endpoints) != 2 || endpoints[0].Transfer != presentation.EndpointInterrupt ||
+		endpoints[1].Transfer != presentation.EndpointIsochronous || endpoints[1].MaxPacket != 768 {
+		t.Fatalf("function endpoints = %#v", endpoints)
+	}
+
+	// Every interface and endpoint number the class descriptors carry has to be
+	// rewritten to the presented one, or the host follows them to interfaces and
+	// endpoints this gadget does not have.
+	for _, item := range blockDescriptors(image.Descriptors, 11) {
+		if item[2] != 0 {
+			t.Fatalf("association starts at interface %d, want 0", item[2])
+		}
+	}
+	var headers [][]byte
+	for _, item := range blockDescriptors(image.Descriptors, 0x24) {
+		headers = append(headers, item)
+	}
+	if len(headers) != 4 {
+		t.Fatalf("presented %d class interface descriptors, want 4 (two per speed)", len(headers))
+	}
+	if headers[0][12] != 1 {
+		t.Fatalf("video control header collects interface %d, want 1", headers[0][12])
+	}
+	if headers[1][6] != 0x82 {
+		t.Fatalf("video streaming header names endpoint 0x%02x, want 0x82", headers[1][6])
+	}
+}

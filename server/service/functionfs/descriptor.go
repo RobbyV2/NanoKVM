@@ -86,8 +86,12 @@ func Import(raw []byte, fetcher Fetcher, caps presentation.CapabilityTable) (Ima
 	if label, protected := protectedClasses[device[4]]; protected {
 		return Image{}, fmt.Errorf("%w: device is %s class", ErrProtected, label)
 	}
-	if device[4] != 0 {
-		return Image{}, fmt.Errorf("%w: device-level class 0x%02x needs Exact mode", ErrUnsupported, device[4])
+	// EFh/02h/01h is the Interface Association Descriptor marker. It binds no
+	// device-level driver and only tells the host to read the associations this
+	// already parses, which is what a composite camera declares. Every other
+	// device-level class binds a driver to the whole device.
+	if device[4] != 0 && !(device[4] == 0xef && device[5] == 0x02 && device[6] == 0x01) {
+		return Image{}, fmt.Errorf("%w: device-level class 0x%02x/0x%02x/0x%02x needs Exact mode", ErrUnsupported, device[4], device[5], device[6])
 	}
 
 	image := Image{
@@ -633,10 +637,18 @@ func (image *Image) compile(all []descriptor, fetcher Fetcher, caps presentation
 			associated[number] = true
 		}
 		firstInterface := interfaces[first].data
-		for offset := 4; offset <= 6; offset++ {
-			if associationDescriptor(descriptors, first)[offset] != firstInterface[offset+1] {
-				return fmt.Errorf("%w: interface association class mismatch", ErrAmbiguous)
-			}
+		association := associationDescriptor(descriptors, first)
+		// USB Video names the function SC_VIDEO_INTERFACE_COLLECTION while the
+		// first interface of the collection is SC_VIDEOCONTROL, so a video
+		// function is the one association whose subclass legitimately differs
+		// from the interface it starts at.
+		wantSubClass := firstInterface[6]
+		if association[4] == 0x0e {
+			wantSubClass = 0x03
+		}
+		if association[4] != firstInterface[5] || association[5] != wantSubClass || association[6] != firstInterface[7] {
+			return fmt.Errorf("%w: association at interface %d is 0x%02x/0x%02x/0x%02x, interface %d is 0x%02x/0x%02x/0x%02x",
+				ErrAmbiguous, first, association[4], association[5], association[6], first, firstInterface[5], firstInterface[6], firstInterface[7])
 		}
 	}
 	image.Function.Interfaces = uint8(len(interfaces))

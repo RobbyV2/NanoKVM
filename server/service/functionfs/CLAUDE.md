@@ -14,6 +14,8 @@ Isochronous endpoints do not go through `transferLoop`. `isochronousStream` keep
 
 Both loops block in a syscall, which is what makes `raiseRealtime` safe. `sched_rt_runtime_exceeded` sits outside `CONFIG_RT_GROUP_SCHED`, so SCHED_FIFO on a thread that spins costs 50 ms of every second, which is 400 lost microframes. Do not put a polling loop under it.
 
+`ffs_do_single_desc` switches on `bDescriptorType` and has **no case for `USB_DT_CS_INTERFACE` (0x24) or `USB_DT_CS_ENDPOINT` (0x25)**, so a descriptor block carrying either falls through to its `default` and the ep0 write is a bare `EINVAL` with only a `pr_vdebug` line to say why. That is upstream behaviour in every version to 6.8, and it is why `TestKernelTier2FunctionFSRefusesClassSpecificDescriptors` exists: the two-alternate video block this package synthesises is correct and the kernel still refuses it. It also means the CDC ACM support here has never reached a host, since CDC functional descriptors are 0x24 too. `diagnoseDescriptorWrite` turns that `EINVAL` into a message naming the type. The fix is a kernel change, not a change here: add both types to that switch with a length check, the way the fork already carries `get_alt`. Until then Hybrid carries vendor-class isochronous endpoints and nothing that needs a class descriptor.
+
 USBFS retains URB and buffer pointers after `ioctl`. Pin both until reap or a synchronizing file close. Never complete or unpin a request merely because discard failed.
 
 Cleanup order is unbind, unlink `configs/c.1/ffs.hybrid`, restore the persistent presentation, close and unmount FunctionFS, detach VHCI, then clear the recovery marker. Hardware proof still gates enumeration, resets, stalls, and sustained throughput.

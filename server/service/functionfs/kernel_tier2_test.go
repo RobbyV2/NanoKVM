@@ -163,6 +163,36 @@ func TestKernelTier2FunctionFSAcceptsTwoAlternatesOverOneEndpointFile(t *testing
 	}
 }
 
+// The descriptor synthesis is right and the kernel still refuses the result:
+// ffs_do_single_desc has no case for USB_DT_CS_INTERFACE or USB_DT_CS_ENDPOINT,
+// so every CDC and every video function reaches ep0 as a bare EINVAL. This pins
+// that this is the kernel's limit and not a defect in the block, and it names
+// the one change the kernel fork still needs before a camera can enumerate.
+func TestKernelTier2FunctionFSRefusesClassSpecificDescriptors(t *testing.T) {
+	kernelint.RequireTier2(t)
+	gadget := kernelGadget(t)
+	if err := gadget.CreateFunctionFS(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	image, err := Import(cameraFixture(), fixtureFetcher{}, testCapabilities())
+	if err != nil {
+		t.Fatal(err)
+	}
+	control, endpoints, err := openFunctionFS(image)
+	if err == nil {
+		for _, endpoint := range endpoints {
+			_ = endpoint.Close()
+		}
+		_ = control.Close()
+		_ = Cleanup()
+		t.Fatal("this kernel accepted class-specific descriptors; the diagnosis in openFunctionFS is now wrong and video can enumerate")
+	}
+	if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "ffs_do_single_desc has no case for class-specific descriptor type 0x24") {
+		t.Fatalf("write a camera descriptor block: %v, want the named ffs_do_single_desc refusal", err)
+	}
+}
+
 // ENODEV says the instance was never registered; ENOENT says it was registered
 // under another name. Collapsing the two loses the only signal that separates a
 // missing mkdir from a misspelling.
