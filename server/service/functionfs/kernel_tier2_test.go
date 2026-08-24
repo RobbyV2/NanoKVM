@@ -163,12 +163,14 @@ func TestKernelTier2FunctionFSAcceptsTwoAlternatesOverOneEndpointFile(t *testing
 	}
 }
 
-// The descriptor synthesis is right and the kernel still refuses the result:
-// ffs_do_single_desc has no case for USB_DT_CS_INTERFACE or USB_DT_CS_ENDPOINT,
-// so every CDC and every video function reaches ep0 as a bare EINVAL. This pins
-// that this is the kernel's limit and not a defect in the block, and it names
-// the one change the kernel fork still needs before a camera can enumerate.
-func TestKernelTier2FunctionFSRefusesClassSpecificDescriptors(t *testing.T) {
+// The descriptor synthesis is right, so the outcome here is a property of the
+// kernel and not of the block: stock ffs_do_single_desc has no case for
+// USB_DT_CS_INTERFACE or USB_DT_CS_ENDPOINT and refuses every CDC and every
+// video function with a bare EINVAL, while the kernel fork this project ships
+// adds both cases and presents the function. The tier-2 VM runs Ubuntu's stock
+// 6.8, so it takes the refusing branch; the shipped 5.10 takes the accepting
+// one. Both branches assert, so neither kernel is described by silence.
+func TestKernelTier2FunctionFSClassSpecificDescriptors(t *testing.T) {
 	kernelint.RequireTier2(t)
 	gadget := kernelGadget(t)
 	if err := gadget.CreateFunctionFS(context.Background()); err != nil {
@@ -180,16 +182,37 @@ func TestKernelTier2FunctionFSRefusesClassSpecificDescriptors(t *testing.T) {
 		t.Fatal(err)
 	}
 	control, endpoints, err := openFunctionFS(image)
-	if err == nil {
+	if err != nil {
+		if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "ffs_do_single_desc has no case for class-specific descriptor type 0x24") {
+			t.Fatalf("write a camera descriptor block: %v, want either acceptance or the named ffs_do_single_desc refusal", err)
+		}
+		t.Log("stock kernel: class-specific descriptors refused; the shipped fork patches ffs_do_single_desc")
+		return
+	}
+	t.Log("patched kernel: class-specific descriptors accepted")
+	defer func() {
 		for _, endpoint := range endpoints {
 			_ = endpoint.Close()
 		}
 		_ = control.Close()
 		_ = Cleanup()
-		t.Fatal("this kernel accepted class-specific descriptors; the diagnosis in openFunctionFS is now wrong and video can enumerate")
+	}()
+	want := []string{"ep0"}
+	for _, endpoint := range image.Function.Endpoints {
+		want = append(want, functionFSEndpointName(endpoint.Address))
 	}
-	if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "ffs_do_single_desc has no case for class-specific descriptor type 0x24") {
-		t.Fatalf("write a camera descriptor block: %v, want the named ffs_do_single_desc refusal", err)
+	slices.Sort(want)
+	entries, err := os.ReadDir(functionFSMount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, want) {
+		t.Fatalf("FunctionFS created %v, want %v: a video function must present every endpoint its block declares", names, want)
 	}
 }
 
