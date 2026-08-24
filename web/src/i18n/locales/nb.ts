@@ -984,6 +984,11 @@ const nb = {
         queryFailed: 'Kunne ikke hente versjon',
         updateFailed: 'En feil oppstod under oppdatering. Vennligst forsøk igjen.',
         isLatest: 'Du har siste versjon allerede.',
+        rebooting:
+          'Installerer den nye kjernen og starter på nytt. Dette kan ta noen minutter; ikke slå av strømmen.',
+        kernelUpdate:
+          'Denne oppdateringen installerer kjerne {{version}}. Enheten starter på nytt og går selv tilbake til den nåværende kjernen hvis den nye ikke starter.',
+        rolledBack: 'Kjerne {{version}} startet ikke, og enheten gikk tilbake til forrige kjerne.',
         available: 'En oppdatering er tilgjengelig. Er du sikker på at du ønsker å oppdatere?',
         updating: 'Oppdatering har startet. Vennligst vent...',
         confirm: 'Oppdater',

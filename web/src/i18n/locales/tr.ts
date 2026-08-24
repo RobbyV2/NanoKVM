@@ -982,6 +982,11 @@ const tr = {
         queryFailed: 'Sürüm bilgisi alınamadı',
         updateFailed: 'Güncelleme başarısız oldu. Lütfen tekrar deneyin.',
         isLatest: 'En yeni sürüme sahipsiniz.',
+        rebooting:
+          'Yeni çekirdek kuruluyor ve cihaz yeniden başlatılıyor. Bu birkaç dakika sürebilir; gücü kesmeyin.',
+        kernelUpdate:
+          'Bu güncelleme {{version}} çekirdeğini kurar. Cihaz yeniden başlar ve yeni çekirdek açılmazsa kendiliğinden mevcut çekirdeğe döner.',
+        rolledBack: '{{version}} çekirdeği başlatılamadı ve cihaz önceki çekirdeğe geri döndü.',
         available: 'Bir güncelleme indirilebilir. Şimdi güncellemek istediğinizden emin misiniz?',
         updating: 'Güncelleme başlatıldı. Lütfen bekleyin...',
         confirm: 'Onayla',

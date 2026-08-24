@@ -31,6 +31,16 @@ export function offlineUpdate(data: FormData, sha256Checksum = '') {
   });
 }
 
+// get A/B kernel slot state
+export function getKernel() {
+  return http.get('/api/application/kernel');
+}
+
+// acknowledge a kernel rollback so the warning stops
+export function dismissKernelRollback() {
+  return http.post('/api/application/kernel/dismiss');
+}
+
 // enable/disable preview updates
 export function setPreviewUpdates(enable: boolean) {
   const data = {

@@ -978,6 +978,11 @@ const vi = {
         queryFailed: 'Lấy phiên bản thất bại',
         updateFailed: 'Cập nhật thất bại. Vui lòng thử lại.',
         isLatest: 'Bạn đã có phiên bản mới nhất.',
+        rebooting:
+          'Đang cài đặt nhân mới và khởi động lại. Việc này có thể mất vài phút; đừng ngắt nguồn.',
+        kernelUpdate:
+          'Bản cập nhật này cài nhân {{version}}. Thiết bị sẽ khởi động lại và tự quay về nhân hiện tại nếu nhân mới không khởi động được.',
+        rolledBack: 'Nhân {{version}} không khởi động được và thiết bị đã quay về nhân trước đó.',
         available: 'Có bản cập nhật mới. Bạn có chắc chắn muốn cập nhật không?',
         updating: 'Bắt đầu cập nhật. Vui lòng chờ...',
         confirm: 'Xác nhận',

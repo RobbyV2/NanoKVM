@@ -982,6 +982,12 @@ const da = {
         queryFailed: 'Opdateringskontrol mislykkedes',
         updateFailed: 'Opdatering fejlede. Prøv igen.',
         isLatest: 'Du har allerede den nyeste version.',
+        rebooting:
+          'Den nye kerne installeres, og enheden genstarter. Det kan tage et par minutter; sluk ikke for strømmen.',
+        kernelUpdate:
+          'Denne opdatering installerer kerne {{version}}. Enheden genstarter og vender selv tilbage til den nuværende kerne, hvis den nye ikke kommer op.',
+        rolledBack:
+          'Kerne {{version}} startede ikke, og enheden er rullet tilbage til den forrige kerne.',
         available: 'En opdatering er tilgængelig. Vil du installere den?',
         updating: 'Opdatering i gang. Vent venligst...',
         confirm: 'Bekræft',

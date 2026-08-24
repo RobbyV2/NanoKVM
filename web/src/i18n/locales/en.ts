@@ -974,6 +974,12 @@ const en = {
         queryFailed: 'Get version failed',
         updateFailed: 'Update failed. Please retry.',
         isLatest: 'You already have the latest version.',
+        rebooting:
+          'Installing the new kernel and rebooting. This can take a few minutes; do not power off.',
+        kernelUpdate:
+          'This update installs kernel {{version}}. The device reboots, and returns to the current kernel by itself if the new one does not come back.',
+        rolledBack:
+          'Kernel {{version}} did not start and the device rolled back to the previous kernel.',
         available: 'An update is available. Are you sure you want to update now?',
         updating: 'Update started. Please wait...',
         confirm: 'Confirm',

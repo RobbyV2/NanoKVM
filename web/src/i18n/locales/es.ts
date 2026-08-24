@@ -990,6 +990,11 @@ const es = {
         queryFailed: 'Error al obtener la versión',
         updateFailed: 'La actualización falló. Por favor, inténtalo de nuevo.',
         isLatest: 'Ya tienes la última versión.',
+        rebooting:
+          'Instalando el nuevo kernel y reiniciando. Puede tardar unos minutos; no apagues el dispositivo.',
+        kernelUpdate:
+          'Esta actualización instala el kernel {{version}}. El dispositivo se reiniciará y volverá solo al kernel actual si el nuevo no arranca.',
+        rolledBack: 'El kernel {{version}} no arrancó y el dispositivo volvió al kernel anterior.',
         available: 'Hay una actualización disponible. ¿Estás seguro de que quieres actualizar?',
         updating: 'Actualización iniciada. Por favor, espera...',
         confirm: 'Confirmar',

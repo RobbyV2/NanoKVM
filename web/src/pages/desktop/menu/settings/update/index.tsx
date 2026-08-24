@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { LoadingOutlined, RocketOutlined, SmileOutlined } from '@ant-design/icons';
-import { Button, Divider, Result, Spin } from 'antd';
+import { Alert, Button, Divider, Result, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
-import semver from 'semver';
 
 import * as api from '@/api/application.ts';
 
 import { CustomServer } from './custom-server.tsx';
 import { Offline } from './offline.tsx';
 import { Preview } from './preview.tsx';
+import {
+  pollIntervalMs,
+  rebootGraceMs,
+  rebootWaitMs,
+  restartWaitMs,
+  rollbackWarning,
+  updateStatus,
+  type KernelState
+} from './state.ts';
 
 type UpdateProps = {
   setIsLocked: (isClosable: boolean) => void;
@@ -20,6 +28,8 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
   const [status, setStatus] = useState('');
   const [currentVersion, setCurrentVersion] = useState('');
   const [latestVersion, setLatestVersion] = useState('');
+  const [latestKernel, setLatestKernel] = useState('');
+  const [rolledBack, setRolledBack] = useState('');
   const [errMsg, setErrMsg] = useState('');
   const [isCustomServerEnabled, setIsCustomServerEnabled] = useState(false);
   const [isCustomServerPending, setIsCustomServerPending] = useState(false);
@@ -29,35 +39,66 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
     checkForUpdates();
   }, []);
 
-  function checkForUpdates() {
+  async function checkForUpdates() {
     const requestId = ++versionRequestRef.current;
     setStatus('loading');
 
-    api
-      .getVersion()
-      .then((rsp: any) => {
-        if (requestId !== versionRequestRef.current) return;
-        if (rsp.code !== 0 || !rsp.data) {
-          setStatus('failed');
-          setErrMsg(t('settings.update.queryFailed'));
-          return;
-        }
+    let kernel: KernelState | null = null;
+    try {
+      const rsp: any = await api.getKernel();
+      if (rsp.code === 0 && rsp.data) kernel = rsp.data;
+    } catch {
+      kernel = null;
+    }
+    if (requestId !== versionRequestRef.current) return;
+    setRolledBack(rollbackWarning(kernel));
 
-        setCurrentVersion(rsp.data.current);
-
-        if (rsp.data?.latest) {
-          setLatestVersion(rsp.data.latest);
-          const isLatest = semver.gte(rsp.data.current, rsp.data.latest);
-          setStatus(isLatest ? 'latest' : 'outdated');
-        } else {
-          setStatus('latest');
-        }
-      })
-      .catch(() => {
-        if (requestId !== versionRequestRef.current) return;
+    try {
+      const rsp: any = await api.getVersion();
+      if (requestId !== versionRequestRef.current) return;
+      if (rsp.code !== 0 || !rsp.data) {
         setStatus('failed');
         setErrMsg(t('settings.update.queryFailed'));
-      });
+        return;
+      }
+
+      setCurrentVersion(rsp.data.current);
+      setLatestVersion(rsp.data.latest || '');
+      setLatestKernel(rsp.data.latestKernel || '');
+      setStatus(updateStatus(rsp.data, kernel));
+    } catch {
+      if (requestId !== versionRequestRef.current) return;
+      setStatus('failed');
+      setErrMsg(t('settings.update.queryFailed'));
+    }
+  }
+
+  function dismissRollback() {
+    setRolledBack('');
+    api.dismissKernelRollback().catch(() => {});
+  }
+
+  function reloadWhenBack(isRebooting: boolean) {
+    const deadline = Date.now() + rebootWaitMs;
+
+    function finish() {
+      setIsLocked(false);
+      setErrMsg('');
+      window.location.reload();
+    }
+
+    function poll() {
+      if (!isRebooting || Date.now() >= deadline) {
+        finish();
+        return;
+      }
+      api
+        .getKernel()
+        .then(finish)
+        .catch(() => setTimeout(poll, pollIntervalMs));
+    }
+
+    setTimeout(poll, isRebooting ? rebootGraceMs : restartWaitMs);
   }
 
   function update() {
@@ -72,22 +113,31 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
         if (rsp.code !== 0) {
           setStatus('failed');
           setErrMsg(t('settings.update.updateFailed'));
+          reloadWhenBack(false);
+          return;
         }
+        const isRebooting = !!rsp.data?.reboot;
+        if (isRebooting) setStatus('rebooting');
+        reloadWhenBack(isRebooting);
       })
-      .finally(() => {
-        setTimeout(() => {
-          setIsLocked(false);
-          setErrMsg('');
-
-          window.location.reload();
-        }, 12000);
-      });
+      .catch(() => reloadWhenBack(false));
   }
 
   return (
     <>
       <div className="text-base">{t('settings.update.title')}</div>
       <Divider className="opacity-50" />
+
+      {rolledBack && (
+        <Alert
+          className="mb-3"
+          type="warning"
+          showIcon
+          closable
+          onClose={dismissRollback}
+          message={t('settings.update.rolledBack', { version: rolledBack })}
+        />
+      )}
 
       <Preview
         checkForUpdates={checkForUpdates}
@@ -120,6 +170,15 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
           </div>
         )}
 
+        {status === 'rebooting' && (
+          <div className="flex flex-col items-center justify-center space-y-10 pb-10 pt-24">
+            <Spin size="large" />
+            <span className="px-6 text-center text-neutral-500">
+              {t('settings.update.rebooting')}
+            </span>
+          </div>
+        )}
+
         {status === 'latest' && (
           <Result
             status="success"
@@ -139,7 +198,11 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
             status="warning"
             icon={<RocketOutlined />}
             title={`${currentVersion} -> ${latestVersion}`}
-            subTitle={t('settings.update.available')}
+            subTitle={
+              latestKernel
+                ? t('settings.update.kernelUpdate', { version: latestKernel })
+                : t('settings.update.available')
+            }
             extra={[
               <Button
                 key="confirm"

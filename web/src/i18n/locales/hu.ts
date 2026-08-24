@@ -990,6 +990,12 @@ const hu = {
         queryFailed: 'Verzió lekérdezése sikertelen',
         updateFailed: 'Frissítés sikertelen. Kérem, próbálja újra.',
         isLatest: 'Ön már a legfrissebb verziót használja.',
+        rebooting:
+          'Az új kernel telepítése és újraindítás folyamatban. Ez néhány percig tarthat; ne kapcsolja ki az eszközt.',
+        kernelUpdate:
+          'Ez a frissítés a(z) {{version}} kernelt telepíti. Az eszköz újraindul, és magától visszatér a jelenlegi kernelhez, ha az új nem indul el.',
+        rolledBack:
+          'A(z) {{version}} kernel nem indult el, ezért az eszköz visszaállt az előző kernelre.',
         available: 'Frissítés elérhető. Biztos, hogy frissít?',
         updating: 'Frissítés elkezdődött. Kérem várjon...',
         confirm: 'Megerősítés',

@@ -980,6 +980,11 @@ const cz = {
         queryFailed: 'Nepodařilo se získat verzi',
         updateFailed: 'Aktualizace se nezdařila. Zkuste to prosím znovu.',
         isLatest: 'Máte nejnovější verzi.',
+        rebooting:
+          'Instaluje se nové jádro a zařízení se restartuje. Může to trvat několik minut; nevypínejte napájení.',
+        kernelUpdate:
+          'Tato aktualizace nainstaluje jádro {{version}}. Zařízení se restartuje a pokud nové jádro nenaběhne, samo se vrátí k současnému.',
+        rolledBack: 'Jádro {{version}} nenaběhlo a zařízení se vrátilo k předchozímu jádru.',
         available: 'Je dostupná aktualizace. Opravdu chcete aktualizovat?',
         updating: 'Aktualizace zahájena. Prosím čekejte...',
         confirm: 'Potvrdit',

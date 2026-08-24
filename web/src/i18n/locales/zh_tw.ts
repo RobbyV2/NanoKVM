@@ -938,6 +938,10 @@ const zh_tw = {
         queryFailed: '取得版本號失敗',
         updateFailed: '更新失敗。請重試。',
         isLatest: '您已經是最新版本。',
+        rebooting: '正在安裝新核心並重新開機，可能需要幾分鐘，請勿斷電。',
+        kernelUpdate:
+          '此更新將安裝核心 {{version}}。裝置會重新開機；若新核心無法啟動，會自動回復到目前的核心。',
+        rolledBack: '核心 {{version}} 啟動失敗，裝置已回復到上一個核心。',
         available: '發現有可用更新。您確定要更新嗎？',
         updating: '更新中，請稍候...',
         confirm: '確定',

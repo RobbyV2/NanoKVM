@@ -938,6 +938,10 @@ const zh = {
         queryFailed: '获取版本号失败',
         updateFailed: '更新失败，请重试',
         isLatest: '已经是最新版本。',
+        rebooting: '正在安装新内核并重启，可能需要几分钟，请勿断电。',
+        kernelUpdate:
+          '此更新将安装内核 {{version}}。设备会重启；如果新内核无法启动，会自动回退到当前内核。',
+        rolledBack: '内核 {{version}} 启动失败，设备已回退到上一个内核。',
         available: '有新的可用版本，确定要更新吗？',
         updating: '更新中，请稍候...',
         confirm: '确定',

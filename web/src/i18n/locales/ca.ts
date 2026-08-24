@@ -982,6 +982,12 @@ const ca = {
         queryFailed: 'Error en obtenir la versió',
         updateFailed: 'Error en actualitzar. Torna-ho a intentar.',
         isLatest: 'Ja tens la darrera versió.',
+        rebooting:
+          "S'està instal·lant el nucli nou i el dispositiu es reinicia. Pot trigar uns minuts; no l'apagueu.",
+        kernelUpdate:
+          'Aquesta actualització instal·la el nucli {{version}}. El dispositiu es reiniciarà i tornarà sol al nucli actual si el nou no arrenca.',
+        rolledBack:
+          'El nucli {{version}} no ha arrencat i el dispositiu ha tornat al nucli anterior.',
         available: 'Hi ha una actualització disponible. Vols actualitzar ara?',
         updating: 'Actualitzant... espera',
         confirm: 'Confirma',

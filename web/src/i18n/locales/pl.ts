@@ -988,6 +988,12 @@ const pl = {
         queryFailed: 'Uzyskanie wersji nie powiodło się',
         updateFailed: 'Aktualizacja nie powiodła się. Spróbuj ponownie.',
         isLatest: 'Oprogramowanie jest aktualne.',
+        rebooting:
+          'Trwa instalowanie nowego jądra i ponowne uruchamianie. Może to potrwać kilka minut; nie odłączaj zasilania.',
+        kernelUpdate:
+          'Ta aktualizacja instaluje jądro {{version}}. Urządzenie uruchomi się ponownie i samo wróci do bieżącego jądra, jeśli nowe nie wystartuje.',
+        rolledBack:
+          'Jądro {{version}} nie uruchomiło się, więc urządzenie wróciło do poprzedniego jądra.',
         available: 'Aktualizacja jest dostępna. Czy na pewno chcesz dokonać aktualizacji?',
         updating: 'Aktualizacja rozpoczęta. Proszę czekać...',
         confirm: 'Potwierdź',

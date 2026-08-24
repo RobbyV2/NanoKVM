@@ -995,6 +995,12 @@ const fr = {
         queryFailed: 'Impossible de vérifier les mises à jour. Veuillez réessayer.',
         updateFailed: 'Mise à jour échouée. Veuillez réessayer.',
         isLatest: 'Vous avez déjà la dernière version.',
+        rebooting:
+          'Installation du nouveau noyau et redémarrage. Cela peut prendre quelques minutes ; ne coupez pas l’alimentation.',
+        kernelUpdate:
+          'Cette mise à jour installe le noyau {{version}}. L’appareil redémarre et revient de lui-même au noyau actuel si le nouveau ne démarre pas.',
+        rolledBack:
+          'Le noyau {{version}} n’a pas démarré et l’appareil est revenu au noyau précédent.',
         available: 'Une mise à jour est disponible. Voulez-vous vraiment mettre à jour?',
         updating: 'Mise à jour en cours. Veuillez patienter...',
         confirm: 'Confirmer',

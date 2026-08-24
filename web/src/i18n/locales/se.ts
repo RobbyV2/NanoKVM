@@ -984,6 +984,12 @@ const se = {
         queryFailed: 'Kunde inte hämta version',
         updateFailed: 'Uppdatering misslyckades. Försök igen.',
         isLatest: 'Du har redan den senaste versionen.',
+        rebooting:
+          'Den nya kärnan installeras och enheten startar om. Det kan ta några minuter; stäng inte av strömmen.',
+        kernelUpdate:
+          'Den här uppdateringen installerar kärna {{version}}. Enheten startar om och återgår själv till den nuvarande kärnan om den nya inte startar.',
+        rolledBack:
+          'Kärnan {{version}} startade inte och enheten återgick till den föregående kärnan.',
         available: 'En uppdatering finns tillgänglig. Vill du uppdatera nu?',
         updating: 'Uppdatering påbörjad. Vänta...',
         confirm: 'Bekräfta',

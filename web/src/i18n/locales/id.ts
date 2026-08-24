@@ -986,6 +986,12 @@ const id = {
         queryFailed: 'Gagal mendapatkan versi',
         updateFailed: 'Gagal memperbarui, tolong coba lagi.',
         isLatest: 'Kamu sudah menggunakan versi terbaru.',
+        rebooting:
+          'Memasang kernel baru dan memulai ulang. Ini bisa memakan beberapa menit; jangan matikan daya.',
+        kernelUpdate:
+          'Pembaruan ini memasang kernel {{version}}. Perangkat akan dimulai ulang dan kembali sendiri ke kernel saat ini jika yang baru tidak berhasil.',
+        rolledBack:
+          'Kernel {{version}} gagal dijalankan dan perangkat kembali ke kernel sebelumnya.',
         available: 'Ada pembaruan baru. apa kamu mau memperbarui?',
         updating: 'Pembaruan dimulai. Silahkan tunggu...',
         confirm: 'Konfirmasi',

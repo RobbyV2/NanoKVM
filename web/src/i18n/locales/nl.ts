@@ -992,6 +992,12 @@ const nl = {
         queryFailed: 'Ophalen versie mislukt',
         updateFailed: 'Update mislukt. Probeer het opnieuw.',
         isLatest: 'U heeft al de nieuwste versie.',
+        rebooting:
+          'De nieuwe kernel wordt geïnstalleerd en het apparaat start opnieuw op. Dit kan enkele minuten duren; schakel de voeding niet uit.',
+        kernelUpdate:
+          'Deze update installeert kernel {{version}}. Het apparaat start opnieuw op en keert vanzelf terug naar de huidige kernel als de nieuwe niet opstart.',
+        rolledBack:
+          'Kernel {{version}} is niet opgestart en het apparaat is teruggevallen op de vorige kernel.',
         available: 'Er is een update beschikbaar. Weet u zeker dat u wilt updaten?',
         updating: 'Update gestart. Even geduld a.u.b...',
         confirm: 'Bevestigen',

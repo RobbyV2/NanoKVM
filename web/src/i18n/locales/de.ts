@@ -994,6 +994,12 @@ const de = {
         queryFailed: 'Version konnte nicht abgefragt werden',
         updateFailed: 'Aktualisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
         isLatest: 'Sie haben bereits die aktuellste Version.',
+        rebooting:
+          'Der neue Kernel wird installiert und das Gerät startet neu. Das kann einige Minuten dauern; trennen Sie die Stromversorgung nicht.',
+        kernelUpdate:
+          'Dieses Update installiert Kernel {{version}}. Das Gerät startet neu und kehrt von selbst zum aktuellen Kernel zurück, falls der neue nicht hochkommt.',
+        rolledBack:
+          'Kernel {{version}} ist nicht gestartet; das Gerät ist auf den vorherigen Kernel zurückgefallen.',
         available: 'Eine Aktualisierung ist verfügbar. Möchten sie diese jetzt durchführen?',
         updating: 'Aktualisierung gestartet. Bitte warten...',
         confirm: 'Bestätigen',
