@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -206,9 +207,19 @@ func TestWebUSBClaimPrecedesStartupError(t *testing.T) {
 	if claimed.Type != "claimed" || failed.Type != "error" || failed.SinkID != HybridSinkID {
 		t.Fatalf("responses = %+v then %+v", claimed, failed)
 	}
-	_ = connection.SetReadDeadline(time.Now().Add(time.Second))
-	if _, _, err := connection.ReadMessage(); err == nil {
-		t.Fatal("startup failure left the source socket open")
+	// Releasing the binding publishes binding_removed, and the released frame
+	// watchTerminations writes for it races the close of the same socket.
+	_ = connection.SetReadDeadline(time.Now().Add(2 * time.Second))
+	for {
+		_, _, err := connection.ReadMessage()
+		if err == nil {
+			continue
+		}
+		var timeout net.Error
+		if errors.As(err, &timeout) && timeout.Timeout() {
+			t.Fatal("startup failure left the source socket open")
+		}
+		break
 	}
 	if len(registry.Snapshot().Bindings) != 0 {
 		t.Fatal("startup failure left the USB sink bound")
