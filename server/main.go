@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -13,6 +17,7 @@ import (
 	"NanoKVM-Server/logger"
 	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/router"
+	"NanoKVM-Server/service/bootslot"
 	"NanoKVM-Server/service/bridge"
 	"NanoKVM-Server/service/controlmode"
 	"NanoKVM-Server/service/passthrough"
@@ -25,6 +30,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	cors "github.com/rs/cors/wrapper/gin"
+)
+
+const (
+	confirmTimeout  = 150 * time.Second
+	confirmInterval = 2 * time.Second
 )
 
 func main() {
@@ -114,6 +124,7 @@ func run() {
 			}()
 		}
 
+		go confirmKernel(conf.Port.Https)
 		if err := middleware.ListenAndServeLoopbackHTTPRedirect(
 			httpAddr,
 			httpsPortStr,
@@ -131,7 +142,12 @@ func run() {
 			}()
 		}
 
-		if err := r.Run(httpAddr); err != nil {
+		listener, err := net.Listen("tcp", httpAddr)
+		if err != nil {
+			panic("start http server failed")
+		}
+		go confirmKernel(conf.Port.Http)
+		if err := r.RunListener(listener); err != nil {
 			panic("start http server failed")
 		}
 	}
@@ -171,4 +187,53 @@ func dispose() {
 		log.Printf("stop usb passthrough: %v", err)
 	}
 	common.GetKvmVision().Close()
+}
+
+// confirmKernel commits a trial kernel once the device is genuinely usable.
+// Reaching userspace is not enough: a kernel that boots with no working NIC
+// must still roll back, so this waits for the UI to answer on the loopback and
+// for a routable address to exist.
+func confirmKernel(port int) {
+	slot := bootslot.Default()
+	if slot.Slot() != bootslot.SlotTrial {
+		return
+	}
+
+	deadline := time.Now().Add(confirmTimeout)
+	for time.Now().Before(deadline) {
+		if serving(port) && routable() {
+			if err := slot.Confirm(); err != nil {
+				log.Printf("commit trial kernel: %v", err)
+			}
+			return
+		}
+		time.Sleep(confirmInterval)
+	}
+	log.Printf("trial kernel never reached a serving state; the next boot rolls back")
+}
+
+func serving(port int) bool {
+	client := http.Client{Timeout: 5 * time.Second}
+	rsp, err := client.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/")
+	if err != nil {
+		return false
+	}
+	defer rsp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(rsp.Body, 64<<10))
+	return err == nil && bytes.Contains(body, []byte("<title>NanoKVM</title>"))
+}
+
+// routable reports whether any interface holds a non-loopback address, which
+// is what separates a working device from one nobody can reach.
+func routable() bool {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return false
+	}
+	for _, addr := range addrs {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && !ipNet.IP.IsLinkLocalUnicast() {
+			return true
+		}
+	}
+	return false
 }
