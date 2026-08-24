@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/sipeed.ico" />
+    <!-- Served by the device so every browser gets the same icon, and so a
+         change made in Settings shows up without a rebuild. The response
+         carries its own Content-Type; a type attribute here would only go
+         stale. -->
+    <link rel="icon" href="/api/vm/favicon" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NanoKVM</title>
   </head>

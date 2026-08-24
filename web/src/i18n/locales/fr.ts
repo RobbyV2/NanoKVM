@@ -293,7 +293,8 @@ const fr = {
     devices: {
       title: 'Appareils',
       stale: 'L’état en direct des appareils est indisponible. Reconnexion en cours.',
-      empty: 'Aucun emplacement de caméra ou de microphone n\'est configuré. Ajoutez-en un dans Paramètres, Appareil.',
+      empty:
+        "Aucun emplacement de caméra ou de microphone n'est configuré. Ajoutez-en un dans Paramètres, Appareil.",
       available: 'Disponible',
       waiting: 'L’hôte attend une source',
       hostOpen: 'Hôte ouvert',
@@ -340,7 +341,8 @@ const fr = {
         surrenderedDesc:
           'L’hôte distant voit le périphérique importé à la place du clavier, de la souris et des médias virtuels du NanoKVM. Ils reviennent dès que la session s’arrête.',
         unsupported: 'WebUSB nécessite un navigateur Chromium',
-        insecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc WebUSB. Activez HTTPS dans Paramètres, Réseau.',
+        insecure:
+          "Cette page n'est pas servie en HTTPS, le navigateur bloque donc WebUSB. Activez HTTPS dans Paramètres, Réseau.",
         session: 'Transfert de {{device}} ({{mode}})',
         idle: 'Aucune session de passthrough',
         mode: {
@@ -587,7 +589,8 @@ const fr = {
         instructionsDesc:
           'Il n’y a volontairement aucun agent client à installer. Exécutez ces commandes usbip standard sur la machine à laquelle le périphérique est branché.',
         copyFailed: 'Échec de la copie. Copiez la commande manuellement.',
-        copyInsecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez la commande manuellement, ou activez HTTPS dans Paramètres, Réseau.',
+        copyInsecure:
+          "Cette page n'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez la commande manuellement, ou activez HTTPS dans Paramètres, Réseau.",
         directNote:
           'Sans tunnel, usbipd doit être joignable sur votre réseau et l’adresse d’exportateur ci-dessus doit le désigner. usbip transporte le périphérique en clair, le tunnel est donc préférable.',
         steps: {
@@ -639,7 +642,8 @@ const fr = {
           'L’activation de MCP arrêtera PicoClaw et fermera toute session PicoClaw active.',
         failed: 'Échec de l’opération MCP',
         copyFailed: 'La copie a échoué. Copiez manuellement.',
-        copyInsecure: 'Cette page n\'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez manuellement, ou activez HTTPS dans Paramètres, Réseau.',
+        copyInsecure:
+          "Cette page n'est pas servie en HTTPS, le navigateur bloque donc la copie. Copiez manuellement, ou activez HTTPS dans Paramètres, Réseau.",
         okBtn: 'Confirmer',
         cancelBtn: 'Annuler'
       },
@@ -669,6 +673,20 @@ const fr = {
         languageDesc: "Sélectionnez la langue de l'interface",
         webTitle: 'Titre Web',
         webTitleDesc: 'Personnaliser le titre de la page Web',
+        favicon: 'Favicon',
+        faviconDesc: "Personnaliser l'icône de l'onglet du navigateur",
+        faviconPlaceholder: "URL de l'image",
+        faviconUpload: 'Téléverser',
+        faviconReset: 'Réinitialiser',
+        faviconCustom: 'Icône personnalisée',
+        faviconBoot: 'Icône de /boot/logo.ico',
+        faviconDefault: 'Icône par défaut',
+        faviconOverridesBoot: 'Remplace /boot/logo.ico',
+        faviconErrUrl: "Saisissez une adresse d'image http:// ou https://",
+        faviconErrFetch: "L'appareil n'a pas pu télécharger cette image",
+        faviconErrLarge: 'Image trop volumineuse. La limite est de 256 Ko',
+        faviconErrType: 'Image non prise en charge. Utilisez .ico, .png, .svg, .gif ou .jpg',
+        faviconErrSave: "Échec de l'enregistrement de l'icône",
         menuBar: {
           title: 'Barre de menus',
           mode: "Mode d'affichage",
@@ -760,7 +778,8 @@ const fr = {
         networkDesc: "Monter la carte réseau virtuelle sur l'hôte distant",
         networkProtocol: 'Protocole réseau',
         networkProtocolDesc: 'NCM pour les hôtes récents, RNDIS pour les anciens Windows',
-        rebindNotice: 'Basculer l\'un ou l\'autre interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.',
+        rebindNotice:
+          "Basculer l'un ou l'autre interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.",
         media: {
           title: 'Emplacements caméra et micro',
           desc: 'Déclarez les périphériques média que les navigateurs peuvent occuper. Le budget de points de terminaison est vérifié lors de l’application du profil USB. L’enregistrement réénumère le périphérique et déconnecte les navigateurs connectés.',
@@ -774,7 +793,8 @@ const fr = {
           cameraDefault: 'Caméra NanoKVM {{index}}',
           microphoneDefault: 'Microphone NanoKVM {{index}}',
           nameRequired: 'Chaque emplacement doit avoir un nom.',
-          budgetHint: 'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez le disque virtuel ou le réseau USB ci-dessus.',
+          budgetHint:
+            'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez le disque virtuel ou le réseau USB ci-dessus.',
           unsupported:
             'Ce noyau ne peut pas nommer les périphériques média : les machines affichent donc le nom par défaut.',
           save: 'Enregistrer les emplacements',
@@ -1032,7 +1052,8 @@ const fr = {
             'Les mises à jour en préversion ne sont pas disponibles lorsqu’un serveur de mise à jour personnalisé est activé.'
         },
         offline: {
-          kernelNotice: 'Ce paquet contient un noyau. Il est écrit dans l\'emplacement de secours et l\'appareil redémarre pour l\'essayer ; s\'il ne revient pas, l\'appareil retourne seul au noyau actuel.',
+          kernelNotice:
+            "Ce paquet contient un noyau. Il est écrit dans l'emplacement de secours et l'appareil redémarre pour l'essayer ; s'il ne revient pas, l'appareil retourne seul au noyau actuel.",
           kernelConfirm: 'Installer le noyau',
           kernelCancel: 'Annuler',
           title: 'Mises à jour hors ligne',

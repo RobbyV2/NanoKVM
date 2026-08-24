@@ -290,7 +290,8 @@ const nb = {
     devices: {
       title: 'Enheter',
       stale: 'Sanntidsstatusen for enhetene er utilgjengelig. Kobler til igjen.',
-      empty: 'Ingen kamera- eller mikrofonplasser er satt opp. Legg til en under Innstillinger, Enhet.',
+      empty:
+        'Ingen kamera- eller mikrofonplasser er satt opp. Legg til en under Innstillinger, Enhet.',
       available: 'Tilgjengelig',
       waiting: 'Verten venter på en kilde',
       hostOpen: 'Vert åpen',
@@ -337,7 +338,8 @@ const nb = {
         surrenderedDesc:
           'Den eksterne verten ser den importerte enheten i stedet for NanoKVMs tastatur, mus og virtuelle medier. De kommer tilbake når økten stopper.',
         unsupported: 'WebUSB krever en Chromium-nettleser',
-        insecure: 'Denne siden leveres ikke over HTTPS, så nettleseren holder tilbake WebUSB. Slå på HTTPS under Innstillinger, Nettverk.',
+        insecure:
+          'Denne siden leveres ikke over HTTPS, så nettleseren holder tilbake WebUSB. Slå på HTTPS under Innstillinger, Nettverk.',
         session: 'Videresender {{device}} ({{mode}})',
         idle: 'Ingen passthrough-økt',
         mode: {
@@ -581,7 +583,8 @@ const nb = {
         instructionsDesc:
           'Det finnes bevisst ingen klientagent å installere. Kjør disse vanlige usbip-kommandoene på maskinen enheten er koblet til.',
         copyFailed: 'Kopiering mislyktes. Kopier kommandoen manuelt.',
-        copyInsecure: 'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier kommandoen manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
+        copyInsecure:
+          'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier kommandoen manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
         directNote:
           'Uten tunnel må usbipd være tilgjengelig på nettverket ditt, og eksportøradressen ovenfor må peke på den. usbip sender enheten ukryptert, så tunnelen er å foretrekke.',
         steps: {
@@ -632,7 +635,8 @@ const nb = {
           'Aktivering av MCP stopper PicoClaw og lukker alle aktive PicoClaw-økter.',
         failed: 'MCP-operasjonen mislyktes',
         copyFailed: 'Kopiering mislyktes. Kopier manuelt.',
-        copyInsecure: 'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
+        copyInsecure:
+          'Denne siden leveres ikke over HTTPS, så nettleseren blokkerer kopiering. Kopier manuelt, eller slå på HTTPS under Innstillinger, Nettverk.',
         okBtn: 'Bekreft',
         cancelBtn: 'Avbryt'
       },
@@ -662,6 +666,20 @@ const nb = {
         languageDesc: 'Velg språket for grensesnittet',
         webTitle: 'Netttittel',
         webTitleDesc: 'Tilpass nettsidetittelen',
+        favicon: 'Favicon',
+        faviconDesc: 'Tilpass ikonet i nettleserfanen',
+        faviconPlaceholder: 'Bilde-URL',
+        faviconUpload: 'Last opp',
+        faviconReset: 'Tilbakestill',
+        faviconCustom: 'Egendefinert ikon',
+        faviconBoot: 'Ikon fra /boot/logo.ico',
+        faviconDefault: 'Standardikon',
+        faviconOverridesBoot: 'Overstyrer /boot/logo.ico',
+        faviconErrUrl: 'Skriv inn en http:// eller https:// bildeadresse',
+        faviconErrFetch: 'Enheten kunne ikke laste ned bildet',
+        faviconErrLarge: 'Bildet er for stort. Grensen er 256 KB',
+        faviconErrType: 'Bildeformatet støttes ikke. Bruk .ico, .png, .svg, .gif eller .jpg',
+        faviconErrSave: 'Kunne ikke lagre ikonet',
         menuBar: {
           title: 'Menylinje',
           mode: 'Visningsmodus',
@@ -751,7 +769,8 @@ const nb = {
         networkDesc: 'Monter virtuelt nettverkskort på den eksterne verten',
         networkProtocol: 'Nettverksprotokoll',
         networkProtocolDesc: 'NCM for moderne verter, RNDIS for eldre Windows',
-        rebindNotice: 'Å slå om en av bryterne teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
+        rebindNotice:
+          'Å slå om en av bryterne teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
         media: {
           title: 'Kamera- og mikrofonplasser',
           desc: 'Angi hvilke medieenheter nettlesere kan fylle. Endepunktsbudsjettet kontrolleres når USB-profilen tas i bruk. Lagring opplister enheten på nytt og kobler fra tilkoblede nettlesere.',
@@ -765,7 +784,8 @@ const nb = {
           cameraDefault: 'NanoKVM-kamera {{index}}',
           microphoneDefault: 'NanoKVM-mikrofon {{index}}',
           nameRequired: 'Hver plass trenger et navn.',
-          budgetHint: 'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken eller USB-nettverket over.',
+          budgetHint:
+            'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken eller USB-nettverket over.',
           unsupported:
             'Denne kjernen kan ikke navngi medieenheter, så verter viser standardnavnet.',
           save: 'Lagre plasser',
@@ -1019,7 +1039,8 @@ const nb = {
             'Forhåndsvisningsoppdateringer er ikke tilgjengelige mens en egendefinert oppdateringsserver er aktivert.'
         },
         offline: {
-          kernelNotice: 'Denne pakken inneholder en kjerne. Den skrives til reserveplassen og enheten starter på nytt for å prøve den; kommer den ikke tilbake, går enheten selv tilbake til den nåværende kjernen.',
+          kernelNotice:
+            'Denne pakken inneholder en kjerne. Den skrives til reserveplassen og enheten starter på nytt for å prøve den; kommer den ikke tilbake, går enheten selv tilbake til den nåværende kjernen.',
           kernelConfirm: 'Installer kjerne',
           kernelCancel: 'Avbryt',
           title: 'Offline oppdateringer',

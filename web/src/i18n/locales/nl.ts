@@ -292,7 +292,8 @@ const nl = {
     devices: {
       title: 'Apparaten',
       stale: 'De live status van de apparaten is niet beschikbaar. Bezig met opnieuw verbinden.',
-      empty: 'Er zijn geen camera- of microfoonplaatsen ingesteld. Voeg er een toe bij Instellingen, Apparaat.',
+      empty:
+        'Er zijn geen camera- of microfoonplaatsen ingesteld. Voeg er een toe bij Instellingen, Apparaat.',
       available: 'Beschikbaar',
       waiting: 'De host wacht op een bron',
       hostOpen: 'Host open',
@@ -339,7 +340,8 @@ const nl = {
         surrenderedDesc:
           'De externe host ziet het geïmporteerde apparaat in plaats van het toetsenbord, de muis en de virtuele media van NanoKVM. Ze komen terug zodra de sessie stopt.',
         unsupported: 'WebUSB vereist een Chromium-browser',
-        insecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom houdt de browser WebUSB tegen. Schakel HTTPS in bij Instellingen, Netwerk.',
+        insecure:
+          'Deze pagina wordt niet via HTTPS geleverd, daarom houdt de browser WebUSB tegen. Schakel HTTPS in bij Instellingen, Netwerk.',
         session: '{{device}} wordt doorgegeven ({{mode}})',
         idle: 'Geen passthrough-sessie',
         mode: {
@@ -584,7 +586,8 @@ const nl = {
         instructionsDesc:
           'Er is bewust geen clientagent om te installeren. Voer deze gewone usbip-commando’s uit op de machine waar het apparaat aan hangt.',
         copyFailed: 'Kopiëren mislukt. Kopieer het commando handmatig.',
-        copyInsecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer de opdracht handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
+        copyInsecure:
+          'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer de opdracht handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
         directNote:
           'Zonder tunnel moet usbipd bereikbaar zijn op uw netwerk en moet het exporteradres hierboven daarnaar verwijzen. usbip draagt het apparaat onversleuteld over, dus de tunnel verdient de voorkeur.',
         steps: {
@@ -636,7 +639,8 @@ const nl = {
           'Als MCP wordt ingeschakeld, stopt PicoClaw en worden alle actieve PicoClaw-sessies gesloten.',
         failed: 'MCP-bewerking mislukt',
         copyFailed: 'Kopiëren mislukt. Kopieer handmatig.',
-        copyInsecure: 'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
+        copyInsecure:
+          'Deze pagina wordt niet via HTTPS geleverd, daarom blokkeert de browser het kopiëren. Kopieer handmatig of schakel HTTPS in bij Instellingen, Netwerk.',
         okBtn: 'Bevestigen',
         cancelBtn: 'Annuleren'
       },
@@ -666,6 +670,20 @@ const nl = {
         languageDesc: 'Selecteer de taal voor de interface',
         webTitle: 'Webtitel',
         webTitleDesc: 'Pas de titel van de webpagina aan',
+        favicon: 'Favicon',
+        faviconDesc: 'Pas het pictogram van het browsertabblad aan',
+        faviconPlaceholder: 'Afbeeldings-URL',
+        faviconUpload: 'Uploaden',
+        faviconReset: 'Herstellen',
+        faviconCustom: 'Aangepast pictogram',
+        faviconBoot: 'Pictogram uit /boot/logo.ico',
+        faviconDefault: 'Standaardpictogram',
+        faviconOverridesBoot: 'Overschrijft /boot/logo.ico',
+        faviconErrUrl: 'Voer een http:// of https:// afbeeldingsadres in',
+        faviconErrFetch: 'Het apparaat kon die afbeelding niet downloaden',
+        faviconErrLarge: 'Afbeelding is te groot. De limiet is 256 KB',
+        faviconErrType: 'Niet-ondersteunde afbeelding. Gebruik .ico, .png, .svg, .gif of .jpg',
+        faviconErrSave: 'Kan het pictogram niet opslaan',
         menuBar: {
           title: 'Menubalk',
           mode: 'Weergavemodus',
@@ -758,7 +776,8 @@ const nl = {
         networkDesc: 'Koppel virtueel netwerk kaart aan de externe host',
         networkProtocol: 'Netwerkprotocol',
         networkProtocolDesc: 'NCM voor moderne hosts, RNDIS voor oudere Windows',
-        rebindNotice: 'Een van beide schakelaars omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
+        rebindNotice:
+          'Een van beide schakelaars omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
         media: {
           title: 'Camera- en microfoonplaatsen',
           desc: 'Geef aan welke media-apparaten browsers mogen invullen. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast. Bij opslaan wordt het apparaat opnieuw opgesomd en worden verbonden browsers verbroken.',
@@ -772,7 +791,8 @@ const nl = {
           cameraDefault: 'NanoKVM-camera {{index}}',
           microphoneDefault: 'NanoKVM-microfoon {{index}}',
           nameRequired: 'Elke plaats heeft een naam nodig.',
-          budgetHint: 'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hierboven de virtuele schijf of het USB-netwerk uit.',
+          budgetHint:
+            'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hierboven de virtuele schijf of het USB-netwerk uit.',
           unsupported:
             'Deze kernel kan media-apparaten geen naam geven, dus computers tonen de standaardnaam.',
           save: 'Plaatsen opslaan',
@@ -1028,7 +1048,8 @@ const nl = {
             'Preview-updates zijn niet beschikbaar zolang een aangepaste updateserver is ingeschakeld.'
         },
         offline: {
-          kernelNotice: 'Dit pakket bevat een kernel. Die wordt naar het reserveslot geschreven en het apparaat start opnieuw op om hem te proberen; komt hij niet terug, dan keert het apparaat vanzelf terug naar de huidige kernel.',
+          kernelNotice:
+            'Dit pakket bevat een kernel. Die wordt naar het reserveslot geschreven en het apparaat start opnieuw op om hem te proberen; komt hij niet terug, dan keert het apparaat vanzelf terug naar de huidige kernel.',
           kernelConfirm: 'Kernel installeren',
           kernelCancel: 'Annuleren',
           title: 'Offline-updates',

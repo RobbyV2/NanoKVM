@@ -291,7 +291,8 @@ const es = {
     devices: {
       title: 'Dispositivos',
       stale: 'El estado en vivo de los dispositivos no está disponible. Reconectando.',
-      empty: 'No hay ranuras de cámara ni de micrófono configuradas. Añade una en Ajustes, Dispositivo.',
+      empty:
+        'No hay ranuras de cámara ni de micrófono configuradas. Añade una en Ajustes, Dispositivo.',
       available: 'Disponible',
       waiting: 'El host espera una fuente',
       hostOpen: 'Host abierto',
@@ -338,7 +339,8 @@ const es = {
         surrenderedDesc:
           'El host remoto ve el dispositivo importado en lugar del teclado, el ratón y los medios virtuales del NanoKVM. Vuelven cuando la sesión termina.',
         unsupported: 'WebUSB necesita un navegador Chromium',
-        insecure: 'Esta página no se sirve por HTTPS, así que el navegador oculta WebUSB. Activa HTTPS en Ajustes, Red.',
+        insecure:
+          'Esta página no se sirve por HTTPS, así que el navegador oculta WebUSB. Activa HTTPS en Ajustes, Red.',
         session: 'Reenviando {{device}} ({{mode}})',
         idle: 'Ninguna sesión de passthrough',
         mode: {
@@ -584,7 +586,8 @@ const es = {
         instructionsDesc:
           'Por diseño no hay ningún agente cliente que instalar. Ejecute estas órdenes estándar de usbip en el equipo al que está conectado el dispositivo.',
         copyFailed: 'No se pudo copiar. Copie la orden manualmente.',
-        copyInsecure: 'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Copia el comando manualmente o activa HTTPS en Ajustes, Red.',
+        copyInsecure:
+          'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Copia el comando manualmente o activa HTTPS en Ajustes, Red.',
         directNote:
           'Sin túnel, usbipd tiene que ser accesible en su red y la dirección del exportador de arriba debe apuntar a él. usbip transporta el dispositivo sin cifrar, así que es preferible el túnel.',
         steps: {
@@ -636,7 +639,8 @@ const es = {
           'Al activar MCP se detendrá PicoClaw y se cerrará cualquier sesión activa de PicoClaw.',
         failed: 'Error en la operación MCP',
         copyFailed: 'Error al copiar. Copia manualmente.',
-        copyInsecure: 'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Cópialo manualmente o activa HTTPS en Ajustes, Red.',
+        copyInsecure:
+          'Esta página no se sirve por HTTPS, así que el navegador bloquea la copia. Cópialo manualmente o activa HTTPS en Ajustes, Red.',
         okBtn: 'Confirmar',
         cancelBtn: 'Cancelar'
       },
@@ -666,6 +670,20 @@ const es = {
         languageDesc: 'Seleccionar el idioma de la interfaz',
         webTitle: 'Título web',
         webTitleDesc: 'Personaliza el título de la página web',
+        favicon: 'Favicon',
+        faviconDesc: 'Personaliza el icono de la pestaña del navegador',
+        faviconPlaceholder: 'URL de la imagen',
+        faviconUpload: 'Subir',
+        faviconReset: 'Restablecer',
+        faviconCustom: 'Icono personalizado',
+        faviconBoot: 'Icono de /boot/logo.ico',
+        faviconDefault: 'Icono predeterminado',
+        faviconOverridesBoot: 'Anula /boot/logo.ico',
+        faviconErrUrl: 'Introduce una dirección de imagen http:// o https://',
+        faviconErrFetch: 'El dispositivo no pudo descargar la imagen',
+        faviconErrLarge: 'La imagen es demasiado grande. El límite es 256 KB',
+        faviconErrType: 'Imagen no compatible. Usa .ico, .png, .svg, .gif o .jpg',
+        faviconErrSave: 'No se pudo guardar el icono',
         menuBar: {
           title: 'Barra de menú',
           mode: 'Modo de visualización',
@@ -757,7 +775,8 @@ const es = {
         networkDesc: 'Montar tarjeta de red virtual en el host remoto',
         networkProtocol: 'Protocolo de red',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antiguos',
-        rebindNotice: 'Cambiar cualquiera de los dos interruptores vuelve a enumerar el dispositivo USB, así que el destino pierde un momento sus dispositivos virtuales y su red USB.',
+        rebindNotice:
+          'Cambiar cualquiera de los dos interruptores vuelve a enumerar el dispositivo USB, así que el destino pierde un momento sus dispositivos virtuales y su red USB.',
         media: {
           title: 'Ranuras de cámara y micrófono',
           desc: 'Declare los dispositivos multimedia que los navegadores pueden ocupar. El presupuesto de endpoints se comprueba al aplicar el perfil USB. Al guardar, el dispositivo se vuelve a enumerar y se desconecta cualquier navegador conectado.',
@@ -771,7 +790,8 @@ const es = {
           cameraDefault: 'Cámara NanoKVM {{index}}',
           microphoneDefault: 'Micrófono NanoKVM {{index}}',
           nameRequired: 'Cada ranura necesita un nombre.',
-          budgetHint: 'Los seis endpoints USB IN son un límite fijo del hardware. Reúne teclado, ratón y puntero absoluto en una sola interfaz HID en Presentación USB, o desactiva arriba el disco virtual o la red USB.',
+          budgetHint:
+            'Los seis endpoints USB IN son un límite fijo del hardware. Reúne teclado, ratón y puntero absoluto en una sola interfaz HID en Presentación USB, o desactiva arriba el disco virtual o la red USB.',
           unsupported:
             'Este kernel no puede nombrar los dispositivos multimedia, así que los equipos muestran el nombre predeterminado.',
           save: 'Guardar ranuras',
@@ -1025,7 +1045,8 @@ const es = {
             'Las actualizaciones preliminares no están disponibles mientras esté activado un servidor de actualizaciones personalizado.'
         },
         offline: {
-          kernelNotice: 'Este paquete contiene un kernel. Se escribe en la ranura de reserva y el dispositivo reinicia para probarlo; si no vuelve, regresa por sí solo al kernel actual.',
+          kernelNotice:
+            'Este paquete contiene un kernel. Se escribe en la ranura de reserva y el dispositivo reinicia para probarlo; si no vuelve, regresa por sí solo al kernel actual.',
           kernelConfirm: 'Instalar kernel',
           kernelCancel: 'Cancelar',
           title: 'Actualizaciones sin conexión',

@@ -336,7 +336,8 @@ const tr = {
         surrenderedDesc:
           'Uzak host, NanoKVM’in klavyesi, faresi ve sanal ortamları yerine içe aktarılan cihazı görür. Oturum durduğunda hepsi geri gelir.',
         unsupported: 'WebUSB için Chromium tabanlı bir tarayıcı gerekir',
-        insecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı WebUSB\'yi gizliyor. Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
+        insecure:
+          "Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı WebUSB'yi gizliyor. Ayarlar, Ağ bölümünden HTTPS'yi etkinleştirin.",
         session: '{{device}} aktarılıyor ({{mode}})',
         idle: 'Passthrough oturumu yok',
         mode: {
@@ -578,7 +579,8 @@ const tr = {
         instructionsDesc:
           'Tasarım gereği kurulacak bir istemci aracısı yok. Bu standart usbip komutlarını aygıtın takılı olduğu makinede çalıştırın.',
         copyFailed: 'Kopyalanamadı. Komutu elle kopyalayın.',
-        copyInsecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Komutu elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
+        copyInsecure:
+          "Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Komutu elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS'yi etkinleştirin.",
         directNote:
           'Tünel olmadan usbipd ağınızdan erişilebilir olmalı ve yukarıdaki dışa aktaran adresi onu göstermelidir. usbip aygıtı şifresiz taşır, bu yüzden tünel tercih edilmelidir.',
         steps: {
@@ -630,7 +632,8 @@ const tr = {
           'MCP etkinleştirildiğinde PicoClaw durdurulur ve tüm etkin PicoClaw oturumları kapatılır.',
         failed: 'MCP işlemi başarısız oldu',
         copyFailed: 'Kopyalama başarısız. Elle kopyalayın.',
-        copyInsecure: 'Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS\'yi etkinleştirin.',
+        copyInsecure:
+          "Bu sayfa HTTPS üzerinden sunulmadığı için tarayıcı kopyalamayı engelledi. Elle kopyalayın veya Ayarlar, Ağ bölümünden HTTPS'yi etkinleştirin.",
         okBtn: 'Onayla',
         cancelBtn: 'İptal'
       },
@@ -660,6 +663,20 @@ const tr = {
         languageDesc: 'Arayüz için dili seçin',
         webTitle: 'Site başlığı',
         webTitleDesc: 'Görünen site başlığını güncelleyin',
+        favicon: 'Favicon',
+        faviconDesc: 'Tarayıcı sekmesi simgesini özelleştirin',
+        faviconPlaceholder: "Görsel URL'si",
+        faviconUpload: 'Yükle',
+        faviconReset: 'Sıfırla',
+        faviconCustom: 'Özel simge',
+        faviconBoot: '/boot/logo.ico simgesi',
+        faviconDefault: 'Varsayılan simge',
+        faviconOverridesBoot: '/boot/logo.ico dosyasını geçersiz kılıyor',
+        faviconErrUrl: 'http:// veya https:// ile başlayan bir görsel adresi girin',
+        faviconErrFetch: 'Cihaz bu görseli indiremedi',
+        faviconErrLarge: 'Görsel çok büyük. Sınır 256 KB',
+        faviconErrType: 'Desteklenmeyen görsel. .ico, .png, .svg, .gif veya .jpg kullanın',
+        faviconErrSave: 'Simge kaydedilemedi',
         menuBar: {
           title: 'Menü Çubuğu',
           mode: 'Görüntüleme Modu',
@@ -752,7 +769,8 @@ const tr = {
         networkDesc: 'Sanal ağ kartını uzak ana bilgisayara bağla',
         networkProtocol: 'Ağ protokolü',
         networkProtocolDesc: 'Modern ana bilgisayarlar için NCM, eski Windows için RNDIS',
-        rebindNotice: 'İki anahtardan birini değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
+        rebindNotice:
+          'İki anahtardan birini değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
         media: {
           title: 'Kamera ve mikrofon yuvaları',
           desc: 'Tarayıcıların doldurabileceği medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir. Kaydetmek aygıtı yeniden numaralandırır ve bağlı tarayıcıların bağlantısını keser.',
@@ -766,7 +784,8 @@ const tr = {
           cameraDefault: 'NanoKVM Kamera {{index}}',
           microphoneDefault: 'NanoKVM Mikrofon {{index}}',
           nameRequired: 'Her yuvanın bir adı olmalı.',
-          budgetHint: 'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da yukarıdaki sanal diski veya USB ağını kapatın.',
+          budgetHint:
+            'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da yukarıdaki sanal diski veya USB ağını kapatın.',
           unsupported:
             'Bu çekirdek medya aygıtlarını adlandıramaz, bu yüzden makineler varsayılan adı gösterir.',
           save: 'Yuvaları kaydet',
@@ -1017,7 +1036,8 @@ const tr = {
             'Özel bir güncelleme sunucusu etkinken önizleme güncellemeleri kullanılamaz.'
         },
         offline: {
-          kernelNotice: 'Bu paket bir çekirdek içeriyor. Yedek yuvaya yazılır ve aygıt denemek için yeniden başlar; geri gelmezse aygıt kendiliğinden şu anki çekirdeğe döner.',
+          kernelNotice:
+            'Bu paket bir çekirdek içeriyor. Yedek yuvaya yazılır ve aygıt denemek için yeniden başlar; geri gelmezse aygıt kendiliğinden şu anki çekirdeğe döner.',
           kernelConfirm: 'Çekirdeği kur',
           kernelCancel: 'İptal',
           title: 'Çevrimdışı Güncellemeler',

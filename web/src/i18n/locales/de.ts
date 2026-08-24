@@ -294,7 +294,8 @@ const de = {
     devices: {
       title: 'Geräte',
       stale: 'Der Live-Status der Geräte ist nicht verfügbar. Verbindung wird wiederhergestellt.',
-      empty: 'Es sind keine Kamera- oder Mikrofonplätze eingerichtet. Unter Einstellungen, Gerät einen hinzufügen.',
+      empty:
+        'Es sind keine Kamera- oder Mikrofonplätze eingerichtet. Unter Einstellungen, Gerät einen hinzufügen.',
       available: 'Verfügbar',
       waiting: 'Der Host wartet auf eine Quelle',
       hostOpen: 'Host geöffnet',
@@ -341,7 +342,8 @@ const de = {
         surrenderedDesc:
           'Der entfernte Host sieht das importierte Gerät statt Tastatur, Maus und virtuellen Medien des NanoKVM. Sie kommen zurück, sobald die Sitzung endet.',
         unsupported: 'WebUSB braucht einen Chromium-Browser',
-        insecure: 'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb hält der Browser WebUSB zurück. HTTPS unter Einstellungen, Netzwerk aktivieren.',
+        insecure:
+          'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb hält der Browser WebUSB zurück. HTTPS unter Einstellungen, Netzwerk aktivieren.',
         session: '{{device}} wird durchgereicht ({{mode}})',
         idle: 'Keine Passthrough-Sitzung',
         mode: {
@@ -586,7 +588,8 @@ const de = {
         instructionsDesc:
           'Es gibt bewusst keinen Client-Agenten zu installieren. Führen Sie diese normalen usbip-Befehle auf dem Rechner aus, an dem das Gerät hängt.',
         copyFailed: 'Kopieren fehlgeschlagen. Bitte den Befehl von Hand kopieren.',
-        copyInsecure: 'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb blockiert der Browser das Kopieren. Den Befehl von Hand kopieren oder HTTPS unter Einstellungen, Netzwerk aktivieren.',
+        copyInsecure:
+          'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb blockiert der Browser das Kopieren. Den Befehl von Hand kopieren oder HTTPS unter Einstellungen, Netzwerk aktivieren.',
         directNote:
           'Ohne Tunnel muss usbipd in Ihrem Netz erreichbar sein und die Exporter-Adresse oben muss darauf zeigen. usbip überträgt das Gerät unverschlüsselt, der Tunnel ist deshalb vorzuziehen.',
         steps: {
@@ -638,7 +641,8 @@ const de = {
           'Durch Aktivieren von MCP wird PicoClaw gestoppt und jede aktive PicoClaw-Sitzung geschlossen.',
         failed: 'MCP-Aktion fehlgeschlagen',
         copyFailed: 'Kopieren fehlgeschlagen. Bitte manuell kopieren.',
-        copyInsecure: 'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb blockiert der Browser das Kopieren. Manuell kopieren oder HTTPS unter Einstellungen, Netzwerk aktivieren.',
+        copyInsecure:
+          'Diese Seite wird nicht über HTTPS ausgeliefert, deshalb blockiert der Browser das Kopieren. Manuell kopieren oder HTTPS unter Einstellungen, Netzwerk aktivieren.',
         okBtn: 'Bestätigen',
         cancelBtn: 'Abbrechen'
       },
@@ -668,6 +672,20 @@ const de = {
         languageDesc: 'Wählen Sie die Sprache für die Benutzeroberfläche aus',
         webTitle: 'Web Titel',
         webTitleDesc: 'Passen Sie den Web-Seite Titel an',
+        favicon: 'Favicon',
+        faviconDesc: 'Symbol im Browser-Tab anpassen',
+        faviconPlaceholder: 'Bild-URL',
+        faviconUpload: 'Hochladen',
+        faviconReset: 'Zurücksetzen',
+        faviconCustom: 'Eigenes Symbol',
+        faviconBoot: 'Symbol aus /boot/logo.ico',
+        faviconDefault: 'Standardsymbol',
+        faviconOverridesBoot: 'Überschreibt /boot/logo.ico',
+        faviconErrUrl: 'Geben Sie eine http:// oder https:// Bildadresse ein',
+        faviconErrFetch: 'Das Gerät konnte das Bild nicht herunterladen',
+        faviconErrLarge: 'Bild ist zu groß. Das Limit liegt bei 256 KB',
+        faviconErrType: 'Nicht unterstütztes Bild. Verwenden Sie .ico, .png, .svg, .gif oder .jpg',
+        faviconErrSave: 'Symbol konnte nicht gespeichert werden',
         menuBar: {
           title: 'Menüleiste',
           mode: 'Anzeigemodus',
@@ -759,7 +777,8 @@ const de = {
         networkDesc: 'Binde die virtuelle Netzwerkkarte an den entfernten Host',
         networkProtocol: 'Netzwerkprotokoll',
         networkProtocolDesc: 'NCM für moderne Hosts, RNDIS für ältere Windows-Systeme',
-        rebindNotice: 'Das Umschalten eines der beiden Schalter meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
+        rebindNotice:
+          'Das Umschalten eines der beiden Schalter meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
         media: {
           title: 'Kamera- und Mikrofonplätze',
           desc: 'Legen Sie fest, welche Mediengeräte Browser belegen dürfen. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft. Beim Speichern wird das Gerät neu erkannt und verbundene Browser werden getrennt.',
@@ -773,7 +792,8 @@ const de = {
           cameraDefault: 'NanoKVM-Kamera {{index}}',
           microphoneDefault: 'NanoKVM-Mikrofon {{index}}',
           nameRequired: 'Jeder Platz braucht einen Namen.',
-          budgetHint: 'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte oben die virtuelle Festplatte oder das USB-Netzwerk ab.',
+          budgetHint:
+            'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte oben die virtuelle Festplatte oder das USB-Netzwerk ab.',
           unsupported:
             'Dieser Kernel kann Mediengeräte nicht benennen, deshalb zeigen Hosts den Standardnamen.',
           save: 'Plätze speichern',
@@ -1030,7 +1050,8 @@ const de = {
             'Vorschau-Updates sind nicht verfügbar, solange ein benutzerdefinierter Update-Server aktiviert ist.'
         },
         offline: {
-          kernelNotice: 'Dieses Paket enthält einen Kernel. Er wird in den Reserveplatz geschrieben und das Gerät startet zum Test neu; kommt es nicht zurück, kehrt es von selbst zum aktuellen Kernel zurück.',
+          kernelNotice:
+            'Dieses Paket enthält einen Kernel. Er wird in den Reserveplatz geschrieben und das Gerät startet zum Test neu; kommt es nicht zurück, kehrt es von selbst zum aktuellen Kernel zurück.',
           kernelConfirm: 'Kernel installieren',
           kernelCancel: 'Abbrechen',
           title: 'Offline Aktualisierung',

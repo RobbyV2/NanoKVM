@@ -327,7 +327,8 @@ const zh = {
         surrenderedDesc:
           '远程主机看到的是导入的设备，而不是 NanoKVM 的键盘、鼠标和虚拟媒体。会话停止后它们会自动恢复。',
         unsupported: 'WebUSB 需要 Chromium 内核浏览器',
-        insecure: '本页面未通过 HTTPS 提供，浏览器因此禁用了 WebUSB。请在“设置 - 网络”中启用 HTTPS。',
+        insecure:
+          '本页面未通过 HTTPS 提供，浏览器因此禁用了 WebUSB。请在“设置 - 网络”中启用 HTTPS。',
         session: '正在直通 {{device}}（{{mode}}）',
         idle: '没有直通会话',
         mode: {
@@ -547,7 +548,8 @@ const zh = {
         instructionsDesc:
           '按照设计，无需安装任何客户端代理。请在拥有该设备的电脑上运行以下标准 usbip 命令。',
         copyFailed: '复制失败，请手动复制命令。',
-        copyInsecure: '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制命令，或在“设置 - 网络”中启用 HTTPS。',
+        copyInsecure:
+          '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制命令，或在“设置 - 网络”中启用 HTTPS。',
         directNote:
           '不使用隧道时，usbipd 必须在您的网络上可达，并且上面的导出端地址要指向它。usbip 以明文传输设备数据，建议优先使用隧道。',
         steps: {
@@ -597,7 +599,8 @@ const zh = {
         enableConfirmDesc: '启用 MCP 将停止 PicoClaw，并关闭当前活动的 PicoClaw 会话。',
         failed: 'MCP 操作失败',
         copyFailed: '复制失败，请手动复制。',
-        copyInsecure: '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制，或在“设置 - 网络”中启用 HTTPS。',
+        copyInsecure:
+          '本页面未通过 HTTPS 提供，浏览器因此阻止了复制。请手动复制，或在“设置 - 网络”中启用 HTTPS。',
         okBtn: '确认',
         cancelBtn: '取消'
       },
@@ -627,6 +630,20 @@ const zh = {
         languageDesc: '选择界面语言',
         webTitle: '网页标题',
         webTitleDesc: '自定义网站页面标题',
+        favicon: '网页图标',
+        faviconDesc: '自定义浏览器标签页图标',
+        faviconPlaceholder: '图片链接',
+        faviconUpload: '上传',
+        faviconReset: '重置',
+        faviconCustom: '自定义图标',
+        faviconBoot: '来自 /boot/logo.ico 的图标',
+        faviconDefault: '默认图标',
+        faviconOverridesBoot: '已覆盖 /boot/logo.ico',
+        faviconErrUrl: '请输入 http:// 或 https:// 开头的图片地址',
+        faviconErrFetch: '设备无法下载该图片',
+        faviconErrLarge: '图片过大，上限为 256 KB',
+        faviconErrType: '不支持的图片格式，请使用 .ico、.png、.svg、.gif 或 .jpg',
+        faviconErrSave: '保存图标失败',
         menuBar: {
           title: '菜单栏',
           mode: '显示方式',
@@ -715,7 +732,8 @@ const zh = {
         networkDesc: '在远程主机中挂载虚拟网卡',
         networkProtocol: '网络协议',
         networkProtocolDesc: '新主机使用 NCM，旧版 Windows 使用 RNDIS',
-        rebindNotice: '切换任一开关都会让 USB 设备重新枚举，目标主机会短暂失去虚拟设备和 USB 网络。',
+        rebindNotice:
+          '切换任一开关都会让 USB 设备重新枚举，目标主机会短暂失去虚拟设备和 USB 网络。',
         media: {
           title: '摄像头与麦克风插槽',
           desc: '声明浏览器可以占用的媒体设备。端点预算会在应用 USB 配置文件时检查。 保存会重新枚举设备，并断开已连接的浏览器。',
@@ -729,7 +747,8 @@ const zh = {
           cameraDefault: 'NanoKVM 摄像头 {{index}}',
           microphoneDefault: 'NanoKVM 麦克风 {{index}}',
           nameRequired: '每个插槽都需要名称。',
-          budgetHint: '六个 USB IN 端点是固定的硬件上限。请在“USB 呈现”中把键盘、鼠标和绝对定位放到同一个 HID 接口上，或关闭上面的虚拟磁盘或 USB 网络。',
+          budgetHint:
+            '六个 USB IN 端点是固定的硬件上限。请在“USB 呈现”中把键盘、鼠标和绝对定位放到同一个 HID 接口上，或关闭上面的虚拟磁盘或 USB 网络。',
           unsupported: '此内核无法为媒体设备命名，因此主机会显示默认名称。',
           save: '保存插槽',
           disconnect: '断开',
@@ -970,7 +989,8 @@ const zh = {
           previewDisabled: '启用自定义更新服务器时，预览更新不可用'
         },
         offline: {
-          kernelNotice: '该安装包包含内核。内核会写入备用槽位并重启试运行；若无法启动，设备会自动回退到当前内核。',
+          kernelNotice:
+            '该安装包包含内核。内核会写入备用槽位并重启试运行；若无法启动，设备会自动回退到当前内核。',
           kernelConfirm: '安装内核',
           kernelCancel: '取消',
           title: '离线更新',

@@ -291,7 +291,8 @@ const cz = {
     devices: {
       title: 'Zařízení',
       stale: 'Živý stav zařízení není dostupný. Probíhá opětovné připojení.',
-      empty: 'Nejsou nastavené žádné sloty kamery ani mikrofonu. Přidejte je v Nastavení, Zařízení.',
+      empty:
+        'Nejsou nastavené žádné sloty kamery ani mikrofonu. Přidejte je v Nastavení, Zařízení.',
       available: 'Dostupné',
       waiting: 'Hostitel čeká na zdroj',
       hostOpen: 'Hostitel otevřen',
@@ -338,7 +339,8 @@ const cz = {
         surrenderedDesc:
           'Vzdálený host vidí importované zařízení místo klávesnice, myši a virtuálních médií NanoKVM. Vrátí se, jakmile relace skončí.',
         unsupported: 'WebUSB vyžaduje prohlížeč založený na Chromiu',
-        insecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč WebUSB skrývá. Zapněte HTTPS v Nastavení, Síť.',
+        insecure:
+          'Tato stránka není poskytována přes HTTPS, proto prohlížeč WebUSB skrývá. Zapněte HTTPS v Nastavení, Síť.',
         session: 'Předává se {{device}} ({{mode}})',
         idle: 'Žádná relace passthrough',
         mode: {
@@ -579,7 +581,8 @@ const cz = {
         instructionsDesc:
           'Záměrně se neinstaluje žádný klientský agent. Spusťte tyto běžné příkazy usbip na počítači, ke kterému je zařízení připojeno.',
         copyFailed: 'Kopírování se nezdařilo. Zkopírujte příkaz ručně.',
-        copyInsecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte příkaz ručně, nebo zapněte HTTPS v Nastavení, Síť.',
+        copyInsecure:
+          'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte příkaz ručně, nebo zapněte HTTPS v Nastavení, Síť.',
         directNote:
           'Bez tunelu musí být usbipd dostupný ve vaší síti a adresa exportéra výše na něj musí ukazovat. usbip přenáší zařízení nešifrovaně, proto je tunel vhodnější.',
         steps: {
@@ -631,7 +634,8 @@ const cz = {
           'Povolením MCP se zastaví PicoClaw a ukončí se všechny aktivní relace PicoClaw.',
         failed: 'Operace MCP se nezdařila',
         copyFailed: 'Kopírování se nezdařilo. Zkopírujte ručně.',
-        copyInsecure: 'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte ho ručně, nebo zapněte HTTPS v Nastavení, Síť.',
+        copyInsecure:
+          'Tato stránka není poskytována přes HTTPS, proto prohlížeč zablokoval kopírování. Zkopírujte ho ručně, nebo zapněte HTTPS v Nastavení, Síť.',
         okBtn: 'Potvrdit',
         cancelBtn: 'Zrušit'
       },
@@ -661,6 +665,20 @@ const cz = {
         languageDesc: 'Vyberte jazyk rozhraní',
         webTitle: 'Název webu',
         webTitleDesc: 'Přizpůsobte název webové stránky',
+        favicon: 'Favicon',
+        faviconDesc: 'Přizpůsobte ikonu na kartě prohlížeče',
+        faviconPlaceholder: 'URL obrázku',
+        faviconUpload: 'Nahrát',
+        faviconReset: 'Obnovit',
+        faviconCustom: 'Vlastní ikona',
+        faviconBoot: 'Ikona z /boot/logo.ico',
+        faviconDefault: 'Výchozí ikona',
+        faviconOverridesBoot: 'Přepisuje /boot/logo.ico',
+        faviconErrUrl: 'Zadejte adresu obrázku http:// nebo https://',
+        faviconErrFetch: 'Zařízení nemohlo obrázek stáhnout',
+        faviconErrLarge: 'Obrázek je příliš velký. Limit je 256 KB',
+        faviconErrType: 'Nepodporovaný obrázek. Použijte .ico, .png, .svg, .gif nebo .jpg',
+        faviconErrSave: 'Uložení ikony se nezdařilo',
         menuBar: {
           title: 'Panel nabídek',
           mode: 'Režim zobrazení',
@@ -750,7 +768,8 @@ const cz = {
         networkDesc: 'Připojit virtuální síťovou kartu na vzdáleném hostiteli',
         networkProtocol: 'Síťový protokol',
         networkProtocolDesc: 'NCM pro moderní systémy, RNDIS pro starší Windows',
-        rebindNotice: 'Přepnutí kteréhokoli z přepínačů znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
+        rebindNotice:
+          'Přepnutí kteréhokoli z přepínačů znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
         media: {
           title: 'Sloty pro kameru a mikrofon',
           desc: 'Určete, která mediální zařízení smějí prohlížeče obsadit. Rozpočet koncových bodů se kontroluje při použití profilu USB. Uložení znovu vyčíslí zařízení a odpojí připojené prohlížeče.',
@@ -764,7 +783,8 @@ const cz = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Každý slot potřebuje název.',
-          budgetHint: 'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo výše vypněte virtuální disk či USB síť.',
+          budgetHint:
+            'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo výše vypněte virtuální disk či USB síť.',
           unsupported:
             'Toto jádro neumí pojmenovat mediální zařízení, takže počítače uvidí výchozí název.',
           save: 'Uložit sloty',
@@ -1015,7 +1035,8 @@ const cz = {
             'Testovací aktualizace nejsou při použití vlastního aktualizačního serveru dostupné.'
         },
         offline: {
-          kernelNotice: 'Tento balíček obsahuje jádro. Zapíše se do záložního slotu a zařízení se restartuje, aby ho vyzkoušelo; pokud nenaběhne, samo se vrátí k současnému jádru.',
+          kernelNotice:
+            'Tento balíček obsahuje jádro. Zapíše se do záložního slotu a zařízení se restartuje, aby ho vyzkoušelo; pokud nenaběhne, samo se vrátí k současnému jádru.',
           kernelConfirm: 'Nainstalovat jádro',
           kernelCancel: 'Zrušit',
           title: 'Offline aktualizace',

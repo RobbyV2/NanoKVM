@@ -9,6 +9,9 @@ export const submenuOpenCountAtom = atom(0);
 // web title
 export const webTitleAtom = atom('');
 
+// favicon cache key: a digest of the stored icon, empty until it is known
+export const faviconVersionAtom = atom('');
+
 // menu display mode: 'off' | 'auto' | 'always'
 export const menuDisplayModeAtom = atom<string>('auto');
 

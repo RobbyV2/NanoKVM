@@ -288,7 +288,8 @@ const ca = {
     devices: {
       title: 'Dispositius',
       stale: 'L’estat en directe dels dispositius no està disponible. S’està reconnectant.',
-      empty: 'No hi ha cap ranura de càmera ni de micròfon configurada. Afegeix-ne una a Configuració, Dispositiu.',
+      empty:
+        'No hi ha cap ranura de càmera ni de micròfon configurada. Afegeix-ne una a Configuració, Dispositiu.',
       available: 'Disponible',
       waiting: 'L’amfitrió espera una font',
       hostOpen: 'Amfitrió obert',
@@ -335,7 +336,8 @@ const ca = {
         surrenderedDesc:
           'L’amfitrió remot veu el dispositiu importat en lloc del teclat, el ratolí i els mitjans virtuals del NanoKVM. Tornen quan s’atura la sessió.',
         unsupported: 'WebUSB necessita un navegador Chromium',
-        insecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador amaga el WebUSB. Activa l\'HTTPS a Configuració, Xarxa.',
+        insecure:
+          "Aquesta pàgina no se serveix per HTTPS, així que el navegador amaga el WebUSB. Activa l'HTTPS a Configuració, Xarxa.",
         session: 'S’està reenviant {{device}} ({{mode}})',
         idle: 'Cap sessió de passthrough',
         mode: {
@@ -580,7 +582,8 @@ const ca = {
         instructionsDesc:
           'Per disseny no cal instal·lar cap agent client. Executa aquestes ordres estàndard d’usbip a la màquina on hi ha el dispositiu.',
         copyFailed: 'No s’ha pogut copiar. Copia l’ordre manualment.',
-        copyInsecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia l\'ordre manualment, o activa l\'HTTPS a Configuració, Xarxa.',
+        copyInsecure:
+          "Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia l'ordre manualment, o activa l'HTTPS a Configuració, Xarxa.",
         directNote:
           'Sense túnel, l’usbipd ha de ser accessible a la teva xarxa i l’adreça de l’exportador de dalt l’ha d’indicar. L’usbip transporta el dispositiu sense xifrar, així que és preferible el túnel.',
         steps: {
@@ -632,7 +635,8 @@ const ca = {
           'En activar MCP, PicoClaw s’aturarà i es tancarà qualsevol sessió activa de PicoClaw.',
         failed: 'L’operació MCP ha fallat',
         copyFailed: 'La còpia ha fallat. Copieu-ho manualment.',
-        copyInsecure: 'Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia-ho manualment, o activa l\'HTTPS a Configuració, Xarxa.',
+        copyInsecure:
+          "Aquesta pàgina no se serveix per HTTPS, així que el navegador bloqueja la còpia. Copia-ho manualment, o activa l'HTTPS a Configuració, Xarxa.",
         okBtn: 'Confirma',
         cancelBtn: 'Cancel·la'
       },
@@ -662,6 +666,20 @@ const ca = {
         languageDesc: "Seleccioneu l'idioma per a la interfície",
         webTitle: 'Títol web',
         webTitleDesc: 'Personalitza el títol de la pàgina',
+        favicon: 'Favicon',
+        faviconDesc: 'Personalitza la icona de la pestanya del navegador',
+        faviconPlaceholder: 'URL de la imatge',
+        faviconUpload: 'Puja',
+        faviconReset: 'Restableix',
+        faviconCustom: 'Icona personalitzada',
+        faviconBoot: 'Icona de /boot/logo.ico',
+        faviconDefault: 'Icona per defecte',
+        faviconOverridesBoot: 'Anul·la /boot/logo.ico',
+        faviconErrUrl: "Introduïu una adreça d'imatge http:// o https://",
+        faviconErrFetch: 'El dispositiu no ha pogut baixar la imatge',
+        faviconErrLarge: 'La imatge és massa gran. El límit és 256 KB',
+        faviconErrType: 'Imatge no compatible. Utilitzeu .ico, .png, .svg, .gif o .jpg',
+        faviconErrSave: "No s'ha pogut desar la icona",
         menuBar: {
           title: 'Barra de menús',
           mode: 'Mode de visualització',
@@ -752,7 +770,8 @@ const ca = {
         networkDesc: 'Munta una targeta de xarxa virtual al dispositiu remot',
         networkProtocol: 'Protocol de xarxa',
         networkProtocolDesc: 'NCM per a amfitrions moderns, RNDIS per a Windows antics',
-        rebindNotice: 'Canviar qualsevol dels dos interruptors torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
+        rebindNotice:
+          'Canviar qualsevol dels dos interruptors torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
         media: {
           title: 'Ranures de càmera i micròfon',
           desc: 'Declareu els dispositius multimèdia que els navegadors poden omplir. El pressupost de punts finals es comprova en aplicar el perfil USB. En desar, el dispositiu es torna a enumerar i es desconnecta qualsevol navegador connectat.',
@@ -766,7 +785,8 @@ const ca = {
           cameraDefault: 'Càmera NanoKVM {{index}}',
           microphoneDefault: 'Micròfon NanoKVM {{index}}',
           nameRequired: 'Cada ranura necessita un nom.',
-          budgetHint: 'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva a dalt el disc virtual o la xarxa USB.',
+          budgetHint:
+            'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva a dalt el disc virtual o la xarxa USB.',
           unsupported:
             'Aquest nucli no pot anomenar els dispositius multimèdia, així que els amfitrions mostren el nom per defecte.',
           save: 'Desa les ranures',
@@ -1017,7 +1037,8 @@ const ca = {
             'Les actualitzacions de previsualització no estan disponibles mentre hi hagi activat un servidor d’actualitzacions personalitzat.'
         },
         offline: {
-          kernelNotice: 'Aquest paquet conté un nucli. S\'escriu a la ranura de reserva i el dispositiu es reinicia per provar-lo; si no torna, el dispositiu retorna tot sol al nucli actual.',
+          kernelNotice:
+            "Aquest paquet conté un nucli. S'escriu a la ranura de reserva i el dispositiu es reinicia per provar-lo; si no torna, el dispositiu retorna tot sol al nucli actual.",
           kernelConfirm: 'Instal·la el nucli',
           kernelCancel: 'Cancel·la',
           title: 'Actualitzacions fora de línia',

@@ -290,7 +290,8 @@ const pt_br = {
     devices: {
       title: 'Dispositivos',
       stale: 'O estado ao vivo dos dispositivos está indisponível. Reconectando.',
-      empty: 'Nenhum slot de câmera ou microfone está configurado. Adicione um em Configurações, Dispositivo.',
+      empty:
+        'Nenhum slot de câmera ou microfone está configurado. Adicione um em Configurações, Dispositivo.',
       available: 'Disponível',
       waiting: 'O host está esperando uma fonte',
       hostOpen: 'Host aberto',
@@ -337,7 +338,8 @@ const pt_br = {
         surrenderedDesc:
           'O host remoto vê o dispositivo importado no lugar do teclado, do mouse e das mídias virtuais do NanoKVM. Eles voltam quando a sessão termina.',
         unsupported: 'O WebUSB precisa de um navegador Chromium',
-        insecure: 'Esta página não é servida por HTTPS, então o navegador bloqueia o WebUSB. Ative o HTTPS em Configurações, Rede.',
+        insecure:
+          'Esta página não é servida por HTTPS, então o navegador bloqueia o WebUSB. Ative o HTTPS em Configurações, Rede.',
         session: 'Encaminhando {{device}} ({{mode}})',
         idle: 'Nenhuma sessão de passthrough',
         mode: {
@@ -581,7 +583,8 @@ const pt_br = {
         instructionsDesc:
           'Por decisão de projeto não há agente cliente para instalar. Execute estes comandos usbip padrão na máquina em que o dispositivo está conectado.',
         copyFailed: 'Falha ao copiar. Copie o comando manualmente.',
-        copyInsecure: 'Esta página não é servida por HTTPS, então o navegador bloqueia a cópia. Copie o comando manualmente ou ative o HTTPS em Configurações, Rede.',
+        copyInsecure:
+          'Esta página não é servida por HTTPS, então o navegador bloqueia a cópia. Copie o comando manualmente ou ative o HTTPS em Configurações, Rede.',
         directNote:
           'Sem túnel, o usbipd precisa estar acessível na sua rede e o endereço do exportador acima precisa apontar para ele. O usbip transporta o dispositivo sem criptografia, então prefira o túnel.',
         steps: {
@@ -633,7 +636,8 @@ const pt_br = {
           'Habilitar o MCP interromperá o PicoClaw e fechará todas as sessões ativas do PicoClaw.',
         failed: 'Falha na operação MCP',
         copyFailed: 'Falha ao copiar. Copie manualmente.',
-        copyInsecure: 'Esta página não é servida por HTTPS, então o navegador bloqueia a cópia. Copie manualmente ou ative o HTTPS em Configurações, Rede.',
+        copyInsecure:
+          'Esta página não é servida por HTTPS, então o navegador bloqueia a cópia. Copie manualmente ou ative o HTTPS em Configurações, Rede.',
         okBtn: 'Confirmar',
         cancelBtn: 'Cancelar'
       },
@@ -663,6 +667,20 @@ const pt_br = {
         languageDesc: 'Selecione o idioma da interface',
         webTitle: 'Título da Web',
         webTitleDesc: 'Personalizar o título da página web',
+        favicon: 'Favicon',
+        faviconDesc: 'Personalizar o ícone da aba do navegador',
+        faviconPlaceholder: 'URL da imagem',
+        faviconUpload: 'Enviar',
+        faviconReset: 'Redefinir',
+        faviconCustom: 'Ícone personalizado',
+        faviconBoot: 'Ícone de /boot/logo.ico',
+        faviconDefault: 'Ícone padrão',
+        faviconOverridesBoot: 'Substituindo /boot/logo.ico',
+        faviconErrUrl: 'Informe um endereço de imagem http:// ou https://',
+        faviconErrFetch: 'O dispositivo não conseguiu baixar essa imagem',
+        faviconErrLarge: 'A imagem é muito grande. O limite é 256 KB',
+        faviconErrType: 'Imagem não suportada. Use .ico, .png, .svg, .gif ou .jpg',
+        faviconErrSave: 'Falha ao salvar o ícone',
         menuBar: {
           title: 'Barra de Menu',
           mode: 'Modo de exibição',
@@ -753,7 +771,8 @@ const pt_br = {
         networkDesc: 'Montar placa de rede virtual no host remoto',
         networkProtocol: 'Protocolo de rede',
         networkProtocolDesc: 'NCM para hosts modernos, RNDIS para Windows antigos',
-        rebindNotice: 'Mudar qualquer um dos interruptores reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
+        rebindNotice:
+          'Mudar qualquer um dos interruptores reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
         media: {
           title: 'Slots de câmera e microfone',
           desc: 'Declare os dispositivos de mídia que os navegadores podem ocupar. O orçamento de endpoints é verificado ao aplicar o perfil USB. Salvar reenumera o dispositivo e desconecta os navegadores conectados.',
@@ -767,7 +786,8 @@ const pt_br = {
           cameraDefault: 'Câmera NanoKVM {{index}}',
           microphoneDefault: 'Microfone NanoKVM {{index}}',
           nameRequired: 'Cada slot precisa de um nome.',
-          budgetHint: 'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue acima o disco virtual ou a rede USB.',
+          budgetHint:
+            'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue acima o disco virtual ou a rede USB.',
           unsupported:
             'Este kernel não consegue nomear dispositivos de mídia, então os hosts mostram o nome padrão.',
           save: 'Salvar slots',
@@ -1022,7 +1042,8 @@ const pt_br = {
             'As atualizações de prévia ficam indisponíveis enquanto um servidor de atualização personalizado estiver ativado.'
         },
         offline: {
-          kernelNotice: 'Este pacote contém um kernel. Ele é gravado no slot reserva e o dispositivo reinicia para testá-lo; se não voltar, retorna sozinho ao kernel atual.',
+          kernelNotice:
+            'Este pacote contém um kernel. Ele é gravado no slot reserva e o dispositivo reinicia para testá-lo; se não voltar, retorna sozinho ao kernel atual.',
           kernelConfirm: 'Instalar kernel',
           kernelCancel: 'Cancelar',
           title: 'Atualizações off-line',

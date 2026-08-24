@@ -145,6 +145,26 @@ export function setWebTitle(title: string) {
   return http.post('/api/vm/web-title', { title });
 }
 
+// get the favicon state: which icon is live, and the cache key for its url
+export function getFavicon() {
+  return http.get('/api/vm/favicon/state');
+}
+
+// point the device at an image url; an empty url restores the default icon
+export function setFavicon(url: string) {
+  return http.post('/api/vm/favicon', { url });
+}
+
+// upload an icon from the local machine
+export function uploadFavicon(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return http.post('/api/vm/favicon/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+}
+
 // get mDNS state
 export function getMdnsState() {
   return http.get('/api/vm/mdns');

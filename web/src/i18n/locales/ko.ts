@@ -333,7 +333,8 @@ const ko = {
         surrenderedDesc:
           '원격 호스트에는 NanoKVM의 키보드, 마우스, 가상 미디어 대신 가져온 장치가 보입니다. 세션이 끝나면 다시 돌아옵니다.',
         unsupported: 'WebUSB에는 Chromium 계열 브라우저가 필요합니다',
-        insecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 WebUSB를 차단합니다. 설정 - 네트워크에서 HTTPS를 활성화하세요.',
+        insecure:
+          '이 페이지가 HTTPS로 제공되지 않아 브라우저가 WebUSB를 차단합니다. 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         session: '{{device}} 전달 중({{mode}})',
         idle: '패스스루 세션 없음',
         mode: {
@@ -570,7 +571,8 @@ const ko = {
         instructionsDesc:
           '설계상 설치할 클라이언트 에이전트가 없습니다. 장치가 연결된 컴퓨터에서 아래의 표준 usbip 명령을 실행하세요.',
         copyFailed: '복사하지 못했습니다. 명령을 직접 복사하세요.',
-        copyInsecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 명령을 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
+        copyInsecure:
+          '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 명령을 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         directNote:
           '터널을 쓰지 않으려면 usbipd가 네트워크에서 접근 가능해야 하고 위의 내보내는 쪽 주소가 그것을 가리켜야 합니다. usbip는 장치 데이터를 암호화하지 않으므로 터널을 권장합니다.',
         steps: {
@@ -622,7 +624,8 @@ const ko = {
           'MCP를 활성화하면 PicoClaw가 중지되고 활성 PicoClaw 세션이 모두 닫힙니다.',
         failed: 'MCP 작업에 실패했습니다',
         copyFailed: '복사에 실패했습니다. 수동으로 복사하세요.',
-        copyInsecure: '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
+        copyInsecure:
+          '이 페이지가 HTTPS로 제공되지 않아 브라우저가 복사를 차단했습니다. 직접 복사하거나 설정 - 네트워크에서 HTTPS를 활성화하세요.',
         okBtn: '확인',
         cancelBtn: '취소'
       },
@@ -652,6 +655,20 @@ const ko = {
         languageDesc: '인터페이스 언어를 선택하세요',
         webTitle: '웹 제목',
         webTitleDesc: '웹 페이지 제목 사용자 지정',
+        favicon: '파비콘',
+        faviconDesc: '브라우저 탭 아이콘 사용자 지정',
+        faviconPlaceholder: '이미지 URL',
+        faviconUpload: '업로드',
+        faviconReset: '초기화',
+        faviconCustom: '사용자 지정 아이콘',
+        faviconBoot: '/boot/logo.ico의 아이콘',
+        faviconDefault: '기본 아이콘',
+        faviconOverridesBoot: '/boot/logo.ico를 재정의함',
+        faviconErrUrl: 'http:// 또는 https:// 이미지 주소를 입력하세요',
+        faviconErrFetch: '장치가 이미지를 다운로드하지 못했습니다',
+        faviconErrLarge: '이미지가 너무 큽니다. 최대 256 KB입니다',
+        faviconErrType: '지원되지 않는 이미지입니다. .ico, .png, .svg, .gif 또는 .jpg를 사용하세요',
+        faviconErrSave: '아이콘을 저장하지 못했습니다',
         menuBar: {
           title: '메뉴 바',
           mode: '표시 모드',
@@ -741,7 +758,8 @@ const ko = {
         networkDesc: '원격 호스트에서 가상 네트워크 카드를 마운트합니다.',
         networkProtocol: '네트워크 프로토콜',
         networkProtocolDesc: '최신 호스트는 NCM, 구형 Windows는 RNDIS',
-        rebindNotice: '어느 스위치를 바꾸든 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
+        rebindNotice:
+          '어느 스위치를 바꾸든 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
         media: {
           title: '카메라 및 마이크 슬롯',
           desc: '브라우저가 채울 수 있는 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다. 저장하면 장치가 다시 열거되고 연결된 브라우저는 끊어집니다.',
@@ -755,7 +773,8 @@ const ko = {
           cameraDefault: 'NanoKVM 카메라 {{index}}',
           microphoneDefault: 'NanoKVM 마이크 {{index}}',
           nameRequired: '모든 슬롯에 이름이 필요합니다.',
-          budgetHint: 'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나 위의 가상 디스크 또는 USB 네트워크를 끄세요.',
+          budgetHint:
+            'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나 위의 가상 디스크 또는 USB 네트워크를 끄세요.',
           unsupported:
             '이 커널은 미디어 장치의 이름을 지정할 수 없으므로 호스트에는 기본 이름이 표시됩니다.',
           save: '슬롯 저장',
@@ -1002,7 +1021,8 @@ const ko = {
             '사용자 지정 업데이트 서버가 활성화되어 있는 동안에는 미리 보기 업데이트를 사용할 수 없습니다.'
         },
         offline: {
-          kernelNotice: '이 패키지에는 커널이 들어 있습니다. 예비 슬롯에 기록한 뒤 재부팅하여 시험 부팅하며, 살아나지 않으면 장치가 스스로 현재 커널로 되돌아갑니다.',
+          kernelNotice:
+            '이 패키지에는 커널이 들어 있습니다. 예비 슬롯에 기록한 뒤 재부팅하여 시험 부팅하며, 살아나지 않으면 장치가 스스로 현재 커널로 되돌아갑니다.',
           kernelConfirm: '커널 설치',
           kernelCancel: '취소',
           title: '오프라인 업데이트',

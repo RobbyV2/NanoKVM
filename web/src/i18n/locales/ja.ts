@@ -291,7 +291,8 @@ const ja = {
     devices: {
       title: 'デバイス',
       stale: 'デバイスのライブ状態を取得できません。再接続しています。',
-      empty: 'カメラまたはマイクのスロットが設定されていません。「設定 - デバイス」で追加してください。',
+      empty:
+        'カメラまたはマイクのスロットが設定されていません。「設定 - デバイス」で追加してください。',
       available: '利用可能',
       waiting: 'ホストがソースを待っています',
       hostOpen: 'ホスト受信中',
@@ -338,7 +339,8 @@ const ja = {
         surrenderedDesc:
           'リモートホストには NanoKVM のキーボード、マウス、仮想メディアではなくインポートされたデバイスが見えます。セッションが終了すると元に戻ります。',
         unsupported: 'WebUSB には Chromium 系ブラウザーが必要です',
-        insecure: 'このページは HTTPS で配信されていないため、ブラウザーが WebUSB を無効にしています。「設定 - ネットワーク」で HTTPS を有効にしてください。',
+        insecure:
+          'このページは HTTPS で配信されていないため、ブラウザーが WebUSB を無効にしています。「設定 - ネットワーク」で HTTPS を有効にしてください。',
         session: '{{device}} を転送中（{{mode}}）',
         idle: 'パススルーセッションはありません',
         mode: {
@@ -578,7 +580,8 @@ const ja = {
         instructionsDesc:
           '設計上、クライアントエージェントのインストールは不要です。デバイスが接続されているマシンで、標準の usbip コマンドを次のとおり実行してください。',
         copyFailed: 'コピーできませんでした。コマンドを手動でコピーしてください。',
-        copyInsecure: 'このページは HTTPS で配信されていないため、ブラウザーがコピーを拒否しました。コマンドを手動でコピーするか、「設定 - ネットワーク」で HTTPS を有効にしてください。',
+        copyInsecure:
+          'このページは HTTPS で配信されていないため、ブラウザーがコピーを拒否しました。コマンドを手動でコピーするか、「設定 - ネットワーク」で HTTPS を有効にしてください。',
         directNote:
           'トンネルを使わない場合、usbipd をネットワーク上から到達可能にし、上のエクスポーターのアドレスにそれを指定する必要があります。usbip はデバイスの通信を暗号化しないため、トンネルの利用を推奨します。',
         steps: {
@@ -630,7 +633,8 @@ const ja = {
           'MCP を有効にすると PicoClaw が停止し、アクティブな PicoClaw セッションがすべて終了します。',
         failed: 'MCP 操作に失敗しました',
         copyFailed: 'コピーに失敗しました。手動でコピーしてください。',
-        copyInsecure: 'このページは HTTPS で配信されていないため、ブラウザーがコピーを拒否しました。手動でコピーするか、「設定 - ネットワーク」で HTTPS を有効にしてください。',
+        copyInsecure:
+          'このページは HTTPS で配信されていないため、ブラウザーがコピーを拒否しました。手動でコピーするか、「設定 - ネットワーク」で HTTPS を有効にしてください。',
         okBtn: '確認',
         cancelBtn: 'キャンセル'
       },
@@ -660,6 +664,20 @@ const ja = {
         languageDesc: 'インターフェース言語の選択',
         webTitle: 'ウェブページタイトル',
         webTitleDesc: 'ウェブページタイトルのカスタマイズ',
+        favicon: 'ファビコン',
+        faviconDesc: 'ブラウザタブのアイコンをカスタマイズ',
+        faviconPlaceholder: '画像の URL',
+        faviconUpload: 'アップロード',
+        faviconReset: 'リセット',
+        faviconCustom: 'カスタムアイコン',
+        faviconBoot: '/boot/logo.ico のアイコン',
+        faviconDefault: '既定のアイコン',
+        faviconOverridesBoot: '/boot/logo.ico を上書きしています',
+        faviconErrUrl: 'http:// または https:// の画像アドレスを入力してください',
+        faviconErrFetch: 'デバイスが画像をダウンロードできませんでした',
+        faviconErrLarge: '画像が大きすぎます。上限は 256 KB です',
+        faviconErrType: '対応していない画像です。.ico、.png、.svg、.gif、.jpg を使用してください',
+        faviconErrSave: 'アイコンを保存できませんでした',
         menuBar: {
           title: 'メニューバー',
           mode: '表示モード',
@@ -751,7 +769,8 @@ const ja = {
         networkDesc: 'リモートホストに仮想ネットワークカードをマウントする',
         networkProtocol: 'ネットワークプロトコル',
         networkProtocolDesc: '最新のホストには NCM、古い Windows には RNDIS',
-        rebindNotice: 'どちらのスイッチを切り替えても USB デバイスは再列挙され、ターゲットは仮想デバイスと USB ネットワークを一時的に失います。',
+        rebindNotice:
+          'どちらのスイッチを切り替えても USB デバイスは再列挙され、ターゲットは仮想デバイスと USB ネットワークを一時的に失います。',
         media: {
           title: 'カメラとマイクのスロット',
           desc: 'ブラウザーが使えるメディアデバイスを宣言します。エンドポイントの余裕は USB プロファイルの適用時に確認されます。 保存するとデバイスが再列挙され、接続中のブラウザーは切断されます。',
@@ -765,7 +784,8 @@ const ja = {
           cameraDefault: 'NanoKVM カメラ {{index}}',
           microphoneDefault: 'NanoKVM マイク {{index}}',
           nameRequired: 'すべてのスロットに名前が必要です。',
-          budgetHint: '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、上の仮想ディスクか USB ネットワークをオフにしてください。',
+          budgetHint:
+            '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、上の仮想ディスクか USB ネットワークをオフにしてください。',
           unsupported:
             'このカーネルはメディアデバイスに名前を付けられないため、ホストには既定の名前が表示されます。',
           save: 'スロットを保存',
@@ -1017,7 +1037,8 @@ const ja = {
             'カスタム更新サーバーが有効な間は、プレビュー版アップデートを利用できません。'
         },
         offline: {
-          kernelNotice: 'このパッケージにはカーネルが含まれます。予備スロットに書き込んで再起動し試験起動します。起動しなかった場合は自動的に現在のカーネルへ戻ります。',
+          kernelNotice:
+            'このパッケージにはカーネルが含まれます。予備スロットに書き込んで再起動し試験起動します。起動しなかった場合は自動的に現在のカーネルへ戻ります。',
           kernelConfirm: 'カーネルをインストール',
           kernelCancel: 'キャンセル',
           title: 'オフラインアップデート',

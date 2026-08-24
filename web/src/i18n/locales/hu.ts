@@ -292,7 +292,8 @@ const hu = {
     devices: {
       title: 'Eszközök',
       stale: 'Az eszközök élő állapota nem érhető el. Újracsatlakozás folyamatban.',
-      empty: 'Nincs beállítva kamera- vagy mikrofonhely. Adj hozzá egyet a Beállítások, Eszköz alatt.',
+      empty:
+        'Nincs beállítva kamera- vagy mikrofonhely. Adj hozzá egyet a Beállítások, Eszköz alatt.',
       available: 'Elérhető',
       waiting: 'A gazdagép forrásra vár',
       hostOpen: 'A gazdagép nyitva',
@@ -339,7 +340,8 @@ const hu = {
         surrenderedDesc:
           'A távoli gazdagép az importált eszközt látja a NanoKVM billentyűzete, egere és virtuális adathordozói helyett. Ezek a munkamenet leállásakor visszatérnek.',
         unsupported: 'A WebUSB Chromium-alapú böngészőt igényel',
-        insecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző visszatartja a WebUSB-t. Kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
+        insecure:
+          'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző visszatartja a WebUSB-t. Kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         session: '{{device}} átadása ({{mode}})',
         idle: 'Nincs passthrough munkamenet',
         mode: {
@@ -586,7 +588,8 @@ const hu = {
         instructionsDesc:
           'Szándékosan nincs telepítendő kliensügynök. Futtassa ezeket a szokásos usbip parancsokat azon a gépen, amelyhez az eszköz csatlakozik.',
         copyFailed: 'A másolás nem sikerült. Másolja a parancsot kézzel.',
-        copyInsecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold a parancsot kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
+        copyInsecure:
+          'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold a parancsot kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         directNote:
           'Alagút nélkül az usbipd-nek elérhetőnek kell lennie a hálózatán, és a fenti exportálócímnek rá kell mutatnia. Az usbip titkosítatlanul viszi az eszközt, ezért az alagút az ajánlott.',
         steps: {
@@ -638,7 +641,8 @@ const hu = {
           'Az MCP engedélyezése leállítja a PicoClaw-t, és bezár minden aktív PicoClaw-munkamenetet.',
         failed: 'Az MCP-művelet sikertelen',
         copyFailed: 'A másolás sikertelen. Másolja kézzel.',
-        copyInsecure: 'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
+        copyInsecure:
+          'Ez az oldal nem HTTPS-en érkezik, ezért a böngésző letiltotta a másolást. Másold kézzel, vagy kapcsold be a HTTPS-t a Beállítások, Hálózat alatt.',
         okBtn: 'Megerősítés',
         cancelBtn: 'Mégse'
       },
@@ -668,6 +672,21 @@ const hu = {
         languageDesc: 'Válassza ki a felület nyelvét',
         webTitle: 'Webcím',
         webTitleDesc: 'A weboldal címének testreszabása',
+        favicon: 'Favicon',
+        faviconDesc: 'A böngészőfül ikonjának testreszabása',
+        faviconPlaceholder: 'Kép URL-je',
+        faviconUpload: 'Feltöltés',
+        faviconReset: 'Visszaállítás',
+        faviconCustom: 'Egyéni ikon',
+        faviconBoot: 'Ikon a /boot/logo.ico fájlból',
+        faviconDefault: 'Alapértelmezett ikon',
+        faviconOverridesBoot: 'Felülírja a /boot/logo.ico fájlt',
+        faviconErrUrl: 'Adjon meg egy http:// vagy https:// képcímet',
+        faviconErrFetch: 'Az eszköz nem tudta letölteni a képet',
+        faviconErrLarge: 'A kép túl nagy. A korlát 256 KB',
+        faviconErrType:
+          'Nem támogatott kép. Használjon .ico, .png, .svg, .gif vagy .jpg formátumot',
+        faviconErrSave: 'Az ikon mentése sikertelen',
         menuBar: {
           title: 'Menüsor',
           mode: 'Megjelenítési mód',
@@ -758,7 +777,8 @@ const hu = {
         networkDesc: 'Virtuális hálózati kártya csatlakoztatása a távoli gazdagépen',
         networkProtocol: 'Hálózati protokoll',
         networkProtocolDesc: 'NCM modern gazdagépekhez, RNDIS régebbi Windowshoz',
-        rebindNotice: 'Bármelyik kapcsoló átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
+        rebindNotice:
+          'Bármelyik kapcsoló átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
         media: {
           title: 'Kamera- és mikrofonhelyek',
           desc: 'Adja meg, mely médiaeszközöket tölthetik ki a böngészők. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi. A mentés újraszámlálja az eszközt, és lecsatlakoztatja a csatlakozott böngészőket.',
@@ -772,7 +792,8 @@ const hu = {
           cameraDefault: 'NanoKVM kamera {{index}}',
           microphoneDefault: 'NanoKVM mikrofon {{index}}',
           nameRequired: 'Minden helyhez név kell.',
-          budgetHint: 'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki fent a virtuális lemezt vagy az USB-hálózatot.',
+          budgetHint:
+            'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki fent a virtuális lemezt vagy az USB-hálózatot.',
           unsupported:
             'Ez a kernel nem tudja elnevezni a médiaeszközöket, ezért a gépek az alapértelmezett nevet mutatják.',
           save: 'Helyek mentése',
@@ -1026,7 +1047,8 @@ const hu = {
             'Az előzetes frissítések nem érhetők el, amíg egyéni frissítési kiszolgáló van engedélyezve.'
         },
         offline: {
-          kernelNotice: 'Ez a csomag kernelt tartalmaz. A tartalék helyre íródik, és az eszköz újraindul, hogy kipróbálja; ha nem jön vissza, magától visszatér a jelenlegi kernelhez.',
+          kernelNotice:
+            'Ez a csomag kernelt tartalmaz. A tartalék helyre íródik, és az eszköz újraindul, hogy kipróbálja; ha nem jön vissza, magától visszatér a jelenlegi kernelhez.',
           kernelConfirm: 'Kernel telepítése',
           kernelCancel: 'Mégse',
           title: 'Offline frissítések',

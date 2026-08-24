@@ -335,7 +335,8 @@ const en = {
         surrenderedDesc:
           'The remote host sees the imported device instead of NanoKVM’s keyboard, mouse and virtual media. They come back when the session stops.',
         unsupported: 'WebUSB needs a Chromium browser',
-        insecure: 'This page is not served over HTTPS, so the browser withholds WebUSB. Enable HTTPS in Settings, Network.',
+        insecure:
+          'This page is not served over HTTPS, so the browser withholds WebUSB. Enable HTTPS in Settings, Network.',
         session: 'Passing through {{device}} ({{mode}})',
         idle: 'No passthrough session',
         mode: {
@@ -574,7 +575,8 @@ const en = {
         instructionsDesc:
           'There is no client agent to install, by design. Run these stock usbip commands on the machine that owns the device.',
         copyFailed: 'Copy failed. Copy the command manually.',
-        copyInsecure: 'This page is not served over HTTPS, so the browser blocks copying. Copy the command manually, or enable HTTPS in Settings, Network.',
+        copyInsecure:
+          'This page is not served over HTTPS, so the browser blocks copying. Copy the command manually, or enable HTTPS in Settings, Network.',
         directNote:
           'Without a tunnel, usbipd has to be reachable on your network and the exporter address above has to name it. usbip carries the device unencrypted, so prefer the tunnel.',
         steps: {
@@ -625,7 +627,8 @@ const en = {
         enableConfirmDesc: 'Enabling MCP will stop PicoClaw and close any active PicoClaw session.',
         failed: 'MCP operation failed',
         copyFailed: 'Copy failed. Copy manually.',
-        copyInsecure: 'This page is not served over HTTPS, so the browser blocks copying. Copy manually, or enable HTTPS in Settings, Network.',
+        copyInsecure:
+          'This page is not served over HTTPS, so the browser blocks copying. Copy manually, or enable HTTPS in Settings, Network.',
         okBtn: 'Confirm',
         cancelBtn: 'Cancel'
       },
@@ -655,6 +658,20 @@ const en = {
         languageDesc: 'Select the language for the interface',
         webTitle: 'Web Title',
         webTitleDesc: 'Customize the web page title',
+        favicon: 'Favicon',
+        faviconDesc: 'Customize the browser tab icon',
+        faviconPlaceholder: 'Image URL',
+        faviconUpload: 'Upload',
+        faviconReset: 'Reset',
+        faviconCustom: 'Custom icon',
+        faviconBoot: 'Icon from /boot/logo.ico',
+        faviconDefault: 'Default icon',
+        faviconOverridesBoot: 'Overriding /boot/logo.ico',
+        faviconErrUrl: 'Enter an http:// or https:// image address',
+        faviconErrFetch: 'The device could not download that image',
+        faviconErrLarge: 'Image is too large. The limit is 256 KB',
+        faviconErrType: 'Unsupported image. Use .ico, .png, .svg, .gif or .jpg',
+        faviconErrSave: 'Failed to save the icon',
         menuBar: {
           title: 'Menu Bar',
           mode: 'Display Mode',
@@ -743,7 +760,8 @@ const en = {
         networkDesc: 'Mount virtual network card on the remote host',
         networkProtocol: 'Network Protocol',
         networkProtocolDesc: 'NCM for modern hosts, RNDIS for older Windows',
-        rebindNotice: 'Changing either switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
+        rebindNotice:
+          'Changing either switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
         media: {
           title: 'Camera and microphone slots',
           desc: 'Declare the media devices browsers may fill. The endpoint budget is checked when the USB profile is applied. Saving re-enumerates the gadget and disconnects any connected browser.',
@@ -757,7 +775,8 @@ const en = {
           cameraDefault: 'NanoKVM Camera {{index}}',
           microphoneDefault: 'NanoKVM Microphone {{index}}',
           nameRequired: 'Every slot needs a name.',
-          budgetHint: 'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk or USB networking above.',
+          budgetHint:
+            'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk or USB networking above.',
           unsupported: 'This kernel cannot name media devices, so hosts show the default name.',
           save: 'Save slots',
           disconnect: 'Disconnect',
@@ -1009,7 +1028,8 @@ const en = {
           previewDisabled: 'Preview Updates are unavailable while a custom update server is enabled'
         },
         offline: {
-          kernelNotice: 'This package contains a kernel. It is written to the spare slot and the device reboots to try it; if it does not come back, the device returns to the current kernel on its own.',
+          kernelNotice:
+            'This package contains a kernel. It is written to the spare slot and the device reboots to try it; if it does not come back, the device returns to the current kernel on its own.',
           kernelConfirm: 'Install Kernel',
           kernelCancel: 'Cancel',
           title: 'Offline Updates',

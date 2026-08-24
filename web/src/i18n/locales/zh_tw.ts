@@ -327,7 +327,8 @@ const zh_tw = {
         surrenderedDesc:
           '遠端主機看到的是匯入的裝置，而不是 NanoKVM 的鍵盤、滑鼠與虛擬媒體。工作階段結束後它們會自行恢復。',
         unsupported: 'WebUSB 需要 Chromium 核心瀏覽器',
-        insecure: '本頁面未透過 HTTPS 提供，瀏覽器因此停用了 WebUSB。請在「設定 - 網路」中啟用 HTTPS。',
+        insecure:
+          '本頁面未透過 HTTPS 提供，瀏覽器因此停用了 WebUSB。請在「設定 - 網路」中啟用 HTTPS。',
         session: '正在直通 {{device}}（{{mode}}）',
         idle: '沒有直通工作階段',
         mode: {
@@ -547,7 +548,8 @@ const zh_tw = {
         instructionsDesc:
           '依照設計，不需要安裝任何用戶端代理。請在擁有該裝置的電腦上執行下列標準 usbip 指令。',
         copyFailed: '複製失敗，請手動複製指令。',
-        copyInsecure: '本頁面未透過 HTTPS 提供，瀏覽器因此阻擋了複製。請手動複製指令，或在「設定 - 網路」中啟用 HTTPS。',
+        copyInsecure:
+          '本頁面未透過 HTTPS 提供，瀏覽器因此阻擋了複製。請手動複製指令，或在「設定 - 網路」中啟用 HTTPS。',
         directNote:
           '若不使用通道，usbipd 必須在您的網路上可連線，且上面的匯出端位址要指向它。usbip 以明文傳輸裝置資料，建議優先使用通道。',
         steps: {
@@ -597,7 +599,8 @@ const zh_tw = {
         enableConfirmDesc: '啟用 MCP 將停止 PicoClaw，並關閉目前作用中的 PicoClaw 工作階段。',
         failed: 'MCP 操作失敗',
         copyFailed: '複製失敗，請手動複製。',
-        copyInsecure: '本頁面未透過 HTTPS 提供，瀏覽器因此阻擋了複製。請手動複製，或在「設定 - 網路」中啟用 HTTPS。',
+        copyInsecure:
+          '本頁面未透過 HTTPS 提供，瀏覽器因此阻擋了複製。請手動複製，或在「設定 - 網路」中啟用 HTTPS。',
         okBtn: '確認',
         cancelBtn: '取消'
       },
@@ -627,6 +630,20 @@ const zh_tw = {
         languageDesc: '選擇介面語言',
         webTitle: '網頁標題',
         webTitleDesc: '自訂網頁標題',
+        favicon: '網頁圖示',
+        faviconDesc: '自訂瀏覽器分頁圖示',
+        faviconPlaceholder: '圖片網址',
+        faviconUpload: '上傳',
+        faviconReset: '重設',
+        faviconCustom: '自訂圖示',
+        faviconBoot: '來自 /boot/logo.ico 的圖示',
+        faviconDefault: '預設圖示',
+        faviconOverridesBoot: '已覆寫 /boot/logo.ico',
+        faviconErrUrl: '請輸入 http:// 或 https:// 開頭的圖片網址',
+        faviconErrFetch: '裝置無法下載該圖片',
+        faviconErrLarge: '圖片過大，上限為 256 KB',
+        faviconErrType: '不支援的圖片格式，請使用 .ico、.png、.svg、.gif 或 .jpg',
+        faviconErrSave: '儲存圖示失敗',
         menuBar: {
           title: '選單列',
           mode: '顯示方式',
@@ -715,7 +732,8 @@ const zh_tw = {
         networkDesc: '在遠端主機上新增虛擬網卡',
         networkProtocol: '網路通訊協定',
         networkProtocolDesc: '新式主機使用 NCM，較舊的 Windows 使用 RNDIS',
-        rebindNotice: '切換任一開關都會讓 USB 裝置重新列舉，目標主機會短暫失去虛擬裝置與 USB 網路。',
+        rebindNotice:
+          '切換任一開關都會讓 USB 裝置重新列舉，目標主機會短暫失去虛擬裝置與 USB 網路。',
         media: {
           title: '攝影機與麥克風插槽',
           desc: '宣告瀏覽器可以佔用的媒體裝置。端點預算會在套用 USB 設定檔時檢查。 儲存會重新列舉裝置，並中斷已連線的瀏覽器。',
@@ -729,7 +747,8 @@ const zh_tw = {
           cameraDefault: 'NanoKVM 攝影機 {{index}}',
           microphoneDefault: 'NanoKVM 麥克風 {{index}}',
           nameRequired: '每個插槽都需要名稱。',
-          budgetHint: '六個 USB IN 端點是固定的硬體上限。請在「USB 呈現」中把鍵盤、滑鼠與絕對定位放到同一個 HID 介面，或關閉上方的虛擬磁碟或 USB 網路。',
+          budgetHint:
+            '六個 USB IN 端點是固定的硬體上限。請在「USB 呈現」中把鍵盤、滑鼠與絕對定位放到同一個 HID 介面，或關閉上方的虛擬磁碟或 USB 網路。',
           unsupported: '此核心無法為媒體裝置命名，因此主機會顯示預設名稱。',
           save: '儲存插槽',
           disconnect: '中斷連線',
@@ -970,7 +989,8 @@ const zh_tw = {
           previewDisabled: '啟用自訂更新伺服器時，預覽更新無法使用'
         },
         offline: {
-          kernelNotice: '此安裝包含核心。核心會寫入備用插槽並重新開機試執行；若無法啟動，裝置會自動回復到目前的核心。',
+          kernelNotice:
+            '此安裝包含核心。核心會寫入備用插槽並重新開機試執行；若無法啟動，裝置會自動回復到目前的核心。',
           kernelConfirm: '安裝核心',
           kernelCancel: '取消',
           title: '離線更新',

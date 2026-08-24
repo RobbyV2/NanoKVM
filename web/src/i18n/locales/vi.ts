@@ -335,7 +335,8 @@ const vi = {
         surrenderedDesc:
           'Máy chủ từ xa thấy thiết bị đã nhập thay vì bàn phím, chuột và phương tiện ảo của NanoKVM. Chúng sẽ quay lại khi phiên dừng.',
         unsupported: 'WebUSB cần trình duyệt nhân Chromium',
-        insecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn WebUSB. Hãy bật HTTPS trong Cài đặt, Mạng.',
+        insecure:
+          'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn WebUSB. Hãy bật HTTPS trong Cài đặt, Mạng.',
         session: 'Đang chuyển tiếp {{device}} ({{mode}})',
         idle: 'Không có phiên passthrough',
         mode: {
@@ -575,7 +576,8 @@ const vi = {
         instructionsDesc:
           'Theo thiết kế, không cần cài đặt tác nhân phía máy khách. Hãy chạy các lệnh usbip tiêu chuẩn sau trên máy đang cắm thiết bị.',
         copyFailed: 'Sao chép thất bại. Hãy sao chép lệnh thủ công.',
-        copyInsecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép lệnh thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
+        copyInsecure:
+          'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép lệnh thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
         directNote:
           'Nếu không dùng đường hầm, usbipd phải truy cập được trong mạng của bạn và địa chỉ bên xuất ở trên phải trỏ tới nó. usbip truyền dữ liệu thiết bị không mã hóa, vì vậy nên ưu tiên đường hầm.',
         steps: {
@@ -626,7 +628,8 @@ const vi = {
         enableConfirmDesc: 'Bật MCP sẽ dừng PicoClaw và đóng tất cả phiên PicoClaw đang hoạt động.',
         failed: 'Thao tác MCP không thành công',
         copyFailed: 'Sao chép thất bại. Vui lòng sao chép thủ công.',
-        copyInsecure: 'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
+        copyInsecure:
+          'Trang này không được phục vụ qua HTTPS nên trình duyệt chặn thao tác sao chép. Hãy sao chép thủ công, hoặc bật HTTPS trong Cài đặt, Mạng.',
         okBtn: 'Xác nhận',
         cancelBtn: 'Hủy'
       },
@@ -656,6 +659,20 @@ const vi = {
         languageDesc: 'Chọn ngôn ngữ cho giao diện',
         webTitle: 'Tiêu đề trang web',
         webTitleDesc: 'Tùy chỉnh tiêu đề trang web',
+        favicon: 'Favicon',
+        faviconDesc: 'Tùy chỉnh biểu tượng tab trình duyệt',
+        faviconPlaceholder: 'URL hình ảnh',
+        faviconUpload: 'Tải lên',
+        faviconReset: 'Đặt lại',
+        faviconCustom: 'Biểu tượng tùy chỉnh',
+        faviconBoot: 'Biểu tượng từ /boot/logo.ico',
+        faviconDefault: 'Biểu tượng mặc định',
+        faviconOverridesBoot: 'Ghi đè /boot/logo.ico',
+        faviconErrUrl: 'Nhập địa chỉ hình ảnh http:// hoặc https://',
+        faviconErrFetch: 'Thiết bị không tải được hình ảnh đó',
+        faviconErrLarge: 'Hình ảnh quá lớn. Giới hạn là 256 KB',
+        faviconErrType: 'Hình ảnh không được hỗ trợ. Dùng .ico, .png, .svg, .gif hoặc .jpg',
+        faviconErrSave: 'Không lưu được biểu tượng',
         menuBar: {
           title: 'Thanh menu',
           mode: 'Chế độ hiển thị',
@@ -746,7 +763,8 @@ const vi = {
         networkDesc: 'Gắn card mạng ảo trên máy chủ từ xa',
         networkProtocol: 'Giao thức mạng',
         networkProtocolDesc: 'NCM cho máy chủ hiện đại, RNDIS cho Windows cũ',
-        rebindNotice: 'Gạt một trong hai công tắc sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
+        rebindNotice:
+          'Gạt một trong hai công tắc sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
         media: {
           title: 'Khe camera và micrô',
           desc: 'Khai báo các thiết bị đa phương tiện mà trình duyệt có thể lấp đầy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB. Việc lưu sẽ liệt kê lại thiết bị và ngắt kết nối các trình duyệt đang kết nối.',
@@ -760,7 +778,8 @@ const vi = {
           cameraDefault: 'Camera NanoKVM {{index}}',
           microphoneDefault: 'Micrô NanoKVM {{index}}',
           nameRequired: 'Mỗi khe cần một tên.',
-          budgetHint: 'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo hay mạng USB ở trên.',
+          budgetHint:
+            'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo hay mạng USB ở trên.',
           unsupported:
             'Nhân này không thể đặt tên cho thiết bị đa phương tiện, nên máy đích sẽ hiển thị tên mặc định.',
           save: 'Lưu các khe',
@@ -1013,7 +1032,8 @@ const vi = {
             'Không thể sử dụng Bản cập nhật xem trước khi máy chủ cập nhật tùy chỉnh đang được bật.'
         },
         offline: {
-          kernelNotice: 'Gói này chứa một nhân. Nhân được ghi vào khe dự phòng và thiết bị khởi động lại để thử; nếu không lên lại, thiết bị tự quay về nhân hiện tại.',
+          kernelNotice:
+            'Gói này chứa một nhân. Nhân được ghi vào khe dự phòng và thiết bị khởi động lại để thử; nếu không lên lại, thiết bị tự quay về nhân hiện tại.',
           kernelConfirm: 'Cài đặt nhân',
           kernelCancel: 'Hủy',
           title: 'Cập nhật ngoại tuyến',

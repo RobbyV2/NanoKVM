@@ -290,7 +290,8 @@ const id = {
     devices: {
       title: 'Perangkat',
       stale: 'Status langsung perangkat tidak tersedia. Menyambung ulang.',
-      empty: 'Belum ada slot kamera atau mikrofon yang dikonfigurasi. Tambahkan di Pengaturan, Perangkat.',
+      empty:
+        'Belum ada slot kamera atau mikrofon yang dikonfigurasi. Tambahkan di Pengaturan, Perangkat.',
       available: 'Tersedia',
       waiting: 'Host menunggu sebuah sumber',
       hostOpen: 'Host terbuka',
@@ -337,7 +338,8 @@ const id = {
         surrenderedDesc:
           'Host jarak jauh melihat perangkat yang diimpor, bukan papan ketik, tetikus, dan media virtual NanoKVM. Semuanya kembali begitu sesi berhenti.',
         unsupported: 'WebUSB memerlukan peramban berbasis Chromium',
-        insecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban menyembunyikan WebUSB. Aktifkan HTTPS di Pengaturan, Jaringan.',
+        insecure:
+          'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban menyembunyikan WebUSB. Aktifkan HTTPS di Pengaturan, Jaringan.',
         session: 'Meneruskan {{device}} ({{mode}})',
         idle: 'Tidak ada sesi passthrough',
         mode: {
@@ -583,7 +585,8 @@ const id = {
         instructionsDesc:
           'Memang tidak ada agen klien yang perlu dipasang. Jalankan perintah usbip standar berikut di komputer tempat perangkat terpasang.',
         copyFailed: 'Gagal menyalin. Salin perintah secara manual.',
-        copyInsecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin perintah secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
+        copyInsecure:
+          'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin perintah secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
         directNote:
           'Tanpa terowongan, usbipd harus dapat dijangkau di jaringan Anda dan alamat pengekspor di atas harus menunjuk ke sana. usbip membawa data perangkat tanpa enkripsi, jadi terowongan lebih disarankan.',
         steps: {
@@ -635,7 +638,8 @@ const id = {
           'Mengaktifkan MCP akan menghentikan PicoClaw dan menutup semua sesi PicoClaw yang aktif.',
         failed: 'Operasi MCP gagal',
         copyFailed: 'Gagal menyalin. Salin secara manual.',
-        copyInsecure: 'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
+        copyInsecure:
+          'Halaman ini tidak disajikan lewat HTTPS, sehingga peramban memblokir penyalinan. Salin secara manual, atau aktifkan HTTPS di Pengaturan, Jaringan.',
         okBtn: 'Konfirmasi',
         cancelBtn: 'Batal'
       },
@@ -665,6 +669,20 @@ const id = {
         languageDesc: 'Pilih bahasa untuk antarmuka',
         webTitle: 'Judul Web',
         webTitleDesc: 'Menyesuaikan judul halaman web',
+        favicon: 'Favicon',
+        faviconDesc: 'Menyesuaikan ikon tab peramban',
+        faviconPlaceholder: 'URL gambar',
+        faviconUpload: 'Unggah',
+        faviconReset: 'Setel ulang',
+        faviconCustom: 'Ikon khusus',
+        faviconBoot: 'Ikon dari /boot/logo.ico',
+        faviconDefault: 'Ikon bawaan',
+        faviconOverridesBoot: 'Menimpa /boot/logo.ico',
+        faviconErrUrl: 'Masukkan alamat gambar http:// atau https://',
+        faviconErrFetch: 'Perangkat tidak dapat mengunduh gambar tersebut',
+        faviconErrLarge: 'Gambar terlalu besar. Batasnya 256 KB',
+        faviconErrType: 'Gambar tidak didukung. Gunakan .ico, .png, .svg, .gif atau .jpg',
+        faviconErrSave: 'Gagal menyimpan ikon',
         menuBar: {
           title: 'Bilah Menu',
           mode: 'Mode Tampilan',
@@ -754,7 +772,8 @@ const id = {
         networkDesc: 'Pasang kartu jaringan virtual pada host jarak jauh',
         networkProtocol: 'Protokol jaringan',
         networkProtocolDesc: 'NCM untuk host modern, RNDIS untuk Windows lama',
-        rebindNotice: 'Mengubah salah satu sakelar akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
+        rebindNotice:
+          'Mengubah salah satu sakelar akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
         media: {
           title: 'Slot kamera dan mikrofon',
           desc: 'Tetapkan perangkat media yang boleh diisi peramban. Anggaran endpoint diperiksa saat profil USB diterapkan. Menyimpan akan menghitung ulang perangkat dan memutuskan peramban yang terhubung.',
@@ -768,7 +787,8 @@ const id = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Setiap slot memerlukan nama.',
-          budgetHint: 'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual atau jaringan USB di atas.',
+          budgetHint:
+            'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual atau jaringan USB di atas.',
           unsupported:
             'Kernel ini tidak dapat menamai perangkat media, sehingga host menampilkan nama bawaan.',
           save: 'Simpan slot',
@@ -1022,7 +1042,8 @@ const id = {
             'Pembaruan Pratinjau tidak tersedia saat server pembaruan kustom diaktifkan.'
         },
         offline: {
-          kernelNotice: 'Paket ini berisi kernel. Kernel ditulis ke slot cadangan dan perangkat dinyalakan ulang untuk mencobanya; jika tidak kembali, perangkat pulih sendiri ke kernel saat ini.',
+          kernelNotice:
+            'Paket ini berisi kernel. Kernel ditulis ke slot cadangan dan perangkat dinyalakan ulang untuk mencobanya; jika tidak kembali, perangkat pulih sendiri ke kernel saat ini.',
           kernelConfirm: 'Pasang kernel',
           kernelCancel: 'Batal',
           title: 'Pembaruan Offline',

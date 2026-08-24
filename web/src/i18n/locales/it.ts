@@ -292,7 +292,8 @@ const it = {
     devices: {
       title: 'Dispositivi',
       stale: 'Lo stato in tempo reale dei dispositivi non è disponibile. Riconnessione in corso.',
-      empty: 'Nessuno slot per fotocamera o microfono è configurato. Aggiungine uno in Impostazioni, Dispositivo.',
+      empty:
+        'Nessuno slot per fotocamera o microfono è configurato. Aggiungine uno in Impostazioni, Dispositivo.',
       available: 'Disponibile',
       waiting: 'L’host attende una sorgente',
       hostOpen: 'Host aperto',
@@ -339,7 +340,8 @@ const it = {
         surrenderedDesc:
           'L’host remoto vede il dispositivo importato al posto di tastiera, mouse e supporti virtuali del NanoKVM. Tornano quando la sessione si ferma.',
         unsupported: 'WebUSB richiede un browser Chromium',
-        insecure: 'Questa pagina non è servita via HTTPS, quindi il browser blocca WebUSB. Abilita HTTPS in Impostazioni, Rete.',
+        insecure:
+          'Questa pagina non è servita via HTTPS, quindi il browser blocca WebUSB. Abilita HTTPS in Impostazioni, Rete.',
         session: 'Inoltro di {{device}} ({{mode}})',
         idle: 'Nessuna sessione di passthrough',
         mode: {
@@ -584,7 +586,8 @@ const it = {
         instructionsDesc:
           'Per scelta progettuale non c’è alcun agente da installare. Esegui questi normali comandi usbip sulla macchina a cui è collegato il dispositivo.',
         copyFailed: 'Copia non riuscita. Copia il comando manualmente.',
-        copyInsecure: 'Questa pagina non è servita via HTTPS, quindi il browser blocca la copia. Copia il comando manualmente, oppure abilita HTTPS in Impostazioni, Rete.',
+        copyInsecure:
+          'Questa pagina non è servita via HTTPS, quindi il browser blocca la copia. Copia il comando manualmente, oppure abilita HTTPS in Impostazioni, Rete.',
         directNote:
           'Senza tunnel, usbipd deve essere raggiungibile sulla tua rete e l’indirizzo dell’exporter qui sopra deve indicarlo. usbip trasporta il dispositivo in chiaro, quindi è preferibile il tunnel.',
         steps: {
@@ -636,7 +639,8 @@ const it = {
           'L’abilitazione di MCP arresterà PicoClaw e chiuderà tutte le sessioni PicoClaw attive.',
         failed: 'Operazione MCP non riuscita',
         copyFailed: 'Copia non riuscita. Copia manualmente.',
-        copyInsecure: 'Questa pagina non è servita via HTTPS, quindi il browser blocca la copia. Copia manualmente, oppure abilita HTTPS in Impostazioni, Rete.',
+        copyInsecure:
+          'Questa pagina non è servita via HTTPS, quindi il browser blocca la copia. Copia manualmente, oppure abilita HTTPS in Impostazioni, Rete.',
         okBtn: 'Conferma',
         cancelBtn: 'Annulla'
       },
@@ -666,6 +670,20 @@ const it = {
         languageDesc: "Seleziona la lingua per l'interfaccia",
         webTitle: 'Titolo web',
         webTitleDesc: 'Personalizza il titolo della pagina web',
+        favicon: 'Favicon',
+        faviconDesc: "Personalizza l'icona della scheda del browser",
+        faviconPlaceholder: "URL dell'immagine",
+        faviconUpload: 'Carica',
+        faviconReset: 'Ripristina',
+        faviconCustom: 'Icona personalizzata',
+        faviconBoot: 'Icona da /boot/logo.ico',
+        faviconDefault: 'Icona predefinita',
+        faviconOverridesBoot: 'Sostituisce /boot/logo.ico',
+        faviconErrUrl: 'Inserisci un indirizzo immagine http:// o https://',
+        faviconErrFetch: "Il dispositivo non è riuscito a scaricare l'immagine",
+        faviconErrLarge: 'Immagine troppo grande. Il limite è 256 KB',
+        faviconErrType: 'Immagine non supportata. Usa .ico, .png, .svg, .gif o .jpg',
+        faviconErrSave: "Salvataggio dell'icona non riuscito",
         menuBar: {
           title: 'Barra dei menu',
           mode: 'Modalità di visualizzazione',
@@ -758,7 +776,8 @@ const it = {
         networkDesc: 'Monta la scheda di rete virtuale sull’host remoto',
         networkProtocol: 'Protocollo di rete',
         networkProtocolDesc: 'NCM per host moderni, RNDIS per Windows datati',
-        rebindNotice: 'Cambiare uno dei due interruttori rienumera il dispositivo USB, quindi il target perde per un attimo i dispositivi virtuali e la rete USB.',
+        rebindNotice:
+          'Cambiare uno dei due interruttori rienumera il dispositivo USB, quindi il target perde per un attimo i dispositivi virtuali e la rete USB.',
         media: {
           title: 'Slot per fotocamera e microfono',
           desc: 'Dichiara i dispositivi multimediali che i browser possono occupare. Il budget degli endpoint viene verificato quando si applica il profilo USB. Il salvataggio rienumera il dispositivo e disconnette i browser collegati.',
@@ -772,7 +791,8 @@ const it = {
           cameraDefault: 'Fotocamera NanoKVM {{index}}',
           microphoneDefault: 'Microfono NanoKVM {{index}}',
           nameRequired: 'Ogni slot richiede un nome.',
-          budgetHint: 'I sei endpoint USB IN sono un limite fisso dell\'hardware. Metti tastiera, mouse e puntatore assoluto su una sola interfaccia HID in Presentazione USB, oppure disattiva sopra il disco virtuale o la rete USB.',
+          budgetHint:
+            "I sei endpoint USB IN sono un limite fisso dell'hardware. Metti tastiera, mouse e puntatore assoluto su una sola interfaccia HID in Presentazione USB, oppure disattiva sopra il disco virtuale o la rete USB.",
           unsupported:
             'Questo kernel non può assegnare un nome ai dispositivi multimediali, quindi gli host mostrano il nome predefinito.',
           save: 'Salva slot',
@@ -1028,7 +1048,8 @@ const it = {
             'Gli aggiornamenti in anteprima non sono disponibili quando è attivo un server di aggiornamento personalizzato.'
         },
         offline: {
-          kernelNotice: 'Questo pacchetto contiene un kernel. Viene scritto nello slot di riserva e il dispositivo si riavvia per provarlo; se non torna, ritorna da solo al kernel attuale.',
+          kernelNotice:
+            'Questo pacchetto contiene un kernel. Viene scritto nello slot di riserva e il dispositivo si riavvia per provarlo; se non torna, ritorna da solo al kernel attuale.',
           kernelConfirm: 'Installa kernel',
           kernelCancel: 'Annulla',
           title: 'Aggiornamenti offline',

@@ -338,7 +338,8 @@ const pl = {
         surrenderedDesc:
           'Zdalny host widzi zaimportowane urządzenie zamiast klawiatury, myszy i nośników wirtualnych NanoKVM. Wracają, gdy sesja się kończy.',
         unsupported: 'WebUSB wymaga przeglądarki opartej na Chromium',
-        insecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka blokuje WebUSB. Włącz HTTPS w Ustawieniach, Sieć.',
+        insecure:
+          'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka blokuje WebUSB. Włącz HTTPS w Ustawieniach, Sieć.',
         session: 'Przekazywanie {{device}} ({{mode}})',
         idle: 'Brak sesji passthrough',
         mode: {
@@ -582,7 +583,8 @@ const pl = {
         instructionsDesc:
           'Z założenia nie ma żadnego agenta do zainstalowania. Wykonaj te standardowe polecenia usbip na komputerze, do którego podłączone jest urządzenie.',
         copyFailed: 'Kopiowanie nie powiodło się. Skopiuj polecenie ręcznie.',
-        copyInsecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj polecenie ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
+        copyInsecure:
+          'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj polecenie ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
         directNote:
           'Bez tunelu usbipd musi być osiągalny w Twojej sieci, a adres eksportera powyżej musi go wskazywać. usbip przesyła urządzenie bez szyfrowania, więc lepszy jest tunel.',
         steps: {
@@ -634,7 +636,8 @@ const pl = {
           'Włączenie MCP zatrzyma PicoClaw i zamknie wszystkie aktywne sesje PicoClaw.',
         failed: 'Operacja MCP nie powiodła się',
         copyFailed: 'Kopiowanie nie powiodło się. Skopiuj ręcznie.',
-        copyInsecure: 'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
+        copyInsecure:
+          'Ta strona nie jest serwowana przez HTTPS, więc przeglądarka zablokowała kopiowanie. Skopiuj ręcznie lub włącz HTTPS w Ustawieniach, Sieć.',
         okBtn: 'Potwierdź',
         cancelBtn: 'Anuluj'
       },
@@ -664,6 +667,20 @@ const pl = {
         languageDesc: 'Wybierz język interfejsu',
         webTitle: 'Tytuł strony internetowej',
         webTitleDesc: 'Dostosuj tytuł strony internetowej',
+        favicon: 'Favicon',
+        faviconDesc: 'Dostosuj ikonę karty przeglądarki',
+        faviconPlaceholder: 'Adres URL obrazu',
+        faviconUpload: 'Prześlij',
+        faviconReset: 'Przywróć',
+        faviconCustom: 'Własna ikona',
+        faviconBoot: 'Ikona z /boot/logo.ico',
+        faviconDefault: 'Ikona domyślna',
+        faviconOverridesBoot: 'Zastępuje /boot/logo.ico',
+        faviconErrUrl: 'Podaj adres obrazu http:// lub https://',
+        faviconErrFetch: 'Urządzenie nie mogło pobrać tego obrazu',
+        faviconErrLarge: 'Obraz jest za duży. Limit to 256 KB',
+        faviconErrType: 'Nieobsługiwany obraz. Użyj .ico, .png, .svg, .gif lub .jpg',
+        faviconErrSave: 'Nie udało się zapisać ikony',
         menuBar: {
           title: 'Pasek menu',
           mode: 'Tryb wyświetlania',
@@ -755,7 +772,8 @@ const pl = {
         networkDesc: 'Zamontuj wirtualną kartę sieciową na zdalnym hoście',
         networkProtocol: 'Protokół sieciowy',
         networkProtocolDesc: 'NCM dla nowoczesnych hostów, RNDIS dla starszych systemów Windows',
-        rebindNotice: 'Przełączenie któregokolwiek z przełączników ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
+        rebindNotice:
+          'Przełączenie któregokolwiek z przełączników ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
         media: {
           title: 'Gniazda kamery i mikrofonu',
           desc: 'Zadeklaruj urządzenia multimedialne, które przeglądarki mogą zająć. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB. Zapis powoduje ponowne wyliczenie urządzenia i rozłączenie podłączonych przeglądarek.',
@@ -769,7 +787,8 @@ const pl = {
           cameraDefault: 'Kamera NanoKVM {{index}}',
           microphoneDefault: 'Mikrofon NanoKVM {{index}}',
           nameRequired: 'Każde gniazdo wymaga nazwy.',
-          budgetHint: 'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz powyżej dysk wirtualny lub sieć USB.',
+          budgetHint:
+            'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz powyżej dysk wirtualny lub sieć USB.',
           unsupported:
             'To jądro nie potrafi nazwać urządzeń multimedialnych, więc komputery pokazują nazwę domyślną.',
           save: 'Zapisz gniazda',
@@ -1024,7 +1043,8 @@ const pl = {
             'Aktualizacje w wersji testowej są niedostępne, gdy włączony jest niestandardowy serwer aktualizacji.'
         },
         offline: {
-          kernelNotice: 'Ten pakiet zawiera jądro. Zostanie zapisane w zapasowym slocie, a urządzenie uruchomi się ponownie, aby je wypróbować; jeśli nie wstanie, samo wróci do bieżącego jądra.',
+          kernelNotice:
+            'Ten pakiet zawiera jądro. Zostanie zapisane w zapasowym slocie, a urządzenie uruchomi się ponownie, aby je wypróbować; jeśli nie wstanie, samo wróci do bieżącego jądra.',
           kernelConfirm: 'Zainstaluj jądro',
           kernelCancel: 'Anuluj',
           title: 'Aktualizacje offline',
