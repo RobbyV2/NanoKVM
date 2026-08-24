@@ -45,6 +45,7 @@ type SlotRegistry interface {
 type NodeResolver interface {
 	ResolveVideo(string) (string, error)
 	ResolveAudio(string) (string, error)
+	GadgetVideoNodes() ([]string, error)
 }
 
 type Output interface {
@@ -73,12 +74,18 @@ type SlotSpec struct {
 	Audio *presentation.AudioFunction
 	FIFOs []int
 	Node  string
+	// FD is the descriptor of the one open(2) the manager keeps on a camera's
+	// gadget node for as long as the function is linked (see hold.go). The
+	// output dups it; it must never close it, and never open the node itself.
+	FD int
 }
 
 type Manager struct {
 	registry SlotRegistry
 	resolver NodeResolver
 	factory  OutputFactory
+
+	holds *holdTable
 
 	mu      sync.RWMutex
 	workers map[string]*worker
@@ -121,19 +128,33 @@ func NewManager(registry SlotRegistry) *Manager {
 }
 
 func NewManagerWith(registry SlotRegistry, resolver NodeResolver, factory OutputFactory) *Manager {
-	return &Manager{registry: registry, resolver: resolver, factory: factory, workers: make(map[string]*worker)}
+	return newManagerWith(registry, resolver, factory, holdNode)
+}
+
+func newManagerWith(registry SlotRegistry, resolver NodeResolver, factory OutputFactory, open func(string) (Holder, error)) *Manager {
+	return &Manager{
+		registry: registry, resolver: resolver, factory: factory,
+		holds: newHoldTable(open), workers: make(map[string]*worker),
+	}
 }
 
 func (m *Manager) Applied(ctx context.Context, profile presentation.Profile, plan presentation.Plan) error {
 	return m.Reconcile(ctx, profile, plan)
 }
 
+// Suspend runs before the gadget is torn down, so it has to give the nodes back
+// as well as stop the workers: configfs refuses to unlink a UVC function whose
+// video node is still open. The workers go first because their descriptors are
+// dups of the held one and the V4L2 handle only closes on the last of them.
 func (m *Manager) Suspend() {
 	m.mu.Lock()
 	workers := m.workers
 	m.workers = make(map[string]*worker)
 	m.mu.Unlock()
 	stopWorkers(workers)
+	if _, err := m.holds.hold(context.Background(), nil); err != nil {
+		log.Errorf("release uvc nodes before gadget teardown: %s", err)
+	}
 }
 
 func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, plan presentation.Plan) error {
@@ -142,15 +163,37 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 		return fmt.Errorf("sync media slots: %w", err)
 	}
 
+	// The holds come first and cover every gadget video node, not only the ones
+	// a slot resolves to. A node exists only while its UVC function is linked,
+	// and every linked UVC function is holding the controller deactivated, so
+	// an unheld node is a dark gadget: no HID, no gadget NIC, no virtual disk.
+	// A camera whose slot cannot be resolved therefore still gets its node
+	// held, and costs its own stream rather than the whole device.
+	holders, holdErr := m.holdVideoNodes(ctx)
+
 	next := make(map[string]*worker, len(specs))
 	var failures []error
+	if holdErr != nil {
+		failures = append(failures, holdErr)
+	}
 	for _, spec := range specs {
 		node, err := m.resolve(spec)
 		if err != nil {
+			if spec.Kind == sources.KindCamera {
+				log.Errorf("media slot %s: %s: the node stays held, so the gadget stays on the bus", spec.ID, err)
+			}
 			failures = append(failures, fmt.Errorf("%s: %w", spec.ID, err))
 			continue
 		}
 		spec.Node = node
+		if spec.Kind == sources.KindCamera {
+			holder, held := holders[node]
+			if !held {
+				failures = append(failures, fmt.Errorf("%s: %w: %s is not held", spec.ID, ErrSinkUnavailable, node))
+				continue
+			}
+			spec.FD = holder.FD()
+		}
 		output, err := m.factory.Open(spec, node)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", spec.ID, err))
@@ -374,10 +417,36 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 		}
 		_ = m.registry.SetBindingState(w.spec.ID, state)
 	}); err != nil {
-		log.Errorf("media output %s: %s", w.spec.ID, err)
+		log.Errorf("media output %s: %s: the node stays held, so the gadget stays on the bus", w.spec.ID, err)
 	}
 	_ = m.registry.SetDemand(w.spec.ID, sources.Demand{})
 	_ = m.registry.SetBindingState(w.spec.ID, sources.StateSuspended)
+}
+
+// holdVideoNodes converges the held set on what the gadget currently exposes.
+// It is bounded: a node that will not open, or a hold that will not settle, is
+// an error the caller reports now, never a request that hangs.
+func (m *Manager) holdVideoNodes(ctx context.Context) (map[string]Holder, error) {
+	nodes, err := m.resolver.GadgetVideoNodes()
+	if err != nil {
+		log.Errorf("list gadget video nodes: %s", err)
+		return nil, fmt.Errorf("list gadget video nodes: %w", err)
+	}
+	holders, err := m.holds.hold(ctx, nodes)
+	if err != nil {
+		log.Errorf("hold gadget video nodes %v: %s", nodes, err)
+		return nil, err
+	}
+	var missing []string
+	for _, node := range nodes {
+		if _, held := holders[node]; !held {
+			missing = append(missing, node)
+		}
+	}
+	if len(missing) > 0 {
+		return holders, fmt.Errorf("%w: gadget video nodes %v stayed closed, so the controller stays deactivated", ErrSinkUnavailable, missing)
+	}
+	return holders, nil
 }
 
 func (m *Manager) resolve(spec SlotSpec) (string, error) {

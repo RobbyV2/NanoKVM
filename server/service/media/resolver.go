@@ -37,14 +37,86 @@ func (r *SysfsResolver) ResolveVideo(function string) (string, error) {
 		return "", err
 	}
 	var matches []string
+	named := false
 	for _, entry := range entries {
 		identity, err := os.ReadFile(filepath.Join(entry, "function_name"))
-		if err != nil || strings.TrimSuffix(string(identity), "\n") != function {
+		if err != nil {
+			continue
+		}
+		named = true
+		if strings.TrimSuffix(string(identity), "\n") != function {
 			continue
 		}
 		matches = append(matches, filepath.Join(r.devRoot, filepath.Base(entry)))
 	}
-	return uniqueNode(function, matches, ErrNodeNotFound)
+	if named {
+		return uniqueNode(function, matches, ErrNodeNotFound)
+	}
+	// This kernel carries no function_name backport, so the only identity a
+	// gadget video node has left is the controller it hangs off: the node is
+	// named for the UDC (4340000.usb on this board) and lives under the same
+	// platform device. That separates gadget nodes from capture nodes but not
+	// two cameras from each other, so a second gadget node is reported as
+	// ambiguous rather than guessed at from minor order.
+	nodes, err := r.GadgetVideoNodes()
+	if err != nil {
+		return "", err
+	}
+	return uniqueNode(function, nodes, ErrNodeNotFound)
+}
+
+// GadgetVideoNodes is every video node the gadget owns. A node exists only
+// while its UVC function is linked and bound, so this is also the set of
+// functions currently holding the controller deactivated.
+func (r *SysfsResolver) GadgetVideoNodes() ([]string, error) {
+	entries, err := filepath.Glob(filepath.Join(r.sysRoot, "class/video4linux/video*"))
+	if err != nil {
+		return nil, err
+	}
+	udcs, err := filepath.Glob(filepath.Join(r.sysRoot, "class/udc/*"))
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]bool, len(udcs))
+	var roots []string
+	for _, udc := range udcs {
+		names[filepath.Base(udc)] = true
+		// /sys/class/udc/4340000.usb -> ../../devices/platform/4340000.usb/udc/4340000.usb,
+		// and uvc parents its video device on the gadget, which is a sibling of
+		// that udc directory under the same platform device.
+		if target, err := filepath.EvalSymlinks(udc); err == nil {
+			roots = append(roots, filepath.Dir(filepath.Dir(target)))
+		}
+	}
+	var nodes []string
+	for _, entry := range entries {
+		if !gadgetVideoNode(entry, names, roots) {
+			continue
+		}
+		nodes = append(nodes, filepath.Join(r.devRoot, filepath.Base(entry)))
+	}
+	sort.Strings(nodes)
+	return nodes, nil
+}
+
+func gadgetVideoNode(entry string, udcNames map[string]bool, udcRoots []string) bool {
+	if _, err := os.Stat(filepath.Join(entry, "function_name")); err == nil {
+		return true
+	}
+	name, err := os.ReadFile(filepath.Join(entry, "name"))
+	if err == nil && udcNames[strings.TrimSpace(string(name))] {
+		return true
+	}
+	target, err := filepath.EvalSymlinks(entry)
+	if err != nil {
+		return false
+	}
+	for _, root := range udcRoots {
+		if root != "" && root != string(filepath.Separator) && strings.HasPrefix(target, root+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *SysfsResolver) ResolveAudio(function string) (string, error) {

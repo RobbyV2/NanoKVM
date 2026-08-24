@@ -81,13 +81,18 @@ static int nk_uvc_format(struct nk_uvc *u, unsigned int frame) {
 static void nk_uvc_close(struct nk_uvc *u);
 static int nk_uvc_queue(struct nk_uvc *u, const void *data, size_t length, int all);
 
-static struct nk_uvc *nk_uvc_open(const char *path, const uint16_t *widths,
+// The streaming layer never opens the node: it dups the descriptor the manager
+// holds for the lifetime of the function (see hold.go). dup shares the struct
+// file, so uvc_v4l2_open() and uvc_v4l2_release() - the two halves of
+// cdev->deactivations, which do not cancel out when they overlap - run exactly
+// once per linked function no matter how often streaming starts and stops.
+static struct nk_uvc *nk_uvc_adopt(int held, const uint16_t *widths,
 	const uint16_t *heights, const uint32_t *intervals, unsigned int frame_count,
 	uint32_t max_packet) {
-	if (frame_count == 0 || frame_count > NK_FRAMES) { errno = EINVAL; return NULL; }
+	if (frame_count == 0 || frame_count > NK_FRAMES || held < 0) { errno = EINVAL; return NULL; }
 	struct nk_uvc *u = calloc(1, sizeof(*u));
 	if (!u) return NULL;
-	u->fd = open(path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+	u->fd = fcntl(held, F_DUPFD_CLOEXEC, 0);
 	if (u->fd < 0) { free(u); return NULL; }
 	u->frame_count = frame_count;
 	u->max_packet = max_packet;
@@ -307,6 +312,8 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	return edge;
 }
 
+// Closes the dup, never the held descriptor: the V4L2 handle stays open, so the
+// gadget stays on the bus while streaming is down.
 static void nk_uvc_close(struct nk_uvc *u) {
 	if (!u) return;
 	if (u->fd >= 0 && u->streaming) {
@@ -425,11 +432,12 @@ func openUVC(spec SlotSpec, node string) (*uvcOutput, error) {
 		widths[i], heights[i] = C.uint16_t(frame.Width), C.uint16_t(frame.Height)
 		intervals[i] = C.uint32_t(frame.Intervals[0])
 	}
-	path := C.CString(node)
-	defer C.free(unsafe.Pointer(path))
-	handle := C.nk_uvc_open(path, &widths[0], &heights[0], &intervals[0], C.uint(len(frames)), C.uint32_t(spec.Video.StreamingMaxPacket))
+	if spec.FD <= 0 {
+		return nil, fmt.Errorf("open UVC %s: no held descriptor", node)
+	}
+	handle := C.nk_uvc_adopt(C.int(spec.FD), &widths[0], &heights[0], &intervals[0], C.uint(len(frames)), C.uint32_t(spec.Video.StreamingMaxPacket))
 	if handle == nil {
-		return nil, fmt.Errorf("open UVC %s: %w", node, errno())
+		return nil, fmt.Errorf("adopt UVC %s: %w", node, errno())
 	}
 	return &uvcOutput{handle: handle}, nil
 }

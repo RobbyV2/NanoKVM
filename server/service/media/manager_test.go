@@ -7,6 +7,8 @@ import (
 	"errors"
 	"image"
 	"image/jpeg"
+	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -45,9 +47,79 @@ type fakeResolver struct{ nodes map[string]string }
 func (r fakeResolver) ResolveVideo(id string) (string, error) { return r.nodes[id], nil }
 func (r fakeResolver) ResolveAudio(id string) (string, error) { return r.nodes[id], nil }
 
+func (r fakeResolver) GadgetVideoNodes() ([]string, error) {
+	var nodes []string
+	for _, node := range r.nodes {
+		if strings.HasPrefix(node, "/dev/video") {
+			nodes = append(nodes, node)
+		}
+	}
+	sort.Strings(nodes)
+	return nodes, nil
+}
+
+// One open per node, counted, so a test can prove the manager never opens a
+// gadget video node twice: the second open would leak a deactivation the
+// kernel never pays back.
+type fakeHolds struct {
+	mu     sync.Mutex
+	opens  map[string]int
+	closes map[string]int
+	fail   map[string]error
+	block  chan struct{}
+	next   int
+}
+
+type fakeHolder struct {
+	table *fakeHolds
+	node  string
+	fd    int
+}
+
+func (h *fakeHolder) FD() int { return h.fd }
+
+func (h *fakeHolder) Close() error {
+	h.table.mu.Lock()
+	defer h.table.mu.Unlock()
+	h.table.closes[h.node]++
+	return nil
+}
+
+func newFakeHolds() *fakeHolds {
+	return &fakeHolds{opens: map[string]int{}, closes: map[string]int{}, fail: map[string]error{}, next: 100}
+}
+
+func (t *fakeHolds) open(node string) (Holder, error) {
+	t.mu.Lock()
+	t.opens[node]++
+	err := t.fail[node]
+	block := t.block
+	t.next++
+	fd := t.next
+	t.mu.Unlock()
+	if block != nil {
+		<-block
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &fakeHolder{table: t, node: node, fd: fd}, nil
+}
+
+func (t *fakeHolds) count(node string) (int, int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.opens[node], t.closes[node]
+}
+
+func newTestManager(registry SlotRegistry, resolver NodeResolver, factory OutputFactory) *Manager {
+	return newManagerWith(registry, resolver, factory, newFakeHolds().open)
+}
+
 type fakeFactory struct {
 	mu      sync.Mutex
 	outputs map[string]*fakeOutput
+	specs   map[string]SlotSpec
 }
 
 func (f *fakeFactory) Open(spec SlotSpec, _ string) (Output, error) {
@@ -57,8 +129,18 @@ func (f *fakeFactory) Open(spec SlotSpec, _ string) (Output, error) {
 		f.outputs = make(map[string]*fakeOutput)
 	}
 	f.outputs[spec.ID] = output
+	if f.specs == nil {
+		f.specs = make(map[string]SlotSpec)
+	}
+	f.specs[spec.ID] = spec
 	f.mu.Unlock()
 	return output, nil
+}
+
+func (f *fakeFactory) spec(id string) SlotSpec {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.specs[id]
 }
 
 type fakeOutput struct {
@@ -157,7 +239,7 @@ func waitDemand(t *testing.T, registry *fakeRegistry, id string) {
 func TestManagerKeepsSlotsIndependentAndBounded(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &fakeFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video8", "uvc.cam1": "/dev/video3"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video8", "uvc.cam1": "/dev/video3"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0"), cameraFunction("cam1")}}
 	plan := presentation.Plan{FIFOs: presentation.FIFOAssignment{"uvc.cam0": {128, 768}, "uvc.cam1": {128, 512}}}
 	if err := manager.Reconcile(context.Background(), profile, plan); err != nil {
@@ -204,7 +286,7 @@ func TestManagerKeepsSlotsIndependentAndBounded(t *testing.T) {
 func TestDetachDropsQueuedFrameAndSequenceState(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &fakeFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -225,7 +307,7 @@ func TestDetachDropsQueuedFrameAndSequenceState(t *testing.T) {
 func TestManagerRejectsUndeclaredFormats(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &fakeFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -251,7 +333,7 @@ func TestManagerRejectsMJPEGBeyondDeclaredBuffer(t *testing.T) {
 func TestManagerKeepsOnlyLatestVideoFrame(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &blockedFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -286,7 +368,7 @@ func TestManagerKeepsOnlyLatestVideoFrame(t *testing.T) {
 func TestManagerRejectsBurstBeyondSlotRate(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &blockedFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -307,7 +389,7 @@ func TestManagerRejectsBurstBeyondSlotRate(t *testing.T) {
 
 func TestManagerRejectsFramesWithoutHostDemand(t *testing.T) {
 	registry := &fakeRegistry{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, idleFactory{})
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, idleFactory{})
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -321,7 +403,7 @@ func TestManagerRejectsFramesWithoutHostDemand(t *testing.T) {
 
 func TestManagerSynchronizesSlotsBeforeNodeDiscoveryFails(t *testing.T) {
 	registry := &fakeRegistry{}
-	manager := NewManagerWith(registry, failingAudioResolver{}, &fakeFactory{})
+	manager := newTestManager(registry, failingAudioResolver{}, &fakeFactory{})
 	profile := presentation.Profile{Functions: []presentation.Function{microphoneFunction("mic0"), microphoneFunction("mic1")}}
 	err := manager.Reconcile(context.Background(), profile, presentation.Plan{})
 	if err == nil {
@@ -340,11 +422,12 @@ func (failingAudioResolver) ResolveVideo(string) (string, error) { return "", Er
 func (failingAudioResolver) ResolveAudio(string) (string, error) {
 	return "", ErrAudioIdentityUnavailable
 }
+func (failingAudioResolver) GadgetVideoNodes() ([]string, error) { return nil, nil }
 
 func TestSuspendClosesEverySlot(t *testing.T) {
 	registry := &fakeRegistry{}
 	factory := &fakeFactory{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0", "uac2.mic0": "hw:1,0"}}, factory)
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0", "uac2.mic0": "hw:1,0"}}, factory)
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0"), microphoneFunction("mic0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -482,7 +565,7 @@ func TestLatencyTrackerSummarizesEachWindow(t *testing.T) {
 
 func TestIngestMeasuresFrameLatency(t *testing.T) {
 	registry := &fakeRegistry{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, &blockedFactory{})
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, &blockedFactory{})
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
 	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
 		t.Fatal(err)
@@ -543,7 +626,7 @@ func TestPacketSpanNeverIndexesAnEmptyPayload(t *testing.T) {
 
 func TestSlotsCarryTheNameTheHostWillRead(t *testing.T) {
 	registry := &fakeRegistry{}
-	manager := NewManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0", "uac2.mic0": "hw:0,0"}}, &fakeFactory{})
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0", "uac2.mic0": "hw:0,0"}}, &fakeFactory{})
 	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0"), microphoneFunction("mic0")}}
 	plan := presentation.Plan{MediaNames: map[string]string{"uvc.cam0": "Desk Camera"}}
 	if err := manager.Reconcile(context.Background(), profile, plan); err != nil {
