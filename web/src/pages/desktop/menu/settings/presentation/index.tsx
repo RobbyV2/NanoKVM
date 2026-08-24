@@ -594,7 +594,10 @@ export const Presentation = ({ setIsLocked }: PresentationProps) => {
                           },
                           ...Array.from(
                             {
-                              length: Math.min(3, hidSlotCount(setHidSlot(layout, role, null)) + 1)
+                              length: Math.min(
+                                HID_ROLES.length,
+                                hidSlotCount(setHidSlot(layout, role, null)) + 1
+                              )
                             },
                             (_, index) => ({
                               value: index,
