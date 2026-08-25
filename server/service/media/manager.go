@@ -180,6 +180,7 @@ type latencyTracker struct {
 	started time.Time
 	offset  int64
 	frames  int
+	dropped int
 	sum     int64
 	peak    int64
 	summary sources.SinkLatency
@@ -491,8 +492,12 @@ func (m *Manager) Ingest(ctx context.Context, frame sources.MediaFrame) error {
 		return nil
 	default:
 	}
+	// The queue is full, so the oldest frame goes to make room for the newest -
+	// the right trade for latency, but it is a frame the source was told
+	// nothing about. Count it so the sink's summary carries it back.
 	select {
 	case <-w.queue:
+		w.latency.dropped++
 	default:
 	}
 	select {
@@ -575,12 +580,13 @@ func (t *latencyTracker) observe(now time.Time, stampUS uint64) {
 	}
 	t.summary = sources.SinkLatency{
 		Frames:    t.frames,
+		Dropped:   t.dropped,
 		AvgMS:     float64(t.sum) / float64(t.frames) / 1000,
 		PeakMS:    float64(t.peak) / 1000,
 		BaseMS:    float64(t.offset) / 1000,
 		UpdatedAt: now.UTC(),
 	}
-	t.started, t.frames, t.sum, t.peak = now, 0, 0, 0
+	t.started, t.frames, t.dropped, t.sum, t.peak = now, 0, 0, 0, 0
 }
 
 func (m *Manager) Latency() map[string]sources.SinkLatency {

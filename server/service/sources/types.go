@@ -118,7 +118,13 @@ type Sink struct {
 // AvgMS and PeakMS are relative to BaseMS, the smallest skew yet seen, because
 // the stamp is the browser's wall clock and the two clocks need not agree.
 type SinkLatency struct {
-	Frames    int       `json:"frames"`
+	Frames int `json:"frames"`
+	// Frames this sink threw away in the window because its queue was full.
+	// A source that overruns the device by byte rate stays inside any
+	// frames-per-second limit, so nothing else tells it to back off: every
+	// frame it manages to push is acknowledged while older ones are quietly
+	// discarded. Reporting the discards is what lets it lower its bitrate.
+	Dropped   int       `json:"dropped"`
 	AvgMS     float64   `json:"avg_ms"`
 	PeakMS    float64   `json:"peak_ms"`
 	BaseMS    float64   `json:"base_ms"`
