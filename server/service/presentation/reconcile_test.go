@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -487,3 +488,48 @@ func TestHIDRoleGroupsCoverEveryLayoutTheCompilerCanBuild(t *testing.T) {
 		}
 	}
 }
+
+// withHIDQuiesced holds the HID lock for the whole bracket and pushes routes
+// from its defer. A router that locks again there deadlocks against itself with
+// every HID handle closed, which on hardware was a keyboard that died the
+// instant an apply started and a save that never returned.
+func TestQuiescedRoutePushDoesNotRelockTheHID(t *testing.T) {
+	quiescer := &reentrantQuiescer{}
+	manager := NewManager(NewStore(), nil, staticV1)
+	manager.SetHID(quiescer)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = manager.withHIDQuiesced(func() error { return nil })
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the quiesce bracket never returned: its route push took the HID lock it already holds")
+	}
+	if quiescer.locked.Load() != 0 {
+		t.Fatalf("HID left locked %d deep after the bracket", quiescer.locked.Load())
+	}
+}
+
+// Models sync.Mutex's one property that matters here: it is not reentrant.
+type reentrantQuiescer struct {
+	locked atomic.Int32
+	routes atomic.Int32
+}
+
+func (q *reentrantQuiescer) Lock() {
+	if !q.locked.CompareAndSwap(0, 1) {
+		panic("HID locked while already held: sync.Mutex would block here forever")
+	}
+}
+func (q *reentrantQuiescer) Unlock()                                                { q.locked.Store(0) }
+func (q *reentrantQuiescer) CloseNoLock()                                           {}
+func (q *reentrantQuiescer) SetHIDRoutesLocked([]HIDRoute)                          { q.routes.Add(1) }
+func (q *reentrantQuiescer) SetHIDRoutes(r []HIDRoute)                              { q.Lock(); q.routes.Add(1); q.Unlock() }
+func (q *reentrantQuiescer) OpenNoLockWithRetry(time.Duration, time.Duration) error { return nil }
+func (q *reentrantQuiescer) WriteKeyboardReport([]byte) error                       { return nil }
+func (q *reentrantQuiescer) WriteRelativeMouseReport([]byte) error                  { return nil }
+func (q *reentrantQuiescer) WriteAbsoluteMouseReport([]byte) error                  { return nil }

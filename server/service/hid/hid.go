@@ -77,7 +77,25 @@ func (h *Hid) SetHIDRoutes(routes []presentation.HIDRoute) {
 	h.routes = next
 	h.routeMutex.Unlock()
 
-	h.dropMovedHandles()
+	h.Lock()
+	h.dropMovedHandlesNoLock()
+	h.Unlock()
+}
+
+// For a caller that already holds the HID lock. withHIDQuiesced pushes routes
+// from inside its bracket, and sync.Mutex is not reentrant, so going through
+// SetHIDRoutes there deadlocks the bracket against itself while it holds both
+// HID mutexes and has every handle closed - a keyboard that dies the moment an
+// apply starts and never comes back. Dropping handles is also pointless there:
+// the bracket closed them on the way in and reopens them on the way out.
+func (h *Hid) SetHIDRoutesLocked(routes []presentation.HIDRoute) {
+	next := make(map[presentation.HIDRole]presentation.HIDRoute, len(routes))
+	for _, route := range routes {
+		next[route.Role] = route
+	}
+	h.routeMutex.Lock()
+	h.routes = next
+	h.routeMutex.Unlock()
 }
 
 // Collapsing three HID interfaces onto one moves relative and absolute off
@@ -87,10 +105,7 @@ func (h *Hid) SetHIDRoutes(routes []presentation.HIDRoute) {
 // error on any path and no way to tell from the reports alone. Nothing else
 // closes these - a layout change is not a rebind - so the handles have to be
 // dropped here, at the one moment the mapping is known to have changed.
-func (h *Hid) dropMovedHandles() {
-	h.Lock()
-	defer h.Unlock()
-
+func (h *Hid) dropMovedHandlesNoLock() {
 	for _, device := range h.devices() {
 		if device.get() == nil || device.getPath() == device.path {
 			continue

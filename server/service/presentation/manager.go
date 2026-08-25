@@ -55,6 +55,13 @@ type HIDRouter interface {
 	SetHIDRoutes([]HIDRoute)
 }
 
+// Implemented by a router that can take the routes while the caller holds the
+// HID lock. withHIDQuiesced holds it for the whole bracket, so it must never
+// reach a setter that locks again.
+type lockedHIDRouter interface {
+	SetHIDRoutesLocked([]HIDRoute)
+}
+
 type GadgetObserver interface {
 	// Suspend gives back every device node the gadget owns, before it is taken
 	// apart, and says whether it managed to. The answer is not decoration: a
@@ -149,6 +156,19 @@ func (m *Manager) SetHID(h HIDQuiescer) {
 	m.hid = h
 	m.wireMu.Unlock()
 	m.pushHIDRoutes(h)
+}
+
+// The variant for inside the quiesce bracket. See lockedHIDRouter.
+func (m *Manager) pushHIDRoutesLocked(h HIDQuiescer) {
+	router, ok := h.(lockedHIDRouter)
+	if !ok {
+		return
+	}
+	routes, ok := m.hidRoutes()
+	if !ok {
+		return
+	}
+	router.SetHIDRoutesLocked(routes)
 }
 
 func (m *Manager) pushHIDRoutes(h HIDQuiescer) {
@@ -951,7 +971,7 @@ func (m *Manager) withHIDQuiesced(fn func() error) (err error) {
 	h.Lock()
 	h.CloseNoLock()
 	defer func() {
-		m.pushHIDRoutes(h)
+		m.pushHIDRoutesLocked(h)
 		reopen := h.OpenNoLockWithRetry(hidQuiesceTimeout, hidQuiesceRetryDelay)
 		h.Unlock()
 		if reopen != nil {
