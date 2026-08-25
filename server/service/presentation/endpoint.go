@@ -175,10 +175,15 @@ func inPackets(function Function, caps FunctionCaps) []int {
 		}
 	case FunctionUVC:
 		if function.Video != nil {
+			// A high-bandwidth isochronous endpoint moves maxburst+1 packets per
+			// microframe and the controller needs a FIFO deep enough for all of
+			// them, so the burst has to be costed here or the seating passes a
+			// depth the kernel then refuses at ep_enable.
+			streaming := int(function.Video.StreamingMaxPacket) * (int(function.Video.StreamingMaxBurst) + 1)
 			if !function.Video.interruptEndpoint() {
-				return []int{int(function.Video.StreamingMaxPacket)}
+				return []int{streaming}
 			}
-			return []int{16, int(function.Video.StreamingMaxPacket)}
+			return []int{16, streaming}
 		}
 	case FunctionUAC2:
 		if function.Audio != nil {

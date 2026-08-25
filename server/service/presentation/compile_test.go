@@ -746,3 +746,39 @@ func TestCameraAndMicrophoneFitBesideNetworkingAndOneHID(t *testing.T) {
 		}
 	}
 }
+
+// Full-rate video needs the whole isochronous budget the bus offers: 1024 bytes
+// three times per 125us microframe, not 768 once. The packet size and the burst
+// are two halves of one number - the controller sizes the endpoint's FIFO from
+// their product - so a burst the accounting forgets to multiply is a plan the
+// compiler accepts and dwc2 refuses at ep_enable.
+func TestHighBandwidthVideoIsCostedByPacketTimesBurst(t *testing.T) {
+	profile := standardProfile()
+	if err := SetHIDLayout(&profile, [][]HIDRole{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}}); err != nil {
+		t.Fatalf("set hid layout: %v", err)
+	}
+	camera := testCamera("cam0", 1024)
+	camera.Video.StreamingMaxBurst = 2
+	camera.Video.InterruptEndpoint = ptr(false)
+	profile.Functions = append(profile.Functions, camera)
+
+	if err := profile.Validate(); err != nil {
+		t.Fatalf("a 1024 byte packet with two extra transactions was refused: %v", err)
+	}
+
+	packets := inPackets(camera, staticV1.Functions[FunctionUVC])
+	if len(packets) != 1 || packets[0] != 3072 {
+		t.Fatalf("packets = %v, want one 3072 byte packet (1024 x 3)", packets)
+	}
+
+	seated, err := SeatFIFOs(profile.Functions, staticV1)
+	if err != nil {
+		t.Fatalf("seat fifos: %v", err)
+	}
+	// 3072 bytes is 768 words, which is exactly the largest FIFO this controller
+	// has: the fit is tight rather than comfortable, and a regression that grows
+	// the requirement by one word has nowhere to put it.
+	if got := seated["uvc.cam0"]; len(got) != 1 || got[0] != 768 {
+		t.Fatalf("uvc.cam0 seated on %v, want the 768 word fifo", got)
+	}
+}

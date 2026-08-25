@@ -533,11 +533,21 @@ func (v *VideoFunction) validate() error {
 	if err := hostName(v.HostName); err != nil {
 		return err
 	}
-	if v.StreamingMaxPacket != 256 && v.StreamingMaxPacket != 512 && v.StreamingMaxPacket != 768 {
-		return fmt.Errorf("streaming maxpacket %d, want 256, 512, or 768", v.StreamingMaxPacket)
+	// High-speed isochronous carries wMaxPacketSize in bits 10:0 and the extra
+	// transactions per microframe in bits 12:11, so 1024 bytes three times per
+	// 125us is what the bus allows and 768 once was leaving most of it unused.
+	// f_uvc's streaming_maxburst is named for SuperSpeed but sets those mult
+	// bits on high speed, so 0..2 means one to three transactions.
+	switch v.StreamingMaxPacket {
+	case 256, 512, 768, 1024:
+	default:
+		return fmt.Errorf("streaming maxpacket %d, want 256, 512, 768, or 1024", v.StreamingMaxPacket)
 	}
-	if v.StreamingMaxBurst != 0 || v.StreamingInterval != 1 {
-		return fmt.Errorf("high-speed streaming requires maxburst 0 and interval 1")
+	if v.StreamingMaxBurst > 2 {
+		return fmt.Errorf("streaming maxburst %d, want 0 through 2 on high speed", v.StreamingMaxBurst)
+	}
+	if v.StreamingInterval != 1 {
+		return fmt.Errorf("high-speed streaming requires interval 1")
 	}
 	if len(v.Formats) != 1 || v.Formats[0].Codec != "mjpeg" || len(v.Formats[0].Frames) == 0 {
 		return fmt.Errorf("exactly one non-empty mjpeg format is required")
