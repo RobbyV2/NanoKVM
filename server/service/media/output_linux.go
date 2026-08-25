@@ -697,31 +697,14 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			// Every period the device has ready, not one per tick. The
-			// gadget's audio clock and this ticker are independent and drift
-			// apart: a tick that lands a little late leaves a period queued,
-			// the queue grows, and the ring eventually overruns and loses
-			// samples. Lost samples are a discontinuity in the waveform, and
-			// discontinuities arriving at the drift beat are heard as a buzz
-			// over otherwise correct audio. Draining paces this loop off the
-			// device instead of off the timer, so the queue cannot build.
-			drained := 0
-			var rc C.int
-			for drained < maxCaptureDrain {
-				c.pcm.mu.Lock()
-				if c.pcm.handle == nil {
-					c.pcm.mu.Unlock()
-					return nil
-				}
-				rc = C.nk_pcm_read(c.pcm.handle, unsafe.Pointer(&buffer[0]), C.uint(len(buffer)))
+			c.pcm.mu.Lock()
+			if c.pcm.handle == nil {
 				c.pcm.mu.Unlock()
-				if rc != 0 {
-					break
-				}
-				drained++
-				emit(Packet{Data: append([]byte(nil), buffer...)})
+				return nil
 			}
-			if drained > 0 {
+			rc := C.nk_pcm_read(c.pcm.handle, unsafe.Pointer(&buffer[0]), C.uint(len(buffer)))
+			c.pcm.mu.Unlock()
+			if rc == 0 {
 				failures, resets = 0, 0
 				successes++
 				if !streaming && successes > 4 {
@@ -732,6 +715,7 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 					sourceActive = true
 					active(true)
 				}
+				emit(Packet{Data: append([]byte(nil), buffer...)})
 				continue
 			}
 			successes = 0
