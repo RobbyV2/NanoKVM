@@ -287,6 +287,9 @@ const en = {
     },
     devices: {
       title: 'Devices',
+      camera: {
+        resolution: 'Resolution'
+      },
       stale: 'Live device state is unavailable. Reconnecting.',
       empty:
         'No camera, microphone or speaker slots are configured. Add one under Settings, Device.',

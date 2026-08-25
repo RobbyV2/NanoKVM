@@ -24,6 +24,10 @@ const (
 	videoQueueDepth = 1
 	audioQueueDepth = 4
 	pcmPacketBytes  = 1920
+	// How many 20 ms periods one tick may take from the capture device before
+	// yielding. Bounded so a device handing back data forever cannot hold the
+	// loop, but high enough to swallow any realistic scheduling delay.
+	maxCaptureDrain = 8
 	stopTimeout     = 2 * time.Second
 	videoFallback   = 500 * time.Millisecond
 	videoPoll       = 25 * time.Millisecond

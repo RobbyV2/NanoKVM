@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
 import { Alert, Button, Divider, Select, Tooltip } from 'antd';
 import clsx from 'clsx';
@@ -16,7 +16,11 @@ import { useTranslation } from 'react-i18next';
 import type { SourceSink } from '@/api/sources.ts';
 import { MenuItem } from '@/components/menu-item.tsx';
 
+import * as presentation from '@/api/presentation.ts';
+import type { PresentationProfile } from '@/api/presentation.ts';
+
 import { useDevices } from './context.ts';
+import { cameraCap, cameraOptions, withCameraCap } from './modes.ts';
 import { WebUSBRelay } from './webusb.ts';
 
 export const Devices = () => {
@@ -24,6 +28,49 @@ export const Devices = () => {
   const { account } = useAuth();
   const state = useDevices();
   const [selected, setSelected] = useState<Record<string, string>>({});
+  // The camera's advertised modes, which is the only lever that makes the host
+  // ask for a smaller picture. Loaded lazily: most sessions never touch it.
+  const [profile, setProfile] = useState<PresentationProfile>();
+  const [capBusy, setCapBusy] = useState(false);
+  const [capError, setCapError] = useState('');
+  const isAdmin = account.role === 'admin';
+
+  useEffect(() => {
+    if (!isAdmin || profile) return;
+    if (!state.snapshot.sinks.some((sink) => sink.kind === 'camera')) return;
+    let cancelled = false;
+    presentation
+      .getProfile('current')
+      .then((rsp) => {
+        if (!cancelled && rsp.code === 0) setProfile(rsp.data as PresentationProfile);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, profile, state.snapshot.sinks]);
+
+  // Changing the cap rewrites the profile and re-applies it, which re-enumerates
+  // the gadget: the host has to be told the mode list changed, and there is no
+  // lighter way to say it.
+  async function applyCap(instance: string, cap: string) {
+    if (!profile) return;
+    setCapBusy(true);
+    setCapError('');
+    try {
+      const next = withCameraCap(profile, instance, cap);
+      const saved = await presentation.updateProfile(next);
+      if (saved.code !== 0) throw new Error(saved.msg);
+      const applied = await presentation.applyProfile(next.name);
+      if (applied.code !== 0) throw new Error(applied.msg);
+      setProfile(next);
+    } catch (error) {
+      setCapError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCapBusy(false);
+    }
+  }
+
   const activeCount = state.snapshot.sinks.filter((sink) => sink.binding).length;
   const surrendered = !!state.passthrough?.hidSurrendered;
 
@@ -53,6 +100,7 @@ export const Devices = () => {
         <Alert type="warning" showIcon message={t('devices.stale')} />
       )}
       {state.errors.connection && <Alert type="error" showIcon message={state.errors.connection} />}
+      {capError && <Alert type="error" showIcon message={capError} />}
 
       {state.snapshot.sinks.length === 0 ? (
         <div className="py-5 text-center text-sm text-neutral-500">{t('devices.empty')}</div>
@@ -63,7 +111,11 @@ export const Devices = () => {
               key={sink.id}
               sink={sink}
               username={account.username}
-              isAdmin={account.role === 'admin'}
+              isAdmin={isAdmin}
+              cameraCap={profile ? cameraCap(profile, sink.id.replace(/^uvc\./, '')) : undefined}
+              cameraOptions={profile ? cameraOptions(profile, sink.id.replace(/^uvc\./, '')) : []}
+              cameraCapBusy={capBusy}
+              onCameraCap={(cap) => applyCap(sink.id.replace(/^uvc\./, ''), cap)}
               selected={selected[sink.id]}
               setSelected={(deviceID) => {
                 setSelected((current) => ({ ...current, [sink.id]: deviceID }));
@@ -120,9 +172,23 @@ type SinkRowProps = {
   isAdmin: boolean;
   selected?: string;
   setSelected: (deviceID: string) => void;
+  cameraCap?: string;
+  cameraOptions?: Array<{ width: number; height: number }>;
+  cameraCapBusy?: boolean;
+  onCameraCap?: (cap: string) => void;
 };
 
-const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProps) => {
+const SinkRow = ({
+  sink,
+  username,
+  isAdmin,
+  selected,
+  setSelected,
+  cameraCap: cap,
+  cameraOptions: capOptions,
+  cameraCapBusy,
+  onCameraCap
+}: SinkRowProps) => {
   const { t } = useTranslation();
   const state = useDevices();
   const options = state.devices[sink.kind];
@@ -181,6 +247,29 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
           </div>
 
           {isUSB && <UsbDetail />}
+
+          {/* The host always asks for the largest mode a camera offers, so the
+              only way to make it ask for less is to stop offering more. Capping
+              is what keeps the picture inside what this board can carry. */}
+          {sink.kind === 'camera' && isAdmin && cap && onCameraCap && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="shrink-0 text-xs text-neutral-500">
+                {t('devices.camera.resolution')}
+              </span>
+              <Select
+                size="small"
+                className="w-[128px]"
+                value={cap}
+                disabled={cameraCapBusy}
+                loading={cameraCapBusy}
+                onChange={onCameraCap}
+                options={(capOptions ?? []).map((mode) => ({
+                  value: `${mode.width}x${mode.height}`,
+                  label: `${mode.width} x ${mode.height}`
+                }))}
+              />
+            </div>
+          )}
 
           {insecure ? (
             <div className="text-xs text-amber-400">{t('devices.permission.insecure')}</div>

@@ -74,6 +74,16 @@ export type USBFunction = {
   };
   net?: Record<string, unknown>;
   storage?: Record<string, unknown>;
+  // Only the parts the UI edits are named. Everything else on a video function
+  // rides along untouched, because a profile is round-tripped through here.
+  video?: {
+    formats?: Array<{
+      codec?: string;
+      frames?: Array<{ width: number; height: number; intervals?: number[] }>;
+    }>;
+    [key: string]: unknown;
+  };
+  audio?: Record<string, unknown>;
 };
 
 export type DescriptorSet = {
