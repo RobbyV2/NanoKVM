@@ -1,6 +1,9 @@
 import type { Demand, SourceKind } from '@/api/sources.ts';
 
 import { PcmPacketizer } from './pcm.ts';
+// See playback.ts: the bundler only emits the worklet for the `?worker&url`
+// form, so a production build served nothing for the bare new URL() version.
+import audioWorkletUrl from './audio.worklet.ts?worker&url';
 
 type FrameHandler = (payload: ArrayBuffer) => void;
 type ErrorHandler = (message: string) => void;
@@ -153,7 +156,7 @@ export class MicrophoneCapture {
       }
     });
     this.context = new AudioContext({ latencyHint: 'interactive' });
-    await this.context.audioWorklet.addModule(new URL('./audio.worklet.ts', import.meta.url));
+    await this.context.audioWorklet.addModule(audioWorkletUrl);
     await this.context.resume();
     if (this.context.state !== 'running') throw new Error('Click Share again to start microphone');
     const packetizer = new PcmPacketizer(this.context.sampleRate);

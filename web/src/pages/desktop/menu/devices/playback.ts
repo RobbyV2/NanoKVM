@@ -1,3 +1,11 @@
+// `?worker&url` so the bundler compiles the worklet and hands back the URL of
+// the built file. A bare `new URL('./x.worklet.ts', import.meta.url)` is not a
+// form the bundler rewrites: the dev server transpiles TypeScript on request so
+// it works there, but a production build emits nothing and the browser asks for
+// a .ts that is not on the server. It surfaces as "Unable to load a worklet's
+// module", which is why the speaker failed only in a real build.
+import playbackWorkletUrl from './playback.worklet.ts?worker&url';
+
 import { captureSupport, CaptureUnsupported } from './capture.ts';
 
 export class SpeakerPlayback {
@@ -14,7 +22,7 @@ export class SpeakerPlayback {
     const context = new AudioContext({ latencyHint: 'interactive', sampleRate: 48000 });
     this.context = context;
     try {
-      await context.audioWorklet.addModule(new URL('./playback.worklet.ts', import.meta.url));
+      await context.audioWorklet.addModule(playbackWorkletUrl);
       await context.resume();
       if (context.state !== 'running') throw new Error('Click Listen again to start playback');
       this.worklet = new AudioWorkletNode(context, 'nanokvm-playback', {
