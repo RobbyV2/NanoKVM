@@ -748,27 +748,37 @@ func TestCameraAndMicrophoneFitBesideNetworkingAndOneHID(t *testing.T) {
 }
 
 // Full-rate video needs the whole isochronous budget the bus offers: 1024 bytes
-// three times per 125us microframe, not 768 once. The packet size and the burst
-// are two halves of one number - the controller sizes the endpoint's FIFO from
-// their product - so a burst the accounting forgets to multiply is a plan the
-// compiler accepts and dwc2 refuses at ep_enable.
-func TestHighBandwidthVideoIsCostedByPacketTimesBurst(t *testing.T) {
+// three times per 125us microframe, not 768 once. On high speed that width is
+// asked for with the packet size alone - f_uvc splits streaming_maxpacket into
+// a size and a mult and puts streaming_maxburst only in the SuperSpeed
+// companion descriptor - so 3072 has to be a legal size, has to be costed at
+// its full width or dwc2 refuses it at ep_enable, and a burst beside it has to
+// cost nothing or the accounting charges for transactions high speed never
+// makes.
+func TestHighBandwidthVideoIsCostedByPacketWidth(t *testing.T) {
 	profile := standardProfile()
 	if err := SetHIDLayout(&profile, [][]HIDRole{{HIDRoleKeyboard, HIDRoleRelative, HIDRoleAbsolute}}); err != nil {
 		t.Fatalf("set hid layout: %v", err)
 	}
-	camera := testCamera("cam0", 1024)
-	camera.Video.StreamingMaxBurst = 2
+	camera := testCamera("cam0", 3072)
 	camera.Video.InterruptEndpoint = ptr(false)
 	profile.Functions = append(profile.Functions, camera)
 
 	if err := profile.Validate(); err != nil {
-		t.Fatalf("a 1024 byte packet with two extra transactions was refused: %v", err)
+		t.Fatalf("a 3072 byte microframe was refused: %v", err)
 	}
 
 	packets := inPackets(camera, staticV1.Functions[FunctionUVC])
 	if len(packets) != 1 || packets[0] != 3072 {
 		t.Fatalf("packets = %v, want one 3072 byte packet (1024 x 3)", packets)
+	}
+
+	burst := camera
+	video := *camera.Video
+	video.StreamingMaxPacket, video.StreamingMaxBurst = 1024, 2
+	burst.Video = &video
+	if packets := inPackets(burst, staticV1.Functions[FunctionUVC]); len(packets) != 1 || packets[0] != 1024 {
+		t.Fatalf("packets = %v with a SuperSpeed burst, want one 1024 byte packet: the burst is not spent on high speed", packets)
 	}
 
 	seated, err := SeatFIFOs(profile.Functions, staticV1)

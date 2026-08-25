@@ -192,11 +192,13 @@ func inPackets(function Function, caps FunctionCaps) []int {
 		}
 	case FunctionUVC:
 		if function.Video != nil {
-			// A high-bandwidth isochronous endpoint moves maxburst+1 packets per
+			// A high-bandwidth isochronous endpoint moves several packets per
 			// microframe and the controller needs a FIFO deep enough for all of
-			// them, so the burst has to be costed here or the seating passes a
-			// depth the kernel then refuses at ep_enable.
-			streaming := int(function.Video.StreamingMaxPacket) * (int(function.Video.StreamingMaxBurst) + 1)
+			// them. That whole width is streaming_maxpacket: f_uvc divides it
+			// into a packet size and a mult itself, and puts streaming_maxburst
+			// only in the SuperSpeed companion descriptor, so multiplying by the
+			// burst here would charge for transactions high speed never makes.
+			streaming := int(function.Video.StreamingMaxPacket)
 			if !function.Video.interruptEndpoint() {
 				return []int{streaming}
 			}

@@ -527,6 +527,19 @@ func defaultCamera(index int, label string, named bool) Function {
 		{Width: 320, Height: 240, Intervals: []uint32{333333, 666666}},
 		{Width: 160, Height: 120, Intervals: []uint32{333333, 666666}},
 	}
+	// 768 bytes per microframe, measured rather than assumed. A synthetic
+	// source sent one identical 3285 byte MJPEG payload 713 times while a host
+	// captured the raw stream, and the gadget silently loses whole isochronous
+	// payloads mid-frame: dwc2 completes the request with status 0 but a short
+	// actual, so nothing is logged and the frame arrives short by exactly one
+	// payload. Widening the microframe does not help, because the loss is per
+	// frame rather than per payload: 512 truncated 13.9% of live frames, 768
+	// 13.7%, 1024 12.7% - one population within noise of each other - while
+	// 3072 (1024 three times, the widest high speed allows) made it far worse
+	// at 24-30%, and 2048 is worse still because the Windows UVC driver will
+	// not render a mult-2 stream at all ("Could not RenderStream to connect
+	// pins"). So the value here buys nothing by growing, and the payload loss
+	// has to be answered somewhere other than the endpoint's width.
 	video := &VideoFunction{
 		FunctionName: label, Formats: []VideoFormat{{Codec: "mjpeg", Frames: frames}},
 		StreamingMaxPacket: 768, StreamingInterval: 1,

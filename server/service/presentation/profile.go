@@ -603,12 +603,18 @@ func (v *VideoFunction) validate() error {
 	// High-speed isochronous carries wMaxPacketSize in bits 10:0 and the extra
 	// transactions per microframe in bits 12:11, so 1024 bytes three times per
 	// 125us is what the bus allows and 768 once was leaving most of it unused.
-	// f_uvc's streaming_maxburst is named for SuperSpeed but sets those mult
-	// bits on high speed, so 0..2 means one to three transactions.
+	// The mult comes from this one number and nothing else: f_uvc splits
+	// streaming_maxpacket into size and mult itself (f_uvc.c uvc_function_bind,
+	// "<= 1024 -> mult 1", "<= 2048 -> mult 2, size/2", "else mult 3, size/3")
+	// and only ever puts streaming_maxburst in the SuperSpeed companion
+	// descriptor, so on this high-speed controller the burst does nothing at
+	// all. 2048 and 3072 are therefore the only ways to ask for a wider
+	// microframe, and each one still has to be a whole number of 1024 byte
+	// transactions or the split loses bytes.
 	switch v.StreamingMaxPacket {
-	case 256, 512, 768, 1024:
+	case 256, 512, 768, 1024, 2048, 3072:
 	default:
-		return fmt.Errorf("streaming maxpacket %d, want 256, 512, 768, or 1024", v.StreamingMaxPacket)
+		return fmt.Errorf("streaming maxpacket %d, want 256, 512, 768, 1024, 2048, or 3072", v.StreamingMaxPacket)
 	}
 	if v.StreamingMaxBurst > 2 {
 		return fmt.Errorf("streaming maxburst %d, want 0 through 2 on high speed", v.StreamingMaxBurst)
