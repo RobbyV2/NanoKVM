@@ -15,6 +15,7 @@ package media
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sound/asound.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -442,21 +443,27 @@ static int nk_pcm_write(struct nk_pcm *pcm, const void *data, unsigned int lengt
 	return rc < 0 ? rc : 0;
 }
 
-// One period, or nothing. poll(2) with a zero timeout answers now; a period is
-// only read once avail_min frames are there, so the read cannot wait either.
-static int nk_pcm_read(struct nk_pcm *pcm, void *data, unsigned int length) {
-	struct pollfd pfd;
-	pfd.fd = pcm->fd;
-	pfd.events = POLLIN;
-	pfd.revents = 0;
-	int ready;
-	do { ready = poll(&pfd, 1, 0); } while (ready < 0 && errno == EINTR);
-	if (ready < 0) return -errno;
-	if (ready == 0) return -EAGAIN;
-	if (pfd.revents & (POLLERR | POLLNVAL | POLLHUP)) return -EPIPE;
-	if (!(pfd.revents & POLLIN)) return -EAGAIN;
-	int rc = pcm->read(pcm->handle, data, length);
-	return rc < 0 ? rc : 0;
+// Read what is there and say how much that was, in frames. The transfer ioctl
+// is issued directly rather than through pcm_read because pcm_read cannot
+// answer the only question that matters: this tinyalsa's pcm_open writes
+// avail_min = 1 into the kernel's sw_params whatever the config asks for
+// (/proc/asound/.../sw_params reads back 1), so poll(POLLIN) fires on a single
+// frame, the descriptor is non-blocking, and a read of a whole period comes
+// back short. pcm_read returns 0 for that, and the caller then sends a period
+// whose tail is still the previous one - a seam at a whole millisecond inside
+// every packet, which is the buzz the target host's audio arrived with. The
+// ioctl reports the frames it moved, so a short read is simply the start of a
+// period the next call finishes.
+static int nk_pcm_read_frames(struct nk_pcm *pcm, void *data, unsigned int frames) {
+	struct snd_xferi xfer;
+	xfer.result = 0;
+	xfer.buf = data;
+	xfer.frames = frames;
+	int rc;
+	do { rc = ioctl(pcm->fd, SNDRV_PCM_IOCTL_READI_FRAMES, &xfer); } while (rc < 0 && errno == EINTR);
+	if (rc < 0) return -errno;
+	if (xfer.result <= 0) return -EAGAIN;
+	return (int)xfer.result;
 }
 
 // Stop, prepare, and for a capture stream start again, which is what puts
@@ -485,7 +492,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -690,6 +696,10 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	buffer := make([]byte, pcmPacketBytes)
+	// Bytes of buffer already holding fresh samples. A period that arrives in
+	// two reads is one period, not two, and the remainder must not be sent as
+	// if it were audio.
+	filled := 0
 	streaming, sourceActive := false, false
 	successes, failures, resets := 0, 0, 0
 	for {
@@ -697,14 +707,36 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			c.pcm.mu.Lock()
-			if c.pcm.handle == nil {
+			// Take every period the device has ready, not one per tick. The
+			// gadget's audio clock and this ticker are independent, so a tick
+			// that lands late leaves a period queued and the ring eventually
+			// overruns. Bounded, so a device handing back frames forever
+			// cannot hold the loop. Draining is only safe now that a short
+			// read is recognised as one: doing it against a reader that
+			// assumed every read was a whole period is what silenced the
+			// speaker the first time it was tried.
+			var rc C.int
+			moved, emitted := false, 0
+			for emitted < maxCaptureDrain {
+				c.pcm.mu.Lock()
+				if c.pcm.handle == nil {
+					c.pcm.mu.Unlock()
+					return nil
+				}
+				rc = C.nk_pcm_read_frames(c.pcm.handle, unsafe.Pointer(&buffer[filled]), C.uint((len(buffer)-filled)/2))
 				c.pcm.mu.Unlock()
-				return nil
+				if rc <= 0 {
+					break
+				}
+				moved = true
+				filled += int(rc) * 2
+				if filled < len(buffer) {
+					continue
+				}
+				emit(Packet{Data: append([]byte(nil), buffer...)})
+				filled, emitted = 0, emitted+1
 			}
-			rc := C.nk_pcm_read(c.pcm.handle, unsafe.Pointer(&buffer[0]), C.uint(len(buffer)))
-			c.pcm.mu.Unlock()
-			if rc == 0 {
+			if moved {
 				failures, resets = 0, 0
 				successes++
 				if !streaming && successes > 4 {
@@ -715,12 +747,12 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 					sourceActive = true
 					active(true)
 				}
-				emit(Packet{Data: append([]byte(nil), buffer...)})
 				continue
 			}
-			successes = 0
-			// -EAGAIN is the ordinary quiet host: nothing to read this tick.
-			if int(rc) == -int(syscall.EAGAIN) {
+			switch classifyPCM(int(rc)) {
+			case pcmIdle:
+				// Nothing to read this tick: the ordinary quiet host.
+				successes = 0
 				if streaming {
 					failures++
 				}
@@ -734,6 +766,10 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 				}
 				continue
 			}
+			successes = 0
+			// The ring lost its place, so the part-period in hand no longer
+			// joins what comes next.
+			filled = 0
 			// Anything else is an overrun or a stream the host tore down.
 			// Recovery is bounded: a stream that will not come back is an
 			// error the caller reports rather than a loop that spins forever.
@@ -772,7 +808,7 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 	if err != nil {
 		return err
 	}
-	streaming, failures, successes := false, 0, 0
+	streaming, failures, successes, resets := false, 0, 0, 0
 	sourceActive := false
 	currentSource := false
 	var generation uint64
@@ -781,35 +817,41 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			select {
-			case frame := <-frames:
-				changed := frame.Generation != generation
-				if frame.Reset || len(frame.Data) == 0 {
-					current, err = fallback(0, 0)
-					if err != nil {
-						return err
+			// Only take a new packet once the one in hand has gone out. A tick
+			// whose write found no room used to take the next packet anyway
+			// and overwrite the packet it was still holding, so every full
+			// ring cost the target host 20 ms of audio that the browser had
+			// already been told was accepted.
+			if !currentSource {
+				select {
+				case frame := <-frames:
+					changed := frame.Generation != generation
+					if frame.Reset || len(frame.Data) == 0 {
+						current, err = fallback(0, 0)
+						if err != nil {
+							return err
+						}
+					} else {
+						current = frame
+						currentSource = true
 					}
-					currentSource = false
-				} else {
-					current = frame
-					currentSource = true
-				}
-				if changed {
-					generation = frame.Generation
-					o.mu.Lock()
-					if o.handle == nil {
+					if changed {
+						generation = frame.Generation
+						o.mu.Lock()
+						if o.handle == nil {
+							o.mu.Unlock()
+							return nil
+						}
+						rc := C.nk_pcm_reset(o.handle)
 						o.mu.Unlock()
-						return nil
+						if rc < 0 {
+							return fmt.Errorf("reset PCM: return %d", int(rc))
+						}
+						streaming, failures, successes = false, 0, 0
+						demand(sources.Demand{})
 					}
-					rc := C.nk_pcm_reset(o.handle)
-					o.mu.Unlock()
-					if rc < 0 {
-						return fmt.Errorf("reset PCM: return %d", int(rc))
-					}
-					streaming, failures, successes = false, 0, 0
-					demand(sources.Demand{})
+				default:
 				}
-			default:
 			}
 			o.mu.Lock()
 			if o.handle == nil {
@@ -819,8 +861,9 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 			base, size := packetSpan(current)
 			rc := C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))
 			o.mu.Unlock()
-			if rc == 0 {
-				failures = 0
+			switch classifyPCM(int(rc)) {
+			case pcmTransferred:
+				failures, resets = 0, 0
 				successes++
 				if !streaming && successes > 4 {
 					streaming = true
@@ -836,16 +879,43 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 				}
 				currentSource = false
 				continue
-			}
-			failures++
-			successes = 0
-			if streaming && failures >= 3 {
-				streaming = false
-				demand(sources.Demand{})
-				if sourceActive {
-					sourceActive = false
-					source(false)
+			case pcmIdle:
+				// The ring is full: the target host is not draining the
+				// endpoint. The packet stays in current and goes out on a
+				// later tick, so a host that pauses costs no audio.
+				failures++
+				successes = 0
+				if streaming && failures >= 3 {
+					streaming = false
+					demand(sources.Demand{})
+					if sourceActive {
+						sourceActive = false
+						source(false)
+					}
 				}
+				continue
+			}
+			// An underrun. This loop is paced by a Go ticker and the endpoint
+			// by the host's clock, so a tick that lands late empties a ring
+			// only four periods deep and ALSA parks the substream in XRUN.
+			// Nothing put it back, so the first late tick silenced the
+			// microphone for the rest of the binding while every frame was
+			// still acknowledged - the queue filled, the writer never drained
+			// it, and hw_ptr never moved again.
+			successes = 0
+			resets++
+			if resets > 50 {
+				return fmt.Errorf("write PCM: return %d after %d resets", int(rc), resets)
+			}
+			o.mu.Lock()
+			if o.handle == nil {
+				o.mu.Unlock()
+				return nil
+			}
+			reset := C.nk_pcm_reset(o.handle)
+			o.mu.Unlock()
+			if reset < 0 {
+				return fmt.Errorf("reset playback PCM: return %d", int(reset))
 			}
 		}
 	}
