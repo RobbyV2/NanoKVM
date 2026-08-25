@@ -555,6 +555,43 @@ func defaultSpeaker(index int, label string, named bool) Function {
 // mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";
 // mount -t functionfs hybrid returns ENODEV until it exists. The caller mounts
 // and writes ep0 between this and StartFunctionFS, which links and binds.
+// Reattach presents the gadget to the host again without changing it: the
+// pull-up drops and rises, the descriptors and every link stay exactly as they
+// are. Startup calls it once it has finished, because the bind necessarily
+// happens while the board is still busy coming up, and a host that asks this
+// device for a descriptor before it can answer does not retry - it starts the
+// interfaces it managed to reach and abandons the rest. Measured on Windows:
+// after a cold boot the microphone, speaker and the USB NIC sit at
+// CM_PROB_FAILED_START with STATUS_IO_TIMEOUT and the gadget never sees a
+// single class request, while the camera and HID are healthy; one pull-up cycle
+// on the settled device brings all six up with nothing else changed.
+//
+// A no-op when nothing is bound, and it never takes the controller from a
+// passthrough session that has borrowed it.
+func (m *Manager) Reattach() error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient != nil {
+		return ErrTransient
+	}
+	if err := m.loanHeld(); err != nil {
+		return err
+	}
+	data, err := m.ops.ReadFile(udcAttr)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", udcAttr, err)
+	}
+	udc := strings.TrimSpace(string(data))
+	if udc == "" {
+		return nil
+	}
+	return m.ops.Reattach(udc)
+}
+
 func (m *Manager) CreateFunctionFS(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err

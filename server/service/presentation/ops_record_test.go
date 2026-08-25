@@ -18,6 +18,7 @@ type RecordOps struct {
 	unbind        error
 	writeFailures map[string][]error
 	bound         string
+	reattached    int
 	role          string
 	resets        int
 	onBind        func()
@@ -224,6 +225,18 @@ func (r *RecordOps) FailUnbind(err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.unbind = err
+}
+
+// Reattach is a pull-up cycle: no configfs state changes, so the recorder only
+// counts it. Tests that care assert on the count.
+func (r *RecordOps) Reattach(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("%w: nothing is bound, so there is nothing to reattach", ErrUDCName)
+	}
+	r.reattached++
+	return nil
 }
 
 func (r *RecordOps) UnbindUDC() error {

@@ -26,4 +26,5 @@ type Ops interface {
 	UnbindUDC() error
 	SetOTGRole(role string) error
 	ResetPHY(ctx context.Context) error
+	Reattach(name string) error
 }

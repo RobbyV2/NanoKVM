@@ -22,6 +22,10 @@ import (
 
 const observerRefreshBudget = 10 * time.Second
 
+// A pull-up cycle is two sysfs writes and a settle; anything longer than this
+// means the controller is wedged, and boot should carry on regardless.
+const reattachBudget = 5 * time.Second
+
 func Init(r *gin.Engine) {
 	web(r)
 	server(r)
@@ -67,6 +71,15 @@ func server(r *gin.Engine) {
 			return err
 		}
 		return nil
+	})
+
+	// The bind that put this gadget on the bus necessarily happened while the
+	// board was still coming up, and a host that asked for a descriptor then
+	// may have given up on the interfaces it had not started yet. Everything
+	// above is done, so drop the pull-up and raise it: same gadget, same
+	// descriptors, one clean enumeration against a device that can answer.
+	startup.Run("usb reattach", reattachBudget, func() error {
+		return presentationManager.Reattach()
 	})
 
 	authRouter(r)
