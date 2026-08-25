@@ -789,8 +789,8 @@ const it = {
           addCamera: 'Aggiungi fotocamera',
           addMicrophone: 'Aggiungi microfono',
           remove: 'Rimuovi',
-          cameraDefault: 'Fotocamera NanoKVM {{index}}',
-          microphoneDefault: 'Microfono NanoKVM {{index}}',
+          cameraDefault: 'Fotocamera {{index}}',
+          microphoneDefault: 'Microfono {{index}}',
           nameRequired: 'Ogni slot richiede un nome.',
           budgetHint:
             "I sei endpoint USB IN sono un limite fisso dell'hardware. Metti tastiera, mouse e puntatore assoluto su una sola interfaccia HID in Presentazione USB, oppure disattiva qui il disco virtuale o, in Rete, l’adattatore di rete USB.",

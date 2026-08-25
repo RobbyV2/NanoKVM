@@ -782,8 +782,8 @@ const nb = {
           addCamera: 'Legg til kamera',
           addMicrophone: 'Legg til mikrofon',
           remove: 'Fjern',
-          cameraDefault: 'NanoKVM-kamera {{index}}',
-          microphoneDefault: 'NanoKVM-mikrofon {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Hver plass trenger et navn.',
           budgetHint:
             'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken her eller USB-nettverkskortet under Nettverk.',

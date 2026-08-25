@@ -785,8 +785,8 @@ const id = {
           addCamera: 'Tambah kamera',
           addMicrophone: 'Tambah mikrofon',
           remove: 'Hapus',
-          cameraDefault: 'Kamera NanoKVM {{index}}',
-          microphoneDefault: 'Mikrofon NanoKVM {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Setiap slot memerlukan nama.',
           budgetHint:
             'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual di sini atau adaptor jaringan USB di bagian Jaringan.',

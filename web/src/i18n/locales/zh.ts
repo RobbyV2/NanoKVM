@@ -743,8 +743,8 @@ const zh = {
           addCamera: '添加摄像头',
           addMicrophone: '添加麦克风',
           remove: '移除',
-          cameraDefault: 'NanoKVM 摄像头 {{index}}',
-          microphoneDefault: 'NanoKVM 麦克风 {{index}}',
+          cameraDefault: '摄像头 {{index}}',
+          microphoneDefault: '麦克风 {{index}}',
           nameRequired: '每个插槽都需要名称。',
           budgetHint:
             '六个 USB IN 端点是固定的硬件上限。请在“USB 呈现”中把键盘、鼠标和绝对定位放到同一个 HID 接口上，或在此关闭虚拟磁盘，或在“网络”中关闭 USB 网卡。',

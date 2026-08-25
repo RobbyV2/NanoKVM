@@ -782,8 +782,8 @@ const uk = {
           addCamera: 'Додати камеру',
           addMicrophone: 'Додати мікрофон',
           remove: 'Видалити',
-          cameraDefault: 'Камера NanoKVM {{index}}',
-          microphoneDefault: 'Мікрофон NanoKVM {{index}}',
+          cameraDefault: 'Камера {{index}}',
+          microphoneDefault: 'Мікрофон {{index}}',
           nameRequired: 'Кожному слоту потрібне ім’я.',
           budgetHint:
             'Шість кінцевих точок USB IN — жорстке обмеження апаратури. Зберіть клавіатуру, мишу та абсолютний вказівник на одному HID-інтерфейсі в розділі «Подання USB» або вимкніть тут віртуальний диск чи мережевий адаптер через USB в розділі «Мережа».',

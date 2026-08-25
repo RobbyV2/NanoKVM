@@ -773,8 +773,8 @@ const en = {
           addCamera: 'Add camera',
           addMicrophone: 'Add microphone',
           remove: 'Remove',
-          cameraDefault: 'NanoKVM Camera {{index}}',
-          microphoneDefault: 'NanoKVM Microphone {{index}}',
+          cameraDefault: 'Camera {{index}}',
+          microphoneDefault: 'Microphone {{index}}',
           nameRequired: 'Every slot needs a name.',
           budgetHint:
             'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk here or the USB network adapter under Network.',

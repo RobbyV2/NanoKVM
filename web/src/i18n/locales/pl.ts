@@ -785,8 +785,8 @@ const pl = {
           addCamera: 'Dodaj kamerę',
           addMicrophone: 'Dodaj mikrofon',
           remove: 'Usuń',
-          cameraDefault: 'Kamera NanoKVM {{index}}',
-          microphoneDefault: 'Mikrofon NanoKVM {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Każde gniazdo wymaga nazwy.',
           budgetHint:
             'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz tutaj dysk wirtualny lub kartę sieciową USB w sekcji Sieć.',

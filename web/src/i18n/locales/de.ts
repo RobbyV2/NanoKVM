@@ -790,8 +790,8 @@ const de = {
           addCamera: 'Kamera hinzufügen',
           addMicrophone: 'Mikrofon hinzufügen',
           remove: 'Entfernen',
-          cameraDefault: 'NanoKVM-Kamera {{index}}',
-          microphoneDefault: 'NanoKVM-Mikrofon {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Jeder Platz braucht einen Namen.',
           budgetHint:
             'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte hier die virtuelle Festplatte oder unter Netzwerk den USB-Netzwerkadapter ab.',

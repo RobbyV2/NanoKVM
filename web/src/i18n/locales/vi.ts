@@ -776,8 +776,8 @@ const vi = {
           addCamera: 'Thêm camera',
           addMicrophone: 'Thêm micrô',
           remove: 'Xóa',
-          cameraDefault: 'Camera NanoKVM {{index}}',
-          microphoneDefault: 'Micrô NanoKVM {{index}}',
+          cameraDefault: 'Camera {{index}}',
+          microphoneDefault: 'Micrô {{index}}',
           nameRequired: 'Mỗi khe cần một tên.',
           budgetHint:
             'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo ở đây hay card mạng USB trong mục Mạng.',

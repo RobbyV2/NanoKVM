@@ -789,8 +789,8 @@ const nl = {
           addCamera: 'Camera toevoegen',
           addMicrophone: 'Microfoon toevoegen',
           remove: 'Verwijderen',
-          cameraDefault: 'NanoKVM-camera {{index}}',
-          microphoneDefault: 'NanoKVM-microfoon {{index}}',
+          cameraDefault: 'Camera {{index}}',
+          microphoneDefault: 'Microfoon {{index}}',
           nameRequired: 'Elke plaats heeft een naam nodig.',
           budgetHint:
             'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hier de virtuele schijf uit of onder Netwerk de USB-netwerkadapter.',

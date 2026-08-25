@@ -791,8 +791,8 @@ const fr = {
           addCamera: 'Ajouter une caméra',
           addMicrophone: 'Ajouter un micro',
           remove: 'Supprimer',
-          cameraDefault: 'Caméra NanoKVM {{index}}',
-          microphoneDefault: 'Microphone NanoKVM {{index}}',
+          cameraDefault: 'Caméra {{index}}',
+          microphoneDefault: 'Microphone {{index}}',
           nameRequired: 'Chaque emplacement doit avoir un nom.',
           budgetHint:
             'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez ici le disque virtuel ou, dans Réseau, l’adaptateur réseau USB.',

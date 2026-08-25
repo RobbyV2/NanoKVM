@@ -783,8 +783,8 @@ const se = {
           addCamera: 'Lägg till kamera',
           addMicrophone: 'Lägg till mikrofon',
           remove: 'Ta bort',
-          cameraDefault: 'NanoKVM-kamera {{index}}',
-          microphoneDefault: 'NanoKVM-mikrofon {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Varje plats behöver ett namn.',
           budgetHint:
             'De sex USB IN-slutpunkterna är en fast hårdvarugräns. Samla tangentbord, mus och absolut pekdon på ett enda HID-gränssnitt under USB-presentation, eller stäng av den virtuella disken här eller USB-nätverkskortet under Nätverk.',

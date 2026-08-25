@@ -781,8 +781,8 @@ const cz = {
           addCamera: 'Přidat kameru',
           addMicrophone: 'Přidat mikrofon',
           remove: 'Odebrat',
-          cameraDefault: 'Kamera NanoKVM {{index}}',
-          microphoneDefault: 'Mikrofon NanoKVM {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Každý slot potřebuje název.',
           budgetHint:
             'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo zde vypněte virtuální disk či síťový adaptér přes USB v sekci Síť.',

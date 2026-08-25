@@ -790,8 +790,8 @@ const hu = {
           addCamera: 'Kamera hozzáadása',
           addMicrophone: 'Mikrofon hozzáadása',
           remove: 'Eltávolítás',
-          cameraDefault: 'NanoKVM kamera {{index}}',
-          microphoneDefault: 'NanoKVM mikrofon {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Minden helyhez név kell.',
           budgetHint:
             'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki itt a virtuális lemezt, illetve a Hálózat alatt az USB hálózati adaptert.',

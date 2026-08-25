@@ -782,8 +782,8 @@ const tr = {
           addCamera: 'Kamera ekle',
           addMicrophone: 'Mikrofon ekle',
           remove: 'Kaldır',
-          cameraDefault: 'NanoKVM Kamera {{index}}',
-          microphoneDefault: 'NanoKVM Mikrofon {{index}}',
+          cameraDefault: 'Kamera {{index}}',
+          microphoneDefault: 'Mikrofon {{index}}',
           nameRequired: 'Her yuvanın bir adı olmalı.',
           budgetHint:
             'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da buradaki sanal diski veya Ağ bölümündeki USB ağ bağdaştırıcısını kapatın.',

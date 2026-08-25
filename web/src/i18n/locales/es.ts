@@ -788,8 +788,8 @@ const es = {
           addCamera: 'Añadir cámara',
           addMicrophone: 'Añadir micrófono',
           remove: 'Quitar',
-          cameraDefault: 'Cámara NanoKVM {{index}}',
-          microphoneDefault: 'Micrófono NanoKVM {{index}}',
+          cameraDefault: 'Cámara {{index}}',
+          microphoneDefault: 'Micrófono {{index}}',
           nameRequired: 'Cada ranura necesita un nombre.',
           budgetHint:
             'Los seis endpoints USB IN son un límite fijo del hardware. Reúne teclado, ratón y puntero absoluto en una sola interfaz HID en Presentación USB, o desactiva aquí el disco virtual o el adaptador de red USB en Red.',

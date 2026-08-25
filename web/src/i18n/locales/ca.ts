@@ -783,8 +783,8 @@ const ca = {
           addCamera: 'Afegeix una càmera',
           addMicrophone: 'Afegeix un micròfon',
           remove: 'Elimina',
-          cameraDefault: 'Càmera NanoKVM {{index}}',
-          microphoneDefault: 'Micròfon NanoKVM {{index}}',
+          cameraDefault: 'Càmera {{index}}',
+          microphoneDefault: 'Micròfon {{index}}',
           nameRequired: 'Cada ranura necessita un nom.',
           budgetHint:
             'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva aquí el disc virtual o l’adaptador de xarxa USB a Xarxa.',

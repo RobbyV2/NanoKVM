@@ -764,8 +764,8 @@ const th = {
           addCamera: 'เพิ่มกล้อง',
           addMicrophone: 'เพิ่มไมโครโฟน',
           remove: 'ลบ',
-          cameraDefault: 'กล้อง NanoKVM {{index}}',
-          microphoneDefault: 'ไมโครโฟน NanoKVM {{index}}',
+          cameraDefault: 'กล้อง {{index}}',
+          microphoneDefault: 'ไมโครโฟน {{index}}',
           nameRequired: 'ทุกช่องต้องมีชื่อ',
           budgetHint:
             'จุดปลาย USB IN หกจุดเป็นขีดจำกัดตายตัวของฮาร์ดแวร์ ให้รวมคีย์บอร์ด เมาส์ และตัวชี้แบบสัมบูรณ์ไว้บนอินเทอร์เฟซ HID เดียวในหัวข้อการนำเสนอ USB หรือปิดดิสก์เสมือนที่นี่ หรือปิดอะแดปเตอร์เครือข่าย USB ในหัวข้อเครือข่าย',

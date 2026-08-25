@@ -782,8 +782,8 @@ const ja = {
           addCamera: 'カメラを追加',
           addMicrophone: 'マイクを追加',
           remove: '削除',
-          cameraDefault: 'NanoKVM カメラ {{index}}',
-          microphoneDefault: 'NanoKVM マイク {{index}}',
+          cameraDefault: 'カメラ {{index}}',
+          microphoneDefault: 'マイク {{index}}',
           nameRequired: 'すべてのスロットに名前が必要です。',
           budgetHint:
             '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、ここで仮想ディスクを、または「ネットワーク」で USB ネットワークアダプターをオフにしてください。',

@@ -771,8 +771,8 @@ const ko = {
           addCamera: '카메라 추가',
           addMicrophone: '마이크 추가',
           remove: '제거',
-          cameraDefault: 'NanoKVM 카메라 {{index}}',
-          microphoneDefault: 'NanoKVM 마이크 {{index}}',
+          cameraDefault: '카메라 {{index}}',
+          microphoneDefault: '마이크 {{index}}',
           nameRequired: '모든 슬롯에 이름이 필요합니다.',
           budgetHint:
             'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나, 여기서 가상 디스크를 끄거나 네트워크에서 USB 네트워크 어댑터를 끄세요.',

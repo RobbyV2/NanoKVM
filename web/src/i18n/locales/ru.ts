@@ -785,8 +785,8 @@ const ru = {
           addCamera: 'Добавить камеру',
           addMicrophone: 'Добавить микрофон',
           remove: 'Удалить',
-          cameraDefault: 'Камера NanoKVM {{index}}',
-          microphoneDefault: 'Микрофон NanoKVM {{index}}',
+          cameraDefault: 'Камера {{index}}',
+          microphoneDefault: 'Микрофон {{index}}',
           nameRequired: 'Каждому слоту нужно имя.',
           budgetHint:
             'Шесть конечных точек USB IN — жёсткий предел оборудования. Соберите клавиатуру, мышь и абсолютный указатель на одном HID-интерфейсе в разделе «Представление USB» либо отключите здесь виртуальный диск или сетевой адаптер по USB в разделе «Сеть».',
