@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 var ErrNotBound = errors.New("gadget did not bind")
@@ -51,7 +52,7 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 		}
 		return recoveryPlan{}, udc, applyErr
 	}
-	if err := m.unlinkStale(before, plan); err != nil {
+	if err := m.unlinkStaleBounded(before, plan); err != nil {
 		return recoveryPlan{}, udc, m.rollbackFailure(profile, recovery, udc, err)
 	}
 
@@ -323,6 +324,37 @@ func (m *Manager) execute(op Op, udc string) error {
 // already unbound, the config symlink has just gone (rmdir on a linked function
 // is -EBUSY), and the plan's mkdir for the replacement has not run yet, so the
 // name is free when it does.
+// configfs refuses to unlink a UVC function while its video node is still open,
+// and it refuses by blocking in the kernel rather than by returning EBUSY. That
+// syscall answers to no context, so a hold the media manager failed to release
+// turns an apply into a request that never returns - measured on hardware: the
+// same unlink takes 0s with the node closed and had not come back after two
+// minutes with it open, which is what a save that hangs past the browser's own
+// timeout actually is.
+//
+// The unlink still runs to completion in its own goroutine, because it will
+// succeed the moment the node closes and abandoning it half-done would leave a
+// gadget nothing can describe. What is bounded is how long a caller waits for
+// it. A refusal here costs the operator an apply; a block costs them the
+// keyboard, the NIC and the disk until they reboot.
+func (m *Manager) unlinkStaleBounded(before Snapshot, plan Plan) error {
+	done := make(chan error, 1)
+	go func() { done <- m.unlinkStale(before, plan) }()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(unlinkBudget):
+		return fmt.Errorf("%w: a function's device node is still open elsewhere, so configfs will not release it",
+			ErrUnlinkBlocked)
+	}
+}
+
+// Long enough that a slow controller finishes, short enough that a caller and
+// the operator behind it learn the apply failed instead of waiting on it.
+const unlinkBudget = 5 * time.Second
+
+var ErrUnlinkBlocked = errors.New("unlink did not complete")
+
 func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
 	for _, name := range plan.Outcome(before).Removes {
 		if err := m.ops.Remove(configPrefix + "/" + name); err != nil {
