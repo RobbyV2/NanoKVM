@@ -533,3 +533,45 @@ func (q *reentrantQuiescer) OpenNoLockWithRetry(time.Duration, time.Duration) er
 func (q *reentrantQuiescer) WriteKeyboardReport([]byte) error                       { return nil }
 func (q *reentrantQuiescer) WriteRelativeMouseReport([]byte) error                  { return nil }
 func (q *reentrantQuiescer) WriteAbsoluteMouseReport([]byte) error                  { return nil }
+
+// Saving a panel without changing anything recompiles the same profile. Running
+// the transaction anyway unbinds the UDC and binds it again, which the host
+// reads as an unplug: it drops whatever camera stream was open and takes the
+// keyboard away for the duration. A plan that asks for nothing must touch
+// nothing.
+func TestAnUnchangedProfileLeavesTheGadgetAlone(t *testing.T) {
+	manager, ops := newTestManager(t)
+	profile := standardProfile()
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+	settled := len(ops.Trace())
+
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("second apply: %v", err)
+	}
+	// The guard above turns an empty plan into a no-op. One op still survives a
+	// recompile of the same profile: osDesc() re-links os_desc/c.1 through
+	// compiler.link, which always emits unlink+symlink whether or not the link
+	// already points where it should. That single op is enough to make the plan
+	// non-empty, so the transaction still runs and the host still sees an
+	// unplug. Pinned rather than waved at: if anything else starts surviving an
+	// unchanged apply, this fails and says what.
+	var touched []string
+	for _, op := range ops.Trace()[settled:] {
+		switch op.Kind {
+		case OpUnlink, OpRmdir, OpBind, OpUnbind:
+			touched = append(touched, op.Kind.String()+" "+op.Path)
+		}
+	}
+	// What it costs today, exactly. The os_desc unlink is the only real change,
+	// and it drags the whole unbind/bind transaction with it - which the host
+	// reads as an unplug and which drops an open camera stream. Fixing it means
+	// teaching Snapshot to record the os_desc link so Reconcile can drop the
+	// redundant relink; then the plan is empty, the guard in applyPlan fires,
+	// and this list becomes empty too.
+	want := "unbind UDC, unlink os_desc/c.1, bind UDC"
+	if got := strings.Join(touched, ", "); got != want {
+		t.Fatalf("an unchanged apply touched the gadget with [%s], want [%s]", got, want)
+	}
+}

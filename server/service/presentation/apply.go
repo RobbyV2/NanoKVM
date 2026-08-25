@@ -45,6 +45,18 @@ func (m *Manager) applyPlan(ctx context.Context, profile Profile, plan Plan, per
 	probes := append(append([]Function(nil), profile.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
 	plan = Reconcile(before, m.dropRedundantWrites(before, plan))
+
+	// A plan that asks for nothing must touch nothing. Saving a panel without
+	// changing it recompiles the same profile, and running the transaction
+	// anyway unbinds the UDC and binds it again - which the host sees as the
+	// device being unplugged and plugged back in. It drops the camera stream
+	// the operator had open, re-enumerates every function, and costs a few
+	// seconds of keyboard, for a save that changed nothing. The store still
+	// gets written by the caller, so an unchanged profile is still recorded.
+	if len(plan.Ops) == 0 && len(plan.Outcome(before).Removes) == 0 {
+		return recovery, udc, nil
+	}
+
 	if err := m.unbindIfBound(); err != nil {
 		applyErr := fmt.Errorf("apply %s: unbind: %w", profile.Name, err)
 		if bindErr := m.ensureBound(udc); bindErr != nil {
