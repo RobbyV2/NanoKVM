@@ -308,14 +308,43 @@ func uniqueNodes(nodes []string) []string {
 	return slices.Compact(slices.Sorted(slices.Values(nodes)))
 }
 
+// Unlinking a UAC2 function blocks while its PCM is open exactly as unlinking a
+// UVC function blocks while its V4L2 node is open, so an apply that drops a
+// microphone or a speaker has the same way to wedge and needs the same proof
+// that the handle is gone. A camera's Node is already the /dev path the handle
+// sits on, but an audio worker's is an ALSA "hw:card,device" name and what the
+// unlink actually waits on is the PCM character device underneath it.
 func workerNodes(workers map[string]*worker) []string {
 	var nodes []string
 	for _, w := range workers {
-		if w.spec.Kind == sources.KindCamera && w.spec.Node != "" {
-			nodes = append(nodes, w.spec.Node)
+		switch w.spec.Kind {
+		case sources.KindCamera:
+			if w.spec.Node != "" {
+				nodes = append(nodes, w.spec.Node)
+			}
+		case sources.KindMicrophone, sources.KindSpeaker:
+			if node := pcmDevice(w.spec.Node, w.spec.Kind); node != "" {
+				nodes = append(nodes, node)
+			}
 		}
 	}
 	return nodes
+}
+
+// Each gadget card carries only the substream its direction uses: a microphone
+// is played into (PCM_OUT, the p substream) and a speaker is captured from
+// (PCM_IN, the c substream). Naming the wrong one would confirm a device that
+// does not exist, which reads as released whether or not anything is open.
+func pcmDevice(node string, kind sources.Kind) string {
+	card, device, err := parseALSANode(node)
+	if err != nil {
+		return ""
+	}
+	substream := "p"
+	if kind == sources.KindSpeaker {
+		substream = "c"
+	}
+	return fmt.Sprintf("/dev/snd/pcmC%dD%d%s", card, device, substream)
 }
 
 func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, plan presentation.Plan) error {

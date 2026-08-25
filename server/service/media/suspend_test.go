@@ -137,3 +137,58 @@ func TestSuspendDoesNotWaitOnAnOutputThatWillNotClose(t *testing.T) {
 		t.Fatal("Suspend blocked on an output that would not close")
 	}
 }
+
+// A microphone and a speaker wedge an unlink exactly as a camera does, so
+// Suspend has to prove their PCMs are closed too. It only ever checked video
+// nodes, which made an apply that drops an audio function report success and
+// then block in the kernel. The substream letter matters: each gadget card
+// carries only the one its direction uses, so naming the wrong device would
+// confirm something that does not exist.
+func TestSuspendReportsAnAudioPCMThatIsStillOpen(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		function presentation.Function
+		node     string
+		device   string
+	}{
+		{"microphone", microphoneFunction("mic0"), "hw:2,0", "/dev/snd/pcmC2D0p"},
+		{"speaker", speakerFunction("spk0"), "hw:3,0", "/dev/snd/pcmC3D0c"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			id := "uac2." + tt.function.Instance
+			resolver := fakeResolver{nodes: map[string]string{id: tt.node}}
+			manager := newTestManager(&fakeRegistry{}, resolver, &fakeFactory{})
+			manager.openNodes = func() (map[string]int, error) {
+				return map[string]int{tt.device: 1}, nil
+			}
+			profile := presentation.Profile{Functions: []presentation.Function{tt.function}}
+			if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+				t.Fatal(err)
+			}
+			err := manager.Suspend()
+			if !errors.Is(err, ErrNodeBusy) {
+				t.Fatalf("Suspend() = %v, want ErrNodeBusy", err)
+			}
+			if !strings.Contains(err.Error(), tt.device) {
+				t.Fatalf("Suspend() = %v, want %s named", err, tt.device)
+			}
+		})
+	}
+}
+
+// The mirror of the above: a closed PCM must not be reported as busy, or every
+// apply that touches audio would refuse.
+func TestSuspendAcceptsAClosedAudioPCM(t *testing.T) {
+	resolver := fakeResolver{nodes: map[string]string{"uac2.mic0": "hw:2,0"}}
+	manager := newTestManager(&fakeRegistry{}, resolver, &fakeFactory{})
+	manager.openNodes = func() (map[string]int, error) {
+		return map[string]int{"/dev/snd/pcmC2D0c": 1}, nil
+	}
+	profile := presentation.Profile{Functions: []presentation.Function{microphoneFunction("mic0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Suspend(); err != nil {
+		t.Fatalf("Suspend() = %v, want nil: the playback substream is closed", err)
+	}
+}
