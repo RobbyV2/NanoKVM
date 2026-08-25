@@ -268,7 +268,12 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 			struct v4l2_event event;
 			memset(&event, 0, sizeof(event));
 			if (nk_ioctl(u->fd, VIDIOC_DQEVENT, &event) < 0) {
-				if (errno == EAGAIN) break;
+				// An empty event queue is ENOENT, not EAGAIN: v4l2_event_dequeue
+				// returns -ENOENT when fh->available is empty, and the kernel's own
+				// blocking wrapper loops on exactly that. Treating it as fatal ends
+				// the worker on its first idle poll with "write UVC: errno 2", which
+				// is a camera that enumerates on the host and never sends a frame.
+				if (errno == EAGAIN || errno == ENOENT) break;
 				return -errno;
 			}
 			struct uvc_event *uvc = (struct uvc_event *)event.u.data;
