@@ -272,6 +272,36 @@ func orDefault(value *string, fallback string) string {
 // that function with, which is why a failure between the two is still repaired
 // by the rollback ladder: the recovery plan links the same functions.
 func Reconcile(current Snapshot, plan Plan) Plan {
+	// The compiler re-links os_desc on every apply because compiler.link cannot
+	// see the current state. When the link is already in place that pair changes
+	// nothing, and dropping it is what lets an unchanged profile compile to an
+	// empty plan - which applyPlan then skips, leaving the controller bound and
+	// the host's camera stream alive.
+	//
+	// Only a pair. An unlink with no symlink after it is the opposite operation:
+	// osDesc() emits exactly that, alongside use=0, when the last network
+	// function goes, and suppressing it would leave the gadget answering the
+	// 0xEE string request for a profile that no longer has anything to describe.
+	osDescLink := osDescDir + "/" + configName
+	if current.OSDescLinked {
+		relinked := false
+		for _, op := range plan.Ops {
+			if op.Kind == OpSymlink && op.Path == osDescLink {
+				relinked = true
+			}
+		}
+		if relinked {
+			kept := plan.Ops[:0]
+			for _, op := range plan.Ops {
+				redundant := (op.Kind == OpUnlink || op.Kind == OpSymlink) && op.Path == osDescLink
+				if !redundant {
+					kept = append(kept, op)
+				}
+			}
+			plan.Ops = kept
+		}
+	}
+
 	links := make(map[string]int, len(plan.Ops))
 	for i, op := range plan.Ops {
 		if op.Kind != OpSymlink {

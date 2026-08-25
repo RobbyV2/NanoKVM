@@ -575,3 +575,48 @@ func TestAnUnchangedProfileLeavesTheGadgetAlone(t *testing.T) {
 		t.Fatalf("an unchanged apply touched the gadget with [%s], want [%s]", got, want)
 	}
 }
+
+// The redundant relink, isolated. compiler.link cannot see the current state so
+// osDesc() always emits unlink+symlink for os_desc/c.1; when the link is already
+// in place that pair changes nothing, and leaving it in is what keeps an
+// otherwise empty plan non-empty - which drags the whole unbind/bind
+// transaction along and reads to the host as an unplug.
+func TestReconcileDropsARelinkThatChangesNothing(t *testing.T) {
+	plan := Plan{Ops: []Op{
+		{Kind: OpUnlink, Path: osDescDir + "/" + configName},
+		{Kind: OpSymlink, Path: osDescDir + "/" + configName, Target: configPrefix},
+	}}
+
+	linked := Reconcile(Snapshot{OSDescLinked: true}, plan)
+	if len(linked.Ops) != 0 {
+		t.Fatalf("os_desc already linked, but the plan kept %d op(s): %v", len(linked.Ops), linked.Ops)
+	}
+
+	// With the link absent the pair is the whole point and must survive.
+	absent := Reconcile(Snapshot{OSDescLinked: false}, plan)
+	if len(absent.Ops) != 2 {
+		t.Fatalf("os_desc not linked, but the plan kept %d op(s), want both", len(absent.Ops))
+	}
+}
+
+// The other half of the rule: osDesc() emits a lone unlink, with use=0 and no
+// symlink after it, when the last network function goes. That is a removal, not
+// a redundant relink, and suppressing it leaves the gadget answering the 0xEE
+// string request for a profile with nothing to describe (H11).
+func TestReconcileKeepsALoneOSDescUnlink(t *testing.T) {
+	plan := Plan{Ops: []Op{
+		{Kind: OpWrite, Path: osDescDir + "/use", Data: []byte("0")},
+		{Kind: OpUnlink, Path: osDescDir + "/" + configName},
+	}}
+
+	got := Reconcile(Snapshot{OSDescLinked: true}, plan)
+	var unlinks int
+	for _, op := range got.Ops {
+		if op.Kind == OpUnlink && op.Path == osDescDir+"/"+configName {
+			unlinks++
+		}
+	}
+	if unlinks != 1 {
+		t.Fatalf("the removal unlink was dropped: plan is %v", got.Ops)
+	}
+}

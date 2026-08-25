@@ -34,7 +34,7 @@ RUN wget -O /tmp/host-tools.tar.gz https://sophon-file.sophon.cn/sophon-prod-s3/
 FROM base_apt AS golang
 
 USER root
-RUN bash -c 'wget -O /tmp/go.tar.gz https://go.dev/dl/go1.25.0.linux-$([ `uname -m` == "x86_64" ] && echo "amd64" || uname -m).tar.gz' \
+RUN bash -c 'wget -O /tmp/go.tar.gz https://go.dev/dl/go1.25.0.linux-$(case `uname -m` in x86_64) echo amd64 ;; aarch64|arm64) echo arm64 ;; *) uname -m ;; esac).tar.gz' \
     && tar -C /usr/local -zxvf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && echo "Installed golang" &&  go version

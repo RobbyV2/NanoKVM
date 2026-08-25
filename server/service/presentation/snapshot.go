@@ -25,6 +25,13 @@ type Snapshot struct {
 	Mode   string   `json:"mode"`
 	Linked []string `json:"linked"`
 
+	// Whether os_desc already points at the config. The compiler re-links it on
+	// every apply because its link helper cannot see the current state, and that
+	// one redundant op is enough to make an otherwise empty plan non-empty - so
+	// saving a panel without changing it unbinds and rebinds the controller,
+	// which the host reads as an unplug and which drops an open camera stream.
+	OSDescLinked bool `json:"os_desc_linked"`
+
 	// Which controller the gadget holds and what the host on the other end has
 	// made of it. Every mutator already reads the UDC attribute to prove its
 	// bind took; state and speed are what say whether a host is there at all.
@@ -115,6 +122,9 @@ func readSnapshot(ops Ops, extra []Function) Snapshot {
 			snapshot.Linked = append(snapshot.Linked, name)
 		}
 	}
+	// os_desc/c.1 is a symlink to the config, so the config's own attributes are
+	// readable through it exactly when the link is in place.
+	snapshot.OSDescLinked = readable(ops, osDescDir+"/"+configName+"/MaxPower")
 	return snapshot
 }
 
