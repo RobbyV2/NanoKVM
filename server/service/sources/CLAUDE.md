@@ -32,6 +32,12 @@ source stream.
 generate legal fallback data while host demand is active; this package never creates
 frames or samples.
 
+A speaker slot runs the other way: the target host plays into the gadget's USB OUT
+endpoint, the media backend reads it, and the frames leave the sink for the browser that
+claimed it. Claims, leases, takeover and terminations are unchanged; only the direction
+of the payload is. A speaker therefore reports no `black` or `silence` output, because
+nothing is generated for it, and it accepts no frame from the browser at all.
+
 The source socket accepts both control JSON and NKMF v1 binary frames. The 26-byte
 big-endian header is `NKMF`, version, kind, flags, sequence, timestamp, sink length,
 stream length and payload length. IDs are at most 64 bytes. MJPEG is at most 2 MiB.
