@@ -451,8 +451,8 @@ func (m *Manager) SetHIDLayout(ctx context.Context, groups [][]HIDRole) error {
 	return m.ApplyProfile(ctx, profile)
 }
 
-func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []string) error {
-	if len(cameras)+len(microphones) > 8 {
+func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones, speakers []string) error {
+	if len(cameras)+len(microphones)+len(speakers) > 8 {
 		return fmt.Errorf("media slots exceed 8")
 	}
 	profile, err := m.currentProfile()
@@ -473,6 +473,9 @@ func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones []stri
 	named = m.caps.Functions[FunctionUAC2].Attributes[UAC2AttrFunctionName]
 	for index, label := range microphones {
 		profile.Functions = append(profile.Functions, defaultMicrophone(index, label, named))
+	}
+	for index, label := range speakers {
+		profile.Functions = append(profile.Functions, defaultSpeaker(index, label, named))
 	}
 	profile.Normalize()
 	return m.ApplyProfile(ctx, profile)
@@ -507,6 +510,21 @@ func defaultMicrophone(index int, label string, named bool) Function {
 		audio.HostName = &label
 	}
 	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("mic%d", index), Audio: audio}
+}
+
+// A speaker is the same f_uac2 function driven the other way: c_chmask is what
+// enables the USB OUT endpoint, and p_chmask stays zero so no IN endpoint - the
+// scarce one - is spent. The disabled direction keeps the kernel's own 48 kHz
+// 16-bit defaults, exactly as the microphone leaves c_srate and c_ssize alone.
+func defaultSpeaker(index int, label string, named bool) Function {
+	audio := &AudioFunction{
+		FunctionName: label, PChannelMask: 0, PSampleRate: 48000, PSampleSize: 2,
+		CChannelMask: 1, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 4,
+	}
+	if named {
+		audio.HostName = &label
+	}
+	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("spk%d", index), Audio: audio}
 }
 
 // mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";

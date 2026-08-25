@@ -24,8 +24,13 @@ type Kind string
 const (
 	KindCamera     Kind = "camera"
 	KindMicrophone Kind = "microphone"
-	KindUSBDevice  Kind = "usb_device"
-	HybridSinkID        = "ffs.hybrid"
+	// A speaker slot runs the other way: the target host plays audio into the
+	// gadget's USB OUT endpoint and this device reads it, so frames leave the
+	// sink for the browser instead of arriving from it. Everything else about
+	// a slot - claims, leases, takeover, terminations - is unchanged.
+	KindSpeaker   Kind = "speaker"
+	KindUSBDevice Kind = "usb_device"
+	HybridSinkID       = "ffs.hybrid"
 )
 
 type BindingState string
@@ -182,10 +187,11 @@ var (
 	ErrInvalidToken   = errors.New("invalid lease token")
 	ErrInvalidMessage = errors.New("invalid message")
 
-	idPattern    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
-	cameraSlotID = regexp.MustCompile(`^uvc\.cam([0-9])$`)
-	micSlotID    = regexp.MustCompile(`^uac2\.mic([0-9])$`)
-	codecPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,23}$`)
+	idPattern     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+	cameraSlotID  = regexp.MustCompile(`^uvc\.cam([0-9])$`)
+	micSlotID     = regexp.MustCompile(`^uac2\.mic([0-9])$`)
+	speakerSlotID = regexp.MustCompile(`^uac2\.spk([0-9])$`)
+	codecPattern  = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,23}$`)
 )
 
 type OccupiedError struct {
@@ -207,7 +213,7 @@ func validateSlots(slots []Slot) ([]Slot, error) {
 	}
 	result := slices.Clone(slots)
 	seen := make(map[string]struct{}, len(result))
-	indices := map[Kind][]int{KindCamera: nil, KindMicrophone: nil}
+	indices := map[Kind][]int{KindCamera: nil, KindMicrophone: nil, KindSpeaker: nil}
 	for i := range result {
 		result[i].Label = strings.TrimSpace(result[i].Label)
 		if _, exists := seen[result[i].ID]; exists {
@@ -240,10 +246,15 @@ func validateSlot(slot Slot) error {
 			return err
 		}
 	}
-	pattern := cameraSlotID
-	if slot.Kind == KindMicrophone {
+	var pattern *regexp.Regexp
+	switch slot.Kind {
+	case KindCamera:
+		pattern = cameraSlotID
+	case KindMicrophone:
 		pattern = micSlotID
-	} else if slot.Kind != KindCamera {
+	case KindSpeaker:
+		pattern = speakerSlotID
+	default:
 		return fmt.Errorf("kind %q", slot.Kind)
 	}
 	if !pattern.MatchString(slot.ID) {
@@ -256,6 +267,9 @@ func slotIndex(id string) int {
 	match := cameraSlotID.FindStringSubmatch(id)
 	if match == nil {
 		match = micSlotID.FindStringSubmatch(id)
+	}
+	if match == nil {
+		match = speakerSlotID.FindStringSubmatch(id)
 	}
 	if len(match) != 2 {
 		return 0
@@ -284,7 +298,7 @@ func validateHello(hello Hello) (Hello, error) {
 			return Hello{}, fmt.Errorf("streams[%d]: duplicate id", i)
 		}
 		seen[stream.ID] = struct{}{}
-		if stream.Kind != KindCamera && stream.Kind != KindMicrophone && stream.Kind != KindUSBDevice {
+		if stream.Kind != KindCamera && stream.Kind != KindMicrophone && stream.Kind != KindSpeaker && stream.Kind != KindUSBDevice {
 			return Hello{}, fmt.Errorf("streams[%d]: invalid kind", i)
 		}
 		if err := validateLabel("stream label", stream.Label); err != nil {
@@ -336,10 +350,10 @@ func (f Format) validate(kind Kind) error {
 		return nil
 	}
 	if f.Codec != "pcm_s16le" || f.SampleRate != 48000 || f.Channels != 1 {
-		return errors.New("microphone requires mono pcm_s16le at 48000 Hz")
+		return fmt.Errorf("%s requires mono pcm_s16le at 48000 Hz", kind)
 	}
 	if f.Width != 0 || f.Height != 0 || f.FPS != 0 {
-		return errors.New("video fields on microphone")
+		return fmt.Errorf("video fields on %s", kind)
 	}
 	return nil
 }

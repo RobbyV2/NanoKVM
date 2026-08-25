@@ -565,6 +565,15 @@ func outputState(sink Sink) OutputState {
 		}
 		return OutputIdle
 	}
+	if sink.Kind == KindSpeaker {
+		// A speaker generates nothing. The host's audio either reaches a
+		// browser or is dropped, so there is no black or silence to report;
+		// whether the host is playing is what Demand already says.
+		if sink.Binding != nil && sink.Binding.State == StateStreaming {
+			return OutputSource
+		}
+		return OutputIdle
+	}
 	if !sink.Demand.Streaming {
 		return OutputIdle
 	}

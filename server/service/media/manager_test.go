@@ -119,6 +119,7 @@ func newTestManager(registry SlotRegistry, resolver NodeResolver, factory Output
 type fakeFactory struct {
 	mu      sync.Mutex
 	outputs map[string]*fakeOutput
+	inputs  map[string]*fakeInput
 	specs   map[string]SlotSpec
 }
 
@@ -135,6 +136,52 @@ func (f *fakeFactory) Open(spec SlotSpec, _ string) (Output, error) {
 	f.specs[spec.ID] = spec
 	f.mu.Unlock()
 	return output, nil
+}
+
+func (f *fakeFactory) OpenInput(spec SlotSpec, _ string) (Input, error) {
+	input := &fakeInput{emit: make(chan func(Packet), 1), closed: make(chan struct{})}
+	f.mu.Lock()
+	if f.inputs == nil {
+		f.inputs = make(map[string]*fakeInput)
+	}
+	f.inputs[spec.ID] = input
+	if f.specs == nil {
+		f.specs = make(map[string]SlotSpec)
+	}
+	f.specs[spec.ID] = spec
+	f.mu.Unlock()
+	return input, nil
+}
+
+func (f *fakeFactory) input(id string) *fakeInput {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.inputs[id]
+}
+
+// fakeInput stands in for a gadget capture substream: it hands the manager the
+// emit callback so a test can push a period through at a moment of its own
+// choosing.
+type fakeInput struct {
+	once   sync.Once
+	emit   chan func(Packet)
+	closed chan struct{}
+}
+
+func (i *fakeInput) Run(ctx context.Context, emit func(Packet), demand func(sources.Demand), active func(bool)) error {
+	demand(sources.Demand{Streaming: true, Since: time.Now()})
+	active(true)
+	select {
+	case i.emit <- emit:
+	default:
+	}
+	<-ctx.Done()
+	return nil
+}
+
+func (i *fakeInput) Close() error {
+	i.once.Do(func() { close(i.closed) })
+	return nil
 }
 
 func (f *fakeFactory) spec(id string) SlotSpec {
@@ -154,6 +201,10 @@ type blockedFactory struct{ output *blockedOutput }
 func (f *blockedFactory) Open(SlotSpec, string) (Output, error) {
 	f.output = &blockedOutput{}
 	return f.output, nil
+}
+
+func (f *blockedFactory) OpenInput(SlotSpec, string) (Input, error) {
+	return nil, errors.New("no capture in this factory")
 }
 
 type blockedOutput struct{}
@@ -178,6 +229,10 @@ func (*idleOutput) Close() error { return nil }
 type idleFactory struct{}
 
 func (idleFactory) Open(SlotSpec, string) (Output, error) { return &idleOutput{}, nil }
+
+func (idleFactory) OpenInput(SlotSpec, string) (Input, error) {
+	return nil, errors.New("no capture in this factory")
+}
 
 func (o *fakeOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool)) error {
 	demand(sources.Demand{Streaming: true, Width: 640, Height: 480, FPS: 30, Since: time.Now()})

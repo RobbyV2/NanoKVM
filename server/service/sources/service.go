@@ -36,10 +36,14 @@ const (
 type Service struct {
 	registry *Registry
 	ingress  FrameIngress
+	egress   FrameEgress
 	slots    SlotManager
 	mu       sync.Mutex
 	usb      USBBackend
 	active   map[string]BinarySession
+	// One detach function per speaker slot a browser is draining. A slot
+	// carries at most one binding, so at most one entry per sink.
+	speakers map[string]func()
 }
 
 type BinarySession interface {
@@ -54,7 +58,7 @@ type USBBackend interface {
 }
 
 type SlotManager interface {
-	SetMediaSlots(context.Context, []string, []string) error
+	SetMediaSlots(context.Context, []string, []string, []string) error
 }
 
 type controlMessage struct {
@@ -118,17 +122,26 @@ var sourceUpgrader = websocket.Upgrader{
 
 func NewService() *Service {
 	registry, _ := NewRegistry(nil, RegistryOptions{})
-	return &Service{registry: registry, active: make(map[string]BinarySession)}
+	return &Service{registry: registry, active: make(map[string]BinarySession), speakers: make(map[string]func())}
 }
 
 func NewServiceWith(registry *Registry) *Service {
-	return &Service{registry: registry, active: make(map[string]BinarySession)}
+	return &Service{registry: registry, active: make(map[string]BinarySession), speakers: make(map[string]func())}
 }
 
 func (s *Service) SetIngress(ingress FrameIngress) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ingress = ingress
+	if egress, ok := ingress.(FrameEgress); ok {
+		s.egress = egress
+	}
+}
+
+func (s *Service) SetEgress(egress FrameEgress) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.egress = egress
 }
 
 func (s *Service) SetSlotManager(manager SlotManager) {
@@ -192,11 +205,14 @@ func (s *Service) SetSinks(c *gin.Context) {
 		response.ErrRsp(c, -2, err.Error())
 		return
 	}
-	var cameras, microphones []string
+	var cameras, microphones, speakers []string
 	for _, slot := range slots {
-		if slot.Kind == KindCamera {
+		switch slot.Kind {
+		case KindCamera:
 			cameras = append(cameras, slot.Label)
-		} else {
+		case KindSpeaker:
+			speakers = append(speakers, slot.Label)
+		default:
 			microphones = append(microphones, slot.Label)
 		}
 	}
@@ -209,7 +225,7 @@ func (s *Service) SetSinks(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), 30*time.Second)
 	defer cancel()
-	if err := manager.SetMediaSlots(ctx, cameras, microphones); err != nil {
+	if err := manager.SetMediaSlots(ctx, cameras, microphones, speakers); err != nil {
 		response.ErrRsp(c, -2, err.Error())
 		return
 	}
@@ -358,6 +374,7 @@ func (s *Service) DisconnectAll(c *gin.Context) {
 		s.detach(binding.SinkID)
 	}
 	s.stopAllUSB()
+	s.stopAllSpeakers()
 	current := s.registry.Snapshot()
 	response.OkRspWithData(c, &current)
 }
@@ -411,6 +428,7 @@ func (s *Service) serveSource(c *gin.Context, actor Actor) {
 		for _, binding := range snapshot.Bindings {
 			if binding.SourceID == source.ID {
 				s.detach(binding.SinkID)
+				s.stopSpeaker(binding.SinkID)
 			}
 		}
 	}()
@@ -569,12 +587,25 @@ func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor
 			s.watchUSB(ctx, writer, actor, message.SinkID, session)
 			return nil
 		}
+		if result.Stream.Kind == KindSpeaker {
+			if err := s.startSpeaker(writer, message.SinkID, message.StreamID); err != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
+			}
+			if err := writer.JSON(controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token}); err != nil {
+				s.stopSpeaker(message.SinkID)
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return err
+			}
+			return nil
+		}
 		return writer.JSON(controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token})
 	case "release":
 		if err := s.registry.Release(actor, message.SinkID, ReasonReleased); err != nil {
 			return writer.JSON(controlResponse{Type: "error", Message: err.Error()})
 		}
 		s.detach(message.SinkID)
+		s.stopSpeaker(message.SinkID)
 		if *active != nil {
 			session := *active
 			s.untrackUSB(message.SinkID, session)
@@ -611,6 +642,18 @@ func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor
 			s.watchUSB(ctx, writer, actor, message.SinkID, session)
 			return nil
 		}
+		if err == nil && stream.Kind == KindSpeaker {
+			if err := s.startSpeaker(writer, message.SinkID, message.StreamID); err != nil {
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
+			}
+			if err := writer.JSON(controlResponse{Type: "resumed", Binding: &binding}); err != nil {
+				s.stopSpeaker(message.SinkID)
+				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
+				return err
+			}
+			return nil
+		}
 		return writer.JSON(controlResponse{Type: "resumed", Binding: &binding})
 	default:
 		return writer.JSON(controlResponse{Type: "error", Message: "unknown message type"})
@@ -640,6 +683,58 @@ func (s *Service) watchUSB(ctx context.Context, writer *sourceWriter, actor Acto
 			_ = writer.Close()
 		}
 	}()
+}
+
+// startSpeaker points a speaker slot's capture at this socket. Encoding runs on
+// the media backend's delivery goroutine and every write carries the socket's
+// own deadline, so a browser that stops reading loses its own stream and
+// nothing else.
+func (s *Service) startSpeaker(writer *sourceWriter, sinkID, streamID string) error {
+	s.mu.Lock()
+	egress := s.egress
+	s.mu.Unlock()
+	if egress == nil {
+		return errors.New("speaker capture is unavailable")
+	}
+	detach, err := egress.Attach(sinkID, func(frame MediaFrame) error {
+		frame.StreamID = streamID
+		data, err := encodeMediaFrame(frame)
+		if err != nil {
+			return err
+		}
+		return writer.Binary(data)
+	})
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	previous := s.speakers[sinkID]
+	s.speakers[sinkID] = detach
+	s.mu.Unlock()
+	if previous != nil {
+		previous()
+	}
+	return nil
+}
+
+func (s *Service) stopSpeaker(sinkID string) {
+	s.mu.Lock()
+	detach := s.speakers[sinkID]
+	delete(s.speakers, sinkID)
+	s.mu.Unlock()
+	if detach != nil {
+		detach()
+	}
+}
+
+func (s *Service) stopAllSpeakers() {
+	s.mu.Lock()
+	detachers := s.speakers
+	s.speakers = make(map[string]func())
+	s.mu.Unlock()
+	for _, detach := range detachers {
+		detach()
+	}
 }
 
 func (s *Service) trackUSB(sinkID string, session BinarySession) {

@@ -385,7 +385,7 @@ func TestSetMediaSlotsPersistsACompiledProfile(t *testing.T) {
 	observer := &fakeGadgetObserver{}
 	manager.SetObserver(observer)
 
-	if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}); err != nil {
+	if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	active, err := manager.store.Active()
@@ -419,7 +419,7 @@ func TestSetMediaSlotsRejectsImpossibleProfileWithoutChangingActive(t *testing.T
 	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
 		t.Fatal(err)
 	}
-	if err := manager.SetMediaSlots(context.Background(), []string{"Camera 1", "Camera 2"}, nil); !errors.Is(err, ErrEndpointBudget) {
+	if err := manager.SetMediaSlots(context.Background(), []string{"Camera 1", "Camera 2"}, nil, nil); !errors.Is(err, ErrEndpointBudget) {
 		t.Fatalf("SetMediaSlots() = %v, want endpoint refusal", err)
 	}
 	active, err := manager.store.Active()
@@ -560,7 +560,7 @@ func TestSetMediaSlotsNamesTheHostOnlyWhereTheKernelCan(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			manager, _ := newTestManager(t)
 			manager.caps = tt.caps
-			if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}); err != nil {
+			if err := manager.SetMediaSlots(context.Background(), []string{"Desk Camera"}, []string{"Desk Microphone"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			profile, err := manager.store.LoadProfile(ProfileCurrent)

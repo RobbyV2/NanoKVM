@@ -53,8 +53,19 @@ type Output interface {
 	Close() error
 }
 
+// Input is the mirror of Output: a gadget function this device reads instead of
+// writes. A UAC2 speaker is the only one - c_chmask enables the USB OUT
+// endpoint, the host writes it, and u_audio hands what it wrote to the gadget's
+// ALSA capture substream. emit is called once per packet and never blocks; Run
+// returns an error rather than waiting on a node that will not produce.
+type Input interface {
+	Run(context.Context, func(Packet), func(sources.Demand), func(bool)) error
+	Close() error
+}
+
 type OutputFactory interface {
 	Open(SlotSpec, string) (Output, error)
+	OpenInput(SlotSpec, string) (Input, error)
 }
 
 type Packet struct {
@@ -94,8 +105,11 @@ type Manager struct {
 var _ sources.FrameIngress = (*Manager)(nil)
 
 type worker struct {
-	spec   SlotSpec
+	spec SlotSpec
+	// Exactly one of output and input is set: output for a slot the browser
+	// fills, input for a speaker the browser drains.
 	output Output
+	input  Input
 	queue  chan Packet
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -107,6 +121,43 @@ type worker struct {
 	rateAt     time.Time
 	rateTokens float64
 	latency    latencyTracker
+	// A slot carries at most one binding, so at most one browser is listening
+	// to a speaker. The listener owns a bounded queue and its own goroutine so
+	// a slow socket can never stall the capture loop.
+	listener *speakerListener
+	egress   uint32
+}
+
+type speakerListener struct {
+	queue chan sources.MediaFrame
+	done  chan struct{}
+	once  sync.Once
+}
+
+func (l *speakerListener) stop() {
+	if l == nil {
+		return
+	}
+	l.once.Do(func() { close(l.done) })
+}
+
+// offer never blocks and never waits. A browser that cannot keep up loses the
+// oldest packet rather than backing pressure into the gadget, where it would
+// overrun the ALSA ring and stall the target host's playback.
+func (l *speakerListener) offer(frame sources.MediaFrame) {
+	select {
+	case l.queue <- frame:
+		return
+	default:
+	}
+	select {
+	case <-l.queue:
+	default:
+	}
+	select {
+	case l.queue <- frame:
+	default:
+	}
 }
 
 type pacer struct {
@@ -204,19 +255,25 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 			}
 			spec.FD = holder.FD()
 		}
-		output, err := m.factory.Open(spec, node)
+		var output Output
+		var input Input
+		if spec.Kind == sources.KindSpeaker {
+			input, err = m.factory.OpenInput(spec, node)
+		} else {
+			output, err = m.factory.Open(spec, node)
+		}
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", spec.ID, err))
 			continue
 		}
 		fallback := fallbackFor(spec)
 		depth := videoQueueDepth
-		if spec.Kind == sources.KindMicrophone {
+		if spec.Kind != sources.KindCamera {
 			depth = audioQueueDepth
 		}
 		workerCtx, cancel := context.WithCancel(context.Background())
 		current := &worker{
-			spec: spec, output: output, queue: make(chan Packet, depth), cancel: cancel,
+			spec: spec, output: output, input: input, queue: make(chan Packet, depth), cancel: cancel,
 			done: make(chan struct{}), sequence: make(map[string]uint32),
 		}
 		next[spec.ID] = current
@@ -300,6 +357,8 @@ func (m *Manager) Detach(sinkID string) {
 		return
 	}
 	w.mu.Lock()
+	listener := w.listener
+	w.listener = nil
 	clear(w.sequence)
 	w.generation++
 	w.rateAt = time.Time{}
@@ -307,6 +366,7 @@ func (m *Manager) Detach(sinkID string) {
 	w.latency = latencyTracker{}
 	generation := w.generation
 	w.mu.Unlock()
+	listener.stop()
 	for {
 		select {
 		case <-w.queue:
@@ -406,8 +466,8 @@ func (p *pacer) due(now time.Time, fps int) (int, bool) {
 
 func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 	defer close(w.done)
-	defer w.output.Close()
-	if err := w.output.Run(ctx, w.queue, fallback, func(demand sources.Demand) {
+	defer w.close()
+	demanded := func(demand sources.Demand) {
 		if !demand.Streaming {
 			demand = sources.Demand{}
 		}
@@ -420,17 +480,101 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 			state = sources.StateClaimed
 		}
 		_ = m.registry.SetBindingState(w.spec.ID, state)
-	}, func(active bool) {
+	}
+	active := func(active bool) {
 		state := sources.StateClaimed
 		if active {
 			state = sources.StateStreaming
 		}
 		_ = m.registry.SetBindingState(w.spec.ID, state)
-	}); err != nil {
+	}
+	var err error
+	if w.input != nil {
+		err = w.input.Run(ctx, func(packet Packet) { m.publish(w, packet) }, demanded, active)
+	} else {
+		err = w.output.Run(ctx, w.queue, fallback, demanded, active)
+	}
+	if err != nil {
 		log.Errorf("media output %s: %s: the node stays held, so the gadget stays on the bus", w.spec.ID, err)
 	}
+	w.mu.Lock()
+	listener := w.listener
+	w.listener = nil
+	w.mu.Unlock()
+	listener.stop()
 	_ = m.registry.SetDemand(w.spec.ID, sources.Demand{})
 	_ = m.registry.SetBindingState(w.spec.ID, sources.StateSuspended)
+}
+
+func (w *worker) close() error {
+	if w.input != nil {
+		return w.input.Close()
+	}
+	return w.output.Close()
+}
+
+// publish hands one captured packet to whichever browser holds this speaker.
+// It runs on the capture goroutine, so it only ever touches a bounded queue.
+func (m *Manager) publish(w *worker, packet Packet) {
+	w.mu.Lock()
+	listener := w.listener
+	sequence := w.egress
+	w.egress++
+	w.mu.Unlock()
+	if listener == nil || len(packet.Data) == 0 {
+		return
+	}
+	listener.offer(sources.MediaFrame{
+		SinkID:      w.spec.ID,
+		Kind:        sources.MediaKindPCMS16LE,
+		Sequence:    sequence,
+		TimestampUS: uint64(time.Now().UnixMicro()),
+		Payload:     packet.Data,
+	})
+}
+
+// Attach subscribes one browser to a speaker slot. The returned function
+// detaches it; it is safe to call more than once. Delivery runs on its own
+// goroutine so a socket that will not drain costs this browser its stream and
+// nothing else - not the capture loop, not the other slots, not the gadget.
+func (m *Manager) Attach(sinkID string, deliver func(sources.MediaFrame) error) (func(), error) {
+	m.mu.RLock()
+	w := m.workers[sinkID]
+	m.mu.RUnlock()
+	if w == nil {
+		return nil, fmt.Errorf("%w: %s", ErrSinkUnavailable, sinkID)
+	}
+	if w.spec.Kind != sources.KindSpeaker {
+		return nil, fmt.Errorf("%w: %s is a %s, which receives frames rather than sending them", ErrUnsupportedFrame, sinkID, w.spec.Kind)
+	}
+	listener := &speakerListener{queue: make(chan sources.MediaFrame, audioQueueDepth), done: make(chan struct{})}
+	w.mu.Lock()
+	previous := w.listener
+	w.listener = listener
+	w.mu.Unlock()
+	previous.stop()
+
+	go func() {
+		for {
+			select {
+			case <-listener.done:
+				return
+			case frame := <-listener.queue:
+				if deliver(frame) != nil {
+					listener.stop()
+					return
+				}
+			}
+		}
+	}()
+	return func() {
+		w.mu.Lock()
+		if w.listener == listener {
+			w.listener = nil
+		}
+		w.mu.Unlock()
+		listener.stop()
+	}, nil
 }
 
 // holdVideoNodes converges the held set on what the gadget currently exposes.
@@ -476,14 +620,23 @@ func deriveSlots(profile presentation.Profile, plan presentation.Plan) ([]SlotSp
 			specs = append(specs, SlotSpec{ID: name, Kind: sources.KindCamera, Label: function.Video.FunctionName, Video: function.Video, FIFOs: slices.Clone(plan.FIFOs[name])})
 			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindCamera, Label: function.Video.FunctionName, HostName: plan.MediaNames[name]})
 		case presentation.FunctionUAC2:
-			specs = append(specs, SlotSpec{ID: name, Kind: sources.KindMicrophone, Label: function.Audio.FunctionName, Audio: function.Audio, FIFOs: slices.Clone(plan.FIFOs[name])})
-			slots = append(slots, sources.Slot{ID: name, Kind: sources.KindMicrophone, Label: function.Audio.FunctionName, HostName: plan.MediaNames[name]})
+			// The channel masks are the direction, exactly as they are for the
+			// kernel: c_chmask enables the USB OUT endpoint, which is a speaker.
+			kind := sources.KindMicrophone
+			if function.Audio.USBOut() {
+				kind = sources.KindSpeaker
+			}
+			specs = append(specs, SlotSpec{ID: name, Kind: kind, Label: function.Audio.FunctionName, Audio: function.Audio, FIFOs: slices.Clone(plan.FIFOs[name])})
+			slots = append(slots, sources.Slot{ID: name, Kind: kind, Label: function.Audio.FunctionName, HostName: plan.MediaNames[name]})
 		}
 	}
 	return specs, slots
 }
 
 func validateFrame(spec SlotSpec, frame sources.MediaFrame) (int, int, error) {
+	if spec.Kind == sources.KindSpeaker {
+		return 0, 0, fmt.Errorf("%w: %s carries the target host's audio to the browser and accepts none", ErrUnsupportedFrame, spec.ID)
+	}
 	if spec.Kind == sources.KindCamera {
 		if frame.Kind != sources.MediaKindMJPEG {
 			return 0, 0, fmt.Errorf("%w: %s accepts MJPEG", ErrUnsupportedFrame, spec.ID)
@@ -525,7 +678,7 @@ func packetSpan(p Packet) (*byte, int) {
 func fallbackFor(spec SlotSpec) Fallback {
 	cache := make(map[[2]int][]byte, 1)
 	return func(width, height int) (Packet, error) {
-		if spec.Kind == sources.KindMicrophone {
+		if spec.Kind != sources.KindCamera {
 			return Packet{Data: make([]byte, pcmPacketBytes)}, nil
 		}
 		if width == 0 || height == 0 {
@@ -568,7 +721,7 @@ func encodeBlackFrame(width, height int) ([]byte, error) {
 func stopWorkers(workers map[string]*worker) {
 	for _, worker := range workers {
 		worker.cancel()
-		_ = worker.output.Close()
+		_ = worker.close()
 	}
 	deadline := time.NewTimer(stopTimeout)
 	defer deadline.Stop()

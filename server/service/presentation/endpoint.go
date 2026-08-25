@@ -60,6 +60,20 @@ func AccountEndpoints(functions []Function, table CapabilityTable) (EndpointUse,
 			return used, fmt.Errorf("%w: %s names itself to the host, which needs a writable %s on the uac2 function, rejected by capability table %s",
 				ErrFunctionUnavailable, name, UAC2AttrFunctionName, table.Source)
 		}
+		// f_uac2 turns the two channel masks straight into endpoints
+		// (EPIN_EN/EPOUT_EN, f_uac2.c:42), so the budget counts the same two
+		// numbers the compiler is about to write. A microphone still costs the
+		// one IN endpoint the table declares; a speaker costs an OUT endpoint
+		// and no IN one, which is why it fits where a microphone would not.
+		if function.Kind == FunctionUAC2 && function.Audio != nil {
+			caps.InEPs, caps.OutEPs = 0, 0
+			if function.Audio.USBIn() {
+				caps.InEPs = 1
+			}
+			if function.Audio.USBOut() {
+				caps.OutEPs = 1
+			}
+		}
 		if function.Kind == FunctionFFS {
 			caps.InEPs, caps.OutEPs = 0, 0
 			for _, endpoint := range function.FFS.Endpoints {
@@ -132,6 +146,9 @@ func budgetAdvice(functions []Function, refused Function, table CapabilityTable,
 		if function.Kind == FunctionUVC && function.Video != nil && !function.Video.interruptEndpoint() {
 			cost--
 		}
+		if function.Kind == FunctionUAC2 && function.Audio != nil && !function.Audio.USBIn() {
+			cost = 0
+		}
 		if cost <= 0 {
 			continue
 		}
@@ -187,6 +204,11 @@ func inPackets(function Function, caps FunctionCaps) []int {
 		}
 	case FunctionUAC2:
 		if function.Audio != nil {
+			// A speaker has no IN endpoint, so it seats no IN FIFO. Charging it
+			// one would refuse profiles the kernel binds happily.
+			if !function.Audio.USBIn() {
+				return nil
+			}
 			channels := bits.OnesCount32(function.Audio.PChannelMask)
 			packet := channels * int(function.Audio.PSampleSize) * int((function.Audio.PSampleRate+999)/1000)
 			return []int{packet}

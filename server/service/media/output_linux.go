@@ -331,7 +331,10 @@ static void nk_uvc_close(struct nk_uvc *u) {
 }
 
 enum nk_pcm_format { NK_PCM_S16_LE = 0 };
-enum nk_pcm_flags { NK_PCM_OUT = 0 };
+// tinyalsa's own flags. PCM_IN opens /dev/snd/pcmC%uD%uc, the capture substream
+// u_audio.c:645 creates for c_chmask - what the host wrote to the USB OUT
+// endpoint. Never confuse it with the microphone's PCM_OUT playback substream.
+enum nk_pcm_flags { NK_PCM_OUT = 0, NK_PCM_IN = 0x10000000 };
 struct nk_pcm_config {
 	unsigned int channels, rate, period_size, period_count;
 	int format;
@@ -343,13 +346,17 @@ struct nk_pcm {
 	void *library;
 	void *handle;
 	int (*write)(void *, const void *, unsigned int);
+	int (*read)(void *, void *, unsigned int);
 	int (*wait)(void *, int);
 	int (*prepare)(void *);
+	int (*start)(void *);
 	int (*stop)(void *);
 	int (*close)(void *);
+	int fd;
+	int capture;
 };
 
-static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device) {
+static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int capture) {
 	const char *paths[] = { "/tmp/server/dl_lib/libtinyalsa.so", "/kvmapp/server/dl_lib/libtinyalsa.so", "libtinyalsa.so" };
 	void *library = NULL;
 	for (unsigned int i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
@@ -360,19 +367,35 @@ static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device) {
 	void *(*open_pcm)(unsigned int, unsigned int, unsigned int, const struct nk_pcm_config *) = dlsym(library, "pcm_open");
 	int (*is_ready)(void *) = dlsym(library, "pcm_is_ready");
 	int (*write_pcm)(void *, const void *, unsigned int) = dlsym(library, "pcm_write");
+	int (*read_pcm)(void *, void *, unsigned int) = dlsym(library, "pcm_read");
 	int (*wait_pcm)(void *, int) = dlsym(library, "pcm_wait");
 	int (*prepare_pcm)(void *) = dlsym(library, "pcm_prepare");
+	int (*start_pcm)(void *) = dlsym(library, "pcm_start");
 	int (*stop_pcm)(void *) = dlsym(library, "pcm_stop");
 	int (*close_pcm)(void *) = dlsym(library, "pcm_close");
+	int (*poll_fd)(void *) = dlsym(library, "pcm_get_poll_fd");
 	if (!open_pcm || !is_ready || !write_pcm || !wait_pcm || !prepare_pcm || !stop_pcm || !close_pcm) { dlclose(library); errno = ENOSYS; return NULL; }
+	if (capture && (!read_pcm || !start_pcm || !poll_fd)) { dlclose(library); errno = ENOSYS; return NULL; }
 	struct nk_pcm_config config = { .channels = 1, .rate = 48000, .period_size = 960,
 		.period_count = 4, .format = NK_PCM_S16_LE, .avail_min = 960 };
-	void *handle = open_pcm(card, device, NK_PCM_OUT, &config);
+	void *handle = open_pcm(card, device, capture ? NK_PCM_IN : NK_PCM_OUT, &config);
 	if (!handle || !is_ready(handle)) { if (handle) close_pcm(handle); dlclose(library); errno = ENODEV; return NULL; }
 	struct nk_pcm *pcm = calloc(1, sizeof(*pcm));
 	if (!pcm) { close_pcm(handle); dlclose(library); return NULL; }
-	pcm->library = library; pcm->handle = handle; pcm->write = write_pcm; pcm->wait = wait_pcm;
-	pcm->prepare = prepare_pcm; pcm->stop = stop_pcm; pcm->close = close_pcm;
+	pcm->library = library; pcm->handle = handle; pcm->write = write_pcm; pcm->read = read_pcm;
+	pcm->wait = wait_pcm; pcm->prepare = prepare_pcm; pcm->start = start_pcm;
+	pcm->stop = stop_pcm; pcm->close = close_pcm; pcm->fd = -1; pcm->capture = capture;
+	if (capture) {
+		// The descriptor is polled directly rather than through pcm_wait: this
+		// tinyalsa polls POLLOUT, which a capture stream never raises. It is
+		// also forced non-blocking, so that even a poll that lies cannot leave
+		// pcm_read waiting inside the gadget's only reader.
+		pcm->fd = poll_fd(handle);
+		if (pcm->fd < 0) { close_pcm(handle); dlclose(library); free(pcm); errno = ENOTSUP; return NULL; }
+		int flags = fcntl(pcm->fd, F_GETFL, 0);
+		if (flags >= 0) fcntl(pcm->fd, F_SETFL, flags | O_NONBLOCK);
+		if (start_pcm(handle) < 0) { prepare_pcm(handle); start_pcm(handle); }
+	}
 	return pcm;
 }
 
@@ -384,10 +407,32 @@ static int nk_pcm_write(struct nk_pcm *pcm, const void *data, unsigned int lengt
 	return rc < 0 ? rc : 0;
 }
 
+// One period, or nothing. poll(2) with a zero timeout answers now; a period is
+// only read once avail_min frames are there, so the read cannot wait either.
+static int nk_pcm_read(struct nk_pcm *pcm, void *data, unsigned int length) {
+	struct pollfd pfd;
+	pfd.fd = pcm->fd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
+	int ready;
+	do { ready = poll(&pfd, 1, 0); } while (ready < 0 && errno == EINTR);
+	if (ready < 0) return -errno;
+	if (ready == 0) return -EAGAIN;
+	if (pfd.revents & (POLLERR | POLLNVAL | POLLHUP)) return -EPIPE;
+	if (!(pfd.revents & POLLIN)) return -EAGAIN;
+	int rc = pcm->read(pcm->handle, data, length);
+	return rc < 0 ? rc : 0;
+}
+
+// Stop, prepare, and for a capture stream start again, which is what puts
+// tinyalsa's own prepared/running flags back in step with the kernel after an
+// overrun. Nothing here drains: a stop path must never wait on a PCM.
 static int nk_pcm_reset(struct nk_pcm *pcm) {
 	int rc = pcm->stop(pcm->handle);
 	if (rc < 0) return rc;
-	return pcm->prepare(pcm->handle);
+	rc = pcm->prepare(pcm->handle);
+	if (rc < 0 || !pcm->capture) return rc;
+	return pcm->start(pcm->handle);
 }
 
 static void nk_pcm_close(struct nk_pcm *pcm) {
@@ -405,6 +450,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -417,7 +463,21 @@ func (platformFactory) Open(spec SlotSpec, node string) (Output, error) {
 	if spec.Kind == sources.KindCamera {
 		return openUVC(spec, node)
 	}
-	return openPCM(node)
+	if spec.Kind == sources.KindSpeaker {
+		return nil, fmt.Errorf("%s is a speaker, which is opened for capture", spec.ID)
+	}
+	return openPCM(node, false)
+}
+
+func (platformFactory) OpenInput(spec SlotSpec, node string) (Input, error) {
+	if spec.Kind != sources.KindSpeaker {
+		return nil, fmt.Errorf("%s is a %s, which is opened for playback", spec.ID, spec.Kind)
+	}
+	output, err := openPCM(node, true)
+	if err != nil {
+		return nil, err
+	}
+	return &pcmCapture{pcm: output}, nil
 }
 
 type uvcOutput struct {
@@ -566,17 +626,109 @@ type pcmOutput struct {
 	handle *C.struct_nk_pcm
 }
 
-func openPCM(node string) (*pcmOutput, error) {
+func openPCM(node string, capture bool) (*pcmOutput, error) {
 	card, device, err := parseALSANode(node)
 	if err != nil {
 		return nil, err
 	}
-	handle := C.nk_pcm_open(C.uint(card), C.uint(device))
+	direction := C.int(0)
+	if capture {
+		direction = 1
+	}
+	handle := C.nk_pcm_open(C.uint(card), C.uint(device), direction)
 	if handle == nil {
 		return nil, fmt.Errorf("open PCM %s: %w", node, errno())
 	}
 	return &pcmOutput{handle: handle}, nil
 }
+
+// pcmCapture reads the gadget's UAC2 capture substream - what the target host
+// played into the USB OUT endpoint - and hands each 20 ms period to the
+// manager. It polls on the same 20 ms cadence the microphone writes on, and
+// every step of it is non-blocking: a host that is not playing costs an empty
+// tick, never a wait.
+type pcmCapture struct {
+	pcm *pcmOutput
+}
+
+func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sources.Demand), active func(bool)) error {
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	buffer := make([]byte, pcmPacketBytes)
+	streaming, sourceActive := false, false
+	successes, failures, resets := 0, 0, 0
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			c.pcm.mu.Lock()
+			if c.pcm.handle == nil {
+				c.pcm.mu.Unlock()
+				return nil
+			}
+			rc := C.nk_pcm_read(c.pcm.handle, unsafe.Pointer(&buffer[0]), C.uint(len(buffer)))
+			c.pcm.mu.Unlock()
+			if rc == 0 {
+				failures, resets = 0, 0
+				successes++
+				if !streaming && successes > 4 {
+					streaming = true
+					demand(sources.Demand{Streaming: true, Since: time.Now().UTC()})
+				}
+				if !sourceActive {
+					sourceActive = true
+					active(true)
+				}
+				emit(Packet{Data: append([]byte(nil), buffer...)})
+				continue
+			}
+			successes = 0
+			// -EAGAIN is the ordinary quiet host: nothing to read this tick.
+			if int(rc) == -int(syscall.EAGAIN) {
+				if streaming {
+					failures++
+				}
+				if streaming && failures >= 25 {
+					streaming, failures = false, 0
+					demand(sources.Demand{})
+				}
+				if sourceActive && failures >= 5 {
+					sourceActive = false
+					active(false)
+				}
+				continue
+			}
+			// Anything else is an overrun or a stream the host tore down.
+			// Recovery is bounded: a stream that will not come back is an
+			// error the caller reports rather than a loop that spins forever.
+			resets++
+			if resets > 50 {
+				return fmt.Errorf("read PCM: return %d after %d resets", int(rc), resets)
+			}
+			c.pcm.mu.Lock()
+			if c.pcm.handle == nil {
+				c.pcm.mu.Unlock()
+				return nil
+			}
+			reset := C.nk_pcm_reset(c.pcm.handle)
+			c.pcm.mu.Unlock()
+			if reset < 0 {
+				return fmt.Errorf("reset capture PCM: return %d", int(reset))
+			}
+			if streaming {
+				streaming = false
+				demand(sources.Demand{})
+			}
+			if sourceActive {
+				sourceActive = false
+				active(false)
+			}
+		}
+	}
+}
+
+func (c *pcmCapture) Close() error { return c.pcm.Close() }
 
 func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool)) error {
 	ticker := time.NewTicker(20 * time.Millisecond)

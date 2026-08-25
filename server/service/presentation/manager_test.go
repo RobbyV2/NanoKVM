@@ -250,7 +250,7 @@ func TestGadgetMutatorsAreRefusedWhileTheUDCIsOnLoan(t *testing.T) {
 		{name: "set lun", run: func(m *Manager) error { return m.SetLUN(ctx, LUN{File: "/data/disk.img"}) }},
 		{name: "rebind", run: func(m *Manager) error { return m.Rebind(ctx) }},
 		{name: "reset phy", run: func(m *Manager) error { return m.ResetPHY(ctx) }},
-		{name: "set media slots", run: func(m *Manager) error { return m.SetMediaSlots(ctx, []string{"cam"}, nil) }},
+		{name: "set media slots", run: func(m *Manager) error { return m.SetMediaSlots(ctx, []string{"cam"}, nil, nil) }},
 		{name: "create functionfs", run: func(m *Manager) error { return m.CreateFunctionFS(ctx) }},
 		{name: "start functionfs", run: func(m *Manager) error {
 			_, err := m.StartFunctionFS(ctx, testFunctionFS())

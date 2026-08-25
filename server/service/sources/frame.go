@@ -37,6 +37,45 @@ type FrameIngress interface {
 	Latency() map[string]SinkLatency
 }
 
+// FrameEgress is the speaker direction: the gadget produces frames and a
+// browser drains them. Attach returns the function that detaches the browser
+// again, and delivery must never be allowed to block the media backend.
+type FrameEgress interface {
+	Attach(string, func(MediaFrame) error) (func(), error)
+}
+
+// encodeMediaFrame is the exact inverse of parseMediaFrame, so a frame this
+// server sends is one it would itself accept. It refuses to build anything the
+// parser would reject rather than putting an unreadable frame on the wire.
+func encodeMediaFrame(frame MediaFrame) ([]byte, error) {
+	sink, stream := []byte(frame.SinkID), []byte(frame.StreamID)
+	if len(sink) == 0 || len(sink) > maxMediaID || len(stream) == 0 || len(stream) > maxMediaID {
+		return nil, errors.New("media frame identifier length is invalid")
+	}
+	if frame.Kind != MediaKindMJPEG && frame.Kind != MediaKindPCMS16LE {
+		return nil, fmt.Errorf("unsupported media frame kind %d", frame.Kind)
+	}
+	limit := maxVideoPayload
+	if frame.Kind == MediaKindPCMS16LE {
+		limit = maxAudioPayload
+	}
+	if len(frame.Payload) == 0 || len(frame.Payload) > limit {
+		return nil, fmt.Errorf("media frame payload is %d bytes, want 1..%d", len(frame.Payload), limit)
+	}
+	data := make([]byte, mediaHeaderSize, mediaHeaderSize+len(sink)+len(stream)+len(frame.Payload))
+	copy(data[:4], mediaMagic[:])
+	data[4] = MediaVersion
+	data[5] = frame.Kind
+	binary.BigEndian.PutUint32(data[8:12], frame.Sequence)
+	binary.BigEndian.PutUint64(data[12:20], frame.TimestampUS)
+	data[20] = uint8(len(sink))
+	data[21] = uint8(len(stream))
+	binary.BigEndian.PutUint32(data[22:26], uint32(len(frame.Payload)))
+	data = append(data, sink...)
+	data = append(data, stream...)
+	return append(data, frame.Payload...), nil
+}
+
 func parseMediaFrame(data []byte) (MediaFrame, error) {
 	if len(data) < mediaHeaderSize {
 		return MediaFrame{}, errors.New("media frame header is truncated")

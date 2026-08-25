@@ -71,6 +71,7 @@ var (
 	stringIndexPattern = regexp.MustCompile(`^(?:0x[0-9A-Fa-f]{4}:)?(?:[1-9][0-9]{0,2})$`)
 	cameraPattern      = regexp.MustCompile(`^cam([0-9])$`)
 	microphonePattern  = regexp.MustCompile(`^mic([0-9])$`)
+	speakerPattern     = regexp.MustCompile(`^spk([0-9])$`)
 )
 
 var (
@@ -260,6 +261,72 @@ type AudioFunction struct {
 	RequestNumber uint8   `json:"req_number"`
 }
 
+// AudioRole is the direction one f_uac2 instance runs in. The kernel decides
+// it from the channel masks and nothing else - f_uac2.c:42 defines EPIN_EN as
+// p_chmask != 0 and EPOUT_EN as c_chmask != 0 - so a profile reads the same two
+// numbers rather than keeping a third field that could disagree with them. The
+// names read from the host's side: a microphone sends on the USB IN endpoint, a
+// speaker receives on the USB OUT endpoint. On the gadget's own ALSA card the
+// directions invert, because u_audio.c:644 gives p_chmask the playback
+// substream and c_chmask the capture substream.
+type AudioRole string
+
+const (
+	AudioMicrophone AudioRole = "microphone"
+	AudioSpeaker    AudioRole = "speaker"
+)
+
+func (r AudioRole) mask() string {
+	if r == AudioSpeaker {
+		return "c_chmask"
+	}
+	return "p_chmask"
+}
+
+// USBIn reports EPIN_EN(opts): the gadget sends audio to the host.
+func (a *AudioFunction) USBIn() bool { return a.PChannelMask != 0 }
+
+// USBOut reports EPOUT_EN(opts): the gadget receives audio from the host.
+func (a *AudioFunction) USBOut() bool { return a.CChannelMask != 0 }
+
+func (a *AudioFunction) Role() AudioRole {
+	if a.USBOut() {
+		return AudioSpeaker
+	}
+	return AudioMicrophone
+}
+
+// audioRoleOf reads the role a uac2 instance name declares. Validation then
+// requires the channel masks to agree with it, so the instance name, the
+// endpoint accounting and what the kernel binds can never diverge.
+func audioRoleOf(instance string) (AudioRole, bool) {
+	switch {
+	case microphonePattern.MatchString(instance):
+		return AudioMicrophone, true
+	case speakerPattern.MatchString(instance):
+		return AudioSpeaker, true
+	}
+	return "", false
+}
+
+// mediaSeries names the independent instance series a media function belongs to
+// and returns the index digit its instance carries.
+func mediaSeries(f Function) (string, string) {
+	if f.Kind == FunctionUVC {
+		if match := cameraPattern.FindStringSubmatch(f.Instance); match != nil {
+			return "uvc", match[1]
+		}
+		return "uvc", ""
+	}
+	if match := speakerPattern.FindStringSubmatch(f.Instance); match != nil {
+		return "uac2 speaker", match[1]
+	}
+	if match := microphonePattern.FindStringSubmatch(f.Instance); match != nil {
+		return "uac2 microphone", match[1]
+	}
+	return "uac2", ""
+}
+
 type OSDesc struct {
 	VendorCode string `json:"b_vendor_code"`
 	QwSign     string `json:"qw_sign"`
@@ -321,7 +388,10 @@ func (p *Profile) Validate() error {
 	var hid []Function
 	functionFS := false
 	mediaStarted := false
-	indices := map[FunctionKind]int{FunctionUVC: 0, FunctionUAC2: 0}
+	// Cameras, microphones and speakers are three independent series. A
+	// speaker shares f_uac2 with a microphone but not its numbering, so the
+	// counter is keyed by the series the instance names, not by the kind.
+	indices := map[string]int{}
 	for _, f := range p.Functions {
 		if err := f.validate(); err != nil {
 			return fmt.Errorf("function %s.%s: %w", f.Kind, f.Instance, err)
@@ -340,16 +410,12 @@ func (p *Profile) Validate() error {
 		functionFS = functionFS || f.Kind == FunctionFFS
 		if f.Kind == FunctionUVC || f.Kind == FunctionUAC2 {
 			mediaStarted = true
-			pattern := cameraPattern
-			if f.Kind == FunctionUAC2 {
-				pattern = microphonePattern
+			series, match := mediaSeries(f)
+			index, _ := strconv.Atoi(match)
+			if index != indices[series] {
+				return fmt.Errorf("%s instances must be contiguous from zero, got %s", series, f.Instance)
 			}
-			match := pattern.FindStringSubmatch(f.Instance)
-			index, _ := strconv.Atoi(match[1])
-			if index != indices[f.Kind] {
-				return fmt.Errorf("%s instances must be contiguous from zero, got %s", f.Kind, f.Instance)
-			}
-			indices[f.Kind]++
+			indices[series]++
 		}
 	}
 	if functionFS && mediaStarted {
@@ -492,10 +558,11 @@ func (f *Function) validate() error {
 		if f.Audio == nil || f.HID != nil || f.Net != nil || f.Storage != nil || f.FFS != nil || f.Video != nil {
 			return fmt.Errorf("expects exactly an audio payload")
 		}
-		if !microphonePattern.MatchString(f.Instance) {
+		role, ok := audioRoleOf(f.Instance)
+		if !ok {
 			return fmt.Errorf("unsupported uac2 instance %q", f.Instance)
 		}
-		return f.Audio.validate()
+		return f.Audio.validate(role)
 	default:
 		return fmt.Errorf("unknown kind")
 	}
@@ -618,7 +685,7 @@ func (f VideoFrame) validate() error {
 	return nil
 }
 
-func (a *AudioFunction) validate() error {
+func (a *AudioFunction) validate(role AudioRole) error {
 	if err := usbString("function name", a.FunctionName); err != nil || a.FunctionName == "" {
 		if err != nil {
 			return err
@@ -628,14 +695,28 @@ func (a *AudioFunction) validate() error {
 	if err := hostName(a.HostName); err != nil {
 		return err
 	}
-	if a.PChannelMask != 1 || a.PSampleRate != 48000 || a.PSampleSize != 2 {
-		return fmt.Errorf("microphone must expose mono 48000 Hz signed 16-bit USB IN")
+	switch {
+	case a.USBIn() && a.USBOut():
+		return fmt.Errorf("a uac2 instance carries one direction, but this %s declares both USB IN and USB OUT channels", role)
+	case !a.USBIn() && !a.USBOut():
+		return fmt.Errorf("this %s declares no USB endpoint: one of p_chmask, c_chmask must be non-zero", role)
+	case a.Role() != role:
+		return fmt.Errorf("a %s instance must carry the %s channel mask, not %s", role, role.mask(), a.Role().mask())
 	}
-	if a.CChannelMask != 0 {
-		return fmt.Errorf("microphone cannot expose USB OUT channels")
-	}
-	if a.CSampleRate != 48000 || a.CSampleSize != 2 {
-		return fmt.Errorf("disabled USB OUT must retain 48000 Hz signed 16-bit defaults")
+	if role == AudioSpeaker {
+		if a.CChannelMask != 1 || a.CSampleRate != 48000 || a.CSampleSize != 2 {
+			return fmt.Errorf("speaker must expose mono 48000 Hz signed 16-bit USB OUT")
+		}
+		if a.PSampleRate != 48000 || a.PSampleSize != 2 {
+			return fmt.Errorf("disabled USB IN must retain 48000 Hz signed 16-bit defaults")
+		}
+	} else {
+		if a.PChannelMask != 1 || a.PSampleRate != 48000 || a.PSampleSize != 2 {
+			return fmt.Errorf("microphone must expose mono 48000 Hz signed 16-bit USB IN")
+		}
+		if a.CSampleRate != 48000 || a.CSampleSize != 2 {
+			return fmt.Errorf("disabled USB OUT must retain 48000 Hz signed 16-bit defaults")
+		}
 	}
 	if a.RequestNumber < 2 || a.RequestNumber > 8 {
 		return fmt.Errorf("request number %d, want 2 through 8", a.RequestNumber)

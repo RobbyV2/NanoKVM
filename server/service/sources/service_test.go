@@ -30,17 +30,22 @@ type recordingSlotManager struct {
 	registry    *Registry
 	cameras     []string
 	microphones []string
+	speakers    []string
 }
 
-func (m *recordingSlotManager) SetMediaSlots(_ context.Context, cameras, microphones []string) error {
+func (m *recordingSlotManager) SetMediaSlots(_ context.Context, cameras, microphones, speakers []string) error {
 	m.cameras = append([]string(nil), cameras...)
 	m.microphones = append([]string(nil), microphones...)
+	m.speakers = append([]string(nil), speakers...)
 	var slots []Slot
 	for index, label := range cameras {
 		slots = append(slots, Slot{ID: fmt.Sprintf("uvc.cam%d", index), Kind: KindCamera, Label: label})
 	}
 	for index, label := range microphones {
 		slots = append(slots, Slot{ID: fmt.Sprintf("uac2.mic%d", index), Kind: KindMicrophone, Label: label})
+	}
+	for index, label := range speakers {
+		slots = append(slots, Slot{ID: fmt.Sprintf("uac2.spk%d", index), Kind: KindSpeaker, Label: label})
 	}
 	return m.registry.SyncSlots(slots)
 }
