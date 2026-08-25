@@ -1,7 +1,10 @@
 import { http } from '@/lib/http.ts';
 import { getBaseUrl } from '@/lib/service.ts';
 
-export type SourceKind = 'camera' | 'microphone' | 'usb_device';
+// A speaker runs the other way from the rest: the target host plays into the
+// gadget and the browser renders what arrives. It is still a sink, because the
+// slot is still the thing a browser claims.
+export type SourceKind = 'camera' | 'microphone' | 'speaker' | 'usb_device';
 export type BindingState = 'claimed' | 'streaming' | 'orphaned' | 'suspended';
 export type OutputState = 'idle' | 'source' | 'black' | 'silence';
 

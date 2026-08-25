@@ -376,8 +376,11 @@ static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int ca
 	int (*poll_fd)(void *) = dlsym(library, "pcm_get_poll_fd");
 	if (!open_pcm || !is_ready || !write_pcm || !wait_pcm || !prepare_pcm || !stop_pcm || !close_pcm) { dlclose(library); errno = ENOSYS; return NULL; }
 	if (capture && (!read_pcm || !start_pcm || !poll_fd)) { dlclose(library); errno = ENOSYS; return NULL; }
+	// A capture ring overruns when the reader falls behind, and the reader here
+	// is a 20 ms Go ticker: four periods is 80 ms of slack, which ordinary
+	// scheduling jitter eats. Eight buys 160 ms and costs 3 KiB.
 	struct nk_pcm_config config = { .channels = 1, .rate = 48000, .period_size = 960,
-		.period_count = 4, .format = NK_PCM_S16_LE, .avail_min = 960 };
+		.period_count = capture ? 8 : 4, .format = NK_PCM_S16_LE, .avail_min = 960 };
 	void *handle = open_pcm(card, device, capture ? NK_PCM_IN : NK_PCM_OUT, &config);
 	if (!handle || !is_ready(handle)) { if (handle) close_pcm(handle); dlclose(library); errno = ENODEV; return NULL; }
 	struct nk_pcm *pcm = calloc(1, sizeof(*pcm));

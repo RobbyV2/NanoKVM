@@ -291,16 +291,21 @@ const pl = {
     devices: {
       title: 'Urządzenia',
       stale: 'Stan urządzeń na żywo jest niedostępny. Trwa ponowne łączenie.',
-      empty: 'Nie skonfigurowano gniazd kamery ani mikrofonu. Dodaj je w Ustawieniach, Urządzenie.',
+      empty:
+        'Nie skonfigurowano gniazd kamery, mikrofonu ani głośnika. Dodaj je w Ustawieniach, Urządzenie.',
       available: 'Dostępny',
       waiting: 'Host czeka na źródło',
       hostOpen: 'Host otwarty',
       hostIdle: 'Host bezczynny',
+      hostPlaying: 'Host odtwarza dźwięk',
+      hostSending: 'Host odtwarza',
       sending: 'Nadawanie z tej przeglądarki',
+      receiving: 'Odtwarzanie w tej przeglądarce',
       black: 'Czarny obraz',
       silence: 'Cyfrowa cisza',
       resuming: 'Oczekiwanie na wznowienie',
       stop: 'Zatrzymaj udostępnianie',
+      stopListening: 'Zatrzymaj słuchanie',
       disconnect: 'Odłącz',
       takeover: 'Przejmij',
       refused: 'Używane przez {{owner}} ze źródła {{source}}',
@@ -315,6 +320,7 @@ const pl = {
       share: {
         camera: 'Udostępnij kamerę',
         microphone: 'Udostępnij mikrofon',
+        speaker: 'Słuchaj',
         usbDevice: 'Udostępnij USB'
       },
       permission: {
@@ -326,7 +332,8 @@ const pl = {
       capture: {
         unsupported: 'Ta przeglądarka nie potrafi przechwycić dźwięku ani obrazu',
         camera: 'Ta przeglądarka nie potrafi zakodować klatek z kamery',
-        microphone: 'Ta przeglądarka nie potrafi przetworzyć dźwięku z mikrofonu'
+        microphone: 'Ta przeglądarka nie potrafi przetworzyć dźwięku z mikrofonu',
+        speaker: 'Ta przeglądarka nie potrafi odtworzyć dźwięku'
       },
       mic: {
         mute: 'Wycisz',
@@ -776,17 +783,20 @@ const pl = {
         rebindNotice:
           'Przełączenie tego przełącznika ponownie wylicza urządzenie USB, więc host docelowy na chwilę traci urządzenia wirtualne i sieć USB.',
         media: {
-          title: 'Gniazda kamery i mikrofonu',
-          desc: 'Zadeklaruj urządzenia multimedialne, które przeglądarki mogą zająć. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB. Zapis powoduje ponowne wyliczenie urządzenia i rozłączenie podłączonych przeglądarek.',
+          title: 'Gniazda kamery, mikrofonu i głośnika',
+          desc: 'Zadeklaruj urządzenia multimedialne, które widzi komputer docelowy. Budżet punktów końcowych jest sprawdzany przy zastosowaniu profilu USB. Zapis powoduje ponowne wyliczenie urządzenia i rozłączenie podłączonych przeglądarek.',
           cameras: 'Kamery',
           microphones: 'Mikrofony',
+          speakers: 'Głośniki',
           name: 'Nazwa',
           namePlaceholder: 'Widoczna na komputerze docelowym',
           addCamera: 'Dodaj kamerę',
           addMicrophone: 'Dodaj mikrofon',
+          addSpeaker: 'Dodaj głośnik',
           remove: 'Usuń',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Głośnik {{index}}',
           nameRequired: 'Każde gniazdo wymaga nazwy.',
           budgetHint:
             'Sześć punktów końcowych USB IN to sztywny limit sprzętowy. Umieść klawiaturę, mysz i wskaźnik bezwzględny na jednym interfejsie HID w sekcji Prezentacja USB albo wyłącz tutaj dysk wirtualny lub kartę sieciową USB w sekcji Sieć.',
@@ -795,7 +805,7 @@ const pl = {
           save: 'Zapisz gniazda',
           disconnect: 'Rozłącz',
           disconnectAll: 'Rozłącz wszystkie źródła',
-          limit: 'Gniazda kamery i mikrofonu mogą łącznie wynosić najwyżej osiem.',
+          limit: 'Gniazda kamery, mikrofonu i głośnika mogą łącznie wynosić najwyżej osiem.',
           failed: 'Nie udało się zaktualizować gniazd multimedialnych.'
         },
         reboot: 'Uruchom ponownie',

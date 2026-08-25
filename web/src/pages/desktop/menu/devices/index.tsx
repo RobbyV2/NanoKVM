@@ -2,7 +2,15 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth.ts';
 import { Alert, Button, Divider, Select, Tooltip } from 'antd';
 import clsx from 'clsx';
-import { CameraIcon, MicIcon, MicOffIcon, RadioTowerIcon, UsbIcon } from 'lucide-react';
+import {
+  CameraIcon,
+  MicIcon,
+  MicOffIcon,
+  RadioTowerIcon,
+  UsbIcon,
+  Volume2Icon,
+  VolumeXIcon
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { SourceSink } from '@/api/sources.ts';
@@ -123,11 +131,15 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
   const busy = state.busy.has(sink.id);
   const demand = sink.demand.streaming;
   const active = state.active.has(sink.id);
-  const permission = sink.kind === 'usb_device' ? undefined : state.permissions[sink.kind];
   const isUSB = sink.kind === 'usb_device';
+  // A speaker is rendered, not captured: no getUserMedia, so no permission and
+  // no secure-context requirement.
+  const isSpeaker = sink.kind === 'speaker';
+  const permission =
+    isUSB || isSpeaker ? undefined : state.permissions[sink.kind as 'camera' | 'microphone'];
   // Outside a secure context the browser reports the camera and microphone as
   // denied even though nothing was blocked in site settings.
-  const insecure = !isUSB && window.isSecureContext === false;
+  const insecure = !isUSB && !isSpeaker && window.isSecureContext === false;
   const refusal = state.refusals[sink.id];
   const revoked = state.revoked[sink.id];
   const selectedID = selected || options[0]?.deviceID;
@@ -135,9 +147,9 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
     if (sink.binding) {
       return `${sink.binding.owner} · ${sink.binding.stream_label || sink.binding.source_label}`;
     }
-    if (demand) return t('devices.waiting');
+    if (demand) return t(isSpeaker ? 'devices.hostPlaying' : 'devices.waiting');
     return t('devices.available');
-  }, [demand, sink.binding, t]);
+  }, [demand, isSpeaker, sink.binding, t]);
 
   return (
     <div className="rounded-md border border-neutral-700/70 bg-neutral-800/60 p-3">
@@ -147,6 +159,8 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
             <CameraIcon size={17} />
           ) : sink.kind === 'microphone' ? (
             <MicIcon size={17} />
+          ) : isSpeaker ? (
+            <Volume2Icon size={17} />
           ) : (
             <UsbIcon size={17} />
           )}
@@ -160,7 +174,9 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
             <div
               className={clsx('shrink-0 text-xs', demand ? 'text-emerald-400' : 'text-neutral-500')}
             >
-              {demand ? t('devices.hostOpen') : t('devices.hostIdle')}
+              {demand
+                ? t(isSpeaker ? 'devices.hostSending' : 'devices.hostOpen')
+                : t('devices.hostIdle')}
             </div>
           </div>
 
@@ -174,7 +190,7 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
             <div className="text-xs text-neutral-500">{t('devices.permission.prompt')}</div>
           ) : null}
 
-          {!sink.binding && options.length > 0 && (
+          {!sink.binding && !isSpeaker && options.length > 0 && (
             <Select
               size="small"
               className="w-full"
@@ -187,7 +203,7 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-neutral-500">
               {active
-                ? t('devices.sending')
+                ? t(isSpeaker ? 'devices.receiving' : 'devices.sending')
                 : sink.output === 'black'
                   ? t('devices.black')
                   : sink.output === 'silence'
@@ -197,7 +213,7 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
                       : ''}
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              {sink.kind === 'microphone' && active && (
+              {(sink.kind === 'microphone' || isSpeaker) && active && (
                 <Tooltip
                   title={state.muted.has(sink.id) ? t('devices.mic.unmute') : t('devices.mic.mute')}
                 >
@@ -205,7 +221,17 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
                     size="small"
                     type="text"
                     icon={
-                      state.muted.has(sink.id) ? <MicOffIcon size={15} /> : <MicIcon size={15} />
+                      state.muted.has(sink.id) ? (
+                        isSpeaker ? (
+                          <VolumeXIcon size={15} />
+                        ) : (
+                          <MicOffIcon size={15} />
+                        )
+                      ) : isSpeaker ? (
+                        <Volume2Icon size={15} />
+                      ) : (
+                        <MicIcon size={15} />
+                      )
                     }
                     className={state.muted.has(sink.id) ? 'text-amber-400' : undefined}
                     onClick={() => state.setMuted(sink.id, !state.muted.has(sink.id))}
@@ -224,7 +250,9 @@ const SinkRow = ({ sink, username, isAdmin, selected, setSelected }: SinkRowProp
                 </Button>
               ) : canRelease ? (
                 <Button danger size="small" loading={busy} onClick={() => state.release(sink.id)}>
-                  {sameOwner ? t('devices.stop') : t('devices.disconnect')}
+                  {sameOwner
+                    ? t(isSpeaker ? 'devices.stopListening' : 'devices.stop')
+                    : t('devices.disconnect')}
                 </Button>
               ) : null}
             </div>

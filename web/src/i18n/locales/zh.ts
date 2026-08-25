@@ -280,16 +280,20 @@ const zh = {
     devices: {
       title: '设备',
       stale: '无法获取设备的实时状态，正在重新连接。',
-      empty: '尚未配置摄像头或麦克风插槽。请在“设置 - 设备”中添加。',
+      empty: '尚未配置摄像头、麦克风或扬声器插槽。请在“设置 - 设备”中添加。',
       available: '可用',
       waiting: '主机正在等待来源',
       hostOpen: '主机已开启',
       hostIdle: '主机空闲',
+      hostPlaying: '主机正在播放音频',
+      hostSending: '主机播放中',
       sending: '正从本浏览器发送',
+      receiving: '正在本浏览器播放',
       black: '黑屏画面',
       silence: '数字静音',
       resuming: '等待恢复',
       stop: '停止共享',
+      stopListening: '停止收听',
       disconnect: '断开连接',
       takeover: '接管',
       refused: '{{owner}} 正通过 {{source}} 使用',
@@ -304,6 +308,7 @@ const zh = {
       share: {
         camera: '共享摄像头',
         microphone: '共享麦克风',
+        speaker: '收听',
         usbDevice: '共享 USB'
       },
       permission: {
@@ -314,7 +319,8 @@ const zh = {
       capture: {
         unsupported: '此浏览器无法采集音频或视频',
         camera: '此浏览器无法编码摄像头画面',
-        microphone: '此浏览器无法处理麦克风音频'
+        microphone: '此浏览器无法处理麦克风音频',
+        speaker: '此浏览器无法播放音频'
       },
       mic: {
         mute: '静音',
@@ -734,17 +740,20 @@ const zh = {
         diskDesc: '在远程主机中挂载虚拟U盘',
         rebindNotice: '切换该开关会让 USB 设备重新枚举，目标主机会短暂失去虚拟设备和 USB 网络。',
         media: {
-          title: '摄像头与麦克风插槽',
-          desc: '声明浏览器可以占用的媒体设备。端点预算会在应用 USB 配置文件时检查。 保存会重新枚举设备，并断开已连接的浏览器。',
+          title: '摄像头、麦克风与扬声器插槽',
+          desc: '声明目标主机看到的媒体设备。端点预算会在应用 USB 配置文件时检查。 保存会重新枚举设备，并断开已连接的浏览器。',
           cameras: '摄像头',
           microphones: '麦克风',
+          speakers: '扬声器',
           name: '名称',
           namePlaceholder: '显示在目标主机上',
           addCamera: '添加摄像头',
           addMicrophone: '添加麦克风',
+          addSpeaker: '添加扬声器',
           remove: '移除',
           cameraDefault: '摄像头 {{index}}',
           microphoneDefault: '麦克风 {{index}}',
+          speakerDefault: '扬声器 {{index}}',
           nameRequired: '每个插槽都需要名称。',
           budgetHint:
             '六个 USB IN 端点是固定的硬件上限。请在“USB 呈现”中把键盘、鼠标和绝对定位放到同一个 HID 接口上，或在此关闭虚拟磁盘，或在“网络”中关闭 USB 网卡。',
@@ -752,7 +761,7 @@ const zh = {
           save: '保存插槽',
           disconnect: '断开',
           disconnectAll: '断开所有来源',
-          limit: '摄像头与麦克风插槽合计不得超过八个。',
+          limit: '摄像头、麦克风与扬声器插槽合计不得超过八个。',
           failed: '无法更新媒体插槽。'
         },
         reboot: '重新启动',

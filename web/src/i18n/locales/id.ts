@@ -291,16 +291,20 @@ const id = {
       title: 'Perangkat',
       stale: 'Status langsung perangkat tidak tersedia. Menyambung ulang.',
       empty:
-        'Belum ada slot kamera atau mikrofon yang dikonfigurasi. Tambahkan di Pengaturan, Perangkat.',
+        'Belum ada slot kamera, mikrofon, atau pengeras suara yang dikonfigurasi. Tambahkan di Pengaturan, Perangkat.',
       available: 'Tersedia',
       waiting: 'Host menunggu sebuah sumber',
       hostOpen: 'Host terbuka',
       hostIdle: 'Host menganggur',
+      hostPlaying: 'Host sedang memutar audio',
+      hostSending: 'Host memutar',
       sending: 'Mengirim dari peramban ini',
+      receiving: 'Diputar di peramban ini',
       black: 'Video hitam',
       silence: 'Senyap digital',
       resuming: 'Menunggu untuk dilanjutkan',
       stop: 'Hentikan berbagi',
+      stopListening: 'Hentikan mendengarkan',
       disconnect: 'Putuskan',
       takeover: 'Ambil alih',
       refused: 'Sedang dipakai oleh {{owner}} dari {{source}}',
@@ -315,6 +319,7 @@ const id = {
       share: {
         camera: 'Bagikan kamera',
         microphone: 'Bagikan mikrofon',
+        speaker: 'Dengarkan',
         usbDevice: 'Bagikan USB'
       },
       permission: {
@@ -326,7 +331,8 @@ const id = {
       capture: {
         unsupported: 'Peramban ini tidak dapat merekam audio atau video',
         camera: 'Peramban ini tidak dapat mengodekan bingkai kamera',
-        microphone: 'Peramban ini tidak dapat memproses audio mikrofon'
+        microphone: 'Peramban ini tidak dapat memproses audio mikrofon',
+        speaker: 'Peramban ini tidak dapat memutar audio'
       },
       mic: {
         mute: 'Bisukan',
@@ -776,17 +782,20 @@ const id = {
         rebindNotice:
           'Mengubah sakelar ini akan menghitung ulang perangkat USB, sehingga target sejenak kehilangan perangkat virtual dan jaringan USB-nya.',
         media: {
-          title: 'Slot kamera dan mikrofon',
-          desc: 'Tetapkan perangkat media yang boleh diisi peramban. Anggaran endpoint diperiksa saat profil USB diterapkan. Menyimpan akan menghitung ulang perangkat dan memutuskan peramban yang terhubung.',
+          title: 'Slot kamera, mikrofon, dan pengeras suara',
+          desc: 'Tetapkan perangkat media yang dilihat host tujuan. Anggaran endpoint diperiksa saat profil USB diterapkan. Menyimpan akan menghitung ulang perangkat dan memutuskan peramban yang terhubung.',
           cameras: 'Kamera',
           microphones: 'Mikrofon',
+          speakers: 'Pengeras suara',
           name: 'Nama',
           namePlaceholder: 'Ditampilkan pada host tujuan',
           addCamera: 'Tambah kamera',
           addMicrophone: 'Tambah mikrofon',
+          addSpeaker: 'Tambah pengeras suara',
           remove: 'Hapus',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Pengeras suara {{index}}',
           nameRequired: 'Setiap slot memerlukan nama.',
           budgetHint:
             'Enam endpoint USB IN adalah batas perangkat keras yang tetap. Satukan papan ketik, tetikus, dan penunjuk absolut pada satu antarmuka HID di Presentasi USB, atau matikan disk virtual di sini atau adaptor jaringan USB di bagian Jaringan.',
@@ -795,7 +804,7 @@ const id = {
           save: 'Simpan slot',
           disconnect: 'Putuskan',
           disconnectAll: 'Putuskan semua sumber',
-          limit: 'Slot kamera dan mikrofon totalnya paling banyak delapan.',
+          limit: 'Slot kamera, mikrofon, dan pengeras suara totalnya paling banyak delapan.',
           failed: 'Slot media tidak dapat diperbarui.'
         },
         reboot: 'Mulai ulang',

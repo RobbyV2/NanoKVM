@@ -292,16 +292,20 @@ const ja = {
       title: 'デバイス',
       stale: 'デバイスのライブ状態を取得できません。再接続しています。',
       empty:
-        'カメラまたはマイクのスロットが設定されていません。「設定 - デバイス」で追加してください。',
+        'カメラ、マイクまたはスピーカーのスロットが設定されていません。「設定 - デバイス」で追加してください。',
       available: '利用可能',
       waiting: 'ホストがソースを待っています',
       hostOpen: 'ホスト受信中',
       hostIdle: 'ホスト待機中',
+      hostPlaying: 'ホストが音声を再生しています',
+      hostSending: 'ホスト再生中',
       sending: 'このブラウザーから送信中',
+      receiving: 'このブラウザーで再生中',
       black: '黒画面',
       silence: 'デジタル無音',
       resuming: '再開待ち',
       stop: '共有を停止',
+      stopListening: '再生を停止',
       disconnect: '切断',
       takeover: '引き継ぐ',
       refused: '{{source}} の {{owner}} が使用中',
@@ -316,6 +320,7 @@ const ja = {
       share: {
         camera: 'カメラを共有',
         microphone: 'マイクを共有',
+        speaker: '音声を再生',
         usbDevice: 'USB を共有'
       },
       permission: {
@@ -327,7 +332,8 @@ const ja = {
       capture: {
         unsupported: 'このブラウザーは音声も映像も取り込めません',
         camera: 'このブラウザーはカメラ映像をエンコードできません',
-        microphone: 'このブラウザーはマイクの音声を処理できません'
+        microphone: 'このブラウザーはマイクの音声を処理できません',
+        speaker: 'このブラウザーは音声を再生できません'
       },
       mic: {
         mute: 'ミュート',
@@ -773,17 +779,20 @@ const ja = {
         rebindNotice:
           'このスイッチを切り替えると USB デバイスは再列挙され、ターゲットは仮想デバイスと USB ネットワークを一時的に失います。',
         media: {
-          title: 'カメラとマイクのスロット',
-          desc: 'ブラウザーが使えるメディアデバイスを宣言します。エンドポイントの余裕は USB プロファイルの適用時に確認されます。 保存するとデバイスが再列挙され、接続中のブラウザーは切断されます。',
+          title: 'カメラ・マイク・スピーカーのスロット',
+          desc: '接続先のホストに見えるメディアデバイスを宣言します。エンドポイントの余裕は USB プロファイルの適用時に確認されます。 保存するとデバイスが再列挙され、接続中のブラウザーは切断されます。',
           cameras: 'カメラ',
           microphones: 'マイク',
+          speakers: 'スピーカー',
           name: '名前',
           namePlaceholder: '接続先のホストに表示されます',
           addCamera: 'カメラを追加',
           addMicrophone: 'マイクを追加',
+          addSpeaker: 'スピーカーを追加',
           remove: '削除',
           cameraDefault: 'カメラ {{index}}',
           microphoneDefault: 'マイク {{index}}',
+          speakerDefault: 'スピーカー {{index}}',
           nameRequired: 'すべてのスロットに名前が必要です。',
           budgetHint:
             '6 つの USB IN エンドポイントは固定のハードウェア上限です。「USB プレゼンテーション」でキーボード・マウス・絶対座標を 1 つの HID インターフェイスにまとめるか、ここで仮想ディスクを、または「ネットワーク」で USB ネットワークアダプターをオフにしてください。',
@@ -792,7 +801,7 @@ const ja = {
           save: 'スロットを保存',
           disconnect: '切断',
           disconnectAll: 'すべてのソースを切断',
-          limit: 'カメラとマイクのスロットは合計 8 個以下にしてください。',
+          limit: 'カメラ、マイク、スピーカーのスロットは合計 8 個以下にしてください。',
           failed: 'メディアスロットを更新できませんでした。'
         },
         reboot: '再起動',

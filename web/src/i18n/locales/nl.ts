@@ -293,16 +293,20 @@ const nl = {
       title: 'Apparaten',
       stale: 'De live status van de apparaten is niet beschikbaar. Bezig met opnieuw verbinden.',
       empty:
-        'Er zijn geen camera- of microfoonplaatsen ingesteld. Voeg er een toe bij Instellingen, Apparaat.',
+        'Er zijn geen camera-, microfoon- of luidsprekerplaatsen ingesteld. Voeg er een toe bij Instellingen, Apparaat.',
       available: 'Beschikbaar',
       waiting: 'De host wacht op een bron',
       hostOpen: 'Host open',
       hostIdle: 'Host inactief',
+      hostPlaying: 'De host speelt audio af',
+      hostSending: 'Host speelt af',
       sending: 'Verzendt vanuit deze browser',
+      receiving: 'Afspelen in deze browser',
       black: 'Zwart beeld',
       silence: 'Digitale stilte',
       resuming: 'Wacht op hervatten',
       stop: 'Delen stoppen',
+      stopListening: 'Luisteren stoppen',
       disconnect: 'Loskoppelen',
       takeover: 'Overnemen',
       refused: 'In gebruik door {{owner}} vanaf {{source}}',
@@ -317,6 +321,7 @@ const nl = {
       share: {
         camera: 'Camera delen',
         microphone: 'Microfoon delen',
+        speaker: 'Luisteren',
         usbDevice: 'USB delen'
       },
       permission: {
@@ -328,7 +333,8 @@ const nl = {
       capture: {
         unsupported: 'Deze browser kan geen audio of video opnemen',
         camera: 'Deze browser kan geen camerabeelden coderen',
-        microphone: 'Deze browser kan geen microfoonaudio verwerken'
+        microphone: 'Deze browser kan geen microfoonaudio verwerken',
+        speaker: 'Deze browser kan geen audio afspelen'
       },
       mic: {
         mute: 'Dempen',
@@ -780,17 +786,20 @@ const nl = {
         rebindNotice:
           'Deze schakelaar omzetten laat het USB-apparaat opnieuw opsommen, waardoor het doel kort zijn virtuele apparaten en zijn USB-netwerk kwijt is.',
         media: {
-          title: 'Camera- en microfoonplaatsen',
-          desc: 'Geef aan welke media-apparaten browsers mogen invullen. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast. Bij opslaan wordt het apparaat opnieuw opgesomd en worden verbonden browsers verbroken.',
+          title: 'Camera-, microfoon- en luidsprekerplaatsen',
+          desc: 'Geef aan welke media-apparaten de doelcomputer ziet. Het endpointbudget wordt gecontroleerd zodra het USB-profiel wordt toegepast. Bij opslaan wordt het apparaat opnieuw opgesomd en worden verbonden browsers verbroken.',
           cameras: "Camera's",
           microphones: 'Microfoons',
+          speakers: 'Luidsprekers',
           name: 'Naam',
           namePlaceholder: 'Wordt op de doelcomputer getoond',
           addCamera: 'Camera toevoegen',
           addMicrophone: 'Microfoon toevoegen',
+          addSpeaker: 'Luidspreker toevoegen',
           remove: 'Verwijderen',
           cameraDefault: 'Camera {{index}}',
           microphoneDefault: 'Microfoon {{index}}',
+          speakerDefault: 'Luidspreker {{index}}',
           nameRequired: 'Elke plaats heeft een naam nodig.',
           budgetHint:
             'De zes USB-IN-endpoints zijn een vaste hardwaregrens. Zet toetsenbord, muis en absolute aanwijzer op één HID-interface onder USB-presentatie, of schakel hier de virtuele schijf uit of onder Netwerk de USB-netwerkadapter.',
@@ -799,7 +808,7 @@ const nl = {
           save: 'Plaatsen opslaan',
           disconnect: 'Verbreken',
           disconnectAll: 'Alle bronnen verbreken',
-          limit: 'Camera- en microfoonplaatsen mogen samen niet meer dan acht zijn.',
+          limit: 'Camera-, microfoon- en luidsprekerplaatsen mogen samen niet meer dan acht zijn.',
           failed: 'De mediaplaatsen konden niet worden bijgewerkt.'
         },
         reboot: 'Opnieuw opstarten',

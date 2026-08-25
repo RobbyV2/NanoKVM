@@ -280,16 +280,20 @@ const zh_tw = {
     devices: {
       title: '設備',
       stale: '無法取得設備的即時狀態，正在重新連線。',
-      empty: '尚未設定攝影機或麥克風插槽。請在「設定 - 裝置」中新增。',
+      empty: '尚未設定攝影機、麥克風或喇叭插槽。請在「設定 - 裝置」中新增。',
       available: '可用',
       waiting: '主機正在等待來源',
       hostOpen: '主機已開啟',
       hostIdle: '主機閒置',
+      hostPlaying: '主機正在播放音訊',
+      hostSending: '主機播放中',
       sending: '正從本瀏覽器傳送',
+      receiving: '正在本瀏覽器播放',
       black: '黑畫面',
       silence: '數位靜音',
       resuming: '等待恢復',
       stop: '停止分享',
+      stopListening: '停止聆聽',
       disconnect: '中斷連線',
       takeover: '接管',
       refused: '{{owner}} 正透過 {{source}} 使用',
@@ -304,6 +308,7 @@ const zh_tw = {
       share: {
         camera: '分享攝影機',
         microphone: '分享麥克風',
+        speaker: '聆聽',
         usbDevice: '分享 USB'
       },
       permission: {
@@ -315,7 +320,8 @@ const zh_tw = {
       capture: {
         unsupported: '此瀏覽器無法擷取音訊或影像',
         camera: '此瀏覽器無法編碼攝影機畫面',
-        microphone: '此瀏覽器無法處理麥克風音訊'
+        microphone: '此瀏覽器無法處理麥克風音訊',
+        speaker: '此瀏覽器無法播放音訊'
       },
       mic: {
         mute: '靜音',
@@ -735,17 +741,20 @@ const zh_tw = {
         diskDesc: '在遠端主機上連接虛擬隨身碟',
         rebindNotice: '切換此開關會讓 USB 裝置重新列舉，目標主機會短暫失去虛擬裝置與 USB 網路。',
         media: {
-          title: '攝影機與麥克風插槽',
-          desc: '宣告瀏覽器可以佔用的媒體裝置。端點預算會在套用 USB 設定檔時檢查。 儲存會重新列舉裝置，並中斷已連線的瀏覽器。',
+          title: '攝影機、麥克風與喇叭插槽',
+          desc: '宣告目標主機看到的媒體裝置。端點預算會在套用 USB 設定檔時檢查。 儲存會重新列舉裝置，並中斷已連線的瀏覽器。',
           cameras: '攝影機',
           microphones: '麥克風',
+          speakers: '喇叭',
           name: '名稱',
           namePlaceholder: '顯示在目標主機上',
           addCamera: '新增攝影機',
           addMicrophone: '新增麥克風',
+          addSpeaker: '新增喇叭',
           remove: '移除',
           cameraDefault: '攝影機 {{index}}',
           microphoneDefault: '麥克風 {{index}}',
+          speakerDefault: '喇叭 {{index}}',
           nameRequired: '每個插槽都需要名稱。',
           budgetHint:
             '六個 USB IN 端點是固定的硬體上限。請在「USB 呈現」中把鍵盤、滑鼠與絕對定位放到同一個 HID 介面，或在此關閉虛擬磁碟，或在「網路」中關閉 USB 網卡。',
@@ -753,7 +762,7 @@ const zh_tw = {
           save: '儲存插槽',
           disconnect: '中斷連線',
           disconnectAll: '中斷所有來源',
-          limit: '攝影機與麥克風插槽合計不得超過八個。',
+          limit: '攝影機、麥克風與喇叭插槽合計不得超過八個。',
           failed: '無法更新媒體插槽。'
         },
         reboot: '重新啟動',

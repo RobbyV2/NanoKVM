@@ -288,16 +288,20 @@ const se = {
       title: 'Enheter',
       stale: 'Enheternas livestatus är inte tillgänglig. Återansluter.',
       empty:
-        'Inga kamera- eller mikrofonplatser är konfigurerade. Lägg till en under Inställningar, Enhet.',
+        'Inga kamera-, mikrofon- eller högtalarplatser är konfigurerade. Lägg till en under Inställningar, Enhet.',
       available: 'Tillgänglig',
       waiting: 'Värden väntar på en källa',
       hostOpen: 'Värden öppen',
       hostIdle: 'Värden inaktiv',
+      hostPlaying: 'Värden spelar upp ljud',
+      hostSending: 'Värden spelar',
       sending: 'Sänder från den här webbläsaren',
+      receiving: 'Spelas upp i den här webbläsaren',
       black: 'Svart video',
       silence: 'Digital tystnad',
       resuming: 'Väntar på att återupptas',
       stop: 'Sluta dela',
+      stopListening: 'Sluta lyssna',
       disconnect: 'Koppla från',
       takeover: 'Ta över',
       refused: 'Används av {{owner}} från {{source}}',
@@ -312,6 +316,7 @@ const se = {
       share: {
         camera: 'Dela kamera',
         microphone: 'Dela mikrofon',
+        speaker: 'Lyssna',
         usbDevice: 'Dela USB'
       },
       permission: {
@@ -323,7 +328,8 @@ const se = {
       capture: {
         unsupported: 'Den här webbläsaren kan inte spela in ljud eller video',
         camera: 'Den här webbläsaren kan inte koda kamerabilder',
-        microphone: 'Den här webbläsaren kan inte bearbeta mikrofonljud'
+        microphone: 'Den här webbläsaren kan inte bearbeta mikrofonljud',
+        speaker: 'Den här webbläsaren kan inte spela upp ljud'
       },
       mic: {
         mute: 'Stäng av ljudet',
@@ -774,17 +780,20 @@ const se = {
         rebindNotice:
           'Att slå om den här brytaren räknar upp USB-enheten på nytt, så målet förlorar kort sina virtuella enheter och sitt USB-nätverk.',
         media: {
-          title: 'Platser för kamera och mikrofon',
-          desc: 'Ange vilka medieenheter webbläsare får fylla. Endpoint-budgeten kontrolleras när USB-profilen tillämpas. Att spara räknar upp enheten på nytt och kopplar från anslutna webbläsare.',
+          title: 'Platser för kamera, mikrofon och högtalare',
+          desc: 'Ange vilka medieenheter måldatorn ser. Endpoint-budgeten kontrolleras när USB-profilen tillämpas. Att spara räknar upp enheten på nytt och kopplar från anslutna webbläsare.',
           cameras: 'Kameror',
           microphones: 'Mikrofoner',
+          speakers: 'Högtalare',
           name: 'Namn',
           namePlaceholder: 'Visas på måldatorn',
           addCamera: 'Lägg till kamera',
           addMicrophone: 'Lägg till mikrofon',
+          addSpeaker: 'Lägg till högtalare',
           remove: 'Ta bort',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Högtalare {{index}}',
           nameRequired: 'Varje plats behöver ett namn.',
           budgetHint:
             'De sex USB IN-slutpunkterna är en fast hårdvarugräns. Samla tangentbord, mus och absolut pekdon på ett enda HID-gränssnitt under USB-presentation, eller stäng av den virtuella disken här eller USB-nätverkskortet under Nätverk.',
@@ -793,7 +802,7 @@ const se = {
           save: 'Spara platser',
           disconnect: 'Koppla från',
           disconnectAll: 'Koppla från alla källor',
-          limit: 'Platser för kamera och mikrofon får sammanlagt vara högst åtta.',
+          limit: 'Platser för kamera, mikrofon och högtalare får sammanlagt vara högst åtta.',
           failed: 'Medieplatserna kunde inte uppdateras.'
         },
         reboot: 'Starta om',

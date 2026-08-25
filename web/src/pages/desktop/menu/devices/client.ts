@@ -10,10 +10,12 @@ import type {
 import { notifyAuthExpired } from '../../../../lib/auth-events.ts';
 import { getBaseUrl } from '../../../../lib/service.ts';
 import {
+  decodeMediaFrame,
   encodeMediaFrame,
   mediaTimestampUS,
   type FrameAck,
   type FrameError,
+  type MediaFrame,
   type MediaFrameKind
 } from './transport.ts';
 
@@ -59,6 +61,9 @@ type ClientCallbacks = {
   onRevoked: (sinkID: string, reason: string) => void;
   onSnapshot: (snapshot: SourcesSnapshot) => void;
   onBinary?: (data: ArrayBuffer) => Promise<ArrayBuffer | undefined>;
+  // A speaker slot sends audio the other way, so the same socket that carries
+  // browser frames out carries gadget frames in.
+  onAudio?: (frame: MediaFrame) => void;
 };
 
 const maxBufferedBytes = (2 << 20) + 256;
@@ -242,6 +247,14 @@ export class BrowserSourceClient {
 
   private async onMessage(event: MessageEvent) {
     if (event.data instanceof ArrayBuffer) {
+      // Two binary protocols share this socket. NKMF is media, and for a
+      // speaker slot it arrives rather than leaves; everything else is a
+      // WebUSB transfer for the relay.
+      const audio = decodeMediaFrame(event.data);
+      if (audio) {
+        this.callbacks.onAudio?.(audio);
+        return;
+      }
       try {
         const response = await this.callbacks.onBinary?.(event.data);
         if (response && this.socket?.readyState === WebSocket.OPEN) this.socket.send(response);

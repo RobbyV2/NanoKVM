@@ -17,12 +17,24 @@ import {
   type MediaPermission,
   type SourceEventsConnection
 } from './context.ts';
+import { SpeakerPlayback } from './playback.ts';
 import { emptySnapshot, reduceSources } from './state.ts';
 import { WebUSBRelay } from './webusb.ts';
 
 const mediaGrace = 5000;
 
-type Capture = CameraCapture | MicrophoneCapture;
+// The browser is the only device a speaker slot can use, so it needs no picker
+// and no permission: one synthetic offer stands for "this page will play it".
+const speakerStreamID = 'spk_browser';
+const speakerOffer: DeviceOffer = {
+  id: speakerStreamID,
+  deviceID: speakerStreamID,
+  kind: 'speaker',
+  label: 'Browser playback',
+  formats: [{ codec: 'pcm_s16le', sample_rate: 48000, channels: 1 }]
+};
+
+type Capture = CameraCapture | MicrophoneCapture | SpeakerPlayback;
 type RunningCapture = {
   capture: Capture;
   deviceID: string;
@@ -40,6 +52,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const [devices, setDevices] = useState<Record<SourceKind, DeviceOffer[]>>({
     camera: [],
     microphone: [],
+    speaker: [speakerOffer],
     usb_device: []
   });
   const [permissions, setPermissions] = useState<Record<'camera' | 'microphone', MediaPermission>>({
@@ -105,7 +118,11 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           if (sinkID === 'ffs.hybrid') closeRelay();
         },
         onSnapshot: setSnapshot,
-        onBinary: async (data) => usbRelay.current?.handle(data)
+        onBinary: async (data) => usbRelay.current?.handle(data),
+        onAudio: (frame) => {
+          const running = captures.current.get(frame.sinkID);
+          if (running?.kind === 'speaker') (running.capture as SpeakerPlayback).push(frame.payload);
+        }
       }),
     [account.username, closeRelay, stopCapture]
   );
@@ -179,6 +196,11 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   const discover = useCallback(async (kind: SourceKind, requestPermission: boolean) => {
     if (kind === 'usb_device') throw new Error('Use the USB device picker');
+    if (kind === 'speaker') {
+      const blocked = captureSupport(kind);
+      if (blocked) throw new CaptureUnsupported(blocked);
+      return [speakerOffer];
+    }
     const blocked = captureSupport(kind);
     if (blocked) throw new CaptureUnsupported(blocked);
     if (requestPermission) {
@@ -233,7 +255,17 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       }
       clearError(sink.id);
       try {
-        if (sink.kind === 'camera') {
+        if (sink.kind === 'speaker') {
+          const playback = new SpeakerPlayback();
+          captures.current.set(sink.id, {
+            capture: playback,
+            deviceID: offer.deviceID,
+            streamID: offer.id,
+            kind: sink.kind,
+            demand: demandKey(sink)
+          });
+          await playback.start(muted.has(sink.id));
+        } else if (sink.kind === 'camera') {
           const capture = new CameraCapture();
           captures.current.set(sink.id, {
             capture,
@@ -277,11 +309,13 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     const wanted = new Set<string>();
     for (const sink of snapshot.sinks) {
       const lease = leaseBySink.get(sink.id);
+      // A speaker's renderer has to exist before the gadget's first packet
+      // arrives, so it runs on the claim rather than on host demand.
       const canRun =
         sourceConnection === 'connected' &&
         owned.has(sink.id) &&
         !!lease &&
-        sink.demand.streaming &&
+        (sink.demand.streaming || sink.kind === 'speaker') &&
         sink.binding?.state !== 'orphaned' &&
         sink.binding?.state !== 'suspended';
       if (canRun) {
@@ -407,18 +441,15 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           });
           usbRelay.current = relay;
           setDevices((current) => ({ ...current, usb_device: [relay.offer] }));
-          await client.setOffers([...devices.camera, ...devices.microphone, relay.offer]);
+          await client.setOffers(withOffers(devices, 'usb_device', [relay.offer]));
           await client.claim(sink.id, relay.offer);
           setActive((current) => new Set(current).add(sink.id));
           return;
         }
         let available = devices[sink.kind];
-        if (available.length === 0) available = await discover(sink.kind, true);
+        if (available.length === 0) available = await discover(sink.kind, sink.kind !== 'speaker');
         const offer = pickOffer(available, sink.id, selectedDeviceID);
-        const offers = [...devices.camera, ...devices.microphone, ...devices.usb_device].filter(
-          (candidate) => candidate.kind !== sink.kind
-        );
-        await client.setOffers([...offers, ...available]);
+        await client.setOffers(withOffers(devices, sink.kind, available));
         await client.claim(sink.id, offer);
         localStorage.setItem(deviceKey(account.username, sink.id), offer.deviceID);
       } catch (error) {
@@ -452,12 +483,9 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       clearError(sink.id);
       try {
         let available = devices[sink.kind];
-        if (available.length === 0) available = await discover(sink.kind, true);
+        if (available.length === 0) available = await discover(sink.kind, sink.kind !== 'speaker');
         const offer = pickOffer(available, sink.id, selectedDeviceID);
-        const offers = [...devices.camera, ...devices.microphone, ...devices.usb_device].filter(
-          (candidate) => candidate.kind !== sink.kind
-        );
-        await client.setOffers([...offers, ...available]);
+        await client.setOffers(withOffers(devices, sink.kind, available));
         const sourceID = client.sourceId();
         if (!sourceID) throw new Error('Media source disconnected');
         const response = await api.takeoverSource(sink.id, sourceID, offer.id);
@@ -546,6 +574,9 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       if (running.kind === 'microphone') {
         (running.capture as MicrophoneCapture).setMuted(muted.has(sinkID));
       }
+      if (running.kind === 'speaker') {
+        (running.capture as SpeakerPlayback).setMuted(muted.has(sinkID));
+      }
     }
   }, [muted]);
 
@@ -583,6 +614,17 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   return <DevicesContext.Provider value={value}>{children}</DevicesContext.Provider>;
 };
+
+// Every offer this browser still stands behind, with one kind replaced. The
+// hello has to carry all of them, or claiming one slot revokes another.
+function withOffers(
+  devices: Record<SourceKind, DeviceOffer[]>,
+  kind: SourceKind,
+  available: DeviceOffer[]
+) {
+  const kinds: SourceKind[] = ['camera', 'microphone', 'speaker', 'usb_device'];
+  return kinds.flatMap((candidate) => (candidate === kind ? available : devices[candidate]));
+}
 
 function streamID(kind: SourceKind, deviceID: string, index: number) {
   let hash = 2166136261;

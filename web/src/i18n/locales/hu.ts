@@ -293,16 +293,20 @@ const hu = {
       title: 'Eszközök',
       stale: 'Az eszközök élő állapota nem érhető el. Újracsatlakozás folyamatban.',
       empty:
-        'Nincs beállítva kamera- vagy mikrofonhely. Adj hozzá egyet a Beállítások, Eszköz alatt.',
+        'Nincs beállítva kamera-, mikrofon- vagy hangszóróhely. Adj hozzá egyet a Beállítások, Eszköz alatt.',
       available: 'Elérhető',
       waiting: 'A gazdagép forrásra vár',
       hostOpen: 'A gazdagép nyitva',
       hostIdle: 'A gazdagép tétlen',
+      hostPlaying: 'A gazdagép hangot játszik le',
+      hostSending: 'A gazdagép lejátszik',
       sending: 'Küldés erről a böngészőről',
+      receiving: 'Lejátszás ebben a böngészőben',
       black: 'Fekete kép',
       silence: 'Digitális csend',
       resuming: 'Folytatásra vár',
       stop: 'Megosztás leállítása',
+      stopListening: 'Hallgatás leállítása',
       disconnect: 'Lecsatlakoztatás',
       takeover: 'Átvétel',
       refused: 'Használatban: {{owner}}, forrás: {{source}}',
@@ -317,6 +321,7 @@ const hu = {
       share: {
         camera: 'Kamera megosztása',
         microphone: 'Mikrofon megosztása',
+        speaker: 'Hallgatás',
         usbDevice: 'USB megosztása'
       },
       permission: {
@@ -328,7 +333,8 @@ const hu = {
       capture: {
         unsupported: 'Ez a böngésző nem tud hangot vagy képet rögzíteni',
         camera: 'Ez a böngésző nem tudja kódolni a kamera képkockáit',
-        microphone: 'Ez a böngésző nem tudja feldolgozni a mikrofon hangját'
+        microphone: 'Ez a böngésző nem tudja feldolgozni a mikrofon hangját',
+        speaker: 'Ez a böngésző nem tud hangot lejátszani'
       },
       mic: {
         mute: 'Némítás',
@@ -781,17 +787,20 @@ const hu = {
         rebindNotice:
           'Ennek a kapcsolónak az átbillentése újraszámlálja az USB-eszközt, így a célgép rövid időre elveszti a virtuális eszközöket és az USB-hálózatot.',
         media: {
-          title: 'Kamera- és mikrofonhelyek',
-          desc: 'Adja meg, mely médiaeszközöket tölthetik ki a böngészők. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi. A mentés újraszámlálja az eszközt, és lecsatlakoztatja a csatlakozott böngészőket.',
+          title: 'Kamera-, mikrofon- és hangszóróhelyek',
+          desc: 'Adja meg, mely médiaeszközöket látja a célgép. A végpontkeretet a rendszer az USB-profil alkalmazásakor ellenőrzi. A mentés újraszámlálja az eszközt, és lecsatlakoztatja a csatlakozott böngészőket.',
           cameras: 'Kamerák',
           microphones: 'Mikrofonok',
+          speakers: 'Hangszórók',
           name: 'Név',
           namePlaceholder: 'A célgépen jelenik meg',
           addCamera: 'Kamera hozzáadása',
           addMicrophone: 'Mikrofon hozzáadása',
+          addSpeaker: 'Hangszóró hozzáadása',
           remove: 'Eltávolítás',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Hangszóró {{index}}',
           nameRequired: 'Minden helyhez név kell.',
           budgetHint:
             'A hat USB IN végpont rögzített hardveres korlát. Tedd a billentyűzetet, az egeret és az abszolút mutatót egyetlen HID-interfészre az USB-megjelenítés alatt, vagy kapcsold ki itt a virtuális lemezt, illetve a Hálózat alatt az USB hálózati adaptert.',
@@ -800,7 +809,7 @@ const hu = {
           save: 'Helyek mentése',
           disconnect: 'Lecsatlakoztatás',
           disconnectAll: 'Minden forrás lecsatlakoztatása',
-          limit: 'A kamera- és mikrofonhelyek összesen legfeljebb nyolcan lehetnek.',
+          limit: 'A kamera-, mikrofon- és hangszóróhelyek összesen legfeljebb nyolcan lehetnek.',
           failed: 'A médiahelyeket nem sikerült frissíteni.'
         },
         reboot: 'Újraindítás',

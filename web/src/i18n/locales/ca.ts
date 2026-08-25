@@ -289,16 +289,20 @@ const ca = {
       title: 'Dispositius',
       stale: 'L’estat en directe dels dispositius no està disponible. S’està reconnectant.',
       empty:
-        'No hi ha cap ranura de càmera ni de micròfon configurada. Afegeix-ne una a Configuració, Dispositiu.',
+        'No hi ha cap ranura de càmera, de micròfon ni d’altaveu configurada. Afegeix-ne una a Configuració, Dispositiu.',
       available: 'Disponible',
       waiting: 'L’amfitrió espera una font',
       hostOpen: 'Amfitrió obert',
       hostIdle: 'Amfitrió inactiu',
+      hostPlaying: 'L’amfitrió està reproduint àudio',
+      hostSending: 'Amfitrió reproduint',
       sending: 'S’està enviant des d’aquest navegador',
+      receiving: 'S’està reproduint en aquest navegador',
       black: 'Vídeo negre',
       silence: 'Silenci digital',
       resuming: 'A l’espera de reprendre',
       stop: 'Atura la compartició',
+      stopListening: 'Atura l’escolta',
       disconnect: 'Desconnecta',
       takeover: 'Pren el control',
       refused: 'En ús per {{owner}} des de {{source}}',
@@ -313,6 +317,7 @@ const ca = {
       share: {
         camera: 'Comparteix la càmera',
         microphone: 'Comparteix el micròfon',
+        speaker: 'Escolta',
         usbDevice: 'Comparteix USB'
       },
       permission: {
@@ -324,7 +329,8 @@ const ca = {
       capture: {
         unsupported: 'Aquest navegador no pot capturar àudio ni vídeo',
         camera: 'Aquest navegador no pot codificar els fotogrames de la càmera',
-        microphone: "Aquest navegador no pot processar l'àudio del micròfon"
+        microphone: "Aquest navegador no pot processar l'àudio del micròfon",
+        speaker: 'Aquest navegador no pot reproduir àudio'
       },
       mic: {
         mute: 'Silencia',
@@ -774,17 +780,20 @@ const ca = {
         rebindNotice:
           'Canviar aquest interruptor torna a enumerar el dispositiu USB, de manera que la destinació perd un moment els dispositius virtuals i la xarxa USB.',
         media: {
-          title: 'Ranures de càmera i micròfon',
-          desc: 'Declareu els dispositius multimèdia que els navegadors poden omplir. El pressupost de punts finals es comprova en aplicar el perfil USB. En desar, el dispositiu es torna a enumerar i es desconnecta qualsevol navegador connectat.',
+          title: 'Ranures de càmera, micròfon i altaveu',
+          desc: 'Declareu els dispositius multimèdia que veu la màquina de destinació. El pressupost de punts finals es comprova en aplicar el perfil USB. En desar, el dispositiu es torna a enumerar i es desconnecta qualsevol navegador connectat.',
           cameras: 'Càmeres',
           microphones: 'Micròfons',
+          speakers: 'Altaveus',
           name: 'Nom',
           namePlaceholder: 'Es mostra a l’amfitrió de destinació',
           addCamera: 'Afegeix una càmera',
           addMicrophone: 'Afegeix un micròfon',
+          addSpeaker: 'Afegeix un altaveu',
           remove: 'Elimina',
           cameraDefault: 'Càmera {{index}}',
           microphoneDefault: 'Micròfon {{index}}',
+          speakerDefault: 'Altaveu {{index}}',
           nameRequired: 'Cada ranura necessita un nom.',
           budgetHint:
             'Els sis extrems USB IN són un límit fix del maquinari. Posa el teclat, el ratolí i el punter absolut en una sola interfície HID a Presentació USB, o desactiva aquí el disc virtual o l’adaptador de xarxa USB a Xarxa.',
@@ -793,7 +802,7 @@ const ca = {
           save: 'Desa les ranures',
           disconnect: 'Desconnecta',
           disconnectAll: 'Desconnecta totes les fonts',
-          limit: 'Les ranures de càmera i micròfon no poden sumar més de vuit.',
+          limit: 'Les ranures de càmera, micròfon i altaveu no poden sumar més de vuit.',
           failed: 'No s’han pogut actualitzar les ranures multimèdia.'
         },
         reboot: 'Reinicia',

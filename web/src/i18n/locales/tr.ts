@@ -289,16 +289,21 @@ const tr = {
     devices: {
       title: 'Cihazlar',
       stale: 'Cihazların canlı durumu kullanılamıyor. Yeniden bağlanılıyor.',
-      empty: 'Yapılandırılmış kamera veya mikrofon yuvası yok. Ayarlar, Aygıt bölümünden ekleyin.',
+      empty:
+        'Yapılandırılmış kamera, mikrofon veya hoparlör yuvası yok. Ayarlar, Aygıt bölümünden ekleyin.',
       available: 'Kullanılabilir',
       waiting: 'Host bir kaynak bekliyor',
       hostOpen: 'Host açık',
       hostIdle: 'Host boşta',
+      hostPlaying: 'Hedef makine ses çalıyor',
+      hostSending: 'Host çalıyor',
       sending: 'Bu tarayıcıdan gönderiliyor',
+      receiving: 'Bu tarayıcıda çalınıyor',
       black: 'Siyah görüntü',
       silence: 'Dijital sessizlik',
       resuming: 'Sürdürülmeyi bekliyor',
       stop: 'Paylaşımı durdur',
+      stopListening: 'Dinlemeyi durdur',
       disconnect: 'Bağlantıyı kes',
       takeover: 'Devral',
       refused: '{{source}} üzerinden {{owner}} kullanıyor',
@@ -313,6 +318,7 @@ const tr = {
       share: {
         camera: 'Kamerayı paylaş',
         microphone: 'Mikrofonu paylaş',
+        speaker: 'Dinle',
         usbDevice: 'USB paylaş'
       },
       permission: {
@@ -324,7 +330,8 @@ const tr = {
       capture: {
         unsupported: 'Bu tarayıcı ses veya video yakalayamıyor',
         camera: 'Bu tarayıcı kamera karelerini kodlayamıyor',
-        microphone: 'Bu tarayıcı mikrofon sesini işleyemiyor'
+        microphone: 'Bu tarayıcı mikrofon sesini işleyemiyor',
+        speaker: 'Bu tarayıcı ses çalamıyor'
       },
       mic: {
         mute: 'Sesi kapat',
@@ -773,17 +780,20 @@ const tr = {
         rebindNotice:
           'Bu anahtarı değiştirmek USB aygıtını yeniden numaralandırır, bu yüzden hedef kısa süreliğine sanal aygıtlarını ve USB ağını yitirir.',
         media: {
-          title: 'Kamera ve mikrofon yuvaları',
-          desc: 'Tarayıcıların doldurabileceği medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir. Kaydetmek aygıtı yeniden numaralandırır ve bağlı tarayıcıların bağlantısını keser.',
+          title: 'Kamera, mikrofon ve hoparlör yuvaları',
+          desc: 'Hedef makinenin gördüğü medya aygıtlarını bildirin. Uç nokta bütçesi USB profili uygulanırken denetlenir. Kaydetmek aygıtı yeniden numaralandırır ve bağlı tarayıcıların bağlantısını keser.',
           cameras: 'Kameralar',
           microphones: 'Mikrofonlar',
+          speakers: 'Hoparlörler',
           name: 'Ad',
           namePlaceholder: 'Hedef makinede görünür',
           addCamera: 'Kamera ekle',
           addMicrophone: 'Mikrofon ekle',
+          addSpeaker: 'Hoparlör ekle',
           remove: 'Kaldır',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Hoparlör {{index}}',
           nameRequired: 'Her yuvanın bir adı olmalı.',
           budgetHint:
             'Altı USB IN uç noktası sabit bir donanım sınırıdır. Klavye, fare ve mutlak imleci USB Sunumu bölümünde tek bir HID arabiriminde toplayın ya da buradaki sanal diski veya Ağ bölümündeki USB ağ bağdaştırıcısını kapatın.',
@@ -792,7 +802,7 @@ const tr = {
           save: 'Yuvaları kaydet',
           disconnect: 'Bağlantıyı kes',
           disconnectAll: 'Tüm kaynakların bağlantısını kes',
-          limit: 'Kamera ve mikrofon yuvaları toplamda en fazla sekiz olabilir.',
+          limit: 'Kamera, mikrofon ve hoparlör yuvaları toplamda en fazla sekiz olabilir.',
           failed: 'Medya yuvaları güncellenemedi.'
         },
         reboot: 'Yeniden Başlat',

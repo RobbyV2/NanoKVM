@@ -291,16 +291,20 @@ const nb = {
       title: 'Enheter',
       stale: 'Sanntidsstatusen for enhetene er utilgjengelig. Kobler til igjen.',
       empty:
-        'Ingen kamera- eller mikrofonplasser er satt opp. Legg til en under Innstillinger, Enhet.',
+        'Ingen kamera-, mikrofon- eller høyttalerplasser er satt opp. Legg til en under Innstillinger, Enhet.',
       available: 'Tilgjengelig',
       waiting: 'Verten venter på en kilde',
       hostOpen: 'Vert åpen',
       hostIdle: 'Vert inaktiv',
+      hostPlaying: 'Verten spiller av lyd',
+      hostSending: 'Vert spiller av',
       sending: 'Sender fra denne nettleseren',
+      receiving: 'Spilles av i denne nettleseren',
       black: 'Svart video',
       silence: 'Digital stillhet',
       resuming: 'Venter på å fortsette',
       stop: 'Stopp deling',
+      stopListening: 'Stopp lytting',
       disconnect: 'Koble fra',
       takeover: 'Overta',
       refused: 'I bruk av {{owner}} fra {{source}}',
@@ -315,6 +319,7 @@ const nb = {
       share: {
         camera: 'Del kamera',
         microphone: 'Del mikrofon',
+        speaker: 'Lytt',
         usbDevice: 'Del USB'
       },
       permission: {
@@ -326,7 +331,8 @@ const nb = {
       capture: {
         unsupported: 'Denne nettleseren kan ikke ta opp lyd eller video',
         camera: 'Denne nettleseren kan ikke kode kamerabilder',
-        microphone: 'Denne nettleseren kan ikke behandle mikrofonlyd'
+        microphone: 'Denne nettleseren kan ikke behandle mikrofonlyd',
+        speaker: 'Denne nettleseren kan ikke spille av lyd'
       },
       mic: {
         mute: 'Slå av lyden',
@@ -773,17 +779,20 @@ const nb = {
         rebindNotice:
           'Å slå om denne bryteren teller opp USB-enheten på nytt, så målet mister kort de virtuelle enhetene og USB-nettverket sitt.',
         media: {
-          title: 'Kamera- og mikrofonplasser',
-          desc: 'Angi hvilke medieenheter nettlesere kan fylle. Endepunktsbudsjettet kontrolleres når USB-profilen tas i bruk. Lagring opplister enheten på nytt og kobler fra tilkoblede nettlesere.',
+          title: 'Kamera-, mikrofon- og høyttalerplasser',
+          desc: 'Angi hvilke medieenheter vertsmaskinen ser. Endepunktsbudsjettet kontrolleres når USB-profilen tas i bruk. Lagring opplister enheten på nytt og kobler fra tilkoblede nettlesere.',
           cameras: 'Kameraer',
           microphones: 'Mikrofoner',
+          speakers: 'Høyttalere',
           name: 'Navn',
           namePlaceholder: 'Vises på vertsmaskinen',
           addCamera: 'Legg til kamera',
           addMicrophone: 'Legg til mikrofon',
+          addSpeaker: 'Legg til høyttaler',
           remove: 'Fjern',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Høyttaler {{index}}',
           nameRequired: 'Hver plass trenger et navn.',
           budgetHint:
             'De seks USB IN-endepunktene er en fast maskinvaregrense. Samle tastatur, mus og absolutt pekeenhet på ett HID-grensesnitt under USB-presentasjon, eller slå av den virtuelle disken her eller USB-nettverkskortet under Nettverk.',
@@ -792,7 +801,7 @@ const nb = {
           save: 'Lagre plasser',
           disconnect: 'Koble fra',
           disconnectAll: 'Koble fra alle kilder',
-          limit: 'Kamera- og mikrofonplasser kan til sammen være høyst åtte.',
+          limit: 'Kamera-, mikrofon- og høyttalerplasser kan til sammen være høyst åtte.',
           failed: 'Medieplassene kunne ikke oppdateres.'
         },
         reboot: 'Start på nytt',

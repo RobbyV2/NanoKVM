@@ -286,16 +286,20 @@ const ko = {
     devices: {
       title: '장치',
       stale: '장치의 실시간 상태를 가져올 수 없습니다. 다시 연결하는 중입니다.',
-      empty: '카메라 또는 마이크 슬롯이 구성되지 않았습니다. 설정 - 장치에서 추가하세요.',
+      empty: '카메라, 마이크 또는 스피커 슬롯이 구성되지 않았습니다. 설정 - 장치에서 추가하세요.',
       available: '사용 가능',
       waiting: '호스트가 소스를 기다리는 중',
       hostOpen: '호스트 열림',
       hostIdle: '호스트 대기 중',
+      hostPlaying: '호스트가 오디오를 재생하고 있습니다',
+      hostSending: '호스트 재생 중',
       sending: '이 브라우저에서 전송 중',
+      receiving: '이 브라우저에서 재생 중',
       black: '검은 화면',
       silence: '디지털 무음',
       resuming: '재개 대기 중',
       stop: '공유 중지',
+      stopListening: '재생 중지',
       disconnect: '연결 해제',
       takeover: '가져오기',
       refused: '{{source}}의 {{owner}}이(가) 사용 중',
@@ -310,6 +314,7 @@ const ko = {
       share: {
         camera: '카메라 공유',
         microphone: '마이크 공유',
+        speaker: '오디오 듣기',
         usbDevice: 'USB 공유'
       },
       permission: {
@@ -321,7 +326,8 @@ const ko = {
       capture: {
         unsupported: '이 브라우저는 오디오나 비디오를 캡처할 수 없습니다',
         camera: '이 브라우저는 카메라 프레임을 인코딩할 수 없습니다',
-        microphone: '이 브라우저는 마이크 오디오를 처리할 수 없습니다'
+        microphone: '이 브라우저는 마이크 오디오를 처리할 수 없습니다',
+        speaker: '이 브라우저는 오디오를 재생할 수 없습니다'
       },
       mic: {
         mute: '음소거',
@@ -762,17 +768,20 @@ const ko = {
         rebindNotice:
           '이 스위치를 바꾸면 USB 장치가 다시 열거되므로 대상 호스트는 가상 장치와 USB 네트워크를 잠시 잃습니다.',
         media: {
-          title: '카메라 및 마이크 슬롯',
-          desc: '브라우저가 채울 수 있는 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다. 저장하면 장치가 다시 열거되고 연결된 브라우저는 끊어집니다.',
+          title: '카메라, 마이크 및 스피커 슬롯',
+          desc: '대상 호스트가 보게 될 미디어 장치를 지정합니다. 엔드포인트 예산은 USB 프로필을 적용할 때 확인됩니다. 저장하면 장치가 다시 열거되고 연결된 브라우저는 끊어집니다.',
           cameras: '카메라',
           microphones: '마이크',
+          speakers: '스피커',
           name: '이름',
           namePlaceholder: '대상 호스트에 표시됩니다',
           addCamera: '카메라 추가',
           addMicrophone: '마이크 추가',
+          addSpeaker: '스피커 추가',
           remove: '제거',
           cameraDefault: '카메라 {{index}}',
           microphoneDefault: '마이크 {{index}}',
+          speakerDefault: '스피커 {{index}}',
           nameRequired: '모든 슬롯에 이름이 필요합니다.',
           budgetHint:
             'USB IN 엔드포인트 6개는 고정된 하드웨어 한계입니다. USB 표시에서 키보드, 마우스, 절대 좌표를 하나의 HID 인터페이스에 모으거나, 여기서 가상 디스크를 끄거나 네트워크에서 USB 네트워크 어댑터를 끄세요.',
@@ -781,7 +790,7 @@ const ko = {
           save: '슬롯 저장',
           disconnect: '연결 끊기',
           disconnectAll: '모든 소스 연결 끊기',
-          limit: '카메라와 마이크 슬롯은 합쳐서 여덟 개 이하여야 합니다.',
+          limit: '카메라, 마이크, 스피커 슬롯은 합쳐서 여덟 개 이하여야 합니다.',
           failed: '미디어 슬롯을 업데이트하지 못했습니다.'
         },
         reboot: '재부팅',

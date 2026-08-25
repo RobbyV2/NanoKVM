@@ -13,6 +13,11 @@ function replaceBinding(sinks: SourceSink[], binding: Binding | null, sinkID: st
 }
 
 function output(sink: SourceSink): SourceSink['output'] {
+  // A speaker generates nothing: the host's audio either reaches a browser or
+  // is dropped, so there is no black or silence for it to fall back to.
+  if (sink.kind === 'speaker') {
+    return sink.binding?.state === 'streaming' ? 'source' : 'idle';
+  }
   if (!sink.demand.streaming) return 'idle';
   if (sink.binding?.state === 'streaming') return 'source';
   return sink.kind === 'camera' ? 'black' : 'silence';
@@ -85,7 +90,7 @@ function bindingOf(sink: SourceSink) {
 
 export type MediaSlotRow = {
   key: string;
-  kind: 'camera' | 'microphone';
+  kind: 'camera' | 'microphone' | 'speaker';
   label: string;
   hostName: string;
 };
@@ -95,7 +100,9 @@ export type MediaSlotRow = {
 // hostName means the kernel carries no name for that slot at all.
 export function mediaSlotRows(sinks: SourceSink[]): MediaSlotRow[] {
   return sinks
-    .filter((sink) => sink.kind === 'camera' || sink.kind === 'microphone')
+    .filter(
+      (sink) => sink.kind === 'camera' || sink.kind === 'microphone' || sink.kind === 'speaker'
+    )
     .map((sink) => ({
       key: sink.id,
       kind: sink.kind as MediaSlotRow['kind'],
@@ -107,9 +114,14 @@ export function mediaSlotRows(sinks: SourceSink[]): MediaSlotRow[] {
 export function mediaSlots(rows: MediaSlotRow[]): SourceSlot[] {
   let cameras = 0;
   let microphones = 0;
-  return rows.map((row) =>
-    row.kind === 'camera'
-      ? { id: `uvc.cam${cameras++}`, kind: 'camera' as const, label: row.label }
-      : { id: `uac2.mic${microphones++}`, kind: 'microphone' as const, label: row.label }
-  );
+  let speakers = 0;
+  return rows.map((row) => {
+    if (row.kind === 'camera') {
+      return { id: `uvc.cam${cameras++}`, kind: 'camera' as const, label: row.label };
+    }
+    if (row.kind === 'speaker') {
+      return { id: `uac2.spk${speakers++}`, kind: 'speaker' as const, label: row.label };
+    }
+    return { id: `uac2.mic${microphones++}`, kind: 'microphone' as const, label: row.label };
+  });
 }

@@ -27,13 +27,23 @@ export const MediaSlots = () => {
   const unnamed = live.some((row) => row.hostName === '');
   const bound = new Map(state.snapshot.bindings.map((b) => [b.sink_id, b.stream_label]));
 
+  const defaultKey = {
+    camera: 'settings.device.media.cameraDefault',
+    microphone: 'settings.device.media.microphoneDefault',
+    speaker: 'settings.device.media.speakerDefault'
+  } as const;
+  const kindKey = {
+    camera: 'settings.device.media.cameras',
+    microphone: 'settings.device.media.microphones',
+    speaker: 'settings.device.media.speakers'
+  } as const;
+
   function add(kind: MediaSlotRow['kind']) {
     const index = rows.filter((row) => row.kind === kind).length + 1;
-    const label =
-      kind === 'camera'
-        ? t('settings.device.media.cameraDefault', { index })
-        : t('settings.device.media.microphoneDefault', { index });
-    setRows([...rows, { key: `new-${added}`, kind, label, hostName: '' }]);
+    setRows([
+      ...rows,
+      { key: `new-${added}`, kind, label: t(defaultKey[kind], { index }), hostName: '' }
+    ]);
     setAdded(added + 1);
   }
 
@@ -82,11 +92,7 @@ export const MediaSlots = () => {
       <div className="space-y-2">
         {rows.map((row) => (
           <div key={row.key} className="flex items-center gap-2">
-            <span className="w-24 shrink-0 text-xs text-neutral-400">
-              {row.kind === 'camera'
-                ? t('settings.device.media.cameras')
-                : t('settings.device.media.microphones')}
-            </span>
+            <span className="w-24 shrink-0 text-xs text-neutral-400">{t(kindKey[row.kind])}</span>
             <div className="min-w-0 flex-1 space-y-1">
               <Input
                 size="small"
@@ -128,6 +134,9 @@ export const MediaSlots = () => {
         </Button>
         <Button size="small" disabled={working} onClick={() => add('microphone')}>
           {t('settings.device.media.addMicrophone')}
+        </Button>
+        <Button size="small" disabled={working} onClick={() => add('speaker')}>
+          {t('settings.device.media.addSpeaker')}
         </Button>
         <Button type="primary" size="small" loading={working} onClick={save}>
           {t('settings.device.media.save')}

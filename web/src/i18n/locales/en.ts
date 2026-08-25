@@ -288,16 +288,21 @@ const en = {
     devices: {
       title: 'Devices',
       stale: 'Live device state is unavailable. Reconnecting.',
-      empty: 'No camera or microphone slots are configured. Add one under Settings, Device.',
+      empty:
+        'No camera, microphone or speaker slots are configured. Add one under Settings, Device.',
       available: 'Available',
       waiting: 'The host is waiting for a source',
       hostOpen: 'Host open',
       hostIdle: 'Host idle',
+      hostPlaying: 'The target is playing audio',
+      hostSending: 'Host playing',
       sending: 'Sending from this browser',
+      receiving: 'Playing in this browser',
       black: 'Black video',
       silence: 'Digital silence',
       resuming: 'Waiting to resume',
       stop: 'Stop sharing',
+      stopListening: 'Stop listening',
       disconnect: 'Disconnect',
       takeover: 'Take over',
       refused: 'In use by {{owner}} from {{source}}',
@@ -312,6 +317,7 @@ const en = {
       share: {
         camera: 'Share camera',
         microphone: 'Share microphone',
+        speaker: 'Listen',
         usbDevice: 'Share USB'
       },
       permission: {
@@ -323,7 +329,8 @@ const en = {
       capture: {
         unsupported: 'This browser cannot capture audio or video',
         camera: 'This browser cannot encode camera frames',
-        microphone: 'This browser cannot process microphone audio'
+        microphone: 'This browser cannot process microphone audio',
+        speaker: 'This browser cannot play audio'
       },
       mic: {
         mute: 'Mute',
@@ -764,17 +771,20 @@ const en = {
         rebindNotice:
           'Changing this switch re-enumerates the USB device, so the target briefly loses its virtual devices and its USB network.',
         media: {
-          title: 'Camera and microphone slots',
-          desc: 'Declare the media devices browsers may fill. The endpoint budget is checked when the USB profile is applied. Saving re-enumerates the gadget and disconnects any connected browser.',
+          title: 'Camera, microphone and speaker slots',
+          desc: 'Declare the media devices the target sees. The endpoint budget is checked when the USB profile is applied. Saving re-enumerates the gadget and disconnects any connected browser.',
           cameras: 'Cameras',
           microphones: 'Microphones',
+          speakers: 'Speakers',
           name: 'Name',
           namePlaceholder: 'Shown on the target host',
           addCamera: 'Add camera',
           addMicrophone: 'Add microphone',
+          addSpeaker: 'Add speaker',
           remove: 'Remove',
           cameraDefault: 'Camera {{index}}',
           microphoneDefault: 'Microphone {{index}}',
+          speakerDefault: 'Speaker {{index}}',
           nameRequired: 'Every slot needs a name.',
           budgetHint:
             'The six USB IN endpoints are a fixed hardware limit. Put the keyboard, mouse and pointer on one HID interface under Presentation, or turn off the virtual disk here or the USB network adapter under Network.',
@@ -782,7 +792,7 @@ const en = {
           save: 'Save slots',
           disconnect: 'Disconnect',
           disconnectAll: 'Disconnect all sources',
-          limit: 'Camera and microphone slots must total eight or fewer.',
+          limit: 'Camera, microphone and speaker slots must total eight or fewer.',
           failed: 'Media slots could not be updated.'
         },
         reboot: 'Reboot',

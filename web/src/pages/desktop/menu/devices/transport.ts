@@ -63,6 +63,49 @@ export function encodeMediaFrame(frame: MediaFrame) {
   return bytes.buffer;
 }
 
+const textDecoder = new TextDecoder('utf-8', { fatal: true });
+const kindNames = { 1: 'mjpeg', 2: 'pcm_s16le_mono_48k' } as Record<number, MediaFrameKind>;
+
+// The exact inverse of encodeMediaFrame, and the mirror of parseMediaFrame in
+// server/service/sources/frame.go. A speaker slot sends frames the other way,
+// so the browser has to read the same header it writes. Anything malformed
+// returns undefined; a stream that cannot be trusted is never played.
+export function decodeMediaFrame(data: ArrayBuffer): MediaFrame | undefined {
+  if (data.byteLength < headerBytes) return undefined;
+  const bytes = new Uint8Array(data);
+  if (bytes[0] !== 0x4e || bytes[1] !== 0x4b || bytes[2] !== 0x4d || bytes[3] !== 0x46) {
+    return undefined;
+  }
+  const view = new DataView(data);
+  if (view.getUint8(4) !== 1 || view.getUint16(6) !== 0) return undefined;
+  const kind = kindNames[view.getUint8(5)];
+  if (!kind) return undefined;
+  const sinkLength = view.getUint8(20);
+  const streamLength = view.getUint8(21);
+  const payloadLength = view.getUint32(22);
+  if (sinkLength === 0 || sinkLength > 64 || streamLength === 0 || streamLength > 64) {
+    return undefined;
+  }
+  if (payloadLength === 0 || payloadLength > maxPayload[kind]) return undefined;
+  if (data.byteLength !== headerBytes + sinkLength + streamLength + payloadLength) {
+    return undefined;
+  }
+  const sinkEnd = headerBytes + sinkLength;
+  const streamEnd = sinkEnd + streamLength;
+  try {
+    return {
+      kind,
+      sequence: view.getUint32(8),
+      timestampUS: Number(view.getBigUint64(12)),
+      sinkID: textDecoder.decode(bytes.subarray(headerBytes, sinkEnd)),
+      streamID: textDecoder.decode(bytes.subarray(sinkEnd, streamEnd)),
+      payload: data.slice(streamEnd)
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export function mediaTimestampUS() {
   return Math.round((performance.timeOrigin + performance.now()) * 1000);
 }

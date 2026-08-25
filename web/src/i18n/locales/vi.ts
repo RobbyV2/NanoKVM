@@ -288,16 +288,21 @@ const vi = {
     devices: {
       title: 'Thiết bị',
       stale: 'Không lấy được trạng thái trực tiếp của thiết bị. Đang kết nối lại.',
-      empty: 'Chưa cấu hình khe camera hay micrô nào. Hãy thêm một khe trong Cài đặt, Thiết bị.',
+      empty:
+        'Chưa cấu hình khe camera, micrô hay loa nào. Hãy thêm một khe trong Cài đặt, Thiết bị.',
       available: 'Sẵn sàng',
       waiting: 'Máy chủ đang chờ một nguồn',
       hostOpen: 'Máy chủ đang mở',
       hostIdle: 'Máy chủ đang rảnh',
+      hostPlaying: 'Máy chủ đang phát âm thanh',
+      hostSending: 'Máy chủ đang phát',
       sending: 'Đang gửi từ trình duyệt này',
+      receiving: 'Đang phát trong trình duyệt này',
       black: 'Hình đen',
       silence: 'Im lặng số',
       resuming: 'Đang chờ tiếp tục',
       stop: 'Dừng chia sẻ',
+      stopListening: 'Dừng nghe',
       disconnect: 'Ngắt kết nối',
       takeover: 'Tiếp quản',
       refused: 'Đang được {{owner}} dùng từ {{source}}',
@@ -312,6 +317,7 @@ const vi = {
       share: {
         camera: 'Chia sẻ camera',
         microphone: 'Chia sẻ micrô',
+        speaker: 'Nghe',
         usbDevice: 'Chia sẻ USB'
       },
       permission: {
@@ -323,7 +329,8 @@ const vi = {
       capture: {
         unsupported: 'Trình duyệt này không thể thu âm thanh hoặc hình ảnh',
         camera: 'Trình duyệt này không thể mã hóa khung hình camera',
-        microphone: 'Trình duyệt này không thể xử lý âm thanh micrô'
+        microphone: 'Trình duyệt này không thể xử lý âm thanh micrô',
+        speaker: 'Trình duyệt này không thể phát âm thanh'
       },
       mic: {
         mute: 'Tắt tiếng',
@@ -767,17 +774,20 @@ const vi = {
         rebindNotice:
           'Gạt công tắc này sẽ khiến thiết bị USB được liệt kê lại, nên máy đích tạm thời mất các thiết bị ảo và mạng USB.',
         media: {
-          title: 'Khe camera và micrô',
-          desc: 'Khai báo các thiết bị đa phương tiện mà trình duyệt có thể lấp đầy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB. Việc lưu sẽ liệt kê lại thiết bị và ngắt kết nối các trình duyệt đang kết nối.',
+          title: 'Khe camera, micrô và loa',
+          desc: 'Khai báo các thiết bị đa phương tiện mà máy đích nhìn thấy. Ngân sách endpoint được kiểm tra khi áp dụng hồ sơ USB. Việc lưu sẽ liệt kê lại thiết bị và ngắt kết nối các trình duyệt đang kết nối.',
           cameras: 'Camera',
           microphones: 'Micrô',
+          speakers: 'Loa',
           name: 'Tên',
           namePlaceholder: 'Hiển thị trên máy đích',
           addCamera: 'Thêm camera',
           addMicrophone: 'Thêm micrô',
+          addSpeaker: 'Thêm loa',
           remove: 'Xóa',
           cameraDefault: 'Camera {{index}}',
           microphoneDefault: 'Micrô {{index}}',
+          speakerDefault: 'Loa {{index}}',
           nameRequired: 'Mỗi khe cần một tên.',
           budgetHint:
             'Sáu điểm cuối USB IN là giới hạn phần cứng cố định. Hãy gộp bàn phím, chuột và con trỏ tuyệt đối vào một giao diện HID trong mục Trình bày USB, hoặc tắt đĩa ảo ở đây hay card mạng USB trong mục Mạng.',
@@ -786,7 +796,7 @@ const vi = {
           save: 'Lưu các khe',
           disconnect: 'Ngắt kết nối',
           disconnectAll: 'Ngắt tất cả nguồn',
-          limit: 'Tổng số khe camera và micrô không được quá tám.',
+          limit: 'Tổng số khe camera, micrô và loa không được quá tám.',
           failed: 'Không thể cập nhật các khe đa phương tiện.'
         },
         reboot: 'Khởi động lại',

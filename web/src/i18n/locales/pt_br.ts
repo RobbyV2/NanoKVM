@@ -291,16 +291,20 @@ const pt_br = {
       title: 'Dispositivos',
       stale: 'O estado ao vivo dos dispositivos está indisponível. Reconectando.',
       empty:
-        'Nenhum slot de câmera ou microfone está configurado. Adicione um em Configurações, Dispositivo.',
+        'Nenhum slot de câmera, microfone ou alto-falante está configurado. Adicione um em Configurações, Dispositivo.',
       available: 'Disponível',
       waiting: 'O host está esperando uma fonte',
       hostOpen: 'Host aberto',
       hostIdle: 'Host ocioso',
+      hostPlaying: 'O host está reproduzindo áudio',
+      hostSending: 'Host reproduzindo',
       sending: 'Enviando deste navegador',
+      receiving: 'Reproduzindo neste navegador',
       black: 'Vídeo preto',
       silence: 'Silêncio digital',
       resuming: 'Aguardando para retomar',
       stop: 'Parar de compartilhar',
+      stopListening: 'Parar de ouvir',
       disconnect: 'Desconectar',
       takeover: 'Assumir',
       refused: 'Em uso por {{owner}} a partir de {{source}}',
@@ -315,6 +319,7 @@ const pt_br = {
       share: {
         camera: 'Compartilhar câmera',
         microphone: 'Compartilhar microfone',
+        speaker: 'Ouvir',
         usbDevice: 'Compartilhar USB'
       },
       permission: {
@@ -326,7 +331,8 @@ const pt_br = {
       capture: {
         unsupported: 'Este navegador não consegue capturar áudio nem vídeo',
         camera: 'Este navegador não consegue codificar os quadros da câmera',
-        microphone: 'Este navegador não consegue processar o áudio do microfone'
+        microphone: 'Este navegador não consegue processar o áudio do microfone',
+        speaker: 'Este navegador não consegue reproduzir áudio'
       },
       mic: {
         mute: 'Silenciar',
@@ -775,17 +781,20 @@ const pt_br = {
         rebindNotice:
           'Mudar este interruptor reenumera o dispositivo USB, então o alvo perde por um instante seus dispositivos virtuais e sua rede USB.',
         media: {
-          title: 'Slots de câmera e microfone',
-          desc: 'Declare os dispositivos de mídia que os navegadores podem ocupar. O orçamento de endpoints é verificado ao aplicar o perfil USB. Salvar reenumera o dispositivo e desconecta os navegadores conectados.',
+          title: 'Slots de câmera, microfone e alto-falante',
+          desc: 'Declare os dispositivos de mídia que o host de destino enxerga. O orçamento de endpoints é verificado ao aplicar o perfil USB. Salvar reenumera o dispositivo e desconecta os navegadores conectados.',
           cameras: 'Câmeras',
           microphones: 'Microfones',
+          speakers: 'Alto-falantes',
           name: 'Nome',
           namePlaceholder: 'Exibido no host de destino',
           addCamera: 'Adicionar câmera',
           addMicrophone: 'Adicionar microfone',
+          addSpeaker: 'Adicionar alto-falante',
           remove: 'Remover',
           cameraDefault: 'Câmera {{index}}',
           microphoneDefault: 'Microfone {{index}}',
+          speakerDefault: 'Alto-falante {{index}}',
           nameRequired: 'Cada slot precisa de um nome.',
           budgetHint:
             'Os seis endpoints USB IN são um limite fixo do hardware. Junte teclado, mouse e ponteiro absoluto em uma única interface HID em Apresentação USB, ou desligue aqui o disco virtual ou, em Rede, o adaptador de rede USB.',
@@ -794,7 +803,7 @@ const pt_br = {
           save: 'Salvar slots',
           disconnect: 'Desconectar',
           disconnectAll: 'Desconectar todas as fontes',
-          limit: 'Os slots de câmera e microfone devem somar oito ou menos.',
+          limit: 'Os slots de câmera, microfone e alto-falante devem somar oito ou menos.',
           failed: 'Não foi possível atualizar os slots de mídia.'
         },
         reboot: 'Reiniciar',

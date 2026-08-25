@@ -292,16 +292,20 @@ const cz = {
       title: 'Zařízení',
       stale: 'Živý stav zařízení není dostupný. Probíhá opětovné připojení.',
       empty:
-        'Nejsou nastavené žádné sloty kamery ani mikrofonu. Přidejte je v Nastavení, Zařízení.',
+        'Nejsou nastavené žádné sloty kamery, mikrofonu ani reproduktoru. Přidejte je v Nastavení, Zařízení.',
       available: 'Dostupné',
       waiting: 'Hostitel čeká na zdroj',
       hostOpen: 'Hostitel otevřen',
       hostIdle: 'Hostitel nečinný',
+      hostPlaying: 'Cílový počítač přehrává zvuk',
+      hostSending: 'Hostitel přehrává',
       sending: 'Odesílá se z tohoto prohlížeče',
+      receiving: 'Přehrává se v tomto prohlížeči',
       black: 'Černé video',
       silence: 'Digitální ticho',
       resuming: 'Čeká na obnovení',
       stop: 'Ukončit sdílení',
+      stopListening: 'Ukončit poslech',
       disconnect: 'Odpojit',
       takeover: 'Převzít',
       refused: 'Používá {{owner}} ze zdroje {{source}}',
@@ -316,6 +320,7 @@ const cz = {
       share: {
         camera: 'Sdílet kameru',
         microphone: 'Sdílet mikrofon',
+        speaker: 'Poslouchat',
         usbDevice: 'Sdílet USB'
       },
       permission: {
@@ -327,7 +332,8 @@ const cz = {
       capture: {
         unsupported: 'Tento prohlížeč neumí zachytávat zvuk ani obraz',
         camera: 'Tento prohlížeč neumí kódovat snímky z kamery',
-        microphone: 'Tento prohlížeč neumí zpracovat zvuk z mikrofonu'
+        microphone: 'Tento prohlížeč neumí zpracovat zvuk z mikrofonu',
+        speaker: 'Tento prohlížeč neumí přehrávat zvuk'
       },
       mic: {
         mute: 'Ztlumit',
@@ -772,17 +778,20 @@ const cz = {
         rebindNotice:
           'Přepnutí tohoto přepínače znovu vyčíslí USB zařízení, takže cílový počítač na chvíli přijde o virtuální zařízení i o USB síť.',
         media: {
-          title: 'Sloty pro kameru a mikrofon',
-          desc: 'Určete, která mediální zařízení smějí prohlížeče obsadit. Rozpočet koncových bodů se kontroluje při použití profilu USB. Uložení znovu vyčíslí zařízení a odpojí připojené prohlížeče.',
+          title: 'Sloty pro kameru, mikrofon a reproduktor',
+          desc: 'Určete, která mediální zařízení uvidí cílový počítač. Rozpočet koncových bodů se kontroluje při použití profilu USB. Uložení znovu vyčíslí zařízení a odpojí připojené prohlížeče.',
           cameras: 'Kamery',
           microphones: 'Mikrofony',
+          speakers: 'Reproduktory',
           name: 'Název',
           namePlaceholder: 'Zobrazí se na cílovém počítači',
           addCamera: 'Přidat kameru',
           addMicrophone: 'Přidat mikrofon',
+          addSpeaker: 'Přidat reproduktor',
           remove: 'Odebrat',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Reproduktor {{index}}',
           nameRequired: 'Každý slot potřebuje název.',
           budgetHint:
             'Šest koncových bodů USB IN je pevný hardwarový strop. Dejte klávesnici, myš a absolutní ukazatel na jedno HID rozhraní v sekci Prezentace USB, nebo zde vypněte virtuální disk či síťový adaptér přes USB v sekci Síť.',
@@ -791,7 +800,7 @@ const cz = {
           save: 'Uložit sloty',
           disconnect: 'Odpojit',
           disconnectAll: 'Odpojit všechny zdroje',
-          limit: 'Sloty pro kameru a mikrofon smí být dohromady nejvýše osm.',
+          limit: 'Sloty pro kameru, mikrofon a reproduktor smí být dohromady nejvýše osm.',
           failed: 'Mediální sloty se nepodařilo aktualizovat.'
         },
         reboot: 'Restartujte',

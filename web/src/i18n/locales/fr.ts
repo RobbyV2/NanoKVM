@@ -294,16 +294,20 @@ const fr = {
       title: 'Appareils',
       stale: 'L’état en direct des appareils est indisponible. Reconnexion en cours.',
       empty:
-        "Aucun emplacement de caméra ou de microphone n'est configuré. Ajoutez-en un dans Paramètres, Appareil.",
+        "Aucun emplacement de caméra, de microphone ou de haut-parleur n'est configuré. Ajoutez-en un dans Paramètres, Appareil.",
       available: 'Disponible',
       waiting: 'L’hôte attend une source',
       hostOpen: 'Hôte ouvert',
       hostIdle: 'Hôte inactif',
+      hostPlaying: 'L’hôte lit de l’audio',
+      hostSending: 'Hôte en lecture',
       sending: 'Émission depuis ce navigateur',
+      receiving: 'Lecture dans ce navigateur',
       black: 'Vidéo noire',
       silence: 'Silence numérique',
       resuming: 'En attente de reprise',
       stop: 'Arrêter le partage',
+      stopListening: 'Arrêter l’écoute',
       disconnect: 'Déconnecter',
       takeover: 'Reprendre',
       refused: 'Utilisé par {{owner}} depuis {{source}}',
@@ -318,6 +322,7 @@ const fr = {
       share: {
         camera: 'Partager la caméra',
         microphone: 'Partager le microphone',
+        speaker: 'Écouter',
         usbDevice: 'Partager l’USB'
       },
       permission: {
@@ -329,7 +334,8 @@ const fr = {
       capture: {
         unsupported: 'Ce navigateur ne peut pas capturer l’audio ni la vidéo',
         camera: 'Ce navigateur ne peut pas encoder les images de la caméra',
-        microphone: 'Ce navigateur ne peut pas traiter l’audio du microphone'
+        microphone: 'Ce navigateur ne peut pas traiter l’audio du microphone',
+        speaker: 'Ce navigateur ne peut pas lire l’audio'
       },
       mic: {
         mute: 'Couper le micro',
@@ -782,17 +788,20 @@ const fr = {
         rebindNotice:
           'Basculer cet interrupteur réénumère le périphérique USB, la cible perd donc brièvement ses périphériques virtuels et son réseau USB.',
         media: {
-          title: 'Emplacements caméra et micro',
-          desc: 'Déclarez les périphériques média que les navigateurs peuvent occuper. Le budget de points de terminaison est vérifié lors de l’application du profil USB. L’enregistrement réénumère le périphérique et déconnecte les navigateurs connectés.',
+          title: 'Emplacements caméra, micro et haut-parleur',
+          desc: 'Déclarez les périphériques média que voit la machine cible. Le budget de points de terminaison est vérifié lors de l’application du profil USB. L’enregistrement réénumère le périphérique et déconnecte les navigateurs connectés.',
           cameras: 'Caméras',
           microphones: 'Microphones',
+          speakers: 'Haut-parleurs',
           name: 'Nom',
           namePlaceholder: 'Affiché sur la machine cible',
           addCamera: 'Ajouter une caméra',
           addMicrophone: 'Ajouter un micro',
+          addSpeaker: 'Ajouter un haut-parleur',
           remove: 'Supprimer',
           cameraDefault: 'Caméra {{index}}',
           microphoneDefault: 'Microphone {{index}}',
+          speakerDefault: 'Haut-parleur {{index}}',
           nameRequired: 'Chaque emplacement doit avoir un nom.',
           budgetHint:
             'Les six points de terminaison USB IN sont une limite matérielle fixe. Regroupez clavier, souris et pointeur absolu sur une seule interface HID dans Présentation USB, ou désactivez ici le disque virtuel ou, dans Réseau, l’adaptateur réseau USB.',
@@ -801,7 +810,8 @@ const fr = {
           save: 'Enregistrer les emplacements',
           disconnect: 'Déconnecter',
           disconnectAll: 'Déconnecter toutes les sources',
-          limit: 'Les emplacements caméra et micro ne doivent pas dépasser huit au total.',
+          limit:
+            'Les emplacements caméra, micro et haut-parleur ne doivent pas dépasser huit au total.',
           failed: 'Impossible de mettre à jour les emplacements média.'
         },
         reboot: 'Redémarrer',

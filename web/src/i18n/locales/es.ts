@@ -292,16 +292,20 @@ const es = {
       title: 'Dispositivos',
       stale: 'El estado en vivo de los dispositivos no está disponible. Reconectando.',
       empty:
-        'No hay ranuras de cámara ni de micrófono configuradas. Añade una en Ajustes, Dispositivo.',
+        'No hay ranuras de cámara, de micrófono ni de altavoz configuradas. Añade una en Ajustes, Dispositivo.',
       available: 'Disponible',
       waiting: 'El host espera una fuente',
       hostOpen: 'Host abierto',
       hostIdle: 'Host inactivo',
+      hostPlaying: 'El host está reproduciendo audio',
+      hostSending: 'Host reproduciendo',
       sending: 'Enviando desde este navegador',
+      receiving: 'Reproduciendo en este navegador',
       black: 'Vídeo en negro',
       silence: 'Silencio digital',
       resuming: 'Esperando para reanudar',
       stop: 'Dejar de compartir',
+      stopListening: 'Dejar de escuchar',
       disconnect: 'Desconectar',
       takeover: 'Tomar el control',
       refused: 'En uso por {{owner}} desde {{source}}',
@@ -316,6 +320,7 @@ const es = {
       share: {
         camera: 'Compartir cámara',
         microphone: 'Compartir micrófono',
+        speaker: 'Escuchar',
         usbDevice: 'Compartir USB'
       },
       permission: {
@@ -327,7 +332,8 @@ const es = {
       capture: {
         unsupported: 'Este navegador no puede capturar audio ni vídeo',
         camera: 'Este navegador no puede codificar los fotogramas de la cámara',
-        microphone: 'Este navegador no puede procesar el audio del micrófono'
+        microphone: 'Este navegador no puede procesar el audio del micrófono',
+        speaker: 'Este navegador no puede reproducir audio'
       },
       mic: {
         mute: 'Silenciar',
@@ -779,17 +785,20 @@ const es = {
         rebindNotice:
           'Cambiar este interruptor vuelve a enumerar el dispositivo USB, así que el destino pierde un momento sus dispositivos virtuales y su red USB.',
         media: {
-          title: 'Ranuras de cámara y micrófono',
-          desc: 'Declare los dispositivos multimedia que los navegadores pueden ocupar. El presupuesto de endpoints se comprueba al aplicar el perfil USB. Al guardar, el dispositivo se vuelve a enumerar y se desconecta cualquier navegador conectado.',
+          title: 'Ranuras de cámara, micrófono y altavoz',
+          desc: 'Declare los dispositivos multimedia que ve el equipo de destino. El presupuesto de endpoints se comprueba al aplicar el perfil USB. Al guardar, el dispositivo se vuelve a enumerar y se desconecta cualquier navegador conectado.',
           cameras: 'Cámaras',
           microphones: 'Micrófonos',
+          speakers: 'Altavoces',
           name: 'Nombre',
           namePlaceholder: 'Se muestra en el equipo de destino',
           addCamera: 'Añadir cámara',
           addMicrophone: 'Añadir micrófono',
+          addSpeaker: 'Añadir altavoz',
           remove: 'Quitar',
           cameraDefault: 'Cámara {{index}}',
           microphoneDefault: 'Micrófono {{index}}',
+          speakerDefault: 'Altavoz {{index}}',
           nameRequired: 'Cada ranura necesita un nombre.',
           budgetHint:
             'Los seis endpoints USB IN son un límite fijo del hardware. Reúne teclado, ratón y puntero absoluto en una sola interfaz HID en Presentación USB, o desactiva aquí el disco virtual o el adaptador de red USB en Red.',
@@ -798,7 +807,7 @@ const es = {
           save: 'Guardar ranuras',
           disconnect: 'Desconectar',
           disconnectAll: 'Desconectar todas las fuentes',
-          limit: 'Las ranuras de cámara y micrófono no pueden sumar más de ocho.',
+          limit: 'Las ranuras de cámara, micrófono y altavoz no pueden sumar más de ocho.',
           failed: 'No se pudieron actualizar las ranuras multimedia.'
         },
         reboot: 'Reiniciar',

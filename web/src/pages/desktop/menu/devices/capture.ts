@@ -7,12 +7,17 @@ type ErrorHandler = (message: string) => void;
 
 type CameraWorkerResponse = { id: number; payload?: ArrayBuffer; error?: string };
 
-export type CaptureBlock = 'insecure' | 'unsupported' | 'camera' | 'microphone';
+export type CaptureBlock = 'insecure' | 'unsupported' | 'camera' | 'microphone' | 'speaker';
 
 // getUserMedia is absent both on a browser that never had it and on a browser
 // that has it but withholds it outside a secure context, and only the second is
 // fixable by the user.
 export function captureSupport(kind: SourceKind): CaptureBlock | '' {
+  // A speaker is played, not captured: it needs neither getUserMedia nor a
+  // secure context, only the worklet that renders what the gadget sends.
+  if (kind === 'speaker') {
+    return audioWorkletMissing() ? 'speaker' : '';
+  }
   if (!navigator.mediaDevices?.getUserMedia) {
     return window.isSecureContext === false ? 'insecure' : 'unsupported';
   }
@@ -22,15 +27,16 @@ export function captureSupport(kind: SourceKind): CaptureBlock | '' {
   ) {
     return 'camera';
   }
-  if (
-    kind === 'microphone' &&
-    (!window.AudioContext ||
-      !window.AudioWorkletNode ||
-      !('audioWorklet' in AudioContext.prototype))
-  ) {
+  if (kind === 'microphone' && audioWorkletMissing()) {
     return 'microphone';
   }
   return '';
+}
+
+function audioWorkletMissing() {
+  return (
+    !window.AudioContext || !window.AudioWorkletNode || !('audioWorklet' in AudioContext.prototype)
+  );
 }
 
 // Carries the reason as a code so the view can translate it; the message is only

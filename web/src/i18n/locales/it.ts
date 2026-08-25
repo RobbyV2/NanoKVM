@@ -293,16 +293,20 @@ const it = {
       title: 'Dispositivi',
       stale: 'Lo stato in tempo reale dei dispositivi non è disponibile. Riconnessione in corso.',
       empty:
-        'Nessuno slot per fotocamera o microfono è configurato. Aggiungine uno in Impostazioni, Dispositivo.',
+        'Nessuno slot per fotocamera, microfono o altoparlante è configurato. Aggiungine uno in Impostazioni, Dispositivo.',
       available: 'Disponibile',
       waiting: 'L’host attende una sorgente',
       hostOpen: 'Host aperto',
       hostIdle: 'Host inattivo',
+      hostPlaying: 'L’host sta riproducendo audio',
+      hostSending: 'Host in riproduzione',
       sending: 'Invio da questo browser',
+      receiving: 'Riproduzione in questo browser',
       black: 'Video nero',
       silence: 'Silenzio digitale',
       resuming: 'In attesa di riprendere',
       stop: 'Interrompi la condivisione',
+      stopListening: 'Interrompi l’ascolto',
       disconnect: 'Disconnetti',
       takeover: 'Prendi il controllo',
       refused: 'In uso da {{owner}} tramite {{source}}',
@@ -317,6 +321,7 @@ const it = {
       share: {
         camera: 'Condividi la fotocamera',
         microphone: 'Condividi il microfono',
+        speaker: 'Ascolta',
         usbDevice: 'Condividi USB'
       },
       permission: {
@@ -328,7 +333,8 @@ const it = {
       capture: {
         unsupported: 'Questo browser non può acquisire audio o video',
         camera: 'Questo browser non può codificare i fotogrammi della fotocamera',
-        microphone: 'Questo browser non può elaborare l’audio del microfono'
+        microphone: 'Questo browser non può elaborare l’audio del microfono',
+        speaker: 'Questo browser non può riprodurre l’audio'
       },
       mic: {
         mute: 'Disattiva audio',
@@ -780,17 +786,20 @@ const it = {
         rebindNotice:
           'Cambiare questo interruttore rienumera il dispositivo USB, quindi il target perde per un attimo i dispositivi virtuali e la rete USB.',
         media: {
-          title: 'Slot per fotocamera e microfono',
-          desc: 'Dichiara i dispositivi multimediali che i browser possono occupare. Il budget degli endpoint viene verificato quando si applica il profilo USB. Il salvataggio rienumera il dispositivo e disconnette i browser collegati.',
+          title: 'Slot per fotocamera, microfono e altoparlante',
+          desc: 'Dichiara i dispositivi multimediali visti dall’host di destinazione. Il budget degli endpoint viene verificato quando si applica il profilo USB. Il salvataggio rienumera il dispositivo e disconnette i browser collegati.',
           cameras: 'Fotocamere',
           microphones: 'Microfoni',
+          speakers: 'Altoparlanti',
           name: 'Nome',
           namePlaceholder: 'Mostrato sull’host di destinazione',
           addCamera: 'Aggiungi fotocamera',
           addMicrophone: 'Aggiungi microfono',
+          addSpeaker: 'Aggiungi altoparlante',
           remove: 'Rimuovi',
           cameraDefault: 'Fotocamera {{index}}',
           microphoneDefault: 'Microfono {{index}}',
+          speakerDefault: 'Altoparlante {{index}}',
           nameRequired: 'Ogni slot richiede un nome.',
           budgetHint:
             "I sei endpoint USB IN sono un limite fisso dell'hardware. Metti tastiera, mouse e puntatore assoluto su una sola interfaccia HID in Presentazione USB, oppure disattiva qui il disco virtuale o, in Rete, l’adattatore di rete USB.",
@@ -799,7 +808,8 @@ const it = {
           save: 'Salva slot',
           disconnect: 'Disconnetti',
           disconnectAll: 'Disconnetti tutte le sorgenti',
-          limit: 'Gli slot per fotocamera e microfono devono essere in totale otto o meno.',
+          limit:
+            'Gli slot per fotocamera, microfono e altoparlante devono essere in totale otto o meno.',
           failed: 'Impossibile aggiornare gli slot multimediali.'
         },
         reboot: 'Riavvia',

@@ -290,16 +290,20 @@ const da = {
       title: 'Enheder',
       stale: 'Enhedernes livestatus er ikke tilgængelig. Opretter forbindelse igen.',
       empty:
-        'Der er ikke opsat nogen kamera- eller mikrofonpladser. Tilføj en under Indstillinger, Enhed.',
+        'Der er ikke opsat nogen kamera-, mikrofon- eller højttalerpladser. Tilføj en under Indstillinger, Enhed.',
       available: 'Tilgængelig',
       waiting: 'Værten venter på en kilde',
       hostOpen: 'Vært åben',
       hostIdle: 'Vært inaktiv',
+      hostPlaying: 'Værten afspiller lyd',
+      hostSending: 'Vært afspiller',
       sending: 'Sender fra denne browser',
+      receiving: 'Afspiller i denne browser',
       black: 'Sort video',
       silence: 'Digital stilhed',
       resuming: 'Venter på at fortsætte',
       stop: 'Stop deling',
+      stopListening: 'Stop lytning',
       disconnect: 'Afbryd',
       takeover: 'Overtag',
       refused: 'Bruges af {{owner}} fra {{source}}',
@@ -314,6 +318,7 @@ const da = {
       share: {
         camera: 'Del kamera',
         microphone: 'Del mikrofon',
+        speaker: 'Lyt',
         usbDevice: 'Del USB'
       },
       permission: {
@@ -325,7 +330,8 @@ const da = {
       capture: {
         unsupported: 'Denne browser kan ikke optage lyd eller video',
         camera: 'Denne browser kan ikke kode kamerabilleder',
-        microphone: 'Denne browser kan ikke behandle mikrofonlyd'
+        microphone: 'Denne browser kan ikke behandle mikrofonlyd',
+        speaker: 'Denne browser kan ikke afspille lyd'
       },
       mic: {
         mute: 'Slå lyden fra',
@@ -771,17 +777,20 @@ const da = {
         rebindNotice:
           'At skifte denne kontakt opregner USB-enheden igen, så målet kortvarigt mister sine virtuelle enheder og sit USB-netværk.',
         media: {
-          title: 'Kamera- og mikrofonpladser',
-          desc: 'Angiv de medieenheder, browsere må udfylde. Endepunktsbudgettet kontrolleres, når USB-profilen anvendes. Når du gemmer, opregnes enheden igen, og tilsluttede browsere afbrydes.',
+          title: 'Kamera-, mikrofon- og højttalerpladser',
+          desc: 'Angiv de medieenheder, værtsmaskinen ser. Endepunktsbudgettet kontrolleres, når USB-profilen anvendes. Når du gemmer, opregnes enheden igen, og tilsluttede browsere afbrydes.',
           cameras: 'Kameraer',
           microphones: 'Mikrofoner',
+          speakers: 'Højttalere',
           name: 'Navn',
           namePlaceholder: 'Vises på værtsmaskinen',
           addCamera: 'Tilføj kamera',
           addMicrophone: 'Tilføj mikrofon',
+          addSpeaker: 'Tilføj højttaler',
           remove: 'Fjern',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Højttaler {{index}}',
           nameRequired: 'Hver plads skal have et navn.',
           budgetHint:
             'De seks USB IN-endepunkter er en fast hardwaregrænse. Saml tastatur, mus og absolut pegeredskab på én HID-grænseflade under USB-præsentation, eller slå den virtuelle disk fra her eller USB-netværkskortet under Netværk.',
@@ -790,7 +799,7 @@ const da = {
           save: 'Gem pladser',
           disconnect: 'Afbryd',
           disconnectAll: 'Afbryd alle kilder',
-          limit: 'Kamera- og mikrofonpladser må tilsammen højst være otte.',
+          limit: 'Kamera-, mikrofon- og højttalerpladser må tilsammen højst være otte.',
           failed: 'Mediepladserne kunne ikke opdateres.'
         },
         reboot: 'Genstart',

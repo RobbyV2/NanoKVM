@@ -295,16 +295,20 @@ const de = {
       title: 'Geräte',
       stale: 'Der Live-Status der Geräte ist nicht verfügbar. Verbindung wird wiederhergestellt.',
       empty:
-        'Es sind keine Kamera- oder Mikrofonplätze eingerichtet. Unter Einstellungen, Gerät einen hinzufügen.',
+        'Es sind keine Kamera-, Mikrofon- oder Lautsprecherplätze eingerichtet. Unter Einstellungen, Gerät einen hinzufügen.',
       available: 'Verfügbar',
       waiting: 'Der Host wartet auf eine Quelle',
       hostOpen: 'Host geöffnet',
       hostIdle: 'Host untätig',
+      hostPlaying: 'Der Host gibt Audio wieder',
+      hostSending: 'Host spielt ab',
       sending: 'Sendet aus diesem Browser',
+      receiving: 'Wiedergabe in diesem Browser',
       black: 'Schwarzes Video',
       silence: 'Digitale Stille',
       resuming: 'Wartet auf Fortsetzung',
       stop: 'Freigabe beenden',
+      stopListening: 'Mithören beenden',
       disconnect: 'Trennen',
       takeover: 'Übernehmen',
       refused: 'In Benutzung von {{owner}} über {{source}}',
@@ -319,6 +323,7 @@ const de = {
       share: {
         camera: 'Kamera freigeben',
         microphone: 'Mikrofon freigeben',
+        speaker: 'Mithören',
         usbDevice: 'USB freigeben'
       },
       permission: {
@@ -330,7 +335,8 @@ const de = {
       capture: {
         unsupported: 'Dieser Browser kann kein Audio und kein Video aufnehmen',
         camera: 'Dieser Browser kann keine Kamerabilder kodieren',
-        microphone: 'Dieser Browser kann kein Mikrofonaudio verarbeiten'
+        microphone: 'Dieser Browser kann kein Mikrofonaudio verarbeiten',
+        speaker: 'Dieser Browser kann kein Audio wiedergeben'
       },
       mic: {
         mute: 'Stummschalten',
@@ -781,17 +787,20 @@ const de = {
         rebindNotice:
           'Das Umschalten dieses Schalters meldet das USB-Gerät neu an, das Zielsystem verliert dabei kurz seine virtuellen Geräte und sein USB-Netzwerk.',
         media: {
-          title: 'Kamera- und Mikrofonplätze',
-          desc: 'Legen Sie fest, welche Mediengeräte Browser belegen dürfen. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft. Beim Speichern wird das Gerät neu erkannt und verbundene Browser werden getrennt.',
+          title: 'Kamera-, Mikrofon- und Lautsprecherplätze',
+          desc: 'Legen Sie fest, welche Mediengeräte der Zielrechner sieht. Das Endpunkt-Budget wird beim Anwenden des USB-Profils geprüft. Beim Speichern wird das Gerät neu erkannt und verbundene Browser werden getrennt.',
           cameras: 'Kameras',
           microphones: 'Mikrofone',
+          speakers: 'Lautsprecher',
           name: 'Name',
           namePlaceholder: 'Wird auf dem Zielrechner angezeigt',
           addCamera: 'Kamera hinzufügen',
           addMicrophone: 'Mikrofon hinzufügen',
+          addSpeaker: 'Lautsprecher hinzufügen',
           remove: 'Entfernen',
           cameraDefault: 'Kamera {{index}}',
           microphoneDefault: 'Mikrofon {{index}}',
+          speakerDefault: 'Lautsprecher {{index}}',
           nameRequired: 'Jeder Platz braucht einen Namen.',
           budgetHint:
             'Die sechs USB-IN-Endpunkte sind eine feste Hardwaregrenze. Lege Tastatur, Maus und Absolutzeiger unter USB-Darstellung auf eine HID-Schnittstelle, oder schalte hier die virtuelle Festplatte oder unter Netzwerk den USB-Netzwerkadapter ab.',
@@ -800,7 +809,8 @@ const de = {
           save: 'Plätze speichern',
           disconnect: 'Trennen',
           disconnectAll: 'Alle Quellen trennen',
-          limit: 'Kamera- und Mikrofonplätze dürfen zusammen höchstens acht ergeben.',
+          limit:
+            'Kamera-, Mikrofon- und Lautsprecherplätze dürfen zusammen höchstens acht ergeben.',
           failed: 'Die Medienplätze konnten nicht aktualisiert werden.'
         },
         reboot: 'Neustarten',
