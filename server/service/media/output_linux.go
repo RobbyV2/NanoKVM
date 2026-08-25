@@ -759,6 +759,11 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 				if streaming && failures >= 25 {
 					streaming, failures = false, 0
 					demand(sources.Demand{})
+					// Half a second of nothing is a host that stopped.
+					// Whatever part-period is in hand belongs to the
+					// stream that ended and must not be glued to the
+					// front of the next one.
+					filled = 0
 				}
 				if sourceActive && failures >= 5 {
 					sourceActive = false
