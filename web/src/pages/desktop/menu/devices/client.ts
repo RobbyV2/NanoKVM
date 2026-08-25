@@ -67,6 +67,7 @@ type ClientCallbacks = {
 };
 
 const maxBufferedBytes = (2 << 20) + 256;
+const mjpegFramesInFlight = 2;
 const frameAckTimeout = 3000;
 
 function sourceSocket() {
@@ -178,7 +179,14 @@ export class BrowserSourceClient {
     for (const pending of this.pendingFrames.values()) {
       if (pending.key === key && pending.kind === kind) inFlight++;
     }
-    if (inFlight >= (kind === 'mjpeg' ? 1 : 4)) return false;
+    // Two video frames, not one. A window of one serialises a whole round trip
+    // per frame - encode, send, the device's work, the ack - so the camera sat
+    // idle for the return leg. Measured against the device with 135KB frames:
+    // window 1 gave 6.6 fps / 0.89 MB/s, window 2 gave 9.3 fps / 1.25 MB/s, and
+    // window 3 gave nothing more (8.6 fps) because the device is the limit by
+    // then. The cost is bounded: at most one extra frame outstanding, so the
+    // lag stays around two frame intervals rather than growing.
+    if (inFlight >= (kind === 'mjpeg' ? mjpegFramesInFlight : 4)) return false;
 
     this.sequence = (this.sequence + 1) >>> 0;
     const sequence = this.sequence;

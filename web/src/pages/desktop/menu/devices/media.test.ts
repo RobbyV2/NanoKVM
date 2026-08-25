@@ -387,3 +387,33 @@ test('slot rows renumber contiguously from zero within each kind', () => {
     { id: 'uvc.cam1', kind: 'camera', label: 'Rack' }
   ]);
 });
+
+// The in-flight window is a throughput knob, not an implementation detail. At
+// one frame the camera waits out a whole round trip - encode, send, the
+// device's work, the ack - before capturing the next. Measured against the
+// hardware with 135KB frames: window 1 gave 6.6 fps / 0.89 MB/s, window 2 gave
+// 9.3 fps / 1.25 MB/s, window 3 gave nothing more because the device is the
+// limit by then. Pin it so a change back to one is a decision, not an accident.
+test('a second video frame may be in flight before the first is acknowledged', { timeout: 1000 }, async () => {
+  installBrowserGlobals();
+  const socket = new ControlSocket();
+  const client = await connectedClient(socket);
+
+  const claiming = client.claim('uvc.cam0', cameraOffer);
+  await flush();
+  socket.deliver({
+    type: 'claimed',
+    binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
+    token: 'lease'
+  });
+  await claiming;
+
+  const payload = new ArrayBuffer(16);
+  const accepted = [
+    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
+    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
+    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload)
+  ];
+
+  assert.deepEqual(accepted, [true, true, false], 'want two frames in flight, then backpressure');
+});
