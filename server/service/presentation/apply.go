@@ -244,6 +244,19 @@ func (m *Manager) unbindIfBound() error {
 // write whose attribute reads back as the bytes the plan wants is dropped. One
 // that differs is left in the plan, and Reconcile is what buys it the unlinked
 // window the kernel needs to accept it.
+// A write is only redundant if the attribute lives long enough to still hold
+// that value when the plan finishes. f_uvc's rebuild opens by removing its
+// descriptor group directories and recreating them, and a recreated attribute
+// comes back holding the function's compiled-in default rather than whatever
+// was read here. Dropping such a write leaves the default standing: for a UVC
+// frame that is 640x360 with an empty dwFrameInterval, which f_uvc renders as
+// bFrameIntervalType 0 - continuous - without the three interval fields that
+// layout requires, and the host refuses the camera outright.
+//
+// Only directories this plan has already removed by the time the write would
+// run disqualify it. A write to an attribute the plan leaves in place is still
+// dropped, which is what keeps the first apply after boot from reissuing
+// S03usbdev's values into a linked function and taking -EBUSY for it.
 func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 	linked := make(map[string]bool, len(before.Linked))
 	for _, name := range before.Linked {
@@ -251,8 +264,12 @@ func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 	}
 
 	ops := make([]Op, 0, len(plan.Ops))
+	var removed []string
 	for _, op := range plan.Ops {
-		if op.Kind == OpWrite && linked[writtenFunction(op.Path)] {
+		if op.Kind == OpRmdir {
+			removed = append(removed, op.Path+"/")
+		}
+		if op.Kind == OpWrite && linked[writtenFunction(op.Path)] && !underRemoved(removed, op.Path) {
 			if current, err := m.ops.ReadFile(op.Path); err == nil && bytes.Equal(current, op.Data) {
 				continue
 			}
@@ -261,6 +278,15 @@ func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 	}
 	plan.Ops = ops
 	return plan
+}
+
+func underRemoved(removed []string, path string) bool {
+	for _, dir := range removed {
+		if strings.HasPrefix(path, dir) {
+			return true
+		}
+	}
+	return false
 }
 
 func writtenFunction(path string) string {
