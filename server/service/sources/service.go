@@ -589,8 +589,12 @@ func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor
 		}
 		if result.Stream.Kind == KindSpeaker {
 			if err := s.startSpeaker(writer, message.SinkID, message.StreamID); err != nil {
+				// The refusal goes out before the slot is given back, so the
+				// browser reads why it failed rather than a bare release the
+				// termination watcher would otherwise deliver first.
+				refused := writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
 				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
-				return writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
+				return refused
 			}
 			if err := writer.JSON(controlResponse{Type: "claimed", Binding: &result.Binding, Token: result.Token}); err != nil {
 				s.stopSpeaker(message.SinkID)
@@ -644,8 +648,9 @@ func (s *Service) handleControl(ctx context.Context, writer *sourceWriter, actor
 		}
 		if err == nil && stream.Kind == KindSpeaker {
 			if err := s.startSpeaker(writer, message.SinkID, message.StreamID); err != nil {
+				refused := writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
 				_ = s.registry.Release(actor, message.SinkID, ReasonReleased)
-				return writer.JSON(controlResponse{Type: "error", Message: err.Error(), SinkID: message.SinkID})
+				return refused
 			}
 			if err := writer.JSON(controlResponse{Type: "resumed", Binding: &binding}); err != nil {
 				s.stopSpeaker(message.SinkID)

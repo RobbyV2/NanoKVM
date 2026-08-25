@@ -207,3 +207,105 @@ func TestSpeakerSinkAcceptsNoBrowserFrames(t *testing.T) {
 		t.Fatalf("Ingest(speaker) = %v, want a refusal", err)
 	}
 }
+
+// Every apply rebuilds every worker, whether or not the slot changed. A browser
+// whose binding survives that must keep hearing the target, not go quiet behind
+// a binding that still reads as live.
+func TestAReconcileDoesNotOrphanAListeningBrowser(t *testing.T) {
+	registry := &fakeRegistry{}
+	factory := &fakeFactory{}
+	resolver := fakeResolver{nodes: map[string]string{"uac2.spk0": "hw:2,0"}}
+	manager := newTestManager(registry, resolver, factory)
+
+	profile := presentation.Profile{Functions: []presentation.Function{speakerFunction("spk0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+
+	frames := make(chan sources.MediaFrame, 4)
+	if _, err := manager.Attach("uac2.spk0", func(frame sources.MediaFrame) error {
+		frames <- frame
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	first := factory.input("uac2.spk0")
+	select {
+	case <-first.emit:
+	case <-time.After(time.Second):
+		t.Fatal("capture never started")
+	}
+
+	// A second reconcile of the same profile, which is what any unrelated
+	// setting change produces.
+	factory.mu.Lock()
+	factory.inputs = nil
+	factory.mu.Unlock()
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	second := factory.input("uac2.spk0")
+	if second == nil {
+		t.Fatal("the reconcile opened no capture")
+	}
+	var emit func(Packet)
+	select {
+	case emit = <-second.emit:
+	case <-time.After(time.Second):
+		t.Fatal("the rebuilt capture never started")
+	}
+	emit(Packet{Data: make([]byte, pcmPacketBytes)})
+	select {
+	case frame := <-frames:
+		if frame.SinkID != "uac2.spk0" {
+			t.Fatalf("frame = %+v", frame)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the listening browser was orphaned by the reconcile")
+	}
+}
+
+func TestARemovedSpeakerStopsItsListener(t *testing.T) {
+	registry := &fakeRegistry{}
+	factory := &fakeFactory{}
+	resolver := fakeResolver{nodes: map[string]string{"uac2.spk0": "hw:2,0"}}
+	manager := newTestManager(registry, resolver, factory)
+
+	profile := presentation.Profile{Functions: []presentation.Function{speakerFunction("spk0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+
+	stopped := make(chan struct{})
+	if _, err := manager.Attach("uac2.spk0", func(sources.MediaFrame) error {
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		defer close(stopped)
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			manager.mu.RLock()
+			_, present := manager.listeners["uac2.spk0"]
+			manager.mu.RUnlock()
+			if !present {
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	if err := manager.Reconcile(context.Background(), presentation.Profile{}, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	<-stopped
+	manager.mu.RLock()
+	_, present := manager.listeners["uac2.spk0"]
+	manager.mu.RUnlock()
+	if present {
+		t.Fatal("a removed speaker kept its listener")
+	}
+}

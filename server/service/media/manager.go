@@ -107,6 +107,11 @@ type Manager struct {
 
 	mu      sync.RWMutex
 	workers map[string]*worker
+	// Keyed by sink, not by worker, so a reconcile that rebuilds a speaker's
+	// worker - which every apply does, whether or not the slot changed - does
+	// not silently orphan the browser listening to it while its binding still
+	// reads as live.
+	listeners map[string]*speakerListener
 }
 
 var _ sources.FrameIngress = (*Manager)(nil)
@@ -128,17 +133,16 @@ type worker struct {
 	rateAt     time.Time
 	rateTokens float64
 	latency    latencyTracker
-	// A slot carries at most one binding, so at most one browser is listening
-	// to a speaker. The listener owns a bounded queue and its own goroutine so
-	// a slow socket can never stall the capture loop.
-	listener *speakerListener
-	egress   uint32
 }
 
+// A slot carries at most one binding, so at most one browser is listening to a
+// speaker. The listener owns a bounded queue and its own goroutine so a slow
+// socket can never stall the capture loop.
 type speakerListener struct {
-	queue chan sources.MediaFrame
-	done  chan struct{}
-	once  sync.Once
+	queue    chan sources.MediaFrame
+	done     chan struct{}
+	once     sync.Once
+	sequence uint32
 }
 
 func (l *speakerListener) stop() {
@@ -193,7 +197,7 @@ func newManagerWith(registry SlotRegistry, resolver NodeResolver, factory Output
 	return &Manager{
 		registry: registry, resolver: resolver, factory: factory,
 		holds: newHoldTable(open), openNodes: procOpenNodes,
-		workers: make(map[string]*worker),
+		workers: make(map[string]*worker), listeners: make(map[string]*speakerListener),
 	}
 }
 
@@ -216,7 +220,12 @@ func (m *Manager) Suspend() error {
 	m.mu.Lock()
 	workers := m.workers
 	m.workers = make(map[string]*worker)
+	listeners := m.listeners
+	m.listeners = make(map[string]*speakerListener)
 	m.mu.Unlock()
+	for _, listener := range listeners {
+		listener.stop()
+	}
 
 	nodes := workerNodes(workers)
 	if discovered, err := m.resolver.GadgetVideoNodes(); err == nil {
@@ -388,7 +397,19 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 	m.mu.Lock()
 	previous := m.workers
 	m.workers = next
+	// A speaker that is no longer a speaker, or no longer declared, keeps no
+	// listener: there is nothing left to publish to it.
+	var orphans []*speakerListener
+	for id, listener := range m.listeners {
+		if worker, ok := next[id]; !ok || worker.spec.Kind != sources.KindSpeaker {
+			orphans = append(orphans, listener)
+			delete(m.listeners, id)
+		}
+	}
 	m.mu.Unlock()
+	for _, listener := range orphans {
+		listener.stop()
+	}
 	if stuck := stopWorkers(previous); len(stuck) > 0 {
 		failures = append(failures, fmt.Errorf("%w: media slots %s did not stop within %s",
 			ErrNodeBusy, strings.Join(stuck, ", "), stopTimeout))
@@ -460,9 +481,8 @@ func (m *Manager) Detach(sinkID string) {
 	if w == nil {
 		return
 	}
+	m.dropListener(sinkID, nil)
 	w.mu.Lock()
-	listener := w.listener
-	w.listener = nil
 	clear(w.sequence)
 	w.generation++
 	w.rateAt = time.Time{}
@@ -470,7 +490,6 @@ func (m *Manager) Detach(sinkID string) {
 	w.latency = latencyTracker{}
 	generation := w.generation
 	w.mu.Unlock()
-	listener.stop()
 	for {
 		select {
 		case <-w.queue:
@@ -601,11 +620,9 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 	if err != nil {
 		log.Errorf("media output %s: %s: the node stays held, so the gadget stays on the bus", w.spec.ID, err)
 	}
-	w.mu.Lock()
-	listener := w.listener
-	w.listener = nil
-	w.mu.Unlock()
-	listener.stop()
+	// The listener deliberately outlives the worker. A reconcile replaces every
+	// worker, and the browser's binding survives that; dropping the listener
+	// here would leave a live binding playing nothing.
 	_ = m.registry.SetDemand(w.spec.ID, sources.Demand{})
 	_ = m.registry.SetBindingState(w.spec.ID, sources.StateSuspended)
 }
@@ -620,14 +637,18 @@ func (w *worker) close() error {
 // publish hands one captured packet to whichever browser holds this speaker.
 // It runs on the capture goroutine, so it only ever touches a bounded queue.
 func (m *Manager) publish(w *worker, packet Packet) {
-	w.mu.Lock()
-	listener := w.listener
-	sequence := w.egress
-	w.egress++
-	w.mu.Unlock()
-	if listener == nil || len(packet.Data) == 0 {
+	if len(packet.Data) == 0 {
 		return
 	}
+	m.mu.Lock()
+	listener := m.listeners[w.spec.ID]
+	if listener == nil {
+		m.mu.Unlock()
+		return
+	}
+	sequence := listener.sequence
+	listener.sequence++
+	m.mu.Unlock()
 	listener.offer(sources.MediaFrame{
 		SinkID:      w.spec.ID,
 		Kind:        sources.MediaKindPCMS16LE,
@@ -652,10 +673,10 @@ func (m *Manager) Attach(sinkID string, deliver func(sources.MediaFrame) error) 
 		return nil, fmt.Errorf("%w: %s is a %s, which receives frames rather than sending them", ErrUnsupportedFrame, sinkID, w.spec.Kind)
 	}
 	listener := &speakerListener{queue: make(chan sources.MediaFrame, audioQueueDepth), done: make(chan struct{})}
-	w.mu.Lock()
-	previous := w.listener
-	w.listener = listener
-	w.mu.Unlock()
+	m.mu.Lock()
+	previous := m.listeners[sinkID]
+	m.listeners[sinkID] = listener
+	m.mu.Unlock()
 	previous.stop()
 
 	go func() {
@@ -671,14 +692,19 @@ func (m *Manager) Attach(sinkID string, deliver func(sources.MediaFrame) error) 
 			}
 		}
 	}()
-	return func() {
-		w.mu.Lock()
-		if w.listener == listener {
-			w.listener = nil
-		}
-		w.mu.Unlock()
-		listener.stop()
-	}, nil
+	return func() { m.dropListener(sinkID, listener) }, nil
+}
+
+func (m *Manager) dropListener(sinkID string, listener *speakerListener) {
+	m.mu.Lock()
+	if listener == nil || m.listeners[sinkID] == listener {
+		listener = m.listeners[sinkID]
+		delete(m.listeners, sinkID)
+	} else {
+		listener = nil
+	}
+	m.mu.Unlock()
+	listener.stop()
 }
 
 // holdVideoNodes converges the held set on what the gadget currently exposes.

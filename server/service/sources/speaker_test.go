@@ -176,14 +176,25 @@ func TestSpeakerClaimFailsFastWithoutCapture(t *testing.T) {
 	if err := connection.WriteJSON(controlMessage{Type: "claim", SinkID: "uac2.spk0", StreamID: "spk"}); err != nil {
 		t.Fatal(err)
 	}
+	// The refusal must reach the browser; the release it triggers may follow.
 	var refused controlResponse
-	readJSON(t, connection, &refused)
+	for range 3 {
+		readJSON(t, connection, &refused)
+		if refused.Type == "error" {
+			break
+		}
+	}
 	if refused.Type != "error" || !strings.Contains(refused.Message, "hw:2,0") {
 		t.Fatalf("claim = %+v", refused)
 	}
-	if binding := registry.Snapshot().Bindings; len(binding) != 0 {
-		t.Fatalf("the slot stayed claimed: %+v", binding)
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if len(registry.Snapshot().Bindings) == 0 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
+	t.Fatalf("the slot stayed claimed: %+v", registry.Snapshot().Bindings)
 }
 
 func TestSpeakerSinkRefusesBrowserAudio(t *testing.T) {
