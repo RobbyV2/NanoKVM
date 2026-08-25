@@ -191,3 +191,37 @@ func TestSetMediaSlotsBuildsSpeakers(t *testing.T) {
 		t.Fatalf("speaker slot broke the budget: %v", err)
 	}
 }
+
+// A missed isochronous OUT still completes its request, and u_audio copies
+// that request's buffer into the ALSA ring a second time - the target host's
+// audio comes back carrying an exact repeat of the block from req_number
+// milliseconds earlier. More requests in flight means fewer misses, measured
+// 8x fewer going from 4 to 8, so the ceiling has to leave room to raise it.
+func TestSpeakerAcceptsMoreRequestsInFlight(t *testing.T) {
+	for _, number := range []uint8{2, 4, 8, 16, 32} {
+		function := testSpeaker("spk0")
+		function.Audio.RequestNumber = number
+		profile := mediaProfile(function)
+		if err := profile.Validate(); err != nil {
+			t.Errorf("req_number %d: Validate() = %v, want accepted", number, err)
+		}
+	}
+	for _, number := range []uint8{0, 1, 33} {
+		function := testSpeaker("spk0")
+		function.Audio.RequestNumber = number
+		profile := mediaProfile(function)
+		if err := profile.Validate(); err == nil {
+			t.Errorf("req_number %d: Validate() = nil, want rejected", number)
+		}
+	}
+}
+
+// The default has to carry the measured value, or every freshly created
+// profile reintroduces the repeats.
+func TestDefaultAudioKeepsEnoughRequestsInFlight(t *testing.T) {
+	for _, function := range []Function{defaultMicrophone(0, "Microphone 1", true), defaultSpeaker(0, "Speaker 1", true)} {
+		if function.Audio.RequestNumber < 8 {
+			t.Errorf("%s default req_number = %d, want at least 8", function.Instance, function.Audio.RequestNumber)
+		}
+	}
+}

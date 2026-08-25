@@ -553,7 +553,7 @@ func defaultCamera(index int, label string, named bool) Function {
 func defaultMicrophone(index int, label string, named bool) Function {
 	audio := &AudioFunction{
 		FunctionName: label, PChannelMask: 1, PSampleRate: 48000, PSampleSize: 2,
-		CChannelMask: 0, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 4,
+		CChannelMask: 0, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 8,
 	}
 	if named {
 		audio.HostName = &label
@@ -568,7 +568,7 @@ func defaultMicrophone(index int, label string, named bool) Function {
 func defaultSpeaker(index int, label string, named bool) Function {
 	audio := &AudioFunction{
 		FunctionName: label, PChannelMask: 0, PSampleRate: 48000, PSampleSize: 2,
-		CChannelMask: 1, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 4,
+		CChannelMask: 1, CSampleRate: 48000, CSampleSize: 2, RequestNumber: 8,
 	}
 	if named {
 		audio.HostName = &label

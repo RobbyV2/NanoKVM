@@ -724,8 +724,18 @@ func (a *AudioFunction) validate(role AudioRole) error {
 			return fmt.Errorf("disabled USB OUT must retain 48000 Hz signed 16-bit defaults")
 		}
 	}
-	if a.RequestNumber < 2 || a.RequestNumber > 8 {
-		return fmt.Errorf("request number %d, want 2 through 8", a.RequestNumber)
+	// How many isochronous requests u_audio keeps in flight. It is not just a
+	// latency knob on this controller: a service interval whose transfer the
+	// core does not deliver still completes its request, and u_audio copies
+	// that request's buffer into the ALSA ring again - an exact repeat of the
+	// audio from req_number milliseconds earlier. Measured against a Windows
+	// host playing a 1025 Hz tone into the speaker: at 4, one 1 ms block in
+	// every 5.6 was a byte-identical copy of the block 4 ms before it and 60%
+	// of block boundaries were discontinuous; at 8 that fell to one in 46 and
+	// 26%. The ceiling is generous because nothing but 98 bytes per request is
+	// spent on it.
+	if a.RequestNumber < 2 || a.RequestNumber > 32 {
+		return fmt.Errorf("request number %d, want 2 through 32", a.RequestNumber)
 	}
 	return nil
 }
