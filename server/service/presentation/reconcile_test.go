@@ -620,3 +620,30 @@ func TestReconcileKeepsALoneOSDescUnlink(t *testing.T) {
 		t.Fatalf("the removal unlink was dropped: plan is %v", got.Ops)
 	}
 }
+
+// S03usbdev leaves the UDC unbound so the host enumerates once, with the final
+// layout. That only holds if every path out of the reconcile binds: an apply
+// binds as part of its transaction, and the paths that decide there is nothing
+// to apply have to bind for themselves. Miss one and the device never reaches
+// a host at all, which is worse than the double enumeration it replaces.
+func TestReconcileBindsWhenItDecidesNotToApply(t *testing.T) {
+	manager, ops := newTestManager(t)
+	profile := standardProfile()
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("seed apply: %v", err)
+	}
+	if err := ops.UnbindUDC(); err != nil {
+		t.Fatalf("unbind: %v", err)
+	}
+	if got := ops.Bound(); got != "" {
+		t.Fatalf("precondition: still bound to %q", got)
+	}
+
+	// The gadget now matches the profile, so the reconcile has nothing to apply.
+	if err := manager.ReconcileGadget(context.Background()); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if got := ops.Bound(); got == "" {
+		t.Fatal("the reconcile found nothing to apply and left the controller unbound")
+	}
+}

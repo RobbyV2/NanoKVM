@@ -154,8 +154,32 @@ start_usb_dev(){
             fi
     fi
 
-    ls /sys/class/udc/ | cat > UDC
+    # Deliberately NOT binding the UDC here.
+    #
+    # This script builds the stock gadget, and the server then applies whatever
+    # profile the operator actually saved - a different set of interfaces. Bind
+    # here and the host enumerates twice, fifteen seconds apart, under one
+    # VID/PID/serial: it binds drivers against the stock interface map at the
+    # first address and is handed a different map at the second. Windows caches
+    # that mapping per device instance, so whichever driver is mid-start when
+    # the device disappears comes back as CM_PROB_FAILED_START - measured, and
+    # it moves between the camera, the NIC and the audio functions from boot to
+    # boot depending on who loses the race.
+    #
+    # So the bind belongs to whoever knows the final layout. The server does it
+    # once, after reconciling. The watchdog below is the safety net: a device
+    # whose server never starts still gets its USB, just the stock gadget.
     echo device > /proc/cviusb/otg_role
+    (
+        waited=0
+        while [ "$waited" -lt 30 ]; do
+            [ -n "$(cat /sys/kernel/config/usb_gadget/g0/UDC 2>/dev/null)" ] && exit 0
+            sleep 1
+            waited=$((waited + 1))
+        done
+        echo "nanokvm: server did not bind the gadget in ${waited}s, binding the stock one"
+        ls /sys/class/udc/ | cat > /sys/kernel/config/usb_gadget/g0/UDC
+    ) &
 }
 
 start_usb_host(){

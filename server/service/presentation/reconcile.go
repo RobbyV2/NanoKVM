@@ -371,6 +371,33 @@ func (m *Manager) divergence(profile Profile) Divergence {
 // profile leaves the controller bound, because every rung of applyPlan's
 // rollback ladder ends in a bind, and hidRoutes then follows the gadget that
 // survived rather than the profile that did not.
+// S03usbdev deliberately leaves the UDC unbound so the host enumerates once,
+// with the layout the operator actually saved, rather than once for the stock
+// gadget and again fifteen seconds later for the real one. Windows caches an
+// interface-to-driver mapping per device instance, and the second enumeration
+// hands it a map that does not match the first - which is how the camera, the
+// NIC and the audio functions ended up at CM_PROB_FAILED_START, moving between
+// them from boot to boot depending on which driver was mid-start.
+//
+// So every path out of the reconcile has to end with the controller bound: the
+// apply paths bind as part of the transaction, and the two paths that decide
+// there is nothing to apply bind here instead. The init script's watchdog is
+// the backstop if this process never gets that far at all.
+func (m *Manager) bindIfUnbound() error {
+	if data, err := m.ops.ReadFile(udcAttr); err == nil && strings.TrimSpace(string(data)) != "" {
+		return nil
+	}
+	available, err := m.ops.ListUDC()
+	if err != nil {
+		return fmt.Errorf("list udc: %w", err)
+	}
+	if len(available) == 0 {
+		return fmt.Errorf("no udc to bind")
+	}
+	log.Infof("binding the gadget to %s: the init script left the bind to us", available[0])
+	return m.ensureBound(available[0])
+}
+
 func (m *Manager) ReconcileGadget(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
@@ -384,9 +411,9 @@ func (m *Manager) ReconcileGadget(ctx context.Context) error {
 		return err
 	}
 	// Nothing has claimed the gadget yet, so there is no promise to keep and
-	// whatever the init script built stands.
+	// whatever the init script built stands - but it still has to reach a host.
 	if profile.Name == "" {
-		return nil
+		return m.bindIfUnbound()
 	}
 	// A hybrid is a transient with a process on the other end of ep0.
 	// Reasserting one from a boot path would build a gadget nobody is serving.
@@ -398,7 +425,7 @@ func (m *Manager) ReconcileGadget(ctx context.Context) error {
 
 	divergence := m.divergence(profile)
 	if divergence.Empty() {
-		return nil
+		return m.bindIfUnbound()
 	}
 
 	log.Warnf("usb gadget diverges from active profile %s: it %s; reasserting the profile", profile.Name, divergence)
