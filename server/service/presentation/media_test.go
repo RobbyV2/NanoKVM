@@ -10,16 +10,18 @@ import (
 )
 
 type fakeGadgetObserver struct {
-	mu       sync.Mutex
-	suspend  int
-	applied  int
-	profiles []string
+	mu         sync.Mutex
+	suspend    int
+	applied    int
+	profiles   []string
+	suspendErr error
 }
 
-func (f *fakeGadgetObserver) Suspend() {
+func (f *fakeGadgetObserver) Suspend() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.suspend++
+	return f.suspendErr
 }
 
 func (f *fakeGadgetObserver) Applied(_ context.Context, profile Profile, _ Plan) error {

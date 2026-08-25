@@ -56,7 +56,13 @@ type HIDRouter interface {
 }
 
 type GadgetObserver interface {
-	Suspend()
+	// Suspend gives back every device node the gadget owns, before it is taken
+	// apart, and says whether it managed to. The answer is not decoration: a
+	// UVC function whose video node is still open does not fail its configfs
+	// unlink, it blocks it in the kernel, past every context and deadline this
+	// package has. Callers that are about to unlink must refuse on an error
+	// here; the ones that only unbind may proceed and log it.
+	Suspend() error
 	Applied(context.Context, Profile, Plan) error
 }
 
@@ -371,9 +377,8 @@ func (m *Manager) ApplyProfile(ctx context.Context, profile Profile) error {
 	if err != nil {
 		return err
 	}
-	observer := m.observer()
-	if observer != nil {
-		observer.Suspend()
+	if err := m.suspend(true); err != nil {
+		return err
 	}
 	err = m.withGadgetLock(func() error { return m.apply(ctx, profile, plan) })
 	// The ladder inside applyPlan reverts the store along with the gadget on
@@ -570,9 +575,9 @@ func (m *Manager) StartFunctionFS(ctx context.Context, function FunctionFS) (*Tr
 		m.mu.Unlock()
 		return nil, err
 	}
-	observer := m.observer()
-	if observer != nil {
-		observer.Suspend()
+	if err := m.suspend(true); err != nil {
+		m.mu.Unlock()
+		return nil, err
 	}
 	var recovery recoveryPlan
 	var udc string
@@ -604,8 +609,9 @@ func (m *Manager) StopFunctionFS(ctx context.Context, token uint64) error {
 		return ErrTransient
 	}
 	state := m.transient
-	if observer := m.observer(); observer != nil {
-		observer.Suspend()
+	if err := m.suspend(true); err != nil {
+		m.mu.Unlock()
+		return err
 	}
 	err := m.withHIDQuiesced(func() error { return m.restoreFunctionFS(ctx, state) })
 	if err == nil {
@@ -633,8 +639,9 @@ func (m *Manager) RecoverFunctionFS(ctx context.Context) error {
 		m.mu.Unlock()
 		return err
 	}
-	if observer := m.observer(); observer != nil {
-		observer.Suspend()
+	if err := m.suspend(true); err != nil {
+		m.mu.Unlock()
+		return err
 	}
 	var recovered Profile
 	var recoveredPlan Plan
@@ -769,9 +776,7 @@ func (m *Manager) SurrenderUDC() (string, error) {
 	if err := m.loanHeld(); err != nil {
 		return "", err
 	}
-	if observer := m.observer(); observer != nil {
-		observer.Suspend()
-	}
+	_ = m.suspend(false)
 
 	udcs, err := m.ops.ListUDC()
 	if err != nil {
@@ -834,9 +839,7 @@ func (m *Manager) Rebind(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	if observer := m.observer(); observer != nil {
-		observer.Suspend()
-	}
+	_ = m.suspend(false)
 	if err := m.withGadgetLock(func() error { return m.rebind(ctx) }); err != nil {
 		m.refreshObserver(context.Background())
 		return err
@@ -851,9 +854,7 @@ func (m *Manager) ResetPHY(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	if observer := m.observer(); observer != nil {
-		observer.Suspend()
-	}
+	_ = m.suspend(false)
 	err := m.withGadgetLock(func() error {
 		if err := m.ops.ResetPHY(ctx); err != nil {
 			return fmt.Errorf("reset usb phy: %w", err)
@@ -998,6 +999,39 @@ func (m *Manager) quiescer() HIDQuiescer {
 	m.wireMu.Lock()
 	defer m.wireMu.Unlock()
 	return m.hid
+}
+
+// ErrMediaBusy is the refusal that replaces the hang. It costs the operator an
+// apply; the alternative cost them the keyboard, the USB NIC and the virtual
+// disk at once, because the gadget was left mid-transaction with nothing linked
+// while a syscall no one could interrupt waited for a video node to close.
+var ErrMediaBusy = errors.New("media pipeline still holds a device node")
+
+// suspend hands the media pipeline its chance to release every device node.
+// unlinks says whether this caller is about to remove a function from the
+// config: those must refuse, because configfs blocks such an unlink rather than
+// failing it. A caller that only unbinds or rebinds the controller never waits
+// on a node, so it logs and proceeds - those are the paths an operator uses to
+// get out of trouble, and refusing them would take the escape hatch away.
+func (m *Manager) suspend(unlinks bool) error {
+	observer := m.observer()
+	if observer == nil {
+		return nil
+	}
+	err := observer.Suspend()
+	if err == nil {
+		return nil
+	}
+	if !unlinks {
+		log.Errorf("suspend media before gadget teardown: %s", err)
+		return nil
+	}
+	// Deliberately no refreshObserver here. The gadget was never unbound, so
+	// HID, the USB NIC and the virtual disk are untouched; what is stopped is
+	// the media pipeline, and re-running it would ask the observer to re-open a
+	// node whose old handle is demonstrably still alive. Streaming comes back
+	// on the next apply that this one refuses to become.
+	return fmt.Errorf("%w: %w", ErrMediaBusy, err)
 }
 
 func (m *Manager) observer() GadgetObserver {

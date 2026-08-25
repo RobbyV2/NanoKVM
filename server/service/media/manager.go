@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -30,6 +32,7 @@ const (
 
 var (
 	ErrSinkUnavailable  = errors.New("media sink unavailable")
+	ErrNodeBusy         = errors.New("media node is still open")
 	ErrUnsupportedFrame = errors.New("unsupported media frame")
 	ErrStaleFrame       = errors.New("stale media frame")
 	ErrNotDemanded      = errors.New("media sink is not demanded")
@@ -97,6 +100,10 @@ type Manager struct {
 	factory  OutputFactory
 
 	holds *holdTable
+
+	// Substituted in tests. In production it is the kernel's own view of which
+	// descriptors this process still holds.
+	openNodes func() (map[string]int, error)
 
 	mu      sync.RWMutex
 	workers map[string]*worker
@@ -185,7 +192,8 @@ func NewManagerWith(registry SlotRegistry, resolver NodeResolver, factory Output
 func newManagerWith(registry SlotRegistry, resolver NodeResolver, factory OutputFactory, open func(string) (Holder, error)) *Manager {
 	return &Manager{
 		registry: registry, resolver: resolver, factory: factory,
-		holds: newHoldTable(open), workers: make(map[string]*worker),
+		holds: newHoldTable(open), openNodes: procOpenNodes,
+		workers: make(map[string]*worker),
 	}
 }
 
@@ -194,18 +202,111 @@ func (m *Manager) Applied(ctx context.Context, profile presentation.Profile, pla
 }
 
 // Suspend runs before the gadget is torn down, so it has to give the nodes back
-// as well as stop the workers: configfs refuses to unlink a UVC function whose
-// video node is still open. The workers go first because their descriptors are
-// dups of the held one and the V4L2 handle only closes on the last of them.
-func (m *Manager) Suspend() {
+// as well as stop the workers. Measured on hardware: unlinking a UVC function
+// whose video node is open had not returned after two minutes, and the same
+// unlink takes 0s once the node is closed - configfs does not refuse it with
+// EBUSY, it blocks in the kernel where no Go context can reach it. So the one
+// thing this must never do is return quietly having failed. It reports what it
+// could not release, and a caller that is about to unlink must refuse the apply
+// on that error rather than walk into the block.
+//
+// The workers go first because their descriptors are dups of the held one and
+// the V4L2 handle only closes on the last of them.
+func (m *Manager) Suspend() error {
 	m.mu.Lock()
 	workers := m.workers
 	m.workers = make(map[string]*worker)
 	m.mu.Unlock()
-	stopWorkers(workers)
-	if _, err := m.holds.hold(context.Background(), nil); err != nil {
-		log.Errorf("release uvc nodes before gadget teardown: %s", err)
+
+	nodes := workerNodes(workers)
+	if discovered, err := m.resolver.GadgetVideoNodes(); err == nil {
+		nodes = append(nodes, discovered...)
 	}
+
+	// The holds stay until every worker is gone. A worker that will not stop
+	// still owns a dup of the held descriptor, so the V4L2 handle is open
+	// whatever this does with its own fd - and giving up a hold that would have
+	// to be re-opened later means a second uvc_v4l2_open(), which leaks a
+	// deactivation the kernel refuses to pay back. Keeping them costs nothing
+	// and leaves HID, the NIC and the disk on the bus while the caller refuses.
+	if stuck := stopWorkers(workers); len(stuck) > 0 {
+		err := fmt.Errorf("%w: media slots %s did not stop within %s, so their descriptors on %s are still open",
+			ErrNodeBusy, strings.Join(stuck, ", "), stopTimeout, strings.Join(uniqueNodes(nodes), ", "))
+		log.Errorf("suspend media before gadget teardown: %s", err)
+		return err
+	}
+
+	var failures []error
+	if _, err := m.holds.hold(context.Background(), nil); err != nil {
+		failures = append(failures, fmt.Errorf("release uvc nodes before gadget teardown: %w", err))
+	}
+	if err := m.confirmClosed(nodes); err != nil {
+		failures = append(failures, err)
+	}
+	err := errors.Join(failures...)
+	if err != nil {
+		log.Errorf("suspend media before gadget teardown: %s", err)
+	}
+	return err
+}
+
+// A dup(2) shares the struct file, so closing the hold's descriptor does not
+// close the V4L2 handle while any dup of it is still open - and it is the
+// handle, not this process's descriptor, that the unlink waits on. "I closed my
+// fd" is therefore not the same as "the node is closed", so this asks the
+// kernel which descriptors are left rather than assuming.
+func (m *Manager) confirmClosed(nodes []string) error {
+	if len(nodes) == 0 {
+		return nil
+	}
+	open, err := m.openNodes()
+	if err != nil {
+		return fmt.Errorf("confirm gadget nodes are closed: %w", err)
+	}
+	var held []string
+	for _, node := range uniqueNodes(nodes) {
+		if count := open[node]; count > 0 {
+			held = append(held, fmt.Sprintf("%s (%d open)", node, count))
+		}
+	}
+	if len(held) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%w: %s, and unlinking its function would block in the kernel rather than fail",
+		ErrNodeBusy, strings.Join(held, ", "))
+}
+
+// Every gadget video node this process still has a descriptor for. /proc/self/fd
+// is the kernel's own answer, which is the only one worth having here: nothing
+// else on the device opens a gadget video node, and a dup is a separate entry.
+func procOpenNodes() (map[string]int, error) {
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int, len(entries))
+	for _, entry := range entries {
+		target, err := os.Readlink(filepath.Join("/proc/self/fd", entry.Name()))
+		if err != nil {
+			continue
+		}
+		counts[target]++
+	}
+	return counts, nil
+}
+
+func uniqueNodes(nodes []string) []string {
+	return slices.Compact(slices.Sorted(slices.Values(nodes)))
+}
+
+func workerNodes(workers map[string]*worker) []string {
+	var nodes []string
+	for _, w := range workers {
+		if w.spec.Kind == sources.KindCamera && w.spec.Node != "" {
+			nodes = append(nodes, w.spec.Node)
+		}
+	}
+	return nodes
 }
 
 func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, plan presentation.Plan) error {
@@ -288,7 +389,10 @@ func (m *Manager) Reconcile(ctx context.Context, profile presentation.Profile, p
 	previous := m.workers
 	m.workers = next
 	m.mu.Unlock()
-	stopWorkers(previous)
+	if stuck := stopWorkers(previous); len(stuck) > 0 {
+		failures = append(failures, fmt.Errorf("%w: media slots %s did not stop within %s",
+			ErrNodeBusy, strings.Join(stuck, ", "), stopTimeout))
+	}
 	return errors.Join(failures...)
 }
 
@@ -718,20 +822,42 @@ func encodeBlackFrame(width, height int) ([]byte, error) {
 	return encoded.Bytes(), nil
 }
 
-func stopWorkers(workers map[string]*worker) {
-	for _, worker := range workers {
-		worker.cancel()
-		_ = worker.close()
+// stopWorkers cancels every worker, closes its output and waits for the
+// goroutine to leave, and returns the slots that did not. Both halves are off
+// the caller's goroutine: Close takes the same mutex a worker wedged inside the
+// C layer is holding, so waiting on Close is the same hang in a different
+// place. What the caller gets back is a bounded answer either way - the slots
+// still holding a descriptor - which is what turns a stuck worker into a
+// refused apply instead of a blocked unlink.
+func stopWorkers(workers map[string]*worker) []string {
+	for _, current := range workers {
+		current.cancel()
+		go func(w *worker) { _ = w.close() }(current)
 	}
 	deadline := time.NewTimer(stopTimeout)
 	defer deadline.Stop()
-	for _, worker := range workers {
+	var stuck []string
+	for id, current := range workers {
 		select {
-		case <-worker.done:
+		case <-current.done:
 		case <-deadline.C:
-			return
+			stuck = append(stuck, id)
 		}
 	}
+	// The deadline is shared, so once it fires the rest are unexamined rather
+	// than known good. Sweep them without waiting again.
+	if len(stuck) > 0 {
+		stuck = stuck[:0]
+		for id, current := range workers {
+			select {
+			case <-current.done:
+			default:
+				stuck = append(stuck, id)
+			}
+		}
+	}
+	slices.Sort(stuck)
+	return stuck
 }
 
 func parseALSANode(node string) (int, int, error) {
