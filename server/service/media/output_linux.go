@@ -46,6 +46,12 @@ struct nk_uvc {
 	uint32_t max_packet;
 	struct uvc_streaming_control probe;
 	struct uvc_streaming_control commit;
+	// The frame index S_FMT was last called with, and whether a commit has
+	// since asked for a different one. The host is free to re-commit while the
+	// stream runs, and without these the gadget keeps the old geometry while
+	// the host decodes against the new one.
+	unsigned int formatted;
+	int refmt;
 };
 
 static int nk_ioctl(int fd, unsigned long request, void *arg) {
@@ -75,7 +81,9 @@ static int nk_uvc_format(struct nk_uvc *u, unsigned int frame) {
 	format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
 	format.fmt.pix.field = V4L2_FIELD_NONE;
 	format.fmt.pix.sizeimage = u->frames[frame].width * u->frames[frame].height * 2;
-	return nk_ioctl(u->fd, VIDIOC_S_FMT, &format);
+	int rc = nk_ioctl(u->fd, VIDIOC_S_FMT, &format);
+	if (rc == 0) u->formatted = frame;
+	return rc;
 }
 
 static void nk_uvc_close(struct nk_uvc *u);
@@ -251,8 +259,19 @@ static int nk_uvc_data(struct nk_uvc *u, const struct uvc_request_data *data) {
 	uint32_t requested = control->dwFrameInterval;
 	nk_control(u, control, frame);
 	if (requested == 333333 || requested == 666666) control->dwFrameInterval = requested;
-	if (u->pending == UVC_VS_COMMIT_CONTROL && !u->streaming && nk_uvc_format(u, frame) < 0)
-		return -errno;
+	// A commit while the stream is down is applied here. A commit while it is up
+	// cannot be: S_FMT is rejected on a streaming node, and the buffers are
+	// sized for the old geometry anyway. Record that the format is stale and let
+	// nk_uvc_step tear the stream down and hand the caller the same edge a
+	// STREAMON gives, which is already wired to re-encode at the committed size,
+	// restart, and tell the source what to produce.
+	if (u->pending == UVC_VS_COMMIT_CONTROL) {
+		if (!u->streaming) {
+			if (nk_uvc_format(u, frame) < 0) return -errno;
+		} else if (frame != u->formatted) {
+			u->refmt = 1;
+		}
+	}
 	u->pending = 0;
 	return 0;
 }
@@ -295,6 +314,19 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 			}
 			if (rc < 0) return rc;
 		}
+	}
+	// Taking the stream down here rather than at the commit keeps every ioctl on
+	// this one thread, and leaves the restart to the caller, which is the only
+	// side that can produce a frame at the newly committed size.
+	if (u->refmt) {
+		u->refmt = 0;
+		if (u->streaming) {
+			enum v4l2_buf_type stale = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+			nk_ioctl(u->fd, VIDIOC_STREAMOFF, &stale);
+			u->streaming = 0;
+			u->queued = 0;
+		}
+		edge = 3;
 	}
 	if (descriptor.revents & (POLLHUP | POLLNVAL)) return -EIO;
 	if (u->streaming && (descriptor.revents & POLLERR)) return -EIO;
