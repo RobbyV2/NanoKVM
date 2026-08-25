@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"NanoKVM-Server/service/controlmode"
+	"NanoKVM-Server/service/hid"
 	"NanoKVM-Server/service/media"
 	"NanoKVM-Server/service/picoclaw"
 	"NanoKVM-Server/service/presentation"
@@ -48,6 +49,15 @@ func server(r *gin.Engine) {
 	presentationManager := presentation.GetManager()
 	sourceService.SetSlotManager(presentationManager)
 	presentationManager.SetObserver(mediaManager)
+	// Wire the HID quiescer here rather than leaving it to whichever handler
+	// happens to reach hid.Manager() first. Until it is wired the manager never
+	// pushes the report-ID routes, so a collapsed HID layout - one interface
+	// carrying keyboard, mouse and pointer behind report IDs 1, 2 and 3 - sends
+	// every report in the old prefix-free framing instead. The host discards
+	// those as report 0, which is a keyboard that types nothing while the
+	// gadget, the descriptor and the writes all look correct. It only worked
+	// before when the UI happened to poll the virtual-device endpoint first.
+	hid.Manager()
 	startup.Fail("usb presentation", presentationManager.Err())
 	startup.Run("media gadget", observerRefreshBudget, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), observerRefreshBudget)
