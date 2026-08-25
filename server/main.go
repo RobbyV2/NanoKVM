@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
 	"log"
 	"net"
@@ -124,7 +125,7 @@ func run() {
 			}()
 		}
 
-		go confirmKernel(conf.Port.Https)
+		go confirmKernel("https", conf.Port.Https)
 		if err := middleware.ListenAndServeLoopbackHTTPRedirect(
 			httpAddr,
 			httpsPortStr,
@@ -146,7 +147,7 @@ func run() {
 		if err != nil {
 			panic("start http server failed")
 		}
-		go confirmKernel(conf.Port.Http)
+		go confirmKernel("http", conf.Port.Http)
 		if err := r.RunListener(listener); err != nil {
 			panic("start http server failed")
 		}
@@ -193,9 +194,9 @@ func dispose() {
 // Reaching userspace is not enough: a kernel that boots with no working NIC
 // must still roll back, so this waits for the UI to answer on the loopback and
 // for a routable address to exist.
-func confirmKernel(port int) {
+func confirmKernel(scheme string, port int) {
 	err := bootslot.Default().ConfirmWhenReady(bootslot.Ready{
-		Serving:  func() bool { return serving(port) },
+		Serving:  func() bool { return serving(scheme, port) },
 		Routable: bootslot.Routable,
 		Timeout:  confirmTimeout,
 		Interval: confirmInterval,
@@ -205,9 +206,19 @@ func confirmKernel(port int) {
 	}
 }
 
-func serving(port int) bool {
+// The scheme has to follow the listener. Probing http:// against a TLS port
+// gets a handshake error rather than a page, so with HTTPS enabled this never
+// reported the UI as serving, the trial never committed, and every kernel
+// update rolled itself back after the guard's deadline - on a device that was
+// running the new kernel perfectly well. The certificate is the device's own
+// and is usually self-signed, so this one probe does not verify it: it is
+// asking "is my own UI up", over the loopback, not trusting a peer.
+func serving(scheme string, port int) bool {
 	client := http.Client{Timeout: 5 * time.Second}
-	rsp, err := client.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/")
+	if scheme == "https" {
+		client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	}
+	rsp, err := client.Get(scheme + "://127.0.0.1:" + strconv.Itoa(port) + "/")
 	if err != nil {
 		return false
 	}
