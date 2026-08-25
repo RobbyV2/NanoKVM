@@ -730,10 +730,11 @@ func (a *AudioFunction) validate(role AudioRole) error {
 	// that request's buffer into the ALSA ring again - an exact repeat of the
 	// audio from req_number milliseconds earlier. Measured against a Windows
 	// host playing a 1025 Hz tone into the speaker: at 4, one 1 ms block in
-	// every 5.6 was a byte-identical copy of the block 4 ms before it and 60%
-	// of block boundaries were discontinuous; at 8 that fell to one in 46 and
-	// 26%. The ceiling is generous because nothing but 98 bytes per request is
-	// spent on it.
+	// every 5.6 was a byte-identical copy of the block 4 ms before it; at 8,
+	// one in 46; at 32 the repeats stop entirely, measured three times, and
+	// the worst non-tone component falls from -10.4 dB to -16.5 dB. Nothing
+	// but 98 bytes per request is spent on it, so the default sits at the
+	// value that ends them rather than the one that merely helps.
 	if a.RequestNumber < 2 || a.RequestNumber > 32 {
 		return fmt.Errorf("request number %d, want 2 through 32", a.RequestNumber)
 	}
