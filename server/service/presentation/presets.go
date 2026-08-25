@@ -65,6 +65,44 @@ var presets = [...]Preset{
 		Product:      "Multifunction Composite Gadget",
 		Source:       "usb.ids 1d6b:0104",
 	},
+	// The gadget identities the kernel's own legacy drivers ship with. They are
+	// registered and real, but no vendor writes a Windows driver for them, so a
+	// host falls back to its inbox class drivers instead of loading somebody
+	// else's product driver against interfaces that product never had. That is
+	// what makes them safe to wear: a preset naming a real consumer device
+	// borrows that vendor's drivers along with its number.
+	{
+		ID:           "linux-ethernet-gadget",
+		VendorID:     "0x0525",
+		ProductID:    "0xa4a1",
+		Manufacturer: "Netchip Technology, Inc.",
+		Product:      "Linux-USB Ethernet Gadget",
+		Source:       "drivers/usb/gadget/legacy/ether.c CDC_PRODUCT_NUM",
+	},
+	{
+		ID:           "linux-rndis-gadget",
+		VendorID:     "0x0525",
+		ProductID:    "0xa4a2",
+		Manufacturer: "Netchip Technology, Inc.",
+		Product:      "Linux-USB Ethernet/RNDIS Gadget",
+		Source:       "drivers/usb/gadget/legacy/ether.c RNDIS_PRODUCT_NUM",
+	},
+	{
+		ID:           "linux-audio-gadget",
+		VendorID:     "0x1d6b",
+		ProductID:    "0x0101",
+		Manufacturer: "Linux Foundation",
+		Product:      "Linux-USB Audio Gadget",
+		Source:       "drivers/usb/gadget/legacy/audio.c AUDIO_PRODUCT_NUM",
+	},
+	{
+		ID:           "linux-serial-gadget",
+		VendorID:     "0x0525",
+		ProductID:    "0xa4a6",
+		Manufacturer: "Netchip Technology, Inc.",
+		Product:      "Linux-USB Serial Gadget",
+		Source:       "drivers/usb/gadget/legacy/serial.c GS_PRODUCT_ID",
+	},
 	{
 		ID:           "linux-hid-gadget",
 		VendorID:     "0x0525",
