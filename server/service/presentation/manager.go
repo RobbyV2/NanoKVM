@@ -510,8 +510,19 @@ func (m *Manager) SetMediaSlots(ctx context.Context, cameras, microphones, speak
 // can carry one: a device without the attribute must still be able to change
 // how many slots it has.
 func defaultCamera(index int, label string, named bool) Function {
+	// 640x480 is the largest mode this board can actually keep up with, so it
+	// is the largest one offered. The limit is not USB - the isochronous
+	// endpoint could carry 6.14 MB/s - it is that the single core saturates
+	// moving bytes at about 1.65 MB/s. Measured against the hardware with the
+	// host streaming: 640x480 frames land near 16 KB and hold 29.8 fps at
+	// 0.47 MB/s with room to spare, while 720p frames at ordinary webcam
+	// quality are 80-150 KB and collapse to 10-14 fps with second-long stalls.
+	// Advertising a mode the device cannot sustain is what made the camera
+	// glitch: the host picks the biggest on offer and then starves.
+	//
+	// 1280x720 stays a legal value a profile may ask for by hand; it is only
+	// dropped from what a camera offers by default.
 	frames := []VideoFrame{
-		{Width: 1280, Height: 720, Intervals: []uint32{333333, 666666}},
 		{Width: 640, Height: 480, Intervals: []uint32{333333, 666666}},
 		{Width: 320, Height: 240, Intervals: []uint32{333333, 666666}},
 		{Width: 160, Height: 120, Intervals: []uint32{333333, 666666}},
