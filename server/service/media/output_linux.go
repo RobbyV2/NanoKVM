@@ -941,6 +941,10 @@ func (c *pcmCapture) Close() error { return c.pcm.Close() }
 // worse than a host that is not draining the endpoint just now.
 const pcmStateRunning = 3
 
+// SNDRV_PCM_STATE_PREPARED, the other state an idle tick may legitimately find:
+// the ring is ready and simply has not been started yet.
+const pcmStatePrepared = 2
+
 // maxWriteBurst bounds how many whole periods one tick may put into the
 // playback ring while catching up. High enough to repair a run of dropped
 // ticks in one go, low enough that a queue kept full by a source running fast
@@ -1054,7 +1058,7 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 					// when the answer is not the ordinary one, so a microphone
 					// that has gone quiet for a reason is not buried in a log full
 					// of a microphone that is merely unused.
-					if failures%3000 == 0 {
+					if failures%50 == 0 {
 						o.mu.Lock()
 						probe := int64(-1)
 						if o.handle != nil {
@@ -1063,9 +1067,33 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 						o.mu.Unlock()
 						switch {
 						case probe < 0:
-							log.Warnf("media playback idle for %d ticks: kernel status unavailable (errno %d), so a parked ring cannot be told from a full one", failures, -probe)
-						case probe&0xff != pcmStateRunning:
-							log.Warnf("media playback idle for %d ticks in kernel state %d, avail %d", failures, probe&0xff, probe>>8)
+							if failures%3000 == 0 {
+								log.Warnf("media playback idle for %d ticks: kernel status unavailable (errno %d), so a parked ring cannot be told from a full one", failures, -probe)
+							}
+						case probe&0xff != pcmStateRunning && probe&0xff != pcmStatePrepared:
+							// A ring that is merely full is a host that paused,
+							// and waiting is the right answer. A ring the kernel
+							// says is parked is not: it will not move another
+							// sample until something prepares it. Every route
+							// into that state has to end here, whether or not
+							// this loop was the one that saw it happen - the bug
+							// this guards is a microphone silent for the rest of
+							// the session while the browser still sends and the
+							// server still acknowledges, and a ring nobody can
+							// explain is worth resetting rather than leaving
+							// parked.
+							log.Warnf("media playback idle for %d ticks in kernel state %d, avail %d: resetting the parked ring", failures, probe&0xff, probe>>8)
+							o.mu.Lock()
+							if o.handle == nil {
+								o.mu.Unlock()
+								return nil
+							}
+							parked := C.nk_pcm_reset(o.handle)
+							o.mu.Unlock()
+							if parked < 0 {
+								return fmt.Errorf("reset parked playback PCM: return %d", int(parked))
+							}
+							failures = 0
 						}
 					}
 					if streaming && failures >= 3 {
