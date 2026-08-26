@@ -56,6 +56,47 @@ test('audio resamples and emits exact 20 millisecond packets', () => {
   assert.equal(new DataView(packets[0]).getInt16(0, true), 16384);
 });
 
+test('a context that is not 48 kHz still yields 48 kHz packets at 50 a second', () => {
+  // The gadget only accepts 20 ms mono S16LE 48000 Hz packets, and an
+  // AudioContext is entitled to run at whatever its output device runs at. Four
+  // seconds of 44100 Hz input therefore has to come back out as four seconds of
+  // 48000 Hz packets, or the microphone drifts against the host's clock until
+  // it starves. One packet of pipeline lag is allowed; a drifting rate is not.
+  const packetizer = new PcmPacketizer(44100);
+  const chunks = 200;
+  let packets = 0;
+  for (let chunk = 0; chunk < chunks; chunk++) {
+    const samples = new Float32Array(882);
+    for (let i = 0; i < samples.length; i++) {
+      samples[i] = Math.sin((2 * Math.PI * 1000 * (chunk * 882 + i)) / 44100);
+    }
+    for (const packet of packetizer.push(samples)) {
+      assert.equal(packet.byteLength, 1920);
+      packets++;
+    }
+  }
+  assert.ok(
+    packets === chunks || packets === chunks - 1,
+    `emitted ${packets} packets, want ${chunks}`
+  );
+});
+
+test('each packet owns its bytes', () => {
+  // The packetizer writes into one buffer and hands it on. If the next packet
+  // were written into the same buffer, every packet already queued for the
+  // socket would be overwritten with the newest audio and the host would hear
+  // one 20 ms slice repeated.
+  const packetizer = new PcmPacketizer(48000);
+  const emitted: ArrayBuffer[] = [];
+  for (const level of [0.25, -0.5, 0.75]) {
+    for (const packet of packetizer.push(new Float32Array(960).fill(level))) emitted.push(packet);
+  }
+  assert.equal(emitted.length, 2, 'want one packet per whole 20 ms, less one of lag');
+  assert.notEqual(emitted[0], emitted[1]);
+  assert.equal(new DataView(emitted[0]).getInt16(0, true), 8192);
+  assert.equal(new DataView(emitted[1]).getInt16(0, true), -16384);
+});
+
 test('event deltas keep shared sink state current', () => {
   const sink: SourceSink = {
     id: 'uvc.cam0',
@@ -222,11 +263,22 @@ const cameraOffer: DeviceOffer = {
   label: 'Camera'
 };
 
+const microphoneOffer: DeviceOffer = {
+  id: 'mic_a',
+  deviceID: 'microphone-a',
+  kind: 'microphone',
+  label: 'Microphone'
+};
+
 type Callbacks = ConstructorParameters<typeof BrowserSourceClient>[1];
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function connectedClient(socket: ControlSocket, callbacks: Partial<Callbacks> = {}) {
+async function connectedClient(
+  socket: ControlSocket,
+  callbacks: Partial<Callbacks> = {},
+  offers: DeviceOffer[] = [cameraOffer]
+) {
   const client = new BrowserSourceClient(
     'alice',
     {
@@ -240,7 +292,7 @@ async function connectedClient(socket: ControlSocket, callbacks: Partial<Callbac
     },
     () => socket as unknown as WebSocket
   );
-  const ready = client.setOffers([cameraOffer]);
+  const ready = client.setOffers(offers);
   socket.onopen?.();
   socket.deliver({
     type: 'source_ready',
@@ -391,29 +443,69 @@ test('slot rows renumber contiguously from zero within each kind', () => {
 // The in-flight window is a throughput knob, not an implementation detail. At
 // one frame the camera waits out a whole round trip - encode, send, the
 // device's work, the ack - before capturing the next. Measured against the
+test(
+  'audio keeps sending while a whole gadget queue is still unacknowledged',
+  { timeout: 1000 },
+  async () => {
+    // An unacknowledged-frame window caps a continuous stream at window/RTT.
+    // Audio is 50 packets a second, so a window of four let the browser send no
+    // more than 4/RTT of them and silently dropped the rest on the floor -
+    // frames the capture chain had already produced and nobody was ever told
+    // about. The window has to cover an ordinary wireless round trip; real
+    // backpressure is bufferedAmount, which sendFrame checks first.
+    installBrowserGlobals();
+    const socket = new ControlSocket();
+    const client = await connectedClient(socket, {}, [cameraOffer, microphoneOffer]);
+
+    const claiming = client.claim('uac2.mic0', microphoneOffer);
+    await flush();
+    socket.deliver({
+      type: 'claimed',
+      binding: { sink_id: 'uac2.mic0', stream_id: 'mic_a' },
+      token: 'lease'
+    });
+    await claiming;
+
+    const payload = new ArrayBuffer(1920);
+    const accepted: boolean[] = [];
+    for (let i = 0; i < 9; i++) {
+      accepted.push(client.sendFrame('uac2.mic0', 'mic_a', 'pcm_s16le_mono_48k', payload));
+    }
+    assert.deepEqual(
+      accepted,
+      [true, true, true, true, true, true, true, true, false],
+      'want eight 20 ms packets - 160 ms of round trip - in flight before backpressure'
+    );
+  }
+);
+
 // hardware with 135KB frames: window 1 gave 6.6 fps / 0.89 MB/s, window 2 gave
 // 9.3 fps / 1.25 MB/s, window 3 gave nothing more because the device is the
 // limit by then. Pin it so a change back to one is a decision, not an accident.
-test('a second video frame may be in flight before the first is acknowledged', { timeout: 1000 }, async () => {
-  installBrowserGlobals();
-  const socket = new ControlSocket();
-  const client = await connectedClient(socket);
+test(
+  'a second video frame may be in flight before the first is acknowledged',
+  { timeout: 1000 },
+  async () => {
+    installBrowserGlobals();
+    const socket = new ControlSocket();
+    const client = await connectedClient(socket);
 
-  const claiming = client.claim('uvc.cam0', cameraOffer);
-  await flush();
-  socket.deliver({
-    type: 'claimed',
-    binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
-    token: 'lease'
-  });
-  await claiming;
+    const claiming = client.claim('uvc.cam0', cameraOffer);
+    await flush();
+    socket.deliver({
+      type: 'claimed',
+      binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
+      token: 'lease'
+    });
+    await claiming;
 
-  const payload = new ArrayBuffer(16);
-  const accepted = [
-    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
-    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
-    client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload)
-  ];
+    const payload = new ArrayBuffer(16);
+    const accepted = [
+      client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
+      client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload),
+      client.sendFrame('uvc.cam0', 'cam_a', 'mjpeg', payload)
+    ];
 
-  assert.deepEqual(accepted, [true, true, false], 'want two frames in flight, then backpressure');
-});
+    assert.deepEqual(accepted, [true, true, false], 'want two frames in flight, then backpressure');
+  }
+);

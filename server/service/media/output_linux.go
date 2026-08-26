@@ -387,6 +387,9 @@ struct nk_pcm {
 	int (*close)(void *);
 	int fd;
 	int capture;
+	unsigned int frame_bytes;
+	unsigned int period_bytes;
+	void *silence;
 };
 
 static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int capture) {
@@ -409,11 +412,15 @@ static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int ca
 	int (*poll_fd)(void *) = dlsym(library, "pcm_get_poll_fd");
 	if (!open_pcm || !is_ready || !write_pcm || !wait_pcm || !prepare_pcm || !stop_pcm || !close_pcm) { dlclose(library); errno = ENOSYS; return NULL; }
 	if (capture && (!read_pcm || !start_pcm || !poll_fd)) { dlclose(library); errno = ENOSYS; return NULL; }
-	// A capture ring overruns when the reader falls behind, and the reader here
-	// is a 20 ms Go ticker: four periods is 80 ms of slack, which ordinary
-	// scheduling jitter eats. Eight buys 160 ms and costs 3 KiB.
+	// Both rings are served by the same 20 ms Go ticker and drained or filled by
+	// the target host's own clock, so both need the same slack: four periods is
+	// 80 ms, which ordinary scheduling jitter on this board eats. Eight buys
+	// 160 ms and costs 3 KiB. The playback side kept four for a while and paid
+	// for it - the microphone underran about three times a second, 100 ring
+	// resets in a 35 second recording, each one costing the target host 20 to
+	// 40 ms of silence.
 	struct nk_pcm_config config = { .channels = 1, .rate = 48000, .period_size = 960,
-		.period_count = capture ? 8 : 4, .format = NK_PCM_S16_LE, .avail_min = 960 };
+		.period_count = 8, .format = NK_PCM_S16_LE, .avail_min = 960 };
 	void *handle = open_pcm(card, device, capture ? NK_PCM_IN : NK_PCM_OUT, &config);
 	if (!handle || !is_ready(handle)) { if (handle) close_pcm(handle); dlclose(library); errno = ENODEV; return NULL; }
 	struct nk_pcm *pcm = calloc(1, sizeof(*pcm));
@@ -421,6 +428,31 @@ static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int ca
 	pcm->library = library; pcm->handle = handle; pcm->write = write_pcm; pcm->read = read_pcm;
 	pcm->wait = wait_pcm; pcm->prepare = prepare_pcm; pcm->start = start_pcm;
 	pcm->stop = stop_pcm; pcm->close = close_pcm; pcm->fd = -1; pcm->capture = capture;
+	pcm->frame_bytes = config.channels * 2;
+	pcm->period_bytes = config.period_size * pcm->frame_bytes;
+	// One period of zeros, kept for priming the ring after a reset. A failed
+	// allocation only costs the cushion, so it is not worth failing the open.
+	if (!capture) pcm->silence = calloc(1, pcm->period_bytes);
+	// Playback needs the descriptor for two things: asking the kernel how much
+	// of the ring is free, and refusing to sleep in it. Checking the room first
+	// is not enough on its own, because the target host can stop draining the
+	// isochronous endpoint between the check and the write - and then a
+	// blocking write parks the microphone's only writer inside
+	// snd_pcm_lib_write for ALSA's ten second timeout, with the loop unable to
+	// tick, reset, or publish that the stream has stopped. Measured on the
+	// device: hw_ptr frozen for 41 seconds, the sink still reporting demand
+	// true and output silence, and the browser's frames still being accepted
+	// and acknowledged into a queue nobody was draining. O_NONBLOCK turns that
+	// into an EAGAIN the loop already knows how to sit out. The write cannot
+	// come back partial: nk_pcm_room has already seen a whole period free, and
+	// a playback ring's free space only ever grows until this loop writes.
+	if (!capture && poll_fd) {
+		pcm->fd = poll_fd(handle);
+		if (pcm->fd >= 0) {
+			int flags = fcntl(pcm->fd, F_GETFL, 0);
+			if (flags >= 0) fcntl(pcm->fd, F_SETFL, flags | O_NONBLOCK);
+		}
+	}
 	if (capture) {
 		// The descriptor is polled directly rather than through pcm_wait: this
 		// tinyalsa polls POLLOUT, which a capture stream never raises. It is
@@ -435,10 +467,84 @@ static struct nk_pcm *nk_pcm_open(unsigned int card, unsigned int device, int ca
 	return pcm;
 }
 
+// nk_pcm_room answers, from the kernel rather than from poll(), whether a whole
+// `frames`-frame write can go out right now: NK_PCM_ROOM_YES, NK_PCM_ROOM_NO,
+// NK_PCM_ROOM_UNKNOWN when the ioctl cannot be asked, or a negative errno for a
+// stream that has to be reset before it will move another sample.
+//
+// pcm_wait cannot answer either half of that. pcm_open leaves the kernel's
+// avail_min at one frame whatever the config asked for - the same quirk
+// nk_pcm_read_frames documents from the capture side, and
+// /proc/asound/.../sw_params reads back avail_min: 1 - so POLLOUT means only
+// that one frame of a 3840 frame ring is free, not that a 960 frame period
+// fits. And a parked substream raises no POLLOUT at all, which pcm_wait
+// reports as a plain timeout, indistinguishable from a ring that is merely
+// full. Only the state field tells those two apart.
+#define NK_PCM_ROOM_NO 0
+#define NK_PCM_ROOM_YES 1
+#define NK_PCM_ROOM_UNKNOWN 2
+static int nk_pcm_room(struct nk_pcm *pcm, unsigned int frames) {
+	struct snd_pcm_status status;
+	memset(&status, 0, sizeof(status));
+	if (pcm->fd < 0 || ioctl(pcm->fd, SNDRV_PCM_IOCTL_STATUS, &status) < 0) return NK_PCM_ROOM_UNKNOWN;
+	switch (status.state) {
+	case SNDRV_PCM_STATE_XRUN: return -EPIPE;
+	case SNDRV_PCM_STATE_SUSPENDED: return -ESTRPIPE;
+	case SNDRV_PCM_STATE_DISCONNECTED: return -ENODEV;
+	default: break;
+	}
+	return status.avail >= (snd_pcm_sframes_t)frames ? NK_PCM_ROOM_YES : NK_PCM_ROOM_NO;
+}
+
+// nk_pcm_probe reports what the kernel says about the stream, for the log line
+// the playback loop prints when it has been unable to write for a while: the
+// state in the low byte, avail in the rest, or a negative errno if the ioctl
+// this all rests on is not answered at all.
+static long nk_pcm_probe(struct nk_pcm *pcm) {
+	struct snd_pcm_status status;
+	memset(&status, 0, sizeof(status));
+	if (pcm->fd < 0) return -ENOTTY;
+	if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_STATUS, &status) < 0) return -errno;
+	return ((long)status.avail << 8) | (status.state & 0xff);
+}
+
+// The kernel is asked first, and pcm_wait is only the fallback for a kernel
+// that will not answer, because the two failures pcm_wait hides are the two
+// that matter here.
+//
+// A parked substream raises no POLLOUT, so pcm_wait returns a timeout and the
+// old code turned that into -EAGAIN. -EAGAIN is classifyPCM's pcmIdle, and the
+// idle branch of the playback loop deliberately does nothing but wait for the
+// next tick - it never resets. So the first underrun parked the ring in XRUN
+// for good: the loop ticked on at 50 Hz writing nothing, hw_ptr never moved
+// again, and the microphone was silent for the rest of the session while the
+// browser's frames were still being accepted and acknowledged into a queue
+// nobody drained. Measured on the device, /proc/asound/card2/pcm0p/sub0/status
+// sat in XRUN with hw_ptr == appl_ptr and trigger_time 541 seconds stale while
+// a browser pushed 50 packets a second at it, and the sink reported exactly
+// the state the bug was reported as: demand true, output silence, binding
+// claimed. Reporting the parked stream as -EPIPE instead sends the loop down
+// the reset path it already has.
+//
+// The other failure is the opposite one. The playback descriptor is blocking,
+// and pcm_open leaves avail_min at one frame, so POLLOUT is raised when a
+// single frame of a 3840 frame ring is free while the write that follows asks
+// for a whole 960 frame period. That write sleeps inside snd_pcm_lib_write
+// until the host drains enough, and a host that has stopped draining never
+// does - the microphone's only writer then lives in that syscall until ALSA's
+// own ten second timeout. Refusing the tick unless a whole period already fits
+// leaves the blocking write nothing to wait for.
 static int nk_pcm_write(struct nk_pcm *pcm, const void *data, unsigned int length) {
-	int ready = pcm->wait(pcm->handle, 0);
-	if (ready == 0) return -EAGAIN;
-	if (ready < 0) return ready;
+	unsigned int frames = pcm->frame_bytes ? length / pcm->frame_bytes : length;
+	int room = nk_pcm_room(pcm, frames);
+	if (room < 0) return room;
+	if (room == NK_PCM_ROOM_UNKNOWN) {
+		int ready = pcm->wait(pcm->handle, 0);
+		if (ready == 0) return -EAGAIN;
+		if (ready < 0) return ready;
+	} else if (room == NK_PCM_ROOM_NO) {
+		return -EAGAIN;
+	}
 	int rc = pcm->write(pcm->handle, data, length);
 	return rc < 0 ? rc : 0;
 }
@@ -466,6 +572,19 @@ static int nk_pcm_read_frames(struct nk_pcm *pcm, void *data, unsigned int frame
 	return (int)xfer.result;
 }
 
+// How many periods of silence a prepared playback ring is primed with, and so
+// how much slack the writer runs with from then on. The writer puts one period
+// in per 20 ms tick and the endpoint takes one out per 20 ms, so the level
+// never climbs on its own: whatever prepare() leaves in the ring is the entire
+// cushion until the next reset. Priming nothing means the first tick that lands
+// late finds the ring empty and ALSA parks the substream, and the reset that
+// follows primes nothing again - on the device that ran at about three
+// underruns a second, 45 separate dropouts of 20 to 120 ms in one 17 second
+// recording of a continuous tone, 12% of the audio missing. Four periods is
+// 80 ms of scheduling jitter absorbed, half the eight period ring, leaving the
+// other half as room to write into.
+#define NK_PCM_PRIME_PERIODS 4
+
 // Stop, prepare, and for a capture stream start again, which is what puts
 // tinyalsa's own prepared/running flags back in step with the kernel after an
 // overrun. Nothing here drains: a stop path must never wait on a PCM.
@@ -473,14 +592,24 @@ static int nk_pcm_reset(struct nk_pcm *pcm) {
 	int rc = pcm->stop(pcm->handle);
 	if (rc < 0) return rc;
 	rc = pcm->prepare(pcm->handle);
-	if (rc < 0 || !pcm->capture) return rc;
-	return pcm->start(pcm->handle);
+	if (rc < 0) return rc;
+	if (pcm->capture) return pcm->start(pcm->handle);
+	// Priming writes into a ring prepare() just emptied, so it cannot block
+	// even though the descriptor is blocking. A refusal is not fatal - the
+	// stream still runs, just without the cushion - so the loop is not told.
+	if (pcm->silence) {
+		for (int i = 0; i < NK_PCM_PRIME_PERIODS; i++) {
+			if (pcm->write(pcm->handle, pcm->silence, pcm->period_bytes) < 0) break;
+		}
+	}
+	return 0;
 }
 
 static void nk_pcm_close(struct nk_pcm *pcm) {
 	if (!pcm) return;
 	pcm->close(pcm->handle);
 	dlclose(pcm->library);
+	free(pcm->silence);
 	free(pcm);
 }
 
@@ -496,6 +625,8 @@ import (
 	"unsafe"
 
 	"NanoKVM-Server/service/sources"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type platformFactory struct{}
@@ -806,6 +937,16 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 
 func (c *pcmCapture) Close() error { return c.pcm.Close() }
 
+// SNDRV_PCM_STATE_RUNNING, the one state in which an idle tick means nothing
+// worse than a host that is not draining the endpoint just now.
+const pcmStateRunning = 3
+
+// maxWriteBurst bounds how many whole periods one tick may put into the
+// playback ring while catching up. High enough to repair a run of dropped
+// ticks in one go, low enough that a queue kept full by a source running fast
+// cannot hold the loop past its next tick.
+const maxWriteBurst = 8
+
 func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool)) error {
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
@@ -822,105 +963,146 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			// Only take a new packet once the one in hand has gone out. A tick
-			// whose write found no room used to take the next packet anyway
-			// and overwrite the packet it was still holding, so every full
-			// ring cost the target host 20 ms of audio that the browser had
-			// already been told was accepted.
-			if !currentSource {
-				select {
-				case frame := <-frames:
-					changed := frame.Generation != generation
-					if frame.Reset || len(frame.Data) == 0 {
-						current, err = fallback(0, 0)
-						if err != nil {
-							return err
+			// A Go ticker drops ticks rather than bunching them, and this loop
+			// puts exactly one period into the ring per tick while the endpoint
+			// takes exactly one out. So every tick the runtime drops is a period
+			// the ring never gets back: the level only ever falls, and it falls
+			// until the ring underruns and ALSA parks the substream. Measured on
+			// the device that was about one underrun a second, and every one of
+			// them costs the target host the silence its reset has to prime with.
+			// A tick is therefore allowed to write more than one period, but only
+			// while the source is actually behind - the queue holds something
+			// only when it is, since the browser produces one packet per tick
+			// too - so the level is repaired with real audio and never with
+			// silence this loop invented.
+		burst:
+			for range maxWriteBurst {
+				// Only take a new packet once the one in hand has gone out. A tick
+				// whose write found no room used to take the next packet anyway
+				// and overwrite the packet it was still holding, so every full
+				// ring cost the target host 20 ms of audio that the browser had
+				// already been told was accepted.
+				if !currentSource {
+					select {
+					case frame := <-frames:
+						changed := frame.Generation != generation
+						if frame.Reset || len(frame.Data) == 0 {
+							current, err = fallback(0, 0)
+							if err != nil {
+								return err
+							}
+						} else {
+							current = frame
+							currentSource = true
 						}
-					} else {
-						current = frame
-						currentSource = true
-					}
-					if changed {
-						generation = frame.Generation
-						o.mu.Lock()
-						if o.handle == nil {
+						if changed {
+							generation = frame.Generation
+							o.mu.Lock()
+							if o.handle == nil {
+								o.mu.Unlock()
+								return nil
+							}
+							rc := C.nk_pcm_reset(o.handle)
 							o.mu.Unlock()
-							return nil
+							if rc < 0 {
+								return fmt.Errorf("reset PCM: return %d", int(rc))
+							}
+							streaming, failures, successes = false, 0, 0
+							demand(sources.Demand{})
 						}
-						rc := C.nk_pcm_reset(o.handle)
+					default:
+					}
+				}
+				o.mu.Lock()
+				if o.handle == nil {
+					o.mu.Unlock()
+					return nil
+				}
+				base, size := packetSpan(current)
+				rc := C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))
+				o.mu.Unlock()
+				switch classifyPCM(int(rc)) {
+				case pcmTransferred:
+					failures, resets = 0, 0
+					successes++
+					if !streaming && successes > 4 {
+						streaming = true
+						demand(sources.Demand{Streaming: true, Since: time.Now().UTC()})
+					}
+					if currentSource != sourceActive {
+						sourceActive = currentSource
+						source(sourceActive)
+					}
+					current, err = fallback(0, 0)
+					if err != nil {
+						return err
+					}
+					currentSource = false
+					if len(frames) > 0 {
+						continue
+					}
+					break burst
+				case pcmIdle:
+					// The ring is full: the target host is not draining the
+					// endpoint. The packet stays in current and goes out on a
+					// later tick, so a host that pauses costs no audio.
+					failures++
+					successes = 0
+					// A host that paused looks exactly like a ring the loop can no
+					// longer write to, and only the kernel's own view of the
+					// substream tells them apart. Say so once a minute, and only
+					// when the answer is not the ordinary one, so a microphone
+					// that has gone quiet for a reason is not buried in a log full
+					// of a microphone that is merely unused.
+					if failures%3000 == 0 {
+						o.mu.Lock()
+						probe := int64(-1)
+						if o.handle != nil {
+							probe = int64(C.nk_pcm_probe(o.handle))
+						}
 						o.mu.Unlock()
-						if rc < 0 {
-							return fmt.Errorf("reset PCM: return %d", int(rc))
+						switch {
+						case probe < 0:
+							log.Warnf("media playback idle for %d ticks: kernel status unavailable (errno %d), so a parked ring cannot be told from a full one", failures, -probe)
+						case probe&0xff != pcmStateRunning:
+							log.Warnf("media playback idle for %d ticks in kernel state %d, avail %d", failures, probe&0xff, probe>>8)
 						}
-						streaming, failures, successes = false, 0, 0
+					}
+					if streaming && failures >= 3 {
+						streaming = false
 						demand(sources.Demand{})
+						if sourceActive {
+							sourceActive = false
+							source(false)
+						}
 					}
-				default:
+					break burst
 				}
-			}
-			o.mu.Lock()
-			if o.handle == nil {
-				o.mu.Unlock()
-				return nil
-			}
-			base, size := packetSpan(current)
-			rc := C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))
-			o.mu.Unlock()
-			switch classifyPCM(int(rc)) {
-			case pcmTransferred:
-				failures, resets = 0, 0
-				successes++
-				if !streaming && successes > 4 {
-					streaming = true
-					demand(sources.Demand{Streaming: true, Since: time.Now().UTC()})
-				}
-				if currentSource != sourceActive {
-					sourceActive = currentSource
-					source(sourceActive)
-				}
-				current, err = fallback(0, 0)
-				if err != nil {
-					return err
-				}
-				currentSource = false
-				continue
-			case pcmIdle:
-				// The ring is full: the target host is not draining the
-				// endpoint. The packet stays in current and goes out on a
-				// later tick, so a host that pauses costs no audio.
-				failures++
+				// An underrun. This loop is paced by a Go ticker and the endpoint
+				// by the host's clock, so a tick that lands late empties a ring
+				// only four periods deep and ALSA parks the substream in XRUN.
+				// Nothing put it back, so the first late tick silenced the
+				// microphone for the rest of the binding while every frame was
+				// still acknowledged - the queue filled, the writer never drained
+				// it, and hw_ptr never moved again.
 				successes = 0
-				if streaming && failures >= 3 {
-					streaming = false
-					demand(sources.Demand{})
-					if sourceActive {
-						sourceActive = false
-						source(false)
-					}
+				resets++
+				if resets > 50 {
+					return fmt.Errorf("write PCM: return %d after %d resets", int(rc), resets)
 				}
-				continue
-			}
-			// An underrun. This loop is paced by a Go ticker and the endpoint
-			// by the host's clock, so a tick that lands late empties a ring
-			// only four periods deep and ALSA parks the substream in XRUN.
-			// Nothing put it back, so the first late tick silenced the
-			// microphone for the rest of the binding while every frame was
-			// still acknowledged - the queue filled, the writer never drained
-			// it, and hw_ptr never moved again.
-			successes = 0
-			resets++
-			if resets > 50 {
-				return fmt.Errorf("write PCM: return %d after %d resets", int(rc), resets)
-			}
-			o.mu.Lock()
-			if o.handle == nil {
+				if resets == 1 || resets%25 == 0 {
+					log.Warnf("media playback ring reset after write returned %d (%d in a row)", int(rc), resets)
+				}
+				o.mu.Lock()
+				if o.handle == nil {
+					o.mu.Unlock()
+					return nil
+				}
+				reset := C.nk_pcm_reset(o.handle)
 				o.mu.Unlock()
-				return nil
-			}
-			reset := C.nk_pcm_reset(o.handle)
-			o.mu.Unlock()
-			if reset < 0 {
-				return fmt.Errorf("reset playback PCM: return %d", int(reset))
+				if reset < 0 {
+					return fmt.Errorf("reset playback PCM: return %d", int(reset))
+				}
 			}
 		}
 	}

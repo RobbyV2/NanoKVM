@@ -22,7 +22,14 @@ import (
 
 const (
 	videoQueueDepth = 1
-	audioQueueDepth = 4
+	// Eight 20 ms packets, not four. This queue is the only jitter buffer
+	// between a browser pacing itself by its own AudioContext clock over a
+	// wireless link and a gadget ring drained by the target host's USB clock,
+	// and four packets is 80 ms - less than the round trip the frames arrive
+	// over. Measured against the device, a queue that shallow spent every
+	// other tick empty, so the loop wrote silence and flapped the binding
+	// between streaming and claimed dozens of times a minute.
+	audioQueueDepth = 8
 	pcmPacketBytes  = 1920
 	stopTimeout     = 2 * time.Second
 	videoFallback   = 500 * time.Millisecond
@@ -537,8 +544,17 @@ func (m *Manager) Detach(sinkID string) {
 	}
 }
 
+// audioRateBurst is how far ahead of the nominal 50 packets a second a source
+// may run before the bucket refuses it. The long run rate still holds, so a
+// runaway source is still bounded; the burst only decides how much bunching is
+// tolerated on the way in. It was audioQueueDepth, which at 80 ms was narrower
+// than the jitter of the link the packets arrive over: a 20 second recording on
+// the device refused 22 perfectly good frames as "frame rate exceeded", each one
+// 20 ms of audio the host never heard.
+const audioRateBurst = 25
+
 func (w *worker) allowFrame(now time.Time, demand sources.Demand) bool {
-	rate, burst := float64(50), float64(audioQueueDepth)
+	rate, burst := float64(50), float64(audioRateBurst)
 	if w.spec.Kind == sources.KindCamera {
 		rate, burst = float64(demand.FPS), float64(videoQueueDepth+1)
 		if rate <= 0 {

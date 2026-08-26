@@ -68,6 +68,13 @@ type ClientCallbacks = {
 
 const maxBufferedBytes = (2 << 20) + 256;
 const mjpegFramesInFlight = 2;
+// Audio is a continuous 50 packets a second, so an unacknowledged-frame window
+// caps the send rate at window/RTT: at four packets the browser could not send
+// more than 4/RTT a second, which silently threw away every packet past that
+// for the whole session. Eight packets is 160 ms, which covers an ordinary
+// wireless round trip while still bounding how far ahead of the gadget the
+// browser may run. Real backpressure is bufferedAmount, checked above.
+const pcmFramesInFlight = 8;
 const frameAckTimeout = 3000;
 
 function sourceSocket() {
@@ -186,7 +193,7 @@ export class BrowserSourceClient {
     // window 3 gave nothing more (8.6 fps) because the device is the limit by
     // then. The cost is bounded: at most one extra frame outstanding, so the
     // lag stays around two frame intervals rather than growing.
-    if (inFlight >= (kind === 'mjpeg' ? mjpegFramesInFlight : 4)) return false;
+    if (inFlight >= (kind === 'mjpeg' ? mjpegFramesInFlight : pcmFramesInFlight)) return false;
 
     this.sequence = (this.sequence + 1) >>> 0;
     const sequence = this.sequence;
