@@ -17,5 +17,9 @@ export const Screen = () => {
     return <H264Direct />;
   }
 
-  return <H264Webrtc />;
+  if (videoMode === 'h264') {
+    return <H264Webrtc />;
+  }
+
+  return null;
 };
