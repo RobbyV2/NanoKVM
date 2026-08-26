@@ -679,8 +679,21 @@ func New(cfg Config) *Manager {
 	// The gadget half of the wiring. Step 13 enslaves the gadget NIC once; this
 	// is what keeps it enslaved across the applies that rebuild it, under
 	// whatever name each rebuild leaves it with.
+	//
+	// The catch-up call matters as much as the registration. At boot the only
+	// rebind notification is the presentation manager's startup refresh, and
+	// that fires while the routers are still being built - before this
+	// constructor has run, so nothing is listening for it. S29bridge cannot
+	// cover the gap either: it builds br0 around seven seconds before the
+	// gadget NIC exists, and treats its absence as success. The result was a
+	// bridge with no gadget port on every boot, so an attached host saw the
+	// USB network adapter enumerate and carry nothing. Reattaching once here,
+	// after the callback is in place, closes it: by now the gadget is bound
+	// and the NIC is real, and ReattachGadget is a no-op when br0 is absent or
+	// the port is already enslaved.
 	if m.gadget != nil {
 		m.gadget.OnRebind(m.ReattachGadget)
+		m.ReattachGadget(context.Background())
 	}
 	return m
 }

@@ -1211,3 +1211,42 @@ func TestStatusSkipsTheLoopCheckWithOnePort(t *testing.T) {
 	notInTrace(t, h.net.trace(), "neigh show")
 	notInTrace(t, h.net.trace(), "fdb show")
 }
+
+// At boot the presentation manager's startup refresh is the only rebind
+// notification, and it fires while the routers are still being constructed -
+// before this manager exists, so nothing is listening for it. S29bridge does
+// not cover the gap either: it builds br0 about seven seconds before the gadget
+// NIC exists and treats its absence as success. The result was a bridge with no
+// gadget port on every boot, and an attached host whose USB network adapter
+// enumerated but carried no traffic. Constructing the manager must therefore
+// reattach once on its own, not merely register for rebinds still to come.
+func TestConstructingTheManagerEnslavesAGadgetAlreadyPresent(t *testing.T) {
+	gadget := &fakeGadget{nic: StockGadgetName}
+	h := newHarness(t, gadget)
+
+	if _, err := h.mgr.Enable(context.Background()); err != nil {
+		t.Fatalf("Enable: %v", err)
+	}
+
+	// The state S29bridge leaves behind: br0 up, gadget NIC outside it.
+	h.net.mu.Lock()
+	h.net.links[StockGadgetName].Master = ""
+	h.net.mu.Unlock()
+
+	// A second manager over the same network is this constructor running after
+	// the notification has already been missed.
+	New(Config{
+		Commander: h.net,
+		Liveness:  h.live,
+		Store:     h.store,
+		Window:    DefaultWindow,
+		Gadget:    gadget,
+	})
+
+	h.net.mu.Lock()
+	master := h.net.links[StockGadgetName].Master
+	h.net.mu.Unlock()
+	if master != BridgeName {
+		t.Fatalf("usb0 master = %q after constructing the manager, want %q", master, BridgeName)
+	}
+}
