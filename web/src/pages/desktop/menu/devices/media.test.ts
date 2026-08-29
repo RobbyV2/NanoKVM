@@ -386,6 +386,148 @@ test('an owned release is not reported as a revocation', { timeout: 1000 }, asyn
   client.close();
 });
 
+// A reload is the recovery path the operator is told to use, so it has to work
+// even when the new page beats its own goodbye to the server. The registry only
+// accepts a resume once it has seen the previous socket go; until then the
+// binding is still claimed and the token it holds is refused outright. Giving up
+// on that first refusal used to strand the slot on a source that no longer
+// exists, and every later claim was refused until the whole lease grace ran out.
+class ResumeSocket extends ControlSocket {
+  attempts = 0;
+  succeedOn: number;
+  refusal: string;
+
+  constructor(succeedOn: number, refusal = 'invalid lease token') {
+    super();
+    this.succeedOn = succeedOn;
+    this.refusal = refusal;
+  }
+
+  send(data: string) {
+    super.send(data);
+    const message = JSON.parse(data) as { type: string; sink_id?: string; stream_id?: string };
+    if (message.type !== 'resume') return;
+    this.attempts++;
+    const attempt = this.attempts;
+    queueMicrotask(() => {
+      if (attempt < this.succeedOn) {
+        this.deliver({ type: 'error', message: this.refusal });
+        return;
+      }
+      this.deliver({
+        type: 'resumed',
+        binding: { sink_id: message.sink_id, stream_id: message.stream_id }
+      });
+    });
+  }
+}
+
+function storeLease() {
+  sessionStorage.setItem(
+    'nanokvm-media-leases:alice',
+    JSON.stringify([
+      {
+        sinkID: 'uvc.cam0',
+        streamID: cameraOffer.id,
+        token: 'lease',
+        deviceID: cameraOffer.deviceID,
+        kind: 'camera'
+      }
+    ])
+  );
+}
+
+test(
+  'a lease refused while the server still holds the old socket is resumed',
+  { timeout: 5000 },
+  async () => {
+    installBrowserGlobals();
+    storeLease();
+    const socket = new ResumeSocket(2);
+    const owned: string[][] = [];
+    const client = await connectedClient(socket, {
+      onOwned: (sinks: Set<string>) => owned.push([...sinks])
+    });
+
+    assert.equal(socket.attempts, 2, 'want the refusal retried across the detach window');
+    assert.deepEqual(owned[owned.length - 1], ['uvc.cam0']);
+    assert.deepEqual(
+      client.selections().map((lease) => lease.sinkID),
+      ['uvc.cam0'],
+      'want the lease kept once it resumed'
+    );
+    client.close();
+  }
+);
+
+test('a refusal that will not change gives the lease up at once', { timeout: 5000 }, async () => {
+  // Waiting out a refusal only helps while the server is still catching up with
+  // a socket that has gone. "Forbidden" is an answer, not a race, and retrying
+  // it would delay the clean session the operator refreshed for.
+  installBrowserGlobals();
+  storeLease();
+  const socket = new ResumeSocket(Number.POSITIVE_INFINITY, 'forbidden');
+  const errors: Array<[string, string]> = [];
+  const client = await connectedClient(socket, {
+    onError: (sinkID: string, message: string) => errors.push([sinkID, message])
+  });
+
+  assert.equal(socket.attempts, 1);
+  assert.deepEqual(client.selections(), [], 'want the dead lease dropped so the page starts clean');
+  assert.ok(errors.some(([sinkID, message]) => sinkID === 'uvc.cam0' && message === 'forbidden'));
+  client.close();
+});
+
+test(
+  'a client closed for the page unload connects again when the page returns',
+  { timeout: 1000 },
+  async () => {
+    // The page closes this socket on its way out so the server hears the goodbye
+    // before the next page says hello. A page that comes back from the back and
+    // forward cache still holds the offers that justified the connection, so the
+    // close must not be the end of it.
+    installBrowserGlobals();
+    const sockets: ControlSocket[] = [];
+    const client = new BrowserSourceClient(
+      'alice',
+      {
+        onConnection() {},
+        onOwned() {},
+        onError() {},
+        onRefused() {},
+        onRevoked() {},
+        onSnapshot() {}
+      },
+      () => {
+        const socket = new ControlSocket();
+        sockets.push(socket);
+        return socket as unknown as WebSocket;
+      }
+    );
+
+    const ready = client.setOffers([cameraOffer]);
+    sockets[0].onopen?.();
+    sockets[0].deliver({
+      type: 'source_ready',
+      source: {
+        id: 'src_browser',
+        owner: 'alice',
+        agent: 'browser',
+        label: 'Browser',
+        streams: []
+      },
+      snapshot: { sinks: [], sources: [], bindings: [] }
+    });
+    await ready;
+
+    client.close();
+    assert.equal(sockets.length, 1);
+    client.reconnect();
+    assert.equal(sockets.length, 2, 'want a fresh socket once the page is back');
+    client.close();
+  }
+);
+
 test('slot rows carry the name the host reads apart from the editable label', () => {
   const sinks: SourceSink[] = [
     {

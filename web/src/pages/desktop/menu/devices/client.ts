@@ -76,6 +76,18 @@ const mjpegFramesInFlight = 2;
 // browser may run. Real backpressure is bufferedAmount, checked above.
 const pcmFramesInFlight = 8;
 const frameAckTimeout = 3000;
+// Two consecutive dead windows is not a slow device, it is a socket that is no
+// longer carrying anything. Reopening it re-runs hello and resume, which is the
+// only way back once the far end has stopped reading.
+const frameAckTimeoutsBeforeRestart = 2;
+// The registry only accepts a resume once it has noticed the previous socket
+// go: until then the binding is still claimed and the lease token it holds is
+// rejected outright. A reload routinely reconnects inside that window - the new
+// page's hello can beat the old page's close through the network - so a single
+// refusal is not proof the lease is gone. Retrying across the gap is what keeps
+// a refresh from stranding the slot on a source that no longer exists, where
+// every later claim is refused until the whole grace expires.
+const resumeRetryDelaysMS = [0, 300, 900];
 
 function sourceSocket() {
   return `${getBaseUrl('ws')}/api/sources/ws`;
@@ -100,6 +112,7 @@ export class BrowserSourceClient {
   private restarting = false;
   private isReady = false;
   private sourceID = '';
+  private ackTimeouts = 0;
 
   constructor(
     owner: string,
@@ -133,7 +146,13 @@ export class BrowserSourceClient {
   }
 
   reconnect() {
-    if (!this.shouldConnect || this.socket) return;
+    if (this.socket) return;
+    // Re-arm rather than obey the flag close() cleared. The page closes this
+    // socket on its way out so the server hears about it promptly, and a page
+    // that comes back - restored from the back/forward cache, or made visible
+    // again - still has the offers and leases that justified the connection.
+    this.shouldConnect = this.offers.length > 0 || this.leases.length > 0;
+    if (!this.shouldConnect) return;
     this.reconnectDelay = 1000;
     this.connect();
   }
@@ -212,6 +231,8 @@ export class BrowserSourceClient {
       this.pendingFrames.delete(sequence);
       this.blockedUntil.set(key, Date.now() + frameAckTimeout);
       this.callbacks.onError(sinkID, 'Media receiver stopped acknowledging frames');
+      this.ackTimeouts++;
+      if (this.ackTimeouts >= frameAckTimeoutsBeforeRestart) this.restart();
     }, frameAckTimeout);
     this.pendingFrames.set(sequence, { key, kind, timer });
     return true;
@@ -230,6 +251,9 @@ export class BrowserSourceClient {
     this.restarting = true;
     this.closeSocket();
     this.restarting = false;
+    // Nothing pending can ever be answered on a socket that is gone, and the
+    // caller waiting on it would otherwise hang for the life of the page.
+    this.rejectRequests(new Error('Media source restarting'));
     this.connect();
   }
 
@@ -390,21 +414,41 @@ export class BrowserSourceClient {
         this.writeLeases();
         this.callbacks.onError(lease.sinkID, 'Previous device missing; using the current default');
       }
-      try {
-        await this.request(lease.sinkID, {
-          type: 'resume',
-          sink_id: lease.sinkID,
-          stream_id: selected.id,
-          token: lease.token
-        });
-      } catch (error) {
+
+      let failure: Error | undefined;
+      for (const delay of resumeRetryDelaysMS) {
+        if (delay > 0) await this.wait(delay);
+        if (this.socket?.readyState !== WebSocket.OPEN) return;
+        try {
+          await this.request(lease.sinkID, {
+            type: 'resume',
+            sink_id: lease.sinkID,
+            stream_id: selected.id,
+            token: lease.token
+          });
+          failure = undefined;
+          break;
+        } catch (error) {
+          failure = error instanceof Error ? error : new Error('Media lease could not resume');
+          if (!isResumeRace(failure)) break;
+        }
+      }
+
+      // A socket that went away mid-resume says nothing about the lease. Leave
+      // it stored and let the next connection resume it.
+      if (this.socket?.readyState !== WebSocket.OPEN) return;
+      if (failure) {
         this.removeLease(lease.sinkID);
-        this.callbacks.onError(
-          lease.sinkID,
-          error instanceof Error ? error.message : 'Media lease could not resume'
-        );
+        this.callbacks.onError(lease.sinkID, failure.message);
+      } else {
+        // The attempts that lost the race left their refusal on the panel.
+        this.callbacks.onError(lease.sinkID, '');
       }
     }
+  }
+
+  private wait(ms: number) {
+    return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
   }
 
   private request(sinkID: string, message: Record<string, string>) {
@@ -451,12 +495,14 @@ export class BrowserSourceClient {
     window.clearTimeout(pending.timer);
     this.pendingFrames.delete(sequence);
     this.blockedUntil.delete(pending.key);
+    this.ackTimeouts = 0;
   }
 
   private clearFrames() {
     for (const frame of this.pendingFrames.values()) window.clearTimeout(frame.timer);
     this.pendingFrames.clear();
     this.blockedUntil.clear();
+    this.ackTimeouts = 0;
   }
 
   private closeSocket() {
@@ -492,6 +538,13 @@ export class BrowserSourceClient {
   private emitOwned() {
     this.callbacks.onOwned(new Set(this.owned));
   }
+}
+
+// Only the registry's own "the token you sent is not the token I hold" is worth
+// waiting out; a refusal on grounds that will not change - the wrong kind, no
+// administrator rights, a relay that is not there - is final on the first try.
+function isResumeRace(error: Error) {
+  return /invalid lease token/i.test(error.message);
 }
 
 function readLeases(key: string): StoredLease[] {
