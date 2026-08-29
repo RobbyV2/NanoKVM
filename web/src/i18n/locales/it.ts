@@ -1313,7 +1313,10 @@ const it = {
     },
     error: {
       title: 'Si è verificato un problema',
-      refresh: 'Aggiorna'
+      refresh: 'Aggiorna',
+      panel: 'Questo pannello ha smesso di funzionare',
+      retry: 'Riprova',
+      reload: 'Ricarica la pagina'
     },
     fullscreen: {
       toggle: 'Attiva/disattiva schermo intero'

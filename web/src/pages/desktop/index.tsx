@@ -19,6 +19,7 @@ import {
   selectedOriginalResolutionAtom,
   videoModeAtom
 } from '@/jotai/screen.ts';
+import { OverlayBoundary, PanelBoundary } from '@/components/error-boundary.tsx';
 import { Head } from '@/components/head.tsx';
 
 import { CaptureStatusOverlay, useCaptureStatus } from './capture-status';
@@ -127,6 +128,27 @@ export const Desktop = () => {
     setVideoMode
   ]);
 
+  // React never unmounts on a reload, so without this the control socket dies
+  // with the page and the server only learns of it when the connection times
+  // out. Closing it while the page is still alive puts the close ahead of the
+  // next page's connect, which is what lets the reload come back to a clean
+  // session instead of racing its own ghost.
+  useEffect(() => {
+    const teardown = () => client.close();
+    const onPageShow = (event: PageTransitionEvent) => {
+      // A page restored from the back/forward cache kept its React tree but not
+      // its socket, because we closed it on the way out.
+      if (event.persisted) client.connect();
+    };
+
+    window.addEventListener('pagehide', teardown);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pagehide', teardown);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
+
   useEffect(() => {
     if (controlRegionMode !== 'manual' || !inputRegion) {
       return;
@@ -208,14 +230,18 @@ export const Desktop = () => {
     <div className="h-screen w-screen overflow-hidden bg-neutral-950">
       <Head title={t('head.desktop')} />
 
-      {isBigScreen && <Notification />}
-      <H264ModeNotification />
+      <OverlayBoundary name="notification">
+        {isBigScreen && <Notification />}
+        <H264ModeNotification />
+      </OverlayBoundary>
 
       {videoMode && resolution && (
         <div className="relative flex h-full min-h-0 w-full min-w-0">
-          <SourcesProvider>
-            <Menu />
-          </SourcesProvider>
+          <OverlayBoundary name="menu">
+            <SourcesProvider>
+              <Menu />
+            </SourcesProvider>
+          </OverlayBoundary>
           <div className="h-full min-h-0 w-full min-w-0">
             <Splitter
               className="h-full w-full"
@@ -224,8 +250,12 @@ export const Desktop = () => {
             >
               <Splitter.Panel min="45%">
                 <div className="relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-black">
-                  <Screen />
-                  <CaptureStatusOverlay status={captureStatus} />
+                  <PanelBoundary name="screen">
+                    <Screen />
+                  </PanelBoundary>
+                  <OverlayBoundary name="capture-status">
+                    <CaptureStatusOverlay status={captureStatus} />
+                  </OverlayBoundary>
                 </div>
               </Splitter.Panel>
               <Splitter.Panel
@@ -234,26 +264,40 @@ export const Desktop = () => {
                 max="45%"
                 resizable={isBigScreen && isPicoclawChatOpen}
               >
-                {isBigScreen && isPicoclawChatOpen ? <PicoclawSidebar /> : null}
+                {isBigScreen && isPicoclawChatOpen ? (
+                  <PanelBoundary name="picoclaw-sidebar">
+                    <PicoclawSidebar />
+                  </PanelBoundary>
+                ) : null}
               </Splitter.Panel>
             </Splitter>
           </div>
-          <ActionOverlay />
-          <AutoRegion />
-          <ManualRegion />
-          <InputRegionOverlay />
-          <Mouse />
-          <Keyboard />
+          <OverlayBoundary name="action-overlay">
+            <ActionOverlay />
+          </OverlayBoundary>
+          <OverlayBoundary name="regions">
+            <AutoRegion />
+            <ManualRegion />
+            <InputRegionOverlay />
+          </OverlayBoundary>
+          <OverlayBoundary name="input">
+            <Mouse />
+            <Keyboard />
+          </OverlayBoundary>
         </div>
       )}
 
       {!isBigScreen && isPicoclawChatOpen ? (
         <div className="fixed inset-x-0 bottom-0 top-14 z-[980] overflow-hidden bg-[#0d0d0f] shadow-2xl">
-          <PicoclawSidebar />
+          <PanelBoundary name="picoclaw-sidebar">
+            <PicoclawSidebar />
+          </PanelBoundary>
         </div>
       ) : null}
 
-      <VirtualKeyboard />
+      <OverlayBoundary name="virtual-keyboard">
+        <VirtualKeyboard />
+      </OverlayBoundary>
     </div>
   );
 };

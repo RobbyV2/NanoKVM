@@ -1276,7 +1276,10 @@ const th = {
     },
     error: {
       title: 'เราเจอปัญหา',
-      refresh: 'รีเฟรช'
+      refresh: 'รีเฟรช',
+      panel: 'แผงนี้หยุดทำงาน',
+      retry: 'ลองอีกครั้ง',
+      reload: 'โหลดหน้าใหม่'
     },
     fullscreen: {
       toggle: 'โหมดเต็มหน้าจอ'

@@ -1305,7 +1305,10 @@ const pl = {
     },
     error: {
       title: 'Wystąpił problem',
-      refresh: 'Odśwież'
+      refresh: 'Odśwież',
+      panel: 'Ten panel przestał działać',
+      retry: 'Spróbuj ponownie',
+      reload: 'Przeładuj stronę'
     },
     fullscreen: {
       toggle: 'Przełącz tryb pełnoekranowy'

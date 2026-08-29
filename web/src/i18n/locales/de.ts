@@ -1318,7 +1318,10 @@ const de = {
     },
     error: {
       title: 'Wir sind auf ein Problem gestossen',
-      refresh: 'Neuladen'
+      refresh: 'Neuladen',
+      panel: 'Dieses Panel funktioniert nicht mehr',
+      retry: 'Erneut versuchen',
+      reload: 'Seite neu laden'
     },
     fullscreen: {
       toggle: 'Vollbild ein/aus'

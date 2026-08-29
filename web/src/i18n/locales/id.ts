@@ -1304,7 +1304,10 @@ const id = {
     },
     error: {
       title: 'Kami mengalami masalah',
-      refresh: 'Segarkan'
+      refresh: 'Segarkan',
+      panel: 'Panel ini berhenti bekerja',
+      retry: 'Coba lagi',
+      reload: 'Muat ulang halaman'
     },
     fullscreen: {
       toggle: 'Beralih Layar Penuh'

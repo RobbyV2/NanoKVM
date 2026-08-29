@@ -1302,7 +1302,10 @@ const ja = {
     },
     error: {
       title: 'エラーが発生しました',
-      refresh: '更新'
+      refresh: '更新',
+      panel: 'このパネルは停止しました',
+      retry: '再試行',
+      reload: 'ページを再読み込み'
     },
     fullscreen: {
       toggle: '全画面表示切り替え'

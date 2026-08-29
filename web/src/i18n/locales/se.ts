@@ -1300,7 +1300,10 @@ const se = {
     },
     error: {
       title: 'Vi stötte på ett problem',
-      refresh: 'Uppdatera'
+      refresh: 'Uppdatera',
+      panel: 'Den här panelen slutade fungera',
+      retry: 'Försök igen',
+      reload: 'Ladda om sidan'
     },
     fullscreen: {
       toggle: 'Växla fullskärm'

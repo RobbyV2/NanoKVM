@@ -1301,7 +1301,10 @@ const ca = {
     },
     error: {
       title: 'Hi ha hagut un error',
-      refresh: 'Actualitza'
+      refresh: 'Actualitza',
+      panel: 'Aquest tauler ha deixat de funcionar',
+      retry: 'Torna-ho a provar',
+      reload: 'Torna a carregar la pàgina'
     },
     fullscreen: {
       toggle: 'Pantalla completa'

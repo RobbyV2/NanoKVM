@@ -1243,7 +1243,10 @@ const zh_tw = {
     },
     error: {
       title: '我們遇到了一些問題',
-      refresh: '重新整理'
+      refresh: '重新整理',
+      panel: '此面板已停止運作',
+      retry: '重試',
+      reload: '重新載入頁面'
     },
     fullscreen: {
       toggle: '進入全螢幕模式'

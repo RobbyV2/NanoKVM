@@ -1316,7 +1316,10 @@ const fr = {
     },
     error: {
       title: 'Nous avons rencontré un problème',
-      refresh: 'Actualiser'
+      refresh: 'Actualiser',
+      panel: 'Ce panneau ne fonctionne plus',
+      retry: 'Réessayer',
+      reload: 'Recharger la page'
     },
     fullscreen: {
       toggle: 'Basculer vers le plein écran'

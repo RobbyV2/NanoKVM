@@ -1312,7 +1312,10 @@ const nl = {
     },
     error: {
       title: 'Er is een probleem opgetreden',
-      refresh: 'Vernieuwen'
+      refresh: 'Vernieuwen',
+      panel: 'Dit paneel werkt niet meer',
+      retry: 'Opnieuw proberen',
+      reload: 'Pagina herladen'
     },
     fullscreen: {
       toggle: 'Volledig scherm schakelen'
