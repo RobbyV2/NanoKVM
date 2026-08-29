@@ -277,6 +277,28 @@ static int nk_uvc_data(struct nk_uvc *u, const struct uvc_request_data *data) {
 	return 0;
 }
 
+// Puts the stream back on the ground and asks the caller to raise it again.
+//
+// The gadget marks its buffer queue disconnected from the completion handler
+// the moment a request retires with -ESHUTDOWN, which is every request in
+// flight when the host resets the bus or the composite layer disables the
+// function. From then on uvcg_queue_buffer refuses every QBUF with -ENODEV,
+// and the flag is cleared in exactly one place - uvcg_queue_enable(queue, 0),
+// which only VIDIOC_STREAMOFF reaches. Handing that ENODEV back to Go ended
+// the worker, and nothing restarts a worker: the node stayed held, so the
+// camera kept enumerating on the host and never sent another frame for the
+// rest of the boot. Streaming off here clears the flag, and edge 3 is the same
+// edge a STREAMON gives, which the caller already knows how to answer.
+static int nk_uvc_ground(struct nk_uvc *u) {
+	if (u->streaming) {
+		enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+		nk_ioctl(u->fd, VIDIOC_STREAMOFF, &type);
+	}
+	u->streaming = 0;
+	u->queued = 0;
+	return 3;
+}
+
 static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	int timeout_ms, int submit, unsigned int *width, unsigned int *height, unsigned int *fps) {
 	struct pollfd descriptor = { .fd = u->fd, .events = POLLPRI | (u->streaming && submit ? POLLOUT : 0) };
@@ -330,23 +352,46 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 		edge = 3;
 	}
 	if (descriptor.revents & (POLLHUP | POLLNVAL)) return -EIO;
-	if (u->streaming && (descriptor.revents & POLLERR)) return -EIO;
+	// vb2 answers a poll on a queue that is not streaming, or one it has marked
+	// errored, with POLLERR alone. Both mean this side and the kernel disagree
+	// about whether the stream is up, and the cure for that is to take it down
+	// and raise it again rather than to end the worker.
+	if (u->streaming && (descriptor.revents & POLLERR)) return nk_uvc_ground(u);
 	unsigned int frame = u->commit.bFrameIndex > 0 ? u->commit.bFrameIndex - 1 : 0;
 	if (frame >= u->frame_count) frame = 0;
 	*width = u->frames[frame].width;
 	*height = u->frames[frame].height;
 	*fps = u->commit.dwFrameInterval ? 10000000 / u->commit.dwFrameInterval : 0;
 	if (!u->streaming || !submit || !(descriptor.revents & POLLOUT)) return edge;
+	// One REQBUFS sizes every buffer alike, so buffer zero answers for all of
+	// them and the frame can be measured before a buffer is committed to it. A
+	// payload too big for this geometry is one the source encoded against the
+	// previous commit, which is exactly what arrives in the moments after the
+	// host changes resolution. It costs a frame to drop; it used to cost the
+	// camera, because -EMSGSIZE ended the worker and nothing restarts one.
+	if (u->count > 0 && length > u->lengths[0]) return edge;
 	struct v4l2_buffer buffer;
 	memset(&buffer, 0, sizeof(buffer));
 	buffer.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	buffer.memory = V4L2_MEMORY_MMAP;
-	if (nk_ioctl(u->fd, VIDIOC_DQBUF, &buffer) < 0) return errno == EAGAIN ? edge : -errno;
+	if (nk_ioctl(u->fd, VIDIOC_DQBUF, &buffer) < 0) {
+		if (errno == EAGAIN) return edge;
+		if (errno == ENODEV) return nk_uvc_ground(u);
+		return -errno;
+	}
 	if (buffer.index >= u->count) return -EIO;
-	if (length > u->lengths[buffer.index]) return -EMSGSIZE;
-	memcpy(u->maps[buffer.index], data, length);
-	buffer.bytesused = length;
-	if (nk_ioctl(u->fd, VIDIOC_QBUF, &buffer) < 0) return -errno;
+	// The buffer is dequeued now, so it has to go back either way: an oversized
+	// frame is returned empty rather than kept, which the host reads as one
+	// short frame instead of a stalled endpoint.
+	buffer.bytesused = 0;
+	if (length <= u->lengths[buffer.index]) {
+		memcpy(u->maps[buffer.index], data, length);
+		buffer.bytesused = length;
+	}
+	if (nk_ioctl(u->fd, VIDIOC_QBUF, &buffer) < 0) {
+		if (errno == ENODEV) return nk_uvc_ground(u);
+		return -errno;
+	}
 	return edge;
 }
 
