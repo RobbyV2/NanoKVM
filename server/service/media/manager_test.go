@@ -856,3 +856,66 @@ func TestTwoCamerasCannotClaimOneNode(t *testing.T) {
 		t.Fatal("both slots streamed to one node")
 	}
 }
+
+// An output whose first run fails the way the gadget's own queue does when the
+// host resets the bus: -ENODEV out of a QBUF, once, and the loop returns it.
+// Every run after that behaves. The point of the test is that there is a run
+// after that at all - the node stays held either way, so a slot that stops
+// filling itself is a camera the host still sees and that has gone black.
+type flakyOutput struct {
+	factory *flakyFactory
+	release chan struct{}
+}
+
+func (o *flakyOutput) Run(ctx context.Context, _ <-chan Packet, _ Fallback, demand func(sources.Demand), _ func(bool)) error {
+	o.factory.mu.Lock()
+	o.factory.runs++
+	first := o.factory.runs == 1
+	o.factory.mu.Unlock()
+	if first {
+		return errors.New("write UVC: errno 19")
+	}
+	demand(sources.Demand{Streaming: true, Width: 640, Height: 480, FPS: 30, Since: time.Now()})
+	<-ctx.Done()
+	return nil
+}
+
+func (o *flakyOutput) Close() error { return nil }
+
+type flakyFactory struct {
+	mu    sync.Mutex
+	opens int
+	runs  int
+}
+
+func (f *flakyFactory) Open(SlotSpec, string) (Output, error) {
+	f.mu.Lock()
+	f.opens++
+	f.mu.Unlock()
+	return &flakyOutput{factory: f}, nil
+}
+
+func (f *flakyFactory) OpenInput(SlotSpec, string) (Input, error) {
+	return nil, errors.New("no capture in this factory")
+}
+
+func TestManagerReopensASlotWhoseOutputFailed(t *testing.T) {
+	registry := &fakeRegistry{}
+	factory := &flakyFactory{}
+	manager := newTestManager(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+
+	// The slot has to come back on its own: nothing else rebuilds a worker
+	// short of an admin applying a profile.
+	waitDemand(t, registry, "uvc.cam0")
+	factory.mu.Lock()
+	opens, runs := factory.opens, factory.runs
+	factory.mu.Unlock()
+	if opens < 2 || runs < 2 {
+		t.Fatalf("opens = %d, runs = %d, want the node reopened and run again", opens, runs)
+	}
+}

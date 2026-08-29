@@ -35,6 +35,13 @@ const (
 	videoFallback   = 500 * time.Millisecond
 	videoPoll       = 25 * time.Millisecond
 	latencyWindow   = time.Second
+	// How long a slot waits before reopening a node whose loop returned an
+	// error, doubling per attempt. The first retry is quick because the common
+	// failure - a gadget queue the host's bus reset marked disconnected - is
+	// already over by the time it is noticed, and the ceiling is what keeps a
+	// node that is genuinely gone from spinning the CPU for the rest of the boot.
+	restartBackoff    = 200 * time.Millisecond
+	restartBackoffMax = 5 * time.Second
 )
 
 var (
@@ -677,14 +684,41 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 		}
 		_ = m.registry.SetBindingState(w.spec.ID, state)
 	}
-	var err error
-	if w.input != nil {
-		err = w.input.Run(ctx, func(packet Packet) { m.publish(w, packet) }, demanded, active)
-	} else {
-		err = w.output.Run(ctx, w.queue, fallback, demanded, active)
-	}
-	if err != nil {
-		log.Errorf("media output %s: %s: the node stays held, so the gadget stays on the bus", w.spec.ID, err)
+	// A slot whose loop returns keeps everything that made it visible: the
+	// binding the browser owns, the descriptor the manager holds, and - for a
+	// camera - a UVC function still enumerated on the target, which goes on
+	// asking for frames that no longer come. Ending here therefore does not
+	// free the slot, it only stops filling it, and the host has no way to tell
+	// the difference from a camera that has gone black. Nothing else restarts a
+	// worker either: Reconcile builds them, and a reconcile only happens when an
+	// admin applies a profile. So the loop is supervised here instead, reopening
+	// the node - a dup of the descriptor already held, which does not touch the
+	// gadget - and backing off so a node that is genuinely gone cannot spin.
+	// The first run is unconditional. Cancellation is what every loop below
+	// answers by returning nil, and the slot has to reach one of them to be
+	// counted as stopped: testing the context up here instead would let a
+	// worker whose goroutine is scheduled after the cancel finish without ever
+	// entering - and without ever leaving - the node it was built to own.
+	for attempt := 0; ; attempt++ {
+		if attempt > 0 {
+			if ctx.Err() != nil {
+				break
+			}
+			demanded(sources.Demand{})
+			if !w.reopen(ctx, m.factory, attempt) {
+				continue
+			}
+		}
+		var err error
+		if w.spec.Kind == sources.KindSpeaker {
+			err = w.input.Run(ctx, func(packet Packet) { m.publish(w, packet) }, demanded, active)
+		} else {
+			err = w.output.Run(ctx, w.queue, fallback, demanded, active)
+		}
+		if err == nil {
+			break
+		}
+		log.Errorf("media output %s: %s: reopening the slot, the node stays held, so the gadget stays on the bus", w.spec.ID, err)
 	}
 	// The listener deliberately outlives the worker. A reconcile replaces every
 	// worker, and the browser's binding survives that; dropping the listener
@@ -693,9 +727,45 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 	_ = m.registry.SetBindingState(w.spec.ID, sources.StateSuspended)
 }
 
+// Waits out the backoff for this attempt and hands the worker a fresh handle,
+// answering false when the wait or the open did not produce one. Both answers
+// are survivable: the caller counts another attempt either way, so a node that
+// cannot be opened yet is retried on a longer delay rather than abandoned.
+func (w *worker) reopen(ctx context.Context, factory OutputFactory, attempt int) bool {
+	delay := min(restartBackoff<<min(attempt-1, 5), restartBackoffMax)
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+	}
+	_ = w.close()
+	var err error
+	if w.spec.Kind == sources.KindSpeaker {
+		w.input, err = factory.OpenInput(w.spec, w.spec.Node)
+	} else {
+		w.output, err = factory.Open(w.spec, w.spec.Node)
+	}
+	if err != nil {
+		log.Errorf("media slot %s: reopen: %s", w.spec.ID, err)
+		return false
+	}
+	return true
+}
+
+// Nil-safe because a reopen that fails leaves the worker holding nothing, and
+// the next attempt - and the deferred close on the way out - both come through
+// here before anything has replaced it.
 func (w *worker) close() error {
-	if w.input != nil {
+	if w.spec.Kind == sources.KindSpeaker {
+		if w.input == nil {
+			return nil
+		}
 		return w.input.Close()
+	}
+	if w.output == nil {
+		return nil
 	}
 	return w.output.Close()
 }
