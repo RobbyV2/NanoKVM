@@ -95,6 +95,11 @@ func newHoldTable(open func(string) (Holder, error)) *holdTable {
 
 func (t *holdTable) serve() {
 	held := make(map[string]Holder)
+	// Nodes whose close(2) never came back. The descriptor is still open, so
+	// re-opening would be the second uvc_v4l2_open() this file exists to
+	// prevent, and the count never comes back down. Retiring the node keeps
+	// the invariant at the cost of that one camera.
+	retired := make(map[string]bool)
 	for request := range t.requests {
 		wanted := make(map[string]bool, len(request.nodes))
 		for _, node := range request.nodes {
@@ -107,17 +112,27 @@ func (t *holdTable) serve() {
 			if wanted[node] {
 				continue
 			}
-			if err := holder.Close(); err != nil {
-				log.Errorf("release uvc node %s: %s", node, err)
-			}
 			delete(held, node)
+			if !t.release(node, holder) {
+				retired[node] = true
+			}
 		}
 		result := make(map[string]Holder, len(request.nodes))
 		for _, node := range request.nodes {
+			if retired[node] {
+				continue
+			}
 			holder, ok := held[node]
 			if !ok {
 				var err error
-				holder, err = t.open(node)
+				var settled bool
+				holder, err, settled = t.acquire(node)
+				if !settled {
+					// The open is still in the kernel and may yet hand back a
+					// descriptor no one is tracking. Opening again to find out
+					// is the second uvc_v4l2_open() the invariant forbids.
+					retired[node] = true
+				}
 				if err != nil {
 					// Loud: a node that will not open is a gadget that stays
 					// off the bus, which costs the operator every USB function
@@ -130,6 +145,64 @@ func (t *holdTable) serve() {
 			result[node] = holder
 		}
 		request.reply <- result
+	}
+}
+
+// This goroutine is the single owner of every hold, and both halves of its work
+// are syscalls into the UVC gadget driver: close(2) runs uvc_v4l2_release() and
+// open(2) runs uvc_v4l2_open(). A kernel that does not return from either used
+// to wedge the owner for the life of the process - every later hold() then hit
+// the settle timeout, Suspend() failed forever, and the manager refused every
+// apply with ErrMediaBusy. That costs the operator the whole gadget: HID cannot
+// be relinked, the camera cannot come back, passthrough cannot start, and
+// nothing short of a reboot recovers it.
+//
+// Measured: closing a video node whose function had already been unbound oopsed
+// in uvcg_video_enable() and left the caller unkillable in D state, so the
+// wedge was not hypothetical. The kernel side of that is fixed, but a syscall
+// that never returns must not be able to take the manager with it, so both
+// halves run on their own goroutine against a deadline.
+func (t *holdTable) release(node string, holder Holder) bool {
+	done := make(chan error, 1)
+	go func() { done <- holder.Close() }()
+	timer := time.NewTimer(t.settle)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		if err != nil {
+			log.Errorf("release uvc node %s: %s", node, err)
+		}
+		return true
+	case <-timer.C:
+		// Deliberately not an error to the caller: Suspend() asks the kernel
+		// who still holds the node through confirmClosed(), which is the
+		// honest check and stays accurate whenever the release does finish.
+		log.Errorf("release uvc node %s did not return within %s; abandoning the descriptor and retiring the node", node, t.settle)
+		return false
+	}
+}
+
+// The third result says whether the open(2) settled at all. It did not when the
+// deadline expired first, and the caller must then retire the node: the syscall
+// is still in the kernel and may still produce a descriptor this table is not
+// tracking, so asking for the node again would be the second open.
+func (t *holdTable) acquire(node string) (Holder, error, bool) {
+	type opened struct {
+		holder Holder
+		err    error
+	}
+	done := make(chan opened, 1)
+	go func() {
+		holder, err := t.open(node)
+		done <- opened{holder: holder, err: err}
+	}()
+	timer := time.NewTimer(t.settle)
+	defer timer.Stop()
+	select {
+	case result := <-done:
+		return result.holder, result.err, true
+	case <-timer.C:
+		return nil, fmt.Errorf("open %s did not return within %s", node, t.settle), false
 	}
 }
 

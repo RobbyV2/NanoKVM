@@ -25,6 +25,12 @@ const (
 
 	phyPollInterval = 100 * time.Millisecond
 	phyPollTimeout  = 10 * time.Second
+
+	// How long to keep re-asserting the OTG role before giving up. The
+	// controller takes a moment to settle after a bind or a PHY reset, and
+	// during that window it can land back in host mode on its own.
+	otgRoleTimeout    = 3 * time.Second
+	otgRoleRetryDelay = 100 * time.Millisecond
 )
 
 var (
@@ -44,6 +50,7 @@ var (
 	ErrInvalidPath = errors.New("invalid gadget path")
 	ErrUDCCount    = errors.New("expected exactly one udc")
 	ErrUDCName     = errors.New("invalid udc name")
+	ErrOTGRole     = errors.New("otg role did not take")
 )
 
 var rootSegments = map[string]bool{
@@ -347,11 +354,37 @@ func (o *ConfigFSOps) UnbindUDC() error {
 	return o.WriteFile(udcAttr, []byte(emptyUDCName))
 }
 
+// H4 again, this time for the SoC's OTG role. The write returns nil even when
+// the controller settles back into host mode, and a gadget bound in host mode
+// never enumerates: the UDC sits at "not attached", the host sees nothing, and
+// HID, the gadget NIC and the disk are all dead at once while configfs still
+// reports every function linked and the UDC bound.
+//
+// Measured on hardware after a camera toggle: UDC bound to 4340000.usb,
+// /proc/cviusb/otg_role reading "host", udc state "not attached", dwc2 logging
+// "Mode Mismatch Interrupt: currently in Host mode". Writing "device" once more
+// brought the host back and /dev/hidg0 with it, with no reboot - which is
+// exactly what the operator's HID reset is supposed to be able to do, and could
+// not, because nothing ever read this attribute back.
 func (o *ConfigFSOps) SetOTGRole(role string) error {
-	if err := os.WriteFile(otgRolePath, []byte(role+"\n"), 0o644); err != nil {
-		return fmt.Errorf("set otg role %s: %w", role, err)
+	deadline := time.Now().Add(otgRoleTimeout)
+	var lastErr error
+	for {
+		if err := os.WriteFile(otgRolePath, []byte(role+"\n"), 0o644); err != nil {
+			lastErr = fmt.Errorf("set otg role %s: %w", role, err)
+		} else if data, err := os.ReadFile(otgRolePath); err != nil {
+			lastErr = fmt.Errorf("read otg role: %w", err)
+		} else if got := strings.TrimSpace(string(data)); got == role {
+			return nil
+		} else {
+			lastErr = fmt.Errorf("%w: otg role settled at %q, want %q", ErrOTGRole, got, role)
+		}
+
+		if !time.Now().Before(deadline) {
+			return lastErr
+		}
+		time.Sleep(otgRoleRetryDelay)
 	}
-	return nil
 }
 
 func (o *ConfigFSOps) ResetPHY(ctx context.Context) error {
