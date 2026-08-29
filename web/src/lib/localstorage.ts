@@ -1,4 +1,4 @@
-import { Resolution } from '@/types';
+import type { Resolution } from '@/types';
 
 const LANGUAGE_KEY = 'nano-kvm-language';
 const VIDEO_MODE_KEY = 'nano-kvm-vide-mode';
@@ -26,6 +26,24 @@ type ItemWithExpiry = {
   expiry: number;
 };
 
+// Every stored value is decoded through here. A single unreadable entry used to
+// throw out of whichever component read it, and because the entry survives the
+// reload the operator got the same dead page on every refresh - a broken
+// setting could lock them out of the desktop permanently. A value we cannot
+// read is a value we no longer have: drop it and carry on with the default.
+function readItem<T>(key: string, decode: (raw: string) => T): T | null {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return null;
+
+  try {
+    return decode(raw);
+  } catch (error) {
+    console.warn(`[nanokvm] discarding unreadable ${key}`, error);
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
 // set the value with expiration time (unit: milliseconds)
 function setWithExpiry(key: string, value: string, ttl: number) {
   const now = new Date();
@@ -40,10 +58,15 @@ function setWithExpiry(key: string, value: string, ttl: number) {
 
 // get the value with expiration time
 function getWithExpiry(key: string) {
-  const itemStr = localStorage.getItem(key);
-  if (!itemStr) return null;
+  const item = readItem(key, (raw) => {
+    const parsed = JSON.parse(raw) as ItemWithExpiry;
+    if (typeof parsed?.value !== 'string' || typeof parsed?.expiry !== 'number') {
+      throw new Error('malformed expiring item');
+    }
+    return parsed;
+  });
+  if (!item) return null;
 
-  const item: ItemWithExpiry = JSON.parse(itemStr);
   const now = new Date();
   if (now.getTime() > item.expiry) {
     localStorage.removeItem(key);
@@ -82,13 +105,13 @@ export function setVideoScale(scale: number): void {
 }
 
 export function getResolution(): Resolution | null {
-  const resolution = localStorage.getItem(WEB_RESOLUTION_KEY);
-  if (resolution) {
-    const obj = JSON.parse(window.atob(resolution));
-    return obj as Resolution;
-  }
-
-  return null;
+  return readItem(WEB_RESOLUTION_KEY, (raw) => {
+    const parsed = JSON.parse(window.atob(raw)) as Resolution;
+    if (typeof parsed?.width !== 'number' || typeof parsed?.height !== 'number') {
+      throw new Error('malformed resolution');
+    }
+    return parsed;
+  });
 }
 
 export function setResolution(resolution: Resolution) {
@@ -210,8 +233,14 @@ export function setMenuDisabledItems(items: string[]) {
 }
 
 export function getMenuDisabledItems(): string[] {
-  const value = localStorage.getItem(MENU_DISABLED_ITEMS_KEY);
-  return value ? JSON.parse(value) : [];
+  const items = readItem(MENU_DISABLED_ITEMS_KEY, (raw) => {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
+      throw new Error('malformed menu items');
+    }
+    return parsed as string[];
+  });
+  return items || [];
 }
 
 export function getMenuDisplayMode(): string {
