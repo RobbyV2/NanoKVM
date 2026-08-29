@@ -95,7 +95,15 @@ export class CameraCapture {
     };
     this.stopped = false;
 
-    const interval = 1000 / fps;
+    // Rounded up, because setTimeout truncates its delay to whole milliseconds
+    // and the negotiated rate is a ceiling, not a target. At 30 fps the period
+    // is 33.333 ms, which the browser runs as 33 - a thousandth faster than the
+    // rate the host asked for, and the receiving bucket refills at exactly the
+    // rate the host asked for. The difference only ever accumulates, so the
+    // stream ran fine for the first minute and then dropped a frame every few
+    // seconds for the rest of the session. Undershooting by a third of a
+    // millisecond costs nothing that can be seen.
+    const interval = Math.ceil(1000 / fps);
     const encode = async () => {
       if (this.stopped || !this.video) return;
       if (!this.encoding && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {

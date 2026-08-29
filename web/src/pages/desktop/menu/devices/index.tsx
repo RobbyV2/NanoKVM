@@ -17,7 +17,7 @@ import type { SourceSink } from '@/api/sources.ts';
 import { MenuItem } from '@/components/menu-item.tsx';
 
 import * as presentation from '@/api/presentation.ts';
-import type { PresentationProfile } from '@/api/presentation.ts';
+import type { PresentationProfile, PresentationStatus } from '@/api/presentation.ts';
 
 import { useDevices } from './context.ts';
 import { cameraCap, cameraOptions, withCameraCap } from './modes.ts';
@@ -39,10 +39,22 @@ export const Devices = () => {
     if (!isAdmin || profile) return;
     if (!state.snapshot.sinks.some((sink) => sink.kind === 'camera')) return;
     let cancelled = false;
-    presentation
-      .getProfile('current')
+    // The profile to read is whichever one is on the bus, which is not always
+    // the one named "current". This used to load, cap and apply that name no
+    // matter what was active, and a device driven by named profiles got the
+    // worst of it twice over: the dropdown reported a mode list the host had
+    // never been offered, and choosing a resolution rewrote a profile that was
+    // not running and then applied it, swapping the whole USB layout for one
+    // nobody asked for. Every write below keys off this name.
+    void presentation
+      .getStatus()
+      .then((status) => {
+        if (cancelled || status.code !== 0) return undefined;
+        const active = (status.data as PresentationStatus).snapshot.active;
+        return active ? presentation.getProfile(active) : undefined;
+      })
       .then((rsp) => {
-        if (!cancelled && rsp.code === 0) setProfile(rsp.data as PresentationProfile);
+        if (!cancelled && rsp && rsp.code === 0) setProfile(rsp.data as PresentationProfile);
       })
       .catch(() => undefined);
     return () => {
