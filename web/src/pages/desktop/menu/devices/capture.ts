@@ -194,8 +194,23 @@ export class CameraCapture {
     // seconds for the rest of the session. Undershooting by a third of a
     // millisecond costs nothing that can be seen.
     const interval = Math.ceil(1000 / fps);
+    // Measured against a 30 fps demand, the loop delivered 25.6 fps: the next
+    // tick was armed after grabbing the frame, so every period was the interval
+    // plus however long createImageBitmap had taken, and the gap only ever grew
+    // with the machine's load. The deadline is what is fixed, not the delay, so
+    // each tick is armed for where the next one is due; a tick that lands late
+    // shortens the following delay instead of pushing it back, and a tick that
+    // is more than a whole period late gives up the frames it slept through
+    // rather than firing a burst to catch up on them.
+    let due = 0;
+    const arm = () => {
+      const now = performance.now();
+      due = Math.max(due + interval, now);
+      this.timer = window.setTimeout(encode, due - now);
+    };
     const encode = async () => {
       if (this.stopped || !this.video) return;
+      arm();
       if (!this.encoding && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         this.encoding = true;
         try {
@@ -210,8 +225,8 @@ export class CameraCapture {
           onError(error instanceof Error ? error.message : 'Camera frame failed');
         }
       }
-      this.timer = window.setTimeout(encode, interval);
     };
+    due = performance.now();
     await encode();
   }
 
