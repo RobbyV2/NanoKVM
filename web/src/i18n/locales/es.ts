@@ -1312,7 +1312,10 @@ const es = {
     },
     error: {
       title: 'Hemos encontrado un problema',
-      refresh: 'Actualizar'
+      refresh: 'Actualizar',
+      panel: 'Este panel ha dejado de funcionar',
+      retry: 'Reintentar',
+      reload: 'Recargar la página'
     },
     fullscreen: {
       toggle: 'Activar/Desactivar pantalla completa'

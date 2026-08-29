@@ -50,11 +50,18 @@ export class WsClient {
     this.shouldReconnect = false;
     this.cleanup();
 
-    if (this.instance && this.instance.readyState === W3cWebSocket.OPEN) {
-      this.instance.close();
-    }
-
+    // A socket that has not finished its handshake still has to be closed. It
+    // used to be left alone, so a page unloaded mid-connect handed the server a
+    // session nobody would ever speak on and the next page had to wait it out.
+    const instance = this.instance;
     this.instance = null;
+    if (
+      instance &&
+      (instance.readyState === W3cWebSocket.OPEN || instance.readyState === W3cWebSocket.CONNECTING)
+    ) {
+      instance.onclose = () => undefined;
+      instance.close();
+    }
   }
 
   public on(type: string, handler: MessageHandler): () => void {
@@ -109,6 +116,14 @@ export class WsClient {
 
   private createConnection(): void {
     this.cleanup();
+
+    // Reconnecting on top of a live socket would leave the old one delivering
+    // into the same handlers, so the previous instance always goes first.
+    const previous = this.instance;
+    if (previous && previous.readyState !== W3cWebSocket.CLOSED) {
+      previous.onclose = () => undefined;
+      previous.close();
+    }
 
     this.instance = new W3cWebSocket(this.options.url);
     this.instance.binaryType = 'arraybuffer';

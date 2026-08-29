@@ -1301,7 +1301,10 @@ const nb = {
     },
     error: {
       title: 'Vi har hatt et problem',
-      refresh: 'Oppdater'
+      refresh: 'Oppdater',
+      panel: 'Dette panelet sluttet å virke',
+      retry: 'Prøv igjen',
+      reload: 'Last inn siden på nytt'
     },
     fullscreen: {
       toggle: 'Veksle fullskjerm'

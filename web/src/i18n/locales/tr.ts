@@ -1299,7 +1299,10 @@ const tr = {
     },
     error: {
       title: 'Bir hata oldu!',
-      refresh: 'Yenile'
+      refresh: 'Yenile',
+      panel: 'Bu panel çalışmayı durdurdu',
+      retry: 'Yeniden dene',
+      reload: 'Sayfayı yeniden yükle'
     },
     fullscreen: {
       toggle: 'Tam ekrana geç'

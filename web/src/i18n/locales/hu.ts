@@ -1310,7 +1310,10 @@ const hu = {
     },
     error: {
       title: 'Problémába ütköztünk',
-      refresh: 'Frissítés'
+      refresh: 'Frissítés',
+      panel: 'Ez a panel leállt',
+      retry: 'Újrapróbálkozás',
+      reload: 'Oldal újratöltése'
     },
     fullscreen: {
       toggle: 'Teljes képernyő váltás'

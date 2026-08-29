@@ -1242,7 +1242,10 @@ const zh = {
     },
     error: {
       title: '我们遇到了问题',
-      refresh: '刷新'
+      refresh: '刷新',
+      panel: '此面板已停止工作',
+      retry: '重试',
+      reload: '重新加载页面'
     },
     fullscreen: {
       toggle: '切换全屏'

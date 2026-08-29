@@ -401,6 +401,37 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh]);
 
+  // A reload does not unmount React, so nothing here would otherwise run on the
+  // way out: the sockets die with the page and the registry only learns of it
+  // when the connection times out. By then the next page has already said hello
+  // and is told its own lease token is invalid, because the binding is still
+  // held by a source the server thinks is alive - which is the refresh that
+  // comes back with everything refused and a slot nobody can claim. Closing
+  // here puts the goodbye ahead of the next page's hello. The captures stop
+  // too, or the camera light stays on across the reload.
+  useEffect(() => {
+    const teardown = () => {
+      client.close();
+      window.clearTimeout(eventsRetry.current);
+      eventsSocket.current?.close(1000);
+      eventsSocket.current = undefined;
+      void usbRelay.current?.close();
+      for (const sinkID of [...captures.current.keys()]) void stopCapture(sinkID);
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      // Restored from the back/forward cache: the React tree survived, the
+      // sockets did not, because we closed them on the way out.
+      if (event.persisted) refresh();
+    };
+
+    window.addEventListener('pagehide', teardown);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pagehide', teardown);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [client, refresh, stopCapture]);
+
   const clearAttempt = useCallback((sinkID: string) => {
     setRefusals((current) => {
       const next = { ...current };

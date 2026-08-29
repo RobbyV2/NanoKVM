@@ -15,9 +15,19 @@ let pendingAckTimestamp: number | null = null;
 let decodeBackpressured = false;
 let reportedFrameWidth = 0;
 let reportedFrameHeight = 0;
+let lastFrameAt = 0;
+let stallStrikes = 0;
+let stallTimer: ReturnType<typeof setInterval> | null = null;
 
 const maxQueuedFrames = 1;
 const maxReconnectDelayMs = 5_000;
+// A socket that stays open while the pictures stop is the worst case: the
+// reconnect path never runs, so the canvas holds the last frame forever and the
+// operator is looking at a screen that is no longer the host's. Ask for a fresh
+// key frame first, and if that changes nothing drop the socket so the existing
+// reconnect can rebuild the whole stream.
+const frameStallTimeoutMs = 4_000;
+const stallCheckIntervalMs = 1_000;
 const frameAckMessage = 2;
 const streamResyncMessage = 3;
 const flowControlWindow = 8;
@@ -47,6 +57,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       }
 
       canvas = offscreenCanvas;
+      startStallWatch();
       reportedFrameWidth = 0;
       reportedFrameHeight = 0;
       ctx = canvas!.getContext('2d', {
@@ -59,6 +70,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       break;
     case 'stop':
       stopped = true;
+      stopStallWatch();
       clearReconnectTimer();
       disconnect();
       resetDecoder();
@@ -87,6 +99,8 @@ function connect() {
       resyncRequested = false;
       pendingAckTimestamp = null;
       decodeBackpressured = false;
+      lastFrameAt = Date.now();
+      stallStrikes = 0;
     };
 
     nextSocket.onmessage = (event) => {
@@ -141,6 +155,49 @@ function scheduleReconnect() {
     reconnectTimer = null;
     connect();
   }, delay);
+}
+
+function startStallWatch() {
+  if (stallTimer !== null) {
+    return;
+  }
+
+  lastFrameAt = Date.now();
+  stallStrikes = 0;
+  stallTimer = setInterval(checkFrameStall, stallCheckIntervalMs);
+}
+
+function stopStallWatch() {
+  if (stallTimer === null) {
+    return;
+  }
+
+  clearInterval(stallTimer);
+  stallTimer = null;
+}
+
+function checkFrameStall() {
+  const currentSocket = socket;
+  if (stopped || !currentSocket || currentSocket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+
+  if (Date.now() - lastFrameAt < frameStallTimeoutMs) {
+    stallStrikes = 0;
+    return;
+  }
+
+  // Each remedy gets its own window to work in before the next one is tried.
+  lastFrameAt = Date.now();
+  stallStrikes++;
+
+  if (stallStrikes === 1) {
+    resyncRequested = false;
+    requestStreamResync();
+    return;
+  }
+
+  currentSocket.close();
 }
 
 function clearReconnectTimer() {
@@ -314,6 +371,7 @@ function renderFrame(frame: VideoFrame) {
       canvas.height = frame.displayHeight;
     }
     ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+    lastFrameAt = Date.now();
 
     if (reportedFrameWidth !== frame.displayWidth || reportedFrameHeight !== frame.displayHeight) {
       reportedFrameWidth = frame.displayWidth;

@@ -1297,7 +1297,10 @@ const vi = {
     },
     error: {
       title: 'Chúng tôi đã gặp sự cố',
-      refresh: 'Làm mới'
+      refresh: 'Làm mới',
+      panel: 'Bảng này đã ngừng hoạt động',
+      retry: 'Thử lại',
+      reload: 'Tải lại trang'
     },
     fullscreen: {
       toggle: 'Chuyển đổi toàn màn hình'

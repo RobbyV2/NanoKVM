@@ -1304,7 +1304,10 @@ const pt_br = {
     },
     error: {
       title: 'Encontramos um problema',
-      refresh: 'Atualizar'
+      refresh: 'Atualizar',
+      panel: 'Este painel parou de funcionar',
+      retry: 'Tentar novamente',
+      reload: 'Recarregar a página'
     },
     fullscreen: {
       toggle: 'Alternar Tela Cheia'

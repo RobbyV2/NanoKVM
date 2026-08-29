@@ -1300,7 +1300,10 @@ const da = {
     },
     error: {
       title: 'Vi er stødt på et problem',
-      refresh: 'Opdater'
+      refresh: 'Opdater',
+      panel: 'Dette panel er holdt op med at virke',
+      retry: 'Prøv igen',
+      reload: 'Genindlæs siden'
     },
     fullscreen: {
       toggle: 'Skift fuldskærm'

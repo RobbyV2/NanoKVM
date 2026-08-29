@@ -1281,7 +1281,10 @@ const ko = {
     },
     error: {
       title: '문제가 발생했습니다.',
-      refresh: '새로고침'
+      refresh: '새로고침',
+      panel: '이 패널이 중지되었습니다',
+      retry: '다시 시도',
+      reload: '페이지 새로고침'
     },
     fullscreen: {
       toggle: '전체 화면 전환'

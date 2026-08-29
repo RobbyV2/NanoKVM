@@ -1295,7 +1295,10 @@ const cz = {
     },
     error: {
       title: 'Narazili jsme na problém',
-      refresh: 'Obnovit'
+      refresh: 'Obnovit',
+      panel: 'Tento panel přestal fungovat',
+      retry: 'Zkusit znovu',
+      reload: 'Znovu načíst stránku'
     },
     fullscreen: {
       toggle: 'Přepnout na celou obrazovku'

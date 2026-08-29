@@ -1293,7 +1293,10 @@ const en = {
     },
     error: {
       title: "We've ran into an issue",
-      refresh: 'Refresh'
+      refresh: 'Refresh',
+      panel: 'This panel stopped working',
+      retry: 'Try again',
+      reload: 'Reload page'
     },
     fullscreen: {
       toggle: 'Toggle Fullscreen'

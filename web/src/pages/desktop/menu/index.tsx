@@ -13,6 +13,7 @@ import {
 } from '@/jotai/settings.ts';
 import { useMenuBounds } from '@/hooks/useMenuBounds.ts';
 import { useMenuVisibility } from '@/hooks/useMenuVisibility.ts';
+import { MenuBoundary } from '@/components/error-boundary.tsx';
 
 import { KeyboardLedStatus } from '../keyboard-led-status';
 import { Devices } from './devices';
@@ -104,7 +105,9 @@ export const Menu = () => {
                   isMenuHidden ? 'pointer-events-none opacity-0' : 'opacity-100'
                 )}
               >
-                <KeyboardLedStatus />
+                <MenuBoundary name="keyboard-led-status">
+                  <KeyboardLedStatus />
+                </MenuBoundary>
               </div>
             )}
             <strong>
@@ -114,17 +117,45 @@ export const Menu = () => {
             </strong>
             <Divider type="vertical" />
 
-            <Screen />
-            <Keyboard />
-            <Mouse />
-            <Devices />
+            <MenuBoundary name="screen">
+              <Screen />
+            </MenuBoundary>
+            <MenuBoundary name="keyboard">
+              <Keyboard />
+            </MenuBoundary>
+            <MenuBoundary name="mouse">
+              <Mouse />
+            </MenuBoundary>
+            <MenuBoundary name="devices">
+              <Devices />
+            </MenuBoundary>
             <Divider type="vertical" />
 
-            {isAdmin && isEnabled('image') && <Image />}
-            {isAdmin && isEnabled('download') && <DownloadImage />}
-            {isAdmin && isEnabled('terminal') && <Terminal />}
-            {isAdmin && isEnabled('script') && <Script />}
-            {isEnabled('wol') && <Wol />}
+            {isAdmin && isEnabled('image') && (
+              <MenuBoundary name="image">
+                <Image />
+              </MenuBoundary>
+            )}
+            {isAdmin && isEnabled('download') && (
+              <MenuBoundary name="download">
+                <DownloadImage />
+              </MenuBoundary>
+            )}
+            {isAdmin && isEnabled('terminal') && (
+              <MenuBoundary name="terminal">
+                <Terminal />
+              </MenuBoundary>
+            )}
+            {isAdmin && isEnabled('script') && (
+              <MenuBoundary name="script">
+                <Script />
+              </MenuBoundary>
+            )}
+            {isEnabled('wol') && (
+              <MenuBoundary name="wol">
+                <Wol />
+              </MenuBoundary>
+            )}
 
             {(isEnabled('wol') ||
               (isAdmin && ['image', 'download', 'script', 'terminal'].some(isEnabled))) && (
@@ -133,21 +164,35 @@ export const Menu = () => {
 
             {isAdmin && isEnabled('picoclaw') && (
               <>
-                <Picoclaw />
+                <MenuBoundary name="picoclaw">
+                  <Picoclaw />
+                </MenuBoundary>
                 <Divider type="vertical" />
               </>
             )}
 
             {isEnabled('power') && (
               <>
-                <Power />
+                <MenuBoundary name="power">
+                  <Power />
+                </MenuBoundary>
                 <Divider type="vertical" />
               </>
             )}
 
-            <Settings />
-            {isEnabled('fullscreen') && <Fullscreen />}
-            {isEnabled('collapse') && <Collapse toggleMenu={setIsMenuExpanded} />}
+            <MenuBoundary name="settings">
+              <Settings />
+            </MenuBoundary>
+            {isEnabled('fullscreen') && (
+              <MenuBoundary name="fullscreen">
+                <Fullscreen />
+              </MenuBoundary>
+            )}
+            {isEnabled('collapse') && (
+              <MenuBoundary name="collapse">
+                <Collapse toggleMenu={setIsMenuExpanded} />
+              </MenuBoundary>
+            )}
           </div>
         </div>
 
