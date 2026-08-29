@@ -430,15 +430,21 @@ func TestManagerRejectsBurstBeyondSlotRate(t *testing.T) {
 	}
 	defer manager.Suspend()
 	waitDemand(t, registry, "uvc.cam0")
+	// The demand is 30 fps, so the bucket carries half a second of frames. A
+	// wireless link that hands over a bunch that size is jitter, not a runaway
+	// source, and every frame in it has to be admitted; the frame after the
+	// burst is the one the long run rate refuses.
 	payload := jpegFrame(t, 640, 480)
-	for sequence := uint32(1); sequence <= 3; sequence++ {
+	const burst = 15
+	for sequence := uint32(1); sequence <= burst; sequence++ {
 		err := manager.Ingest(context.Background(), sources.MediaFrame{SourceID: "source", StreamID: "front", SinkID: "uvc.cam0", Kind: sources.MediaKindMJPEG, Sequence: sequence, Payload: payload})
-		if sequence < 3 && err != nil {
-			t.Fatal(err)
+		if err != nil {
+			t.Fatalf("frame %d of the burst: %v", sequence, err)
 		}
-		if sequence == 3 && !errors.Is(err, ErrFrameRate) {
-			t.Fatalf("third frame err = %v, want ErrFrameRate", err)
-		}
+	}
+	err := manager.Ingest(context.Background(), sources.MediaFrame{SourceID: "source", StreamID: "front", SinkID: "uvc.cam0", Kind: sources.MediaKindMJPEG, Sequence: burst + 1, Payload: payload})
+	if !errors.Is(err, ErrFrameRate) {
+		t.Fatalf("frame past the burst err = %v, want ErrFrameRate", err)
 	}
 }
 

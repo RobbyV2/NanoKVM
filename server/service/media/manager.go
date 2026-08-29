@@ -553,13 +553,28 @@ func (m *Manager) Detach(sinkID string) {
 // 20 ms of audio the host never heard.
 const audioRateBurst = 25
 
+// videoRateBurst is the same lesson for the camera, which never learned it: the
+// burst was videoQueueDepth + 1, two frames, because the queue happens to hold
+// one. The queue depth answers a different question - how much latency a frame
+// may sit in - and borrowing it here gave the admission bucket 66 ms of slack at
+// 30 fps, narrower than the jitter of the websocket the frames arrive over. A
+// browser paces its encoder off its own clock and TCP hands the server whatever
+// has accumulated, so a wireless hiccup routinely delivers three or four frames
+// in one wakeup; every frame past the second was refused as "frame rate
+// exceeded" and dropped, which is a visible stutter rather than an overload.
+// Half a second of frames is the floor the audio bucket settled on, and the
+// long run rate still holds either way: a runaway source is bounded by the
+// refill, not by the burst.
+const videoRateBurst = 8
+
 func (w *worker) allowFrame(now time.Time, demand sources.Demand) bool {
 	rate, burst := float64(50), float64(audioRateBurst)
 	if w.spec.Kind == sources.KindCamera {
-		rate, burst = float64(demand.FPS), float64(videoQueueDepth+1)
+		rate = float64(demand.FPS)
 		if rate <= 0 {
 			return false
 		}
+		burst = max(videoRateBurst, rate/2)
 	}
 	if w.rateAt.IsZero() {
 		w.rateAt, w.rateTokens = now, burst
