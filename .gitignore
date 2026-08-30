@@ -42,3 +42,6 @@ kvmapp/tunnels/*.gz
 
 # usb-proxy seed built by "make passthrough"
 kvmapp/passthrough/*.gz
+
+# Session memory hooks write scratch state here
+.remember/
