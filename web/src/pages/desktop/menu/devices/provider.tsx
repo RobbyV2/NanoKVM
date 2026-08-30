@@ -72,6 +72,15 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const eventsConnect = useRef<() => void>();
   const captures = useRef(new Map<string, RunningCapture>());
   const stopTimers = useRef(new Map<string, number>());
+  // Which sinks the host is actually reading right now. A capture outlives its
+  // demand by mediaGrace so a brief blip does not tear the camera down, and for
+  // those seconds the encoder keeps producing frames the sink is guaranteed to
+  // refuse. Sending them anyway cost a websocket round trip and a rejection per
+  // frame - 150 of them per blip at 30fps - and every rejection surfaced as
+  // "media sink is not demanded", which is not a fault the operator can act on.
+  // Holding them here keeps the grace period doing its job (an instant resume)
+  // without spending the device's CPU on frames it will throw away.
+  const demanded = useRef(new Set<string>());
   const mounted = useRef(true);
   const usbRelay = useRef<WebUSBRelay>();
 
@@ -277,7 +286,10 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           await capture.start(
             offer.deviceID,
             sink.demand,
-            (payload) => client.sendFrame(sink.id, offer.id, 'mjpeg', payload),
+            (payload) => {
+              if (!demanded.current.has(sink.id)) return false;
+              return client.sendFrame(sink.id, offer.id, 'mjpeg', payload);
+            },
             (message) => setError(sink.id, message)
           );
         } else {
@@ -291,7 +303,10 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           });
           await capture.start(
             offer.deviceID,
-            (payload) => client.sendFrame(sink.id, offer.id, 'pcm_s16le_mono_48k', payload),
+            (payload) => {
+              if (!demanded.current.has(sink.id)) return false;
+              return client.sendFrame(sink.id, offer.id, 'pcm_s16le_mono_48k', payload);
+            },
             muted.has(sink.id)
           );
         }
@@ -318,6 +333,8 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         (sink.demand.streaming || sink.kind === 'speaker') &&
         sink.binding?.state !== 'orphaned' &&
         sink.binding?.state !== 'suspended';
+      if (sink.demand.streaming) demanded.current.add(sink.id);
+      else demanded.current.delete(sink.id);
       if (canRun) {
         wanted.add(sink.id);
         window.clearTimeout(stopTimers.current.get(sink.id));
@@ -341,6 +358,10 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       if (!wanted.has(sinkID) && !snapshot.sinks.some((sink) => sink.id === sinkID)) {
         void stopCapture(sinkID);
       }
+    }
+    // A sink that has left the snapshot demands nothing.
+    for (const sinkID of [...demanded.current]) {
+      if (!snapshot.sinks.some((sink) => sink.id === sinkID)) demanded.current.delete(sinkID);
     }
   }, [client, owned, snapshot.sinks, sourceConnection, startCapture, stopCapture]);
 

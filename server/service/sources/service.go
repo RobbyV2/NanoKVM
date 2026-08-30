@@ -538,7 +538,16 @@ func (s *Service) handleMedia(ctx context.Context, writer *sourceWriter, sourceI
 		return &frameFailure{frame: frame, err: errors.New("media output is unavailable")}
 	}
 	if err := ingress.Ingest(ctx, frame); err != nil {
-		return &frameFailure{frame: frame, err: err}
+		// A sink the host has stopped reading refuses every frame until it
+		// starts again, and the browser deliberately keeps capturing across
+		// that gap so the picture resumes instantly. Reporting each refusal as
+		// a frame error put "media sink is not demanded" in front of the
+		// operator thirty times a second for something no operator can act on.
+		// The frame is finished either way; acknowledging it keeps the source's
+		// in-flight window moving and says nothing that is not true.
+		if !errors.Is(err, ErrNotDemanded) {
+			return &frameFailure{frame: frame, err: err}
+		}
 	}
 	return writer.JSON(controlResponse{
 		Type: "frame_ack", SinkID: frame.SinkID, StreamID: frame.StreamID, Sequence: frame.Sequence,

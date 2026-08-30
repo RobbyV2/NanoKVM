@@ -192,6 +192,12 @@ var (
 	ErrOccupied       = errors.New("slot occupied")
 	ErrInvalidToken   = errors.New("invalid lease token")
 	ErrInvalidMessage = errors.New("invalid message")
+	// A frame that arrives while the host is not reading the sink. The browser
+	// keeps its capture alive across a brief gap in demand so the picture comes
+	// straight back, so frames legitimately arrive with nowhere to go. It is the
+	// designed steady state, not a fault, and it lives here rather than in the
+	// media package because that package imports this one.
+	ErrNotDemanded = errors.New("media sink is not demanded")
 
 	idPattern     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 	cameraSlotID  = regexp.MustCompile(`^uvc\.cam([0-9])$`)

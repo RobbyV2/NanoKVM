@@ -49,7 +49,7 @@ var (
 	ErrNodeBusy         = errors.New("media node is still open")
 	ErrUnsupportedFrame = errors.New("unsupported media frame")
 	ErrStaleFrame       = errors.New("stale media frame")
-	ErrNotDemanded      = errors.New("media sink is not demanded")
+	ErrNotDemanded      = sources.ErrNotDemanded
 	ErrFrameRate        = errors.New("media frame rate exceeded")
 )
 
