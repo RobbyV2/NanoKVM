@@ -532,17 +532,34 @@ func defaultCamera(index int, label string, named bool) Function {
 	// captured the raw stream, and the gadget silently loses whole isochronous
 	// payloads mid-frame: dwc2 completes the request with status 0 but a short
 	// actual, so nothing is logged and the frame arrives short by exactly one
-	// payload. Widening the microframe does not help, because the loss is per
-	// frame rather than per payload: 512 truncated 13.9% of live frames, 768
-	// 13.7%, 1024 12.7% - one population within noise of each other - while
-	// 3072 (1024 three times, the widest high speed allows) made it far worse
-	// at 24-30%, and 2048 is worse still because the Windows UVC driver will
-	// not render a mult-2 stream at all ("Could not RenderStream to connect
-	// pins"). So the value here buys nothing by growing, and the payload loss
-	// has to be answered somewhere other than the endpoint's width.
+	// payload.
+	//
+	// An earlier sweep concluded the endpoint's width bought nothing - 512
+	// truncated 13.9% of live frames, 768 13.7%, 1024 12.7%, and 3072
+	// apparently far worse at 24-30%. That sweep sent a 3285 byte payload,
+	// which is about two payloads wide at 3072, and its conclusion does not
+	// survive at the frame sizes a real camera produces. Re-measured
+	// byte-exact against known sent frames, one variable changed, on the
+	// current kernel with the keep-alive chain off:
+	//
+	//	768   44 KB frames   73/450 damaged  16.2%
+	//	3072  44 KB frames    1/451 damaged   0.2%
+	//	3072  71 KB frames    3/450 damaged   0.7%
+	//	3072  small frames    0/450 damaged   0.0%
+	//
+	// The failure mode changes, not just its rate: at 768 the holes sit at
+	// payload index 1-4 and are one 766 byte payload each, which is the
+	// descriptor chain restarting after the ~232 idle microframes between
+	// frames. At 3072 that mode is gone and the few survivors are a lost final
+	// payload instead. Fewer, wider payloads mean fewer chain restarts to lose
+	// one at, so this answers the loss at the endpoint after all.
+	//
+	// 2048 stays unusable regardless: the Windows UVC driver will not render a
+	// mult-2 stream at all ("Could not RenderStream to connect pins"). 3072 is
+	// the architectural ceiling, 1024 bytes three times per microframe.
 	video := &VideoFunction{
 		FunctionName: label, Formats: []VideoFormat{{Codec: "mjpeg", Frames: frames}},
-		StreamingMaxPacket: 768, StreamingInterval: 1,
+		StreamingMaxPacket: 3072, StreamingInterval: 1,
 	}
 	if named {
 		video.HostName = &label
