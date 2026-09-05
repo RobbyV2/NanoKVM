@@ -65,6 +65,44 @@ func TestRunReturnsOnBudget(t *testing.T) {
 	}
 }
 
+// The way out is the mirror of the way in: a step that never returns costs its
+// budget and nothing more, the steps after it still run, and the results say
+// which one took the time.
+func TestStopRunsEveryStepInOrderAndAbandonsTheStuckOne(t *testing.T) {
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+
+	var order []string
+	started := time.Now()
+	results := Stop(
+		Step{Name: "media", Budget: time.Second, Run: func() error { order = append(order, "media"); return nil }},
+		Step{Name: "vision", Budget: 50 * time.Millisecond, Run: func() error { <-release; return nil }},
+		Step{Name: "passthrough", Budget: time.Second, Run: func() error { order = append(order, "passthrough"); return errors.New("no session") }},
+		Step{Name: "gadget", Budget: time.Second, Run: func() error { panic("controller gone") }},
+	)
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("Stop blocked for %s on a step that never returns", elapsed)
+	}
+	if len(order) != 2 || order[0] != "media" || order[1] != "passthrough" {
+		t.Fatalf("steps ran as %v, want media then passthrough with the stuck one skipped over", order)
+	}
+	if len(results) != 4 {
+		t.Fatalf("got %d results, want 4", len(results))
+	}
+	if r := results[0]; r.Name != "media" || r.Err != nil || r.Abandoned {
+		t.Fatalf("media = %+v, want done", r)
+	}
+	if r := results[1]; !r.Abandoned || r.Elapsed != 50*time.Millisecond || r.String() != "vision did not finish within 50ms" {
+		t.Fatalf("vision = %+v (%s), want abandoned on its budget", r, r)
+	}
+	if r := results[2]; r.Abandoned || r.Err == nil || r.Err.Error() != "no session" {
+		t.Fatalf("passthrough = %+v, want its error carried", r)
+	}
+	if r := results[3]; r.Err == nil || r.Err.Error() != "panic: controller gone" {
+		t.Fatalf("gadget = %+v, want the panic recovered into an error", r)
+	}
+}
+
 func TestFailRecordsAndClears(t *testing.T) {
 	reset()
 

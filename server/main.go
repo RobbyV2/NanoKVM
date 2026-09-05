@@ -23,6 +23,7 @@ import (
 	"NanoKVM-Server/service/controlmode"
 	"NanoKVM-Server/service/passthrough"
 	"NanoKVM-Server/service/picoclaw"
+	"NanoKVM-Server/service/presentation"
 	"NanoKVM-Server/service/startup"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
@@ -36,11 +37,22 @@ import (
 const (
 	confirmTimeout  = 150 * time.Second
 	confirmInterval = 2 * time.Second
+
+	// What each step of the way out may take before the process leaves without
+	// it. The media pipeline's own waits are two seconds for a worker to leave
+	// its loop and five for a close(2) on the video node to return
+	// (media/CLAUDE.md), so its budget is those plus a margin; the vision
+	// library's deinit closes the capture pipeline in C with no bound of its
+	// own, so it gets a few seconds and no more. The sum stays under the init
+	// script's twenty-second wait on SIGINT, so TERM and KILL never have to.
+	shutdownMediaBudget  = 8 * time.Second
+	shutdownUSBBudget    = 2 * time.Second
+	shutdownVisionBudget = 3 * time.Second
 )
 
 func main() {
 	initialize()
-	defer dispose()
+	defer shutdown()
 
 	run()
 }
@@ -71,13 +83,22 @@ func initialize() {
 		return nil
 	})
 
+	// The first signal starts the way out and the second ends it. Notify takes
+	// the default action away from every signal it names, so a TERM that lands
+	// while the first signal's shutdown is still running used to sit unread in
+	// the channel and the process outlived it until KILL; now it exits at once.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		sig := <-sigChan
-		log.Printf("\nReceived signal: %v\n", sig)
+		log.Printf("received %v: shutting down", sig)
+		go func() {
+			sig := <-sigChan
+			log.Printf("received %v during shutdown: exiting now", sig)
+			os.Exit(1)
+		}()
 
-		dispose()
+		shutdown()
 		os.Exit(0)
 	}()
 }
@@ -183,11 +204,30 @@ func startVNC(conf *config.Config) {
 	}
 }
 
-func dispose() {
-	if err := passthrough.GetManager().Close(); err != nil {
-		log.Printf("stop usb passthrough: %v", err)
+// shutdown gives back what the host can see before the process dies, in order
+// and on a budget per step. The camera goes first: with a stream open the host
+// is polling the video node, and closing it here ends the stream the way a
+// STREAMOFF does instead of leaving the node to fall with the process. The
+// vision library's deinit is last because it is the step with no bound of its
+// own; if it does not return, the result says so and the process exits anyway,
+// which is what the init script's SIGKILL used to do twenty seconds later.
+func shutdown() {
+	results := startup.Stop(
+		startup.Step{Name: "media pipeline", Budget: shutdownMediaBudget, Run: func() error {
+			if manager := presentation.Current(); manager != nil {
+				return manager.SuspendMedia()
+			}
+			return nil
+		}},
+		startup.Step{Name: "usb passthrough", Budget: shutdownUSBBudget, Run: passthrough.GetManager().Close},
+		startup.Step{Name: "kvm vision", Budget: shutdownVisionBudget, Run: func() error {
+			common.GetKvmVision().Close()
+			return nil
+		}},
+	)
+	for _, result := range results {
+		log.Printf("shutdown: %s", result)
 	}
-	common.GetKvmVision().Close()
 }
 
 // confirmKernel commits a trial kernel once the device is genuinely usable.

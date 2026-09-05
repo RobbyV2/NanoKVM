@@ -111,12 +111,22 @@ type Transient struct {
 var (
 	managerOnce    sync.Once
 	defaultManager *Manager
+	current        atomic.Pointer[Manager]
 )
+
+// Current is the manager GetManager built, or nil while nothing has asked for
+// one. Shutdown reads it instead of calling GetManager: a signal that lands
+// before the gadget was ever touched has nothing to give back, and building
+// the manager then would run the boot reconcile on the way out.
+func Current() *Manager {
+	return current.Load()
+}
 
 func GetManager() *Manager {
 	managerOnce.Do(func() {
 		store := NewStore()
 		defaultManager = NewManager(store, nil, LoadCapabilities())
+		current.Store(defaultManager)
 
 		ops, err := NewConfigFSOps(GadgetRoot)
 		if err != nil {
@@ -1138,6 +1148,23 @@ func (m *Manager) suspend(unlinks bool) error {
 	// node whose old handle is demonstrably still alive. Streaming comes back
 	// on the next apply that this one refuses to become.
 	return fmt.Errorf("%w: %w", ErrMediaBusy, err)
+}
+
+// SuspendMedia is the shutdown entry to the media observer's Suspend: the
+// workers stop and the video node is given back while the process can still
+// do it in order, so the host sees the stream end the way a STREAMOFF ends it
+// rather than finding the node closed under it when the process dies. Nothing
+// is unlinked, so the error is a fact for the log and never a reason to keep
+// running; the observer's own waits are bounded (media/CLAUDE.md), and the
+// caller puts a budget on top. It takes no gadget lock on purpose: an apply
+// blocked in the kernel on this very node is exactly what closing the node
+// unblocks, and waiting behind it would cost the budget for nothing.
+func (m *Manager) SuspendMedia() error {
+	observer := m.observer()
+	if observer == nil {
+		return nil
+	}
+	return observer.Suspend()
 }
 
 func (m *Manager) observer() GadgetObserver {

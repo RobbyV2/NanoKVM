@@ -82,6 +82,29 @@ func TestApplyProceedsWhenMediaReleasesItsNodes(t *testing.T) {
 	}
 }
 
+// On the way out the process gives the video node back first and reports what
+// it could not release, without unlinking anything and without waiting on the
+// gadget: the report is for the log, the exit happens either way.
+func TestSuspendMediaReportsWhatTheObserverCouldNotRelease(t *testing.T) {
+	manager, ops := newTestManager(t)
+	if err := manager.SuspendMedia(); err != nil {
+		t.Fatalf("SuspendMedia() with no observer = %v, want nil", err)
+	}
+
+	observer := &stuckObserver{err: errors.New("/dev/video0 is still open")}
+	manager.SetObserver(observer)
+	err := manager.SuspendMedia()
+	if err == nil || !strings.Contains(err.Error(), "/dev/video0") {
+		t.Fatalf("SuspendMedia() = %v, want the node named", err)
+	}
+	if suspends, applied := observer.counts(); suspends != 1 || applied != 0 {
+		t.Fatalf("suspends = %d applied = %d, want 1 and 0: shutdown never rebuilds the pipeline", suspends, applied)
+	}
+	if trace := ops.Trace(); len(trace) != 0 {
+		t.Fatalf("SuspendMedia touched the gadget: %+v", trace)
+	}
+}
+
 // Mounting an image rebinds the controller, and a rebind takes the camera's
 // video node away: f_uvc registers a new device, the media manager's hold is on
 // the old one, and the new function keeps the gadget deactivated until its new
