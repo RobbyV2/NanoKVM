@@ -175,13 +175,75 @@ func TestKernelInstallRefusesWithoutASlotPolicy(t *testing.T) {
 	}
 }
 
-func TestKernelInstallRefusesDuringAnUnconfirmedTrial(t *testing.T) {
-	slot, payload := kernelRig(t)
-	if err := os.WriteFile(slot.Cmdline, []byte("nanokvm_slot=trial"), 0o644); err != nil {
-		t.Fatal(err)
+// A boot from the trial slot may take the next kernel only once its trial is
+// confirmed: until then boot.alt is the running kernel and the one a rollback
+// would abandon. After Confirm, boot.sd holds a copy and the slot is free.
+func TestKernelInstallGateOnTheRunningSlot(t *testing.T) {
+	armTrial := func(t *testing.T, slot bootslot.Paths) {
+		t.Helper()
+		if err := os.WriteFile(slot.Cmdline, []byte("console=ttyS0 nanokvm_slot=trial"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := slot.SetState(bootslot.StateTrial); err != nil {
+			t.Fatal(err)
+		}
+		if err := slot.MarkPending("2.8.0"); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := installKernelPayload(payload, slot); err == nil {
-		t.Fatal("a kernel was installed over the slot the device is running from")
+	cases := []struct {
+		name    string
+		prepare func(t *testing.T, slot bootslot.Paths)
+		refused string
+	}{
+		{"good slot proceeds", func(*testing.T, bootslot.Paths) {}, ""},
+		{"unconfirmed trial is refused", armTrial, "still unconfirmed"},
+		{"confirmed trial proceeds", func(t *testing.T, slot bootslot.Paths) {
+			armTrial(t, slot)
+			if err := slot.Confirm(); err != nil {
+				t.Fatal(err)
+			}
+		}, ""},
+		{"trial whose commit failed and rolls back is refused", func(t *testing.T, slot bootslot.Paths) {
+			armTrial(t, slot)
+			if err := os.WriteFile(slot.ConfirmPath, nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "rolls back"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			slot, payload := kernelRig(t)
+			tc.prepare(t, slot)
+			err := installKernelPayload(payload, slot)
+			if tc.refused != "" {
+				if err == nil {
+					t.Fatal("a kernel was installed over the slot the device is running from")
+				}
+				if !strings.Contains(err.Error(), tc.refused) {
+					t.Errorf("refusal = %q, want it to mention %q", err, tc.refused)
+				}
+				if got := read(t, slot.Alt()); !bytes.Equal(got, oldKernel) {
+					t.Error("a refused install still wrote the trial slot")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("install: %v", err)
+			}
+			if booted := simulateBoot(t, slot); booted != "boot.alt" {
+				t.Errorf("the next boot picks %s, want the trial slot", booted)
+			}
+			if got := read(t, slot.Alt()); !bytes.Equal(got, newKernel) {
+				t.Error("the trial slot does not hold the package's kernel")
+			}
+			if got := read(t, filepath.Join(slot.Root, "boot.sd")); !bytes.Equal(got, oldKernel) {
+				t.Error("the install changed the committed kernel")
+			}
+			if got := strings.TrimSpace(string(read(t, slot.Pending))); got != "2.9.0" {
+				t.Errorf("pending marker = %q, want 2.9.0", got)
+			}
+		})
 	}
 }
 

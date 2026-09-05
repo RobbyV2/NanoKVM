@@ -86,6 +86,34 @@ func (p Paths) Slot() string {
 	return ""
 }
 
+// State is the ab_state line of uEnv.txt, the policy the bootloader reads on
+// the next boot.
+func (p Paths) State() (string, error) {
+	data, err := os.ReadFile(p.uenv())
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if value, ok := strings.CutPrefix(line, statePrefix); ok {
+			return strings.TrimRight(value, "\x00\r"), nil
+		}
+	}
+	return "", ErrNoState
+}
+
+// Confirmed reports whether the running trial kernel has been committed. The
+// state line is what decides it: Confirm signals the guard before it copies,
+// so the marker alone can belong to a commit that failed partway and rolls
+// back on the next boot, while ab_state only reaches committed after boot.sd
+// holds the trial kernel. False on a good boot, which has no trial to confirm.
+func (p Paths) Confirmed() bool {
+	if p.Slot() != SlotTrial {
+		return false
+	}
+	state, err := p.State()
+	return err == nil && state == StateCommitted
+}
+
 // setState rewrites only the ab_state line. Every other byte, including the
 // trailing "\n\0" that env import scans for and the sdboot= last line, is
 // preserved.

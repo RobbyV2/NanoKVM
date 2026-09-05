@@ -51,12 +51,21 @@ func (s *Service) DismissRollback(c *gin.Context) {
 // and the trial gets its single attempt. Reversing any pair of these is what
 // bricks the device. The leading disarm matters because a rolled back device,
 // and one whose reboot never happened, still carries ab_state=trial.
+//
+// A boot from the trial slot is refused only while its trial is unconfirmed:
+// boot.alt is then the kernel the device is running and the one a rollback
+// would abandon, so nothing may write over it. Once Confirm has run, boot.sd
+// holds a copy of the running kernel and ab_state is committed, so boot.alt is
+// free to take the next trial and the same five steps are safe; the device
+// stays on this slot until the reboot that starts the next trial.
 func installKernelPayload(kernel *kernelPayload, slot bootslot.Paths) error {
 	switch slot.Slot() {
 	case "":
 		return errNoSlotPolicy
 	case bootslot.SlotTrial:
-		return errors.New("a kernel trial is still unconfirmed; reboot before installing another")
+		if !slot.Confirmed() {
+			return unconfirmedTrial(slot)
+		}
 	}
 
 	for _, step := range kernelInstallSteps(kernel, slot) {
@@ -65,6 +74,18 @@ func installKernelPayload(kernel *kernelPayload, slot bootslot.Paths) error {
 		}
 	}
 	return nil
+}
+
+// unconfirmedTrial names what the running trial is missing. Confirm signals the
+// guard before it commits, so a marker beside ab_state=trial is a commit that
+// failed partway; ab_state is still trial and bootcnt already spent, so the
+// next boot rolls back. Without the marker the trial is still waiting to be
+// confirmed, or the guard is about to roll it back.
+func unconfirmedTrial(slot bootslot.Paths) error {
+	if _, err := os.Stat(slot.ConfirmPath); err == nil {
+		return errors.New("the running kernel's commit failed and the next boot rolls back; reboot before installing another")
+	}
+	return errors.New("a kernel trial is still unconfirmed; wait for it to confirm or reboot before installing another")
 }
 
 type kernelStep struct {

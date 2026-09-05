@@ -265,3 +265,57 @@ func TestMarkPendingCreatesItsDirectory(t *testing.T) {
 		t.Errorf("RolledBack() = %q, %v, want 2.9.0, true", version, ok)
 	}
 }
+
+// Confirm signals the guard before it copies, so the marker alone can belong
+// to a commit that failed partway. Only the state line says the trial is over.
+func TestConfirmedFollowsTheStateLine(t *testing.T) {
+	cases := []struct {
+		name    string
+		cmdline string
+		prepare func(t *testing.T, p Paths)
+		want    bool
+	}{
+		{"good boot has no trial to confirm", "nanokvm_slot=good", func(t *testing.T, p Paths) {
+			if err := p.SetState(StateCommitted); err != nil {
+				t.Fatal(err)
+			}
+		}, false},
+		{"trial still waiting", "nanokvm_slot=trial", func(*testing.T, Paths) {}, false},
+		{"trial committed", "nanokvm_slot=trial", func(t *testing.T, p Paths) {
+			if err := p.Confirm(); err != nil {
+				t.Fatal(err)
+			}
+		}, true},
+		{"commit signalled the guard and then failed", "nanokvm_slot=trial", func(t *testing.T, p Paths) {
+			if err := os.WriteFile(p.ConfirmPath, nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := rig(t, tc.cmdline, uenvFixture)
+			tc.prepare(t, p)
+			if got := p.Confirmed(); got != tc.want {
+				t.Errorf("Confirmed() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStateReadsTheStateLine(t *testing.T) {
+	p := rig(t, "nanokvm_slot=trial", uenvFixture)
+	if state, err := p.State(); err != nil || state != StateTrial {
+		t.Errorf("State() = %q, %v, want trial", state, err)
+	}
+	if err := p.SetState(StateCommitted); err != nil {
+		t.Fatal(err)
+	}
+	if state, err := p.State(); err != nil || state != StateCommitted {
+		t.Errorf("State() = %q, %v, want committed", state, err)
+	}
+	p = rig(t, "nanokvm_slot=trial", "ab_if=mmc\nsdboot=run ab_pre\n\x00")
+	if _, err := p.State(); !errors.Is(err, ErrNoState) {
+		t.Errorf("State() on a file without ab_state = %v, want ErrNoState", err)
+	}
+}
