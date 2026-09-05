@@ -199,6 +199,25 @@ is not. Nothing in this package knows a bridge can exist — the dependency poin
 into presentation and never back — and the boot half of the same durability lives in
 `S29bridge`, which enslaves `usb0` when it builds `br0`.
 
+## The way out leaves the bus
+
+`main.go`'s shutdown runs `SuspendMedia`, then the passthrough close, then `Detach`, then
+the vision deinit, each on its own budget (`startup.Stop`), and exits when the last
+result is in whether or not every step returned. `SuspendMedia` is the observer's
+`Suspend` with no gadget lock around it: nothing is unlinked, so a node it could not
+release is a line in the log and never a reason to keep running, and an apply blocked in
+the kernel on that node is what closing it unblocks. `Detach` is one `UnbindUDC`, guarded
+like `Reattach` (nothing bound is a no-op, a loan or a transient refuses), so the host
+sees a disconnect the moment the server goes instead of a camera that stays enumerated
+answering nothing until the next server rebinds. It is an unbind and not a pull-up drop
+because `soft_connect` refuses in OTG mode on this kernel, and because unbound is the
+state `ReconcileGadget`'s `bindIfUnbound` already expects at every start. A server that
+is stopped and not started again therefore leaves the host with no gadget at all, the
+USB NIC and the virtual disk included; `echo 4340000.usb > g0/UDC` puts it back by hand.
+`presentation.Current` is how main reaches the manager without building one: a signal
+that lands before anything asked for the gadget must not run the boot reconcile on the
+way out.
+
 ## bcdDevice is the mode marker
 
 `S03usbdev` never wrote `bcdDevice` in any revision. `service/hid/status.go` worked anyway

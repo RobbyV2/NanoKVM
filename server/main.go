@@ -207,7 +207,9 @@ func startVNC(conf *config.Config) {
 // shutdown gives back what the host can see before the process dies, in order
 // and on a budget per step. The camera goes first: with a stream open the host
 // is polling the video node, and closing it here ends the stream the way a
-// STREAMOFF does instead of leaving the node to fall with the process. The
+// STREAMOFF does instead of leaving the node to fall with the process. Then
+// the gadget leaves the bus, so the host sees a disconnect now rather than a
+// device that answers nothing until the next server has rebound it. The
 // vision library's deinit is last because it is the step with no bound of its
 // own; if it does not return, the result says so and the process exits anyway,
 // which is what the init script's SIGKILL used to do twenty seconds later.
@@ -220,6 +222,15 @@ func shutdown() {
 			return nil
 		}},
 		startup.Step{Name: "usb passthrough", Budget: shutdownUSBBudget, Run: passthrough.GetManager().Close},
+		// After passthrough, whose session may hold the controller on loan and
+		// gives it back when it stops; before vision, so the host sees the
+		// gadget go while the process is still certainly able to say so.
+		startup.Step{Name: "usb gadget", Budget: shutdownUSBBudget, Run: func() error {
+			if manager := presentation.Current(); manager != nil {
+				return manager.Detach()
+			}
+			return nil
+		}},
 		startup.Step{Name: "kvm vision", Budget: shutdownVisionBudget, Run: func() error {
 			common.GetKvmVision().Close()
 			return nil

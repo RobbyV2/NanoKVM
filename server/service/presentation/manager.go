@@ -600,6 +600,45 @@ func defaultSpeaker(index int, label string, named bool) Function {
 	return Function{Kind: FunctionUAC2, Instance: fmt.Sprintf("spk%d", index), Audio: audio}
 }
 
+// Detach takes the gadget off the bus, for a process on its way out. A camera
+// whose firmware restarts drops off the bus and comes back; this one used to
+// stay enumerated for the whole restart with nothing behind it, so the host
+// kept the camera open on a device that answered every poll with nothing
+// (measured: the picture frozen for 26 s, then an I/O error when the new
+// server re-enumerated, and the controller reporting 8000 empty microframes a
+// second the whole time). An unbind is a disconnect the host sees at once.
+//
+// It is an unbind and not a pull-up drop because the controller's soft_connect
+// attribute refuses in OTG mode on this kernel (CONFIG_CVITEK_USB_LEGACY), and
+// because unbound is the state every start already handles: S03usbdev leaves
+// the controller unbound on purpose and ReconcileGadget binds it. The cost is
+// that a server stopped and not started again leaves the host with no gadget
+// at all, the USB NIC and the virtual disk included, where before it kept
+// those two (the keyboard needs the server either way). Nothing is unlinked,
+// so a video node the media pipeline could not give back does not block this.
+func (m *Manager) Detach() error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.transient != nil {
+		return ErrTransient
+	}
+	if err := m.loanHeld(); err != nil {
+		return err
+	}
+	data, err := m.ops.ReadFile(udcAttr)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", udcAttr, err)
+	}
+	if strings.TrimSpace(string(data)) == "" {
+		return nil
+	}
+	return m.ops.UnbindUDC()
+}
+
 // mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";
 // mount -t functionfs hybrid returns ENODEV until it exists. The caller mounts
 // and writes ep0 between this and StartFunctionFS, which links and binds.
