@@ -919,3 +919,198 @@ func TestManagerReopensASlotWhoseOutputFailed(t *testing.T) {
 		t.Fatalf("opens = %d, runs = %d, want the node reopened and run again", opens, runs)
 	}
 }
+
+// The kernel's video node, scripted. Every step the loop takes hands the test
+// the frame it carried and then waits for the test to answer it, so the test
+// plays the host: it raises the stream, drops it, and counts how often the loop
+// raises the stream on its own.
+type scriptedVideo struct {
+	calls  chan Packet
+	steps  chan videoStep
+	starts chan Packet
+	closed chan struct{}
+}
+
+func newScriptedVideo() *scriptedVideo {
+	return &scriptedVideo{calls: make(chan Packet, 64), steps: make(chan videoStep), starts: make(chan Packet, 64), closed: make(chan struct{})}
+}
+
+func (v *scriptedVideo) step(current Packet, _ int, _ bool) (videoStep, error) {
+	v.calls <- current
+	select {
+	case step := <-v.steps:
+		return step, nil
+	case <-v.closed:
+		return videoStep{}, errVideoClosed
+	}
+}
+
+func (v *scriptedVideo) start(current Packet) error {
+	v.starts <- current
+	return nil
+}
+
+// A stepped loop under test, with the host having committed 640x480 at 30 fps
+// and started the stream. On return the loop is waiting inside a poll whose
+// frame has already been read, so the test's next action - a frame sent, an
+// edge answered - is what the poll after it carries. The returned function
+// answers the waiting poll with no edge and returns the frame of the one that
+// follows.
+func startScriptedVideo(t *testing.T) (*scriptedVideo, chan Packet, chan sources.Demand, func() Packet) {
+	t.Helper()
+	video := newScriptedVideo()
+	frames := make(chan Packet, 8)
+	demands := make(chan sources.Demand, 8)
+	spec := SlotSpec{ID: "uvc.cam0", Kind: sources.KindCamera, Video: cameraFunction("cam0").Video}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- runVideo(ctx, frames, fallbackFor(spec), func(demand sources.Demand) { demands <- demand }, func(bool) {}, video)
+	}()
+	t.Cleanup(func() {
+		close(video.closed)
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("runVideo returned %v", err)
+		}
+	})
+	<-video.calls
+	video.steps <- videoStep{edge: edgeStreamOn, width: 640, height: 480, fps: 30}
+	if started := <-video.starts; !bytes.Equal(started.Data, blackFrame(t, spec, 640, 480)) {
+		t.Fatal("the stream did not open on the black frame at the committed size")
+	}
+	if demand := <-demands; !demand.Streaming || demand.Width != 640 || demand.Height != 480 || demand.FPS != 30 {
+		t.Fatalf("demand after STREAMON = %+v, want 640x480 at 30 fps", demand)
+	}
+	<-video.calls
+	next := func() Packet {
+		t.Helper()
+		video.steps <- videoStep{width: 640, height: 480, fps: 30}
+		select {
+		case current := <-video.calls:
+			return current
+		case <-time.After(time.Second):
+			t.Fatal("the loop stopped polling the node")
+			return Packet{}
+		}
+	}
+	return video, frames, demands, next
+}
+
+func blackFrame(t *testing.T, spec SlotSpec, width, height int) []byte {
+	t.Helper()
+	packet, err := fallbackFor(spec)(width, height)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return packet.Data
+}
+
+// A browser that releases, refreshes, or is taken over moves the queue to a new
+// generation, and the loop used to answer that by taking the stream down and
+// raising it again - a STREAMOFF and STREAMON on the node with the host still
+// at its streaming alternate setting, which the host saw as the camera freezing.
+// A source change may change which bytes go out and nothing else.
+func TestASourceChangeNeverRestartsTheStream(t *testing.T) {
+	video, frames, _, next := startScriptedVideo(t)
+
+	first := jpegFrame(t, 640, 480)
+	frames <- Packet{Sequence: 1, Generation: 1, Data: first}
+	if got := next(); !bytes.Equal(got.Data, first) {
+		t.Fatal("the first source's frame was not the next thing sent")
+	}
+	second := append(append([]byte(nil), first[:len(first)-2]...), 0x00, 0xff, 0xd9)
+	frames <- Packet{Sequence: 1, Generation: 2, Data: second}
+	if got := next(); !bytes.Equal(got.Data, second) {
+		t.Fatal("the second source's frame was not the next thing sent")
+	}
+	frames <- Packet{Generation: 3, Reset: true}
+	spec := SlotSpec{ID: "uvc.cam0", Kind: sources.KindCamera, Video: cameraFunction("cam0").Video}
+	if got := next(); !bytes.Equal(got.Data, blackFrame(t, spec, 640, 480)) {
+		t.Fatal("a source that let go was not replaced by the black frame at the committed size")
+	}
+	select {
+	case <-video.starts:
+		t.Fatal("a source change raised the stream again")
+	default:
+	}
+}
+
+// The host is the only thing that moves the stream. Its STREAMOFF drops the
+// demand so the browser stops encoding; its STREAMON raises the stream again at
+// the committed size and the demand comes back.
+func TestAHostStreamOffThenStreamOnResumes(t *testing.T) {
+	video, frames, demands, next := startScriptedVideo(t)
+	frames <- Packet{Sequence: 1, Generation: 1, Data: jpegFrame(t, 640, 480)}
+	next()
+
+	video.steps <- videoStep{edge: edgeStreamOff, width: 640, height: 480, fps: 30}
+	if demand := <-demands; demand.Streaming {
+		t.Fatalf("demand after STREAMOFF = %+v, want none", demand)
+	}
+	<-video.calls
+	video.steps <- videoStep{edge: edgeStreamOn, width: 640, height: 480, fps: 30}
+	spec := SlotSpec{ID: "uvc.cam0", Kind: sources.KindCamera, Video: cameraFunction("cam0").Video}
+	select {
+	case started := <-video.starts:
+		if !bytes.Equal(started.Data, blackFrame(t, spec, 640, 480)) {
+			t.Fatal("the stream did not reopen on the black frame at the committed size")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the host's STREAMON did not raise the stream")
+	}
+	if demand := <-demands; !demand.Streaming {
+		t.Fatalf("demand after STREAMON = %+v, want streaming", demand)
+	}
+}
+
+// A browser letting go of a slot reaches the queue and nothing past it: the
+// node is not closed or reopened, the hold on it is untouched, the worker is
+// the same one, and the host's demand stands.
+func TestABrowserDetachNeverReachesTheNode(t *testing.T) {
+	registry := &fakeRegistry{}
+	factory := &fakeFactory{}
+	holds := newFakeHolds()
+	manager := newManagerWith(registry, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory, holds.open)
+	profile := presentation.Profile{Functions: []presentation.Function{cameraFunction("cam0")}}
+	if err := manager.Reconcile(context.Background(), profile, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+	waitDemand(t, registry, "uvc.cam0")
+	output := factory.outputs["uvc.cam0"]
+	worker := manager.workers["uvc.cam0"]
+
+	frame := sources.MediaFrame{SourceID: "source", StreamID: "front", SinkID: "uvc.cam0", Kind: sources.MediaKindMJPEG, Sequence: 1, Payload: jpegFrame(t, 640, 480)}
+	if err := manager.Ingest(context.Background(), frame); err != nil {
+		t.Fatal(err)
+	}
+	manager.Detach("uvc.cam0")
+
+	deadline := time.After(time.Second)
+	for reset := false; !reset; {
+		select {
+		case packet := <-output.packets:
+			reset = packet.Reset
+		case <-deadline:
+			t.Fatal("the output never saw the source let go")
+		}
+	}
+	if opens, closes := holds.count("/dev/video0"); opens != 1 || closes != 0 {
+		t.Fatalf("detach left the node opened %d times and closed %d, want 1 and 0", opens, closes)
+	}
+	select {
+	case <-output.closed:
+		t.Fatal("detach closed the output")
+	default:
+	}
+	if factory.outputs["uvc.cam0"] != output || manager.workers["uvc.cam0"] != worker {
+		t.Fatal("detach rebuilt the worker or reopened the output")
+	}
+	registry.mu.Lock()
+	streaming := registry.demands["uvc.cam0"].Streaming
+	registry.mu.Unlock()
+	if !streaming {
+		t.Fatal("detach dropped the host's demand")
+	}
+}

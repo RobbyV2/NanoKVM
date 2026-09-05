@@ -85,6 +85,12 @@ type OutputFactory interface {
 	OpenInput(SlotSpec, string) (Input, error)
 }
 
+// Generation names the source a packet came from: Detach moves it on, so a
+// packet from a browser that has since let go can be told from one sent by its
+// successor. It is bookkeeping for the queue and the tests. Nothing on the bus
+// follows it, because a source change is not an event the target host can see
+// on a real webcam. Reset marks the source gone, and the output answers it with
+// the fallback frame at whatever geometry the host committed.
 type Packet struct {
 	Sequence   uint32
 	Generation uint64
@@ -640,6 +646,122 @@ func (m *Manager) Latency() map[string]sources.SinkLatency {
 		}
 	}
 	return summaries
+}
+
+// The gadget's video node as the camera loop sees it. step polls the node's
+// events and, when asked, hands it the frame in hand; start raises the stream
+// with that frame queued. The C side implements it; a test stands in for the
+// kernel and plays the host.
+type videoHandle interface {
+	step(current Packet, timeoutMS int, submit bool) (videoStep, error)
+	start(current Packet) error
+}
+
+// What one poll of the node came back with. The edge is the only way the host
+// reaches the loop: edgeStreamOn when it started the stream, or when the queue
+// had to be grounded and raised again at the committed geometry; edgeStreamOff
+// when it stopped. The geometry is whatever the host last committed.
+type videoStep struct {
+	edge   videoEdge
+	width  int
+	height int
+	fps    int
+}
+
+type videoEdge int
+
+const (
+	edgeNone      videoEdge = 0
+	edgeStreamOff videoEdge = 2
+	edgeStreamOn  videoEdge = 3
+)
+
+// What a handle answers once Close has taken the node away. The loop ends
+// quietly on it, exactly as it ends on a cancelled context.
+var errVideoClosed = errors.New("video handle closed")
+
+// runVideo is a camera slot's loop, and the host is the only thing that moves
+// the stream: an edgeStreamOn raises it at the geometry the host committed and
+// an edgeStreamOff lets it fall. Nothing a browser does reaches the node. A
+// frame that arrives is the next thing sent; a source that goes quiet is
+// replaced by the black frame at the same size and interval; and a packet that
+// marks a source change - a browser that released, refreshed or was taken
+// over, which is what Packet.Generation carries - changes which bytes go out
+// and nothing else. A webcam does not restart its isochronous stream because
+// the scene in front of it changed. Restarting it here, VIDIOC_STREAMOFF then
+// STREAMON on the output node with the host still at its streaming alternate
+// setting, is what the target host saw as the camera freezing every time the
+// browser let go.
+func runVideo(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool), handle videoHandle) error {
+	current, err := fallback(0, 0)
+	if err != nil {
+		return err
+	}
+	var geometry videoStep
+	var pace pacer
+	var sourceAt time.Time
+	sourceActive := false
+	quiet := func() {
+		if sourceActive {
+			sourceActive = false
+			source(false)
+		}
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case frame := <-frames:
+			if frame.Reset || len(frame.Data) == 0 {
+				if current, err = fallback(geometry.width, geometry.height); err != nil {
+					return err
+				}
+				quiet()
+			} else {
+				current = frame
+				sourceAt = time.Now()
+				if !sourceActive {
+					sourceActive = true
+					source(true)
+				}
+			}
+		default:
+		}
+		if sourceActive && time.Since(sourceAt) >= videoFallback {
+			if current, err = fallback(geometry.width, geometry.height); err != nil {
+				return err
+			}
+			quiet()
+		}
+		timeout, submit := pace.due(time.Now(), geometry.fps)
+		step, err := handle.step(current, timeout, submit)
+		if errors.Is(err, errVideoClosed) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("write UVC: %w", err)
+		}
+		geometry = step
+		switch step.edge {
+		case edgeStreamOn:
+			// The frame in hand was encoded for the geometry before this
+			// one, so the stream opens on black at the committed size and
+			// the source is told what to produce from now on.
+			if current, err = fallback(step.width, step.height); err != nil {
+				return err
+			}
+			quiet()
+			if err := handle.start(current); errors.Is(err, errVideoClosed) {
+				return nil
+			} else if err != nil {
+				return fmt.Errorf("start UVC: %w", err)
+			}
+			demand(sources.Demand{Streaming: true, Width: step.width, Height: step.height, FPS: step.fps, Since: time.Now().UTC()})
+		case edgeStreamOff:
+			demand(sources.Demand{})
+			quiet()
+		}
+	}
 }
 
 func (p *pacer) due(now time.Time, fps int) (int, bool) {

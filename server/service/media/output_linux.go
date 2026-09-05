@@ -172,15 +172,6 @@ static int nk_uvc_start(struct nk_uvc *u, const void *data, size_t length) {
 	return 0;
 }
 
-static int nk_uvc_restart(struct nk_uvc *u, const void *data, size_t length) {
-	if (!u->streaming) return 0;
-	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-	if (nk_ioctl(u->fd, VIDIOC_STREAMOFF, &type) < 0) return -errno;
-	u->streaming = 0;
-	u->queued = 0;
-	return nk_uvc_start(u, data, length);
-}
-
 static int nk_uvc_queue(struct nk_uvc *u, const void *data, size_t length, int all) {
 	unsigned int begin = 0, end = all ? u->count : 1;
 	for (unsigned int i = begin; i < end; i++) {
@@ -319,10 +310,16 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 				return -errno;
 			}
 			struct uvc_event *uvc = (struct uvc_event *)event.u.data;
-			int rc = 0;
+			// A control transfer this side cannot finish is that one transfer
+			// lost, and the host retries it or moves on. The response ioctl
+			// fails once the host has abandoned the request - a bus reset or a
+			// suspend landing in the middle of a probe - and a format the
+			// commit cannot apply is applied again at the STREAMON that
+			// follows. Neither is a reason to end the worker, which took the
+			// stream down while the host still had the camera open.
 			switch (event.type) {
-			case UVC_EVENT_SETUP: rc = nk_uvc_setup(u, &uvc->req); break;
-			case UVC_EVENT_DATA: rc = nk_uvc_data(u, &uvc->data); break;
+			case UVC_EVENT_SETUP: nk_uvc_setup(u, &uvc->req); break;
+			case UVC_EVENT_DATA: nk_uvc_data(u, &uvc->data); break;
 			case UVC_EVENT_STREAMON:
 				if (!u->streaming) edge = 3;
 				break;
@@ -335,7 +332,6 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 				u->streaming = 0; u->queued = 0; edge = 2;
 				break;
 			}
-			if (rc < 0) return rc;
 		}
 	}
 	// Taking the stream down here rather than at the commit keeps every ioctl on
@@ -724,108 +720,42 @@ func openUVC(spec SlotSpec, node string) (*uvcOutput, error) {
 	return &uvcOutput{handle: handle}, nil
 }
 
+// The loop itself is runVideo in manager.go, where it is pure Go and a test can
+// play the host against it. This side only carries each call into the kernel.
 func (o *uvcOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool)) error {
-	current, err := fallback(0, 0)
-	if err != nil {
-		return err
+	return runVideo(ctx, frames, fallback, demand, source, o)
+}
+
+func (o *uvcOutput) step(current Packet, timeoutMS int, submit bool) (videoStep, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.handle == nil {
+		return videoStep{}, errVideoClosed
+	}
+	send := C.int(0)
+	if submit {
+		send = 1
 	}
 	var width, height, fps C.uint
-	var generation uint64
-	var pace pacer
-	var sourceAt time.Time
-	sourceActive := false
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case frame := <-frames:
-			changed := frame.Generation != generation
-			if frame.Reset || len(frame.Data) == 0 {
-				current, err = fallback(int(width), int(height))
-				if err != nil {
-					return err
-				}
-				if sourceActive {
-					sourceActive = false
-					source(false)
-				}
-			} else {
-				current = frame
-				sourceAt = time.Now()
-				if !sourceActive {
-					sourceActive = true
-					source(true)
-				}
-			}
-			if changed {
-				generation = frame.Generation
-				o.mu.Lock()
-				if o.handle == nil {
-					o.mu.Unlock()
-					return nil
-				}
-				base, size := packetSpan(current)
-				rc := C.nk_uvc_restart(o.handle, unsafe.Pointer(base), C.size_t(size))
-				o.mu.Unlock()
-				if rc < 0 {
-					return fmt.Errorf("reset UVC: %s", syscallError(rc))
-				}
-			}
-		default:
-		}
-		if sourceActive && time.Since(sourceAt) >= videoFallback {
-			current, err = fallback(int(width), int(height))
-			if err != nil {
-				return err
-			}
-			sourceActive = false
-			source(false)
-		}
-		timeout, submit := pace.due(time.Now(), int(fps))
-		send := C.int(0)
-		if submit {
-			send = 1
-		}
-		o.mu.Lock()
-		if o.handle == nil {
-			o.mu.Unlock()
-			return nil
-		}
-		base, size := packetSpan(current)
-		rc := C.nk_uvc_step(o.handle, unsafe.Pointer(base), C.size_t(size), C.int(timeout), send, &width, &height, &fps)
-		o.mu.Unlock()
-		if rc < 0 {
-			return fmt.Errorf("write UVC: %s", syscallError(rc))
-		}
-		if rc == 3 {
-			current, err = fallback(int(width), int(height))
-			if err != nil {
-				return err
-			}
-			if sourceActive {
-				sourceActive = false
-				source(false)
-			}
-			o.mu.Lock()
-			if o.handle == nil {
-				o.mu.Unlock()
-				return nil
-			}
-			base, size = packetSpan(current)
-			rc = C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size))
-			o.mu.Unlock()
-			if rc < 0 {
-				return fmt.Errorf("start UVC: %s", syscallError(rc))
-			}
-			demand(sources.Demand{Streaming: true, Width: int(width), Height: int(height), FPS: int(fps), Since: time.Now().UTC()})
-		} else if rc == 2 {
-			demand(sources.Demand{})
-			if sourceActive {
-				sourceActive = false
-				source(false)
-			}
-		}
+	base, size := packetSpan(current)
+	rc := C.nk_uvc_step(o.handle, unsafe.Pointer(base), C.size_t(size), C.int(timeoutMS), send, &width, &height, &fps)
+	if rc < 0 {
+		return videoStep{}, syscallError(rc)
 	}
+	return videoStep{edge: videoEdge(rc), width: int(width), height: int(height), fps: int(fps)}, nil
+}
+
+func (o *uvcOutput) start(current Packet) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.handle == nil {
+		return errVideoClosed
+	}
+	base, size := packetSpan(current)
+	if rc := C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size)); rc < 0 {
+		return syscallError(rc)
+	}
+	return nil
 }
 
 func (o *uvcOutput) Close() error {
@@ -1006,7 +936,6 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 	streaming, failures, successes, resets := false, 0, 0, 0
 	sourceActive := false
 	currentSource := false
-	var generation uint64
 	for {
 		select {
 		case <-ctx.Done():
@@ -1034,7 +963,13 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 				if !currentSource {
 					select {
 					case frame := <-frames:
-						changed := frame.Generation != generation
+						// A source change is silence now and the new source's
+						// samples when they come, and the ring is not touched
+						// for it: a microphone keeps playing whatever is put
+						// into it. Resetting the ring here stopped the
+						// substream and dropped the demand, so every browser
+						// release or refresh cost the target host a gap and
+						// the browser a hundred milliseconds of not sending.
 						if frame.Reset || len(frame.Data) == 0 {
 							current, err = fallback(0, 0)
 							if err != nil {
@@ -1043,21 +978,6 @@ func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fall
 						} else {
 							current = frame
 							currentSource = true
-						}
-						if changed {
-							generation = frame.Generation
-							o.mu.Lock()
-							if o.handle == nil {
-								o.mu.Unlock()
-								return nil
-							}
-							rc := C.nk_pcm_reset(o.handle)
-							o.mu.Unlock()
-							if rc < 0 {
-								return fmt.Errorf("reset PCM: return %d", int(rc))
-							}
-							streaming, failures, successes = false, 0, 0
-							demand(sources.Demand{})
 						}
 					default:
 					}

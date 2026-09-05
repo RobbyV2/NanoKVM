@@ -14,6 +14,9 @@
 - Audio dlopens the packaged tinyalsa and probes readiness with zero-timeout `pcm_wait`; stop paths must never wait on PCM drain.
 - Keep the C ABI assertions equal to headers installed from the vendored 5.10 kernel.
 - Pace UVC submissions at the host-negotiated interval; the UDC drain rate must never set the frame rate.
+- The host alone moves the camera stream. `VIDIOC_STREAMON` and `STREAMOFF` reach the node from the host's `SET_INTERFACE`, from a host re-commit at a new geometry, and from grounding a queue a bus reset marked disconnected; nothing else. A browser releasing, refreshing, being taken over or changing source changes which bytes go out and nothing more, and a source that vanishes is replaced by the black frame at the committed size and interval. The loop is `runVideo` in `manager.go`, pure Go, so a test plays the host against it.
+- A control transfer the node cannot answer is one lost transfer, never the end of the worker. A reopened worker cannot learn that the host is still at its streaming alternate setting, so an error that ends the loop while the host streams costs the picture until the host restarts the stream.
+- A microphone's ring is never reset for a source change; a source that lets go is silence until the next one sends.
 - The UVC MJPEG payload spec requires YCbCr; the black frame is a cached three-component JPEG, never grayscale.
 - Browser frames are untrusted. Keep payloads and queues bounded and reject undeclared formats.
 - Passthrough owns the same UDC. Suspend all outputs before surrender and reopen only after the presentation gadget binds.
