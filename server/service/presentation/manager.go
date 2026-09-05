@@ -843,11 +843,22 @@ func (m *Manager) LUN() (LUN, error) {
 	return m.readLUN()
 }
 
+// A LUN change ends in a rebind, and a rebind takes the camera's video node
+// away with it: f_uvc unregisters its device on unbind and registers a new one
+// on bind, the descriptor the media manager holds stays on the old one, and the
+// new function keeps the whole gadget deactivated until something opens the new
+// node. Left alone, mounting an image cost the operator HID, the NIC and the
+// very disk being mounted until the next profile apply. So the media pipeline
+// is stood down before and rebuilt after, exactly as Rebind does; the refresh
+// runs on the refusal paths too, since a suspend is undone by nothing else.
 func (m *Manager) SetLUN(ctx context.Context, lun LUN) error {
 	if err := m.ready(); err != nil {
 		return err
 	}
-	return m.withGadgetLock(func() error { return m.setLUN(ctx, lun) })
+	_ = m.suspend(false)
+	err := m.withGadgetLock(func() error { return m.setLUN(ctx, lun) })
+	m.refreshObserver(context.Background())
+	return err
 }
 
 // Raw-gadget runs on the same UDC and udc->driver is a single pointer, so

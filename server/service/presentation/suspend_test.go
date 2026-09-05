@@ -81,3 +81,31 @@ func TestApplyProceedsWhenMediaReleasesItsNodes(t *testing.T) {
 		t.Fatalf("suspends = %d applied = %d, want 1 and 1", suspends, applied)
 	}
 }
+
+// Mounting an image rebinds the controller, and a rebind takes the camera's
+// video node away: f_uvc registers a new device, the media manager's hold is on
+// the old one, and the new function keeps the gadget deactivated until its new
+// node is opened. Every other rebind stands the pipeline down first and
+// rebuilds it after; this one has to as well, or the mount costs the operator
+// HID, the NIC and the disk it was mounting.
+func TestSetLUNStandsTheMediaPipelineDownAndRebuildsIt(t *testing.T) {
+	manager, _ := newTestManager(t)
+	manager.caps = staticV1
+	observer := &stuckObserver{}
+	manager.SetObserver(observer)
+	if err := manager.ApplyProfile(context.Background(), mediaProfile(testCamera("cam0", 768))); err != nil {
+		t.Fatal(err)
+	}
+	suspends, applied := observer.counts()
+	if suspends != 1 || applied != 1 {
+		t.Fatalf("after apply suspends = %d applied = %d, want 1 and 1", suspends, applied)
+	}
+
+	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}); err != nil {
+		t.Fatalf("set lun: %v", err)
+	}
+	suspends, applied = observer.counts()
+	if suspends != 2 || applied != 2 {
+		t.Fatalf("after set lun suspends = %d applied = %d, want 2 and 2: the rebind orphans the camera's node otherwise", suspends, applied)
+	}
+}

@@ -186,6 +186,13 @@ in on both success and failure. That is why `Apply`, `ApplyProfile`, `SetMediaSl
 `Start`, `Stop`, `RecoverFunctionFS`, `SetLUN`, `ReclaimUDC`, `Rebind`, `ResetPHY` and
 `SetMode` are all covered by two call sites.
 
+A rebind also takes the camera's video node away: `f_uvc` unregisters its device on
+unbind and registers a new one on bind, the media manager's hold stays on the old one,
+and the new function keeps the whole gadget deactivated until the new node is opened. So
+every path that rebinds stands the media observer down before (`suspend`) and refreshes
+it after, `SetLUN` included; a rebind that skips either leaves the gadget dark until the
+next apply.
+
 The hook is deliberately over-eager: it also fires on paths where nothing was rebound,
 because re-enslaving a port that is already a port is a no-op and missing a real rebind
 is not. Nothing in this package knows a bridge can exist — the dependency points bridge
