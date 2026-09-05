@@ -17,10 +17,38 @@ package media
 #include <sys/ioctl.h>
 #include <sound/asound.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #define NK_BUFFERS 4
 #define NK_FRAMES 8
+#define NK_MARKS 32
+
+// The edges of a stream as this side sees them, stamped on both clocks: the
+// kernel's (the event's own timestamp, or the buffer's completion time, both
+// CLOCK_MONOTONIC) and this side's at the moment it was done handling. Go
+// drains them after every step and writes one kernel-log line per mark, so a
+// device log shows where the time between the host's alt 1 and the first
+// frame went. Nothing here marks a frame.
+enum nk_mark_kind { NK_MARK_EVENT = 1, NK_MARK_FIRST_SENT = 2, NK_MARK_GROUNDED = 3 };
+enum nk_ground_reason { NK_GROUND_POLLERR = 1, NK_GROUND_ENODEV = 2, NK_GROUND_REFMT = 3 };
+struct nk_mark {
+	uint32_t kind;
+	uint32_t type;      // v4l2 event type, or the ground reason
+	uint32_t request;   // bRequest of a SETUP
+	uint32_t selector;  // wValue >> 8 of a SETUP, or the control a DATA landed in
+	uint32_t length;    // wLength, the DATA length, or the bytes of the first frame sent
+	uint32_t frame;     // the frame index the control holds after a DATA
+	uint32_t interval;  // the interval the control holds after a DATA
+	int64_t kernel_ns;
+	int64_t handled_ns;
+};
+
+static int64_t nk_mono_ns(void) {
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (int64_t)now.tv_sec * 1000000000LL + now.tv_nsec;
+}
 
 _Static_assert(sizeof(struct usb_ctrlrequest) == 8, "usb_ctrlrequest ABI");
 _Static_assert(sizeof(struct uvc_request_data) == 64, "uvc_request_data ABI");
@@ -53,7 +81,27 @@ struct nk_uvc {
 	// the host decodes against the new one.
 	unsigned int formatted;
 	int refmt;
+	struct nk_mark marks[NK_MARKS];
+	unsigned int mark_count;
+	unsigned int marks_lost;
+	// Set by a start; the first buffer the kernel hands back after it is the
+	// first frame that went out on the wire, and is marked once.
+	int first_sent_pending;
+	// nk_uvc_start's clock: entry, after S_FMT, after REQBUFS, after the
+	// mmaps, after the QBUFs, after STREAMON.
+	int64_t start_ns[6];
 };
+
+static struct nk_mark *nk_mark(struct nk_uvc *u, uint32_t kind, uint32_t type, int64_t kernel_ns) {
+	if (u->mark_count >= NK_MARKS) { u->marks_lost++; return NULL; }
+	struct nk_mark *m = &u->marks[u->mark_count++];
+	memset(m, 0, sizeof(*m));
+	m->kind = kind;
+	m->type = type;
+	m->kernel_ns = kernel_ns;
+	m->handled_ns = nk_mono_ns();
+	return m;
+}
 
 static int nk_ioctl(int fd, unsigned long request, void *arg) {
 	int rc;
@@ -140,11 +188,19 @@ static void nk_uvc_release_buffers(struct nk_uvc *u) {
 	nk_ioctl(u->fd, VIDIOC_REQBUFS, &request);
 }
 
+// The host's SET_INTERFACE to alt 1 is answered with a delayed status: f_uvc
+// holds the control transfer's status stage until the STREAMON ioctl below,
+// so everything between the event and that ioctl is time the host spends
+// waiting on this side. start_ns records each step so the kernel log can say
+// which one.
 static int nk_uvc_start(struct nk_uvc *u, const void *data, size_t length) {
 	unsigned int frame = u->commit.bFrameIndex > 0 ? u->commit.bFrameIndex - 1 : 0;
 	if (frame >= u->frame_count) frame = 0;
+	memset(u->start_ns, 0, sizeof(u->start_ns));
+	u->start_ns[0] = nk_mono_ns();
 	nk_uvc_release_buffers(u);
 	if (nk_uvc_format(u, frame) < 0) return -errno;
+	u->start_ns[1] = nk_mono_ns();
 	struct v4l2_requestbuffers request;
 	memset(&request, 0, sizeof(request));
 	request.count = NK_BUFFERS;
@@ -152,6 +208,7 @@ static int nk_uvc_start(struct nk_uvc *u, const void *data, size_t length) {
 	request.memory = V4L2_MEMORY_MMAP;
 	if (nk_ioctl(u->fd, VIDIOC_REQBUFS, &request) < 0) return -errno;
 	if (request.count == 0) return -ENOBUFS;
+	u->start_ns[2] = nk_mono_ns();
 	u->count = request.count > NK_BUFFERS ? NK_BUFFERS : request.count;
 	for (unsigned int i = 0; i < u->count; i++) {
 		struct v4l2_buffer buffer;
@@ -164,11 +221,15 @@ static int nk_uvc_start(struct nk_uvc *u, const void *data, size_t length) {
 		u->maps[i] = mmap(NULL, buffer.length, PROT_READ | PROT_WRITE, MAP_SHARED, u->fd, buffer.m.offset);
 		if (u->maps[i] == MAP_FAILED) { u->maps[i] = NULL; return -errno; }
 	}
+	u->start_ns[3] = nk_mono_ns();
 	int rc = nk_uvc_queue(u, data, length, 1);
 	if (rc < 0) return rc;
+	u->start_ns[4] = nk_mono_ns();
 	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	if (nk_ioctl(u->fd, VIDIOC_STREAMON, &type) < 0) return -errno;
+	u->start_ns[5] = nk_mono_ns();
 	u->streaming = 1;
+	u->first_sent_pending = 1;
 	return 0;
 }
 
@@ -280,13 +341,15 @@ static int nk_uvc_data(struct nk_uvc *u, const struct uvc_request_data *data) {
 // camera kept enumerating on the host and never sent another frame for the
 // rest of the boot. Streaming off here clears the flag, and edge 3 is the same
 // edge a STREAMON gives, which the caller already knows how to answer.
-static int nk_uvc_ground(struct nk_uvc *u) {
+static int nk_uvc_ground(struct nk_uvc *u, uint32_t reason) {
+	int64_t at = nk_mono_ns();
 	if (u->streaming) {
 		enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 		nk_ioctl(u->fd, VIDIOC_STREAMOFF, &type);
 	}
 	u->streaming = 0;
 	u->queued = 0;
+	nk_mark(u, NK_MARK_GROUNDED, reason, at);
 	return 3;
 }
 
@@ -310,6 +373,8 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 				return -errno;
 			}
 			struct uvc_event *uvc = (struct uvc_event *)event.u.data;
+			int64_t queued_ns = (int64_t)event.timestamp.tv_sec * 1000000000LL + event.timestamp.tv_nsec;
+			uint32_t pending = u->pending;
 			// A control transfer this side cannot finish is that one transfer
 			// lost, and the host retries it or moves on. The response ioctl
 			// fails once the host has abandoned the request - a bus reset or a
@@ -332,6 +397,20 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 				u->streaming = 0; u->queued = 0; edge = 2;
 				break;
 			}
+			// Marked after the handling, so a STREAMOFF's mark says when the
+			// stream was down and not only when the event arrived.
+			struct nk_mark *m = nk_mark(u, NK_MARK_EVENT, event.type, queued_ns);
+			if (m && event.type == UVC_EVENT_SETUP) {
+				m->request = uvc->req.bRequest;
+				m->selector = uvc->req.wValue >> 8;
+				m->length = uvc->req.wLength;
+			} else if (m && event.type == UVC_EVENT_DATA) {
+				struct uvc_streaming_control *control = pending == UVC_VS_COMMIT_CONTROL ? &u->commit : &u->probe;
+				m->selector = pending;
+				m->length = uvc->data.length > 0 ? (uint32_t)uvc->data.length : 0;
+				m->frame = control->bFrameIndex;
+				m->interval = control->dwFrameInterval;
+			}
 		}
 	}
 	// Taking the stream down here rather than at the commit keeps every ioctl on
@@ -339,12 +418,7 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	// side that can produce a frame at the newly committed size.
 	if (u->refmt) {
 		u->refmt = 0;
-		if (u->streaming) {
-			enum v4l2_buf_type stale = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-			nk_ioctl(u->fd, VIDIOC_STREAMOFF, &stale);
-			u->streaming = 0;
-			u->queued = 0;
-		}
+		if (u->streaming) nk_uvc_ground(u, NK_GROUND_REFMT);
 		edge = 3;
 	}
 	if (descriptor.revents & (POLLHUP | POLLNVAL)) return -EIO;
@@ -352,7 +426,7 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	// errored, with POLLERR alone. Both mean this side and the kernel disagree
 	// about whether the stream is up, and the cure for that is to take it down
 	// and raise it again rather than to end the worker.
-	if (u->streaming && (descriptor.revents & POLLERR)) return nk_uvc_ground(u);
+	if (u->streaming && (descriptor.revents & POLLERR)) return nk_uvc_ground(u, NK_GROUND_POLLERR);
 	unsigned int frame = u->commit.bFrameIndex > 0 ? u->commit.bFrameIndex - 1 : 0;
 	if (frame >= u->frame_count) frame = 0;
 	*width = u->frames[frame].width;
@@ -372,10 +446,18 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 	buffer.memory = V4L2_MEMORY_MMAP;
 	if (nk_ioctl(u->fd, VIDIOC_DQBUF, &buffer) < 0) {
 		if (errno == EAGAIN) return edge;
-		if (errno == ENODEV) return nk_uvc_ground(u);
+		if (errno == ENODEV) return nk_uvc_ground(u, NK_GROUND_ENODEV);
 		return -errno;
 	}
 	if (buffer.index >= u->count) return -EIO;
+	// The first buffer back after a start is the first frame the kernel has
+	// finished sending; its timestamp is the completion time.
+	if (u->first_sent_pending) {
+		u->first_sent_pending = 0;
+		int64_t completed_ns = (int64_t)buffer.timestamp.tv_sec * 1000000000LL + (int64_t)buffer.timestamp.tv_usec * 1000LL;
+		struct nk_mark *m = nk_mark(u, NK_MARK_FIRST_SENT, 0, completed_ns);
+		if (m) m->length = buffer.bytesused;
+	}
 	// The buffer is dequeued now, so it has to go back either way: an oversized
 	// frame is returned empty rather than kept, which the host reads as one
 	// short frame instead of a stalled endpoint.
@@ -385,7 +467,7 @@ static int nk_uvc_step(struct nk_uvc *u, const void *data, size_t length,
 		buffer.bytesused = length;
 	}
 	if (nk_ioctl(u->fd, VIDIOC_QBUF, &buffer) < 0) {
-		if (errno == ENODEV) return nk_uvc_ground(u);
+		if (errno == ENODEV) return nk_uvc_ground(u, NK_GROUND_ENODEV);
 		return -errno;
 	}
 	return edge;
@@ -695,6 +777,7 @@ func (platformFactory) OpenInput(spec SlotSpec, node string) (Input, error) {
 type uvcOutput struct {
 	mu     sync.Mutex
 	handle *C.struct_nk_uvc
+	trace  *uvcTrace
 }
 
 func openUVC(spec SlotSpec, node string) (*uvcOutput, error) {
@@ -716,7 +799,26 @@ func openUVC(spec SlotSpec, node string) (*uvcOutput, error) {
 	if handle == nil {
 		return nil, fmt.Errorf("adopt UVC %s: %w", node, errno())
 	}
-	return &uvcOutput{handle: handle}, nil
+	return &uvcOutput{handle: handle, trace: newUVCTrace(spec.ID)}, nil
+}
+
+// Every edge the C side marked since the last step, as kernel-log lines.
+// Called with o.mu held and o.handle live.
+func (o *uvcOutput) drainMarks() {
+	count := int(o.handle.mark_count)
+	for i := 0; i < count && i < len(o.handle.marks); i++ {
+		m := o.handle.marks[i]
+		o.trace.event(uvcMark{
+			kind: uint32(m.kind), eventType: uint32(m._type), request: uint32(m.request),
+			selector: uint32(m.selector), length: uint32(m.length), frame: uint32(m.frame),
+			interval: uint32(m.interval), kernelNS: int64(m.kernel_ns), handledNS: int64(m.handled_ns),
+		})
+	}
+	o.handle.mark_count = 0
+	if lost := int(o.handle.marks_lost); lost > 0 {
+		o.handle.marks_lost = 0
+		o.trace.emit("uvc %s: %d edges were not recorded, more than %d arrived in one poll", o.trace.slot, lost, C.NK_MARKS)
+	}
 }
 
 // The loop itself is runVideo in manager.go, where it is pure Go and a test can
@@ -738,6 +840,7 @@ func (o *uvcOutput) step(current Packet, timeoutMS int, submit bool) (videoStep,
 	var width, height, fps C.uint
 	base, size := packetSpan(current)
 	rc := C.nk_uvc_step(o.handle, unsafe.Pointer(base), C.size_t(size), C.int(timeoutMS), send, &width, &height, &fps)
+	o.drainMarks()
 	if rc < 0 {
 		return videoStep{}, syscallError(rc)
 	}
@@ -751,9 +854,17 @@ func (o *uvcOutput) start(current Packet) error {
 		return errVideoClosed
 	}
 	base, size := packetSpan(current)
-	if rc := C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size)); rc < 0 {
-		return syscallError(rc)
+	rc := C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size))
+	var stamps uvcStart
+	for i := range stamps {
+		stamps[i] = int64(o.handle.start_ns[i])
 	}
+	if rc < 0 {
+		err := syscallError(rc)
+		o.trace.started(stamps, err)
+		return err
+	}
+	o.trace.started(stamps, nil)
 	// The host's STREAMON is the edge the lost INT was measured against, so
 	// Go's handler is put back here as well as at worker start.
 	startup.ReassertInterrupt("camera stream start")
