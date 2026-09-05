@@ -666,8 +666,6 @@ import (
 	"unsafe"
 
 	"NanoKVM-Server/service/sources"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type platformFactory struct{}
@@ -912,193 +910,40 @@ func (c *pcmCapture) Run(ctx context.Context, emit func(Packet), demand func(sou
 
 func (c *pcmCapture) Close() error { return c.pcm.Close() }
 
-// SNDRV_PCM_STATE_RUNNING, the one state in which an idle tick means nothing
-// worse than a host that is not draining the endpoint just now.
-const pcmStateRunning = 3
+// The playback loop itself is runPlayback in pcmloop.go, driven through these
+// three calls so its pacing can be tested against a fake ring on any host.
+// Each answers false once Close has run under the loop, which the loop takes
+// as its cue to leave quietly.
+func (o *pcmOutput) write(packet Packet) (int, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.handle == nil {
+		return 0, false
+	}
+	base, size := packetSpan(packet)
+	return int(C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))), true
+}
 
-// SNDRV_PCM_STATE_PREPARED, the other state an idle tick may legitimately find:
-// the ring is ready and simply has not been started yet.
-const pcmStatePrepared = 2
+func (o *pcmOutput) reset() (int, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.handle == nil {
+		return 0, false
+	}
+	return int(C.nk_pcm_reset(o.handle)), true
+}
 
-// maxWriteBurst bounds how many whole periods one tick may put into the
-// playback ring while catching up. High enough to repair a run of dropped
-// ticks in one go, low enough that a queue kept full by a source running fast
-// cannot hold the loop past its next tick.
-const maxWriteBurst = 8
+func (o *pcmOutput) probe() (int64, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.handle == nil {
+		return 0, false
+	}
+	return int64(C.nk_pcm_probe(o.handle)), true
+}
 
 func (o *pcmOutput) Run(ctx context.Context, frames <-chan Packet, fallback Fallback, demand func(sources.Demand), source func(bool)) error {
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
-	current, err := fallback(0, 0)
-	if err != nil {
-		return err
-	}
-	streaming, failures, successes, resets := false, 0, 0, 0
-	sourceActive := false
-	currentSource := false
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticker.C:
-			// A Go ticker drops ticks rather than bunching them, and this loop
-			// puts exactly one period into the ring per tick while the endpoint
-			// takes exactly one out. So every tick the runtime drops is a period
-			// the ring never gets back: the level only ever falls, and it falls
-			// until the ring underruns and ALSA parks the substream. Measured on
-			// the device that was about one underrun a second, and every one of
-			// them costs the target host the silence its reset has to prime with.
-			// A tick is therefore allowed to write more than one period, but only
-			// while the source is actually behind - the queue holds something
-			// only when it is, since the browser produces one packet per tick
-			// too - so the level is repaired with real audio and never with
-			// silence this loop invented.
-		burst:
-			for range maxWriteBurst {
-				// Only take a new packet once the one in hand has gone out. A tick
-				// whose write found no room used to take the next packet anyway
-				// and overwrite the packet it was still holding, so every full
-				// ring cost the target host 20 ms of audio that the browser had
-				// already been told was accepted.
-				if !currentSource {
-					select {
-					case frame := <-frames:
-						// A source change is silence now and the new source's
-						// samples when they come, and the ring is not touched
-						// for it: a microphone keeps playing whatever is put
-						// into it. Resetting the ring here stopped the
-						// substream and dropped the demand, so every browser
-						// release or refresh cost the target host a gap and
-						// the browser a hundred milliseconds of not sending.
-						if frame.Reset || len(frame.Data) == 0 {
-							current, err = fallback(0, 0)
-							if err != nil {
-								return err
-							}
-						} else {
-							current = frame
-							currentSource = true
-						}
-					default:
-					}
-				}
-				o.mu.Lock()
-				if o.handle == nil {
-					o.mu.Unlock()
-					return nil
-				}
-				base, size := packetSpan(current)
-				rc := C.nk_pcm_write(o.handle, unsafe.Pointer(base), C.uint(size))
-				o.mu.Unlock()
-				switch classifyPCM(int(rc)) {
-				case pcmTransferred:
-					failures, resets = 0, 0
-					successes++
-					if !streaming && successes > 4 {
-						streaming = true
-						demand(sources.Demand{Streaming: true, Since: time.Now().UTC()})
-					}
-					if currentSource != sourceActive {
-						sourceActive = currentSource
-						source(sourceActive)
-					}
-					current, err = fallback(0, 0)
-					if err != nil {
-						return err
-					}
-					currentSource = false
-					if len(frames) > 0 {
-						continue
-					}
-					break burst
-				case pcmIdle:
-					// The ring is full: the target host is not draining the
-					// endpoint. The packet stays in current and goes out on a
-					// later tick, so a host that pauses costs no audio.
-					failures++
-					successes = 0
-					// A host that paused looks exactly like a ring the loop can no
-					// longer write to, and only the kernel's own view of the
-					// substream tells them apart. Say so once a minute, and only
-					// when the answer is not the ordinary one, so a microphone
-					// that has gone quiet for a reason is not buried in a log full
-					// of a microphone that is merely unused.
-					if failures%50 == 0 {
-						o.mu.Lock()
-						probe := int64(-1)
-						if o.handle != nil {
-							probe = int64(C.nk_pcm_probe(o.handle))
-						}
-						o.mu.Unlock()
-						switch {
-						case probe < 0:
-							if failures%3000 == 0 {
-								log.Warnf("media playback idle for %d ticks: kernel status unavailable (errno %d), so a parked ring cannot be told from a full one", failures, -probe)
-							}
-						case probe&0xff != pcmStateRunning && probe&0xff != pcmStatePrepared:
-							// A ring that is merely full is a host that paused,
-							// and waiting is the right answer. A ring the kernel
-							// says is parked is not: it will not move another
-							// sample until something prepares it. Every route
-							// into that state has to end here, whether or not
-							// this loop was the one that saw it happen - the bug
-							// this guards is a microphone silent for the rest of
-							// the session while the browser still sends and the
-							// server still acknowledges, and a ring nobody can
-							// explain is worth resetting rather than leaving
-							// parked.
-							log.Warnf("media playback idle for %d ticks in kernel state %d, avail %d: resetting the parked ring", failures, probe&0xff, probe>>8)
-							o.mu.Lock()
-							if o.handle == nil {
-								o.mu.Unlock()
-								return nil
-							}
-							parked := C.nk_pcm_reset(o.handle)
-							o.mu.Unlock()
-							if parked < 0 {
-								return fmt.Errorf("reset parked playback PCM: return %d", int(parked))
-							}
-							failures = 0
-						}
-					}
-					if streaming && failures >= 3 {
-						streaming = false
-						demand(sources.Demand{})
-						if sourceActive {
-							sourceActive = false
-							source(false)
-						}
-					}
-					break burst
-				}
-				// An underrun. This loop is paced by a Go ticker and the endpoint
-				// by the host's clock, so a tick that lands late empties a ring
-				// only four periods deep and ALSA parks the substream in XRUN.
-				// Nothing put it back, so the first late tick silenced the
-				// microphone for the rest of the binding while every frame was
-				// still acknowledged - the queue filled, the writer never drained
-				// it, and hw_ptr never moved again.
-				successes = 0
-				resets++
-				if resets > 50 {
-					return fmt.Errorf("write PCM: return %d after %d resets", int(rc), resets)
-				}
-				if resets == 1 || resets%25 == 0 {
-					log.Warnf("media playback ring reset after write returned %d (%d in a row)", int(rc), resets)
-				}
-				o.mu.Lock()
-				if o.handle == nil {
-					o.mu.Unlock()
-					return nil
-				}
-				reset := C.nk_pcm_reset(o.handle)
-				o.mu.Unlock()
-				if reset < 0 {
-					return fmt.Errorf("reset playback PCM: return %d", int(reset))
-				}
-			}
-		}
-	}
+	return runPlayback(ctx, o, frames, fallback, demand, source)
 }
 
 func (o *pcmOutput) Close() error {
