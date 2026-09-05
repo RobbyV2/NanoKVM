@@ -219,7 +219,11 @@ that lands before anything asked for the gadget must not run the boot reconcile 
 way out. Each step's result is written to `/dev/kmsg` as well as the logger
 (`startup.Kmsg`, info level, prefixed `NanoKVM-Server:`), because the init script
 starts the server on `/dev/null` and the question of which step took the time is asked
-after the process is gone; `dmesg` on the device answers it.
+after the process is gone; `dmesg` on the device answers it. The signal itself is read
+from `startup.Interrupts`, and `startup.ReassertInterrupt` puts Go's SIGINT handler
+back after the vision library's init, at every media stream start and once a second,
+because that library writes its files through `system(3)` and musl leaves SIGINT
+ignored for the process while each shell runs; the comment there has the measurements.
 
 ## bcdDevice is the mode marker
 

@@ -7,9 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
 	"NanoKVM-Server/common"
@@ -47,6 +45,10 @@ const (
 	shutdownMediaBudget  = 8 * time.Second
 	shutdownUSBBudget    = 2 * time.Second
 	shutdownVisionBudget = 3 * time.Second
+
+	// How long SIGINT can stay ignored behind a shell the vision library ran
+	// before Go's handler is put back; two sigaction calls a second.
+	interruptHold = time.Second
 )
 
 func main() {
@@ -61,6 +63,29 @@ func main() {
 // failure only degrades that one subsystem. startup.Report carries the result.
 func initialize() {
 	logger.Init()
+
+	// The first signal starts the way out and the second ends it. Notify takes
+	// the default action away from every signal it names, so a TERM that lands
+	// while the first signal's shutdown is still running used to sit unread in
+	// the channel and the process outlived it until KILL; now it exits at once.
+	// The channel exists before any step below reaches C, and the handler
+	// behind it is put back on a timer from here on: the vision library runs
+	// shells that leave SIGINT ignored, see startup.ReassertInterrupt.
+	sigChan := startup.Interrupts()
+	go func() {
+		sig := <-sigChan
+		log.Printf("received %v: shutting down", sig)
+		go func() {
+			sig := <-sigChan
+			log.Printf("received %v during shutdown: exiting now", sig)
+			startup.Kmsg("shutdown: %v during shutdown, exiting now", sig)
+			os.Exit(1)
+		}()
+
+		shutdown(sig.String())
+		os.Exit(0)
+	}()
+	go startup.KeepInterrupt(interruptHold)
 
 	startup.Run("picoclaw token", 5*time.Second, config.EnsurePicoclawInternalToken)
 	startup.Run("usb passthrough", 15*time.Second, func() error { return passthrough.GetManager().Recover() })
@@ -81,26 +106,6 @@ func initialize() {
 		jiggler.GetJiggler().Run()
 		return nil
 	})
-
-	// The first signal starts the way out and the second ends it. Notify takes
-	// the default action away from every signal it names, so a TERM that lands
-	// while the first signal's shutdown is still running used to sit unread in
-	// the channel and the process outlived it until KILL; now it exits at once.
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		sig := <-sigChan
-		log.Printf("received %v: shutting down", sig)
-		go func() {
-			sig := <-sigChan
-			log.Printf("received %v during shutdown: exiting now", sig)
-			startup.Kmsg("shutdown: %v during shutdown, exiting now", sig)
-			os.Exit(1)
-		}()
-
-		shutdown(sig.String())
-		os.Exit(0)
-	}()
 }
 
 func run() {

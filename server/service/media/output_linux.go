@@ -666,6 +666,7 @@ import (
 	"unsafe"
 
 	"NanoKVM-Server/service/sources"
+	"NanoKVM-Server/service/startup"
 )
 
 type platformFactory struct{}
@@ -753,6 +754,9 @@ func (o *uvcOutput) start(current Packet) error {
 	if rc := C.nk_uvc_start(o.handle, unsafe.Pointer(base), C.size_t(size)); rc < 0 {
 		return syscallError(rc)
 	}
+	// The host's STREAMON is the edge the lost INT was measured against, so
+	// Go's handler is put back here as well as at worker start.
+	startup.ReassertInterrupt("camera stream start")
 	return nil
 }
 

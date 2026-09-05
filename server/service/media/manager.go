@@ -16,6 +16,7 @@ import (
 
 	"NanoKVM-Server/service/presentation"
 	"NanoKVM-Server/service/sources"
+	"NanoKVM-Server/service/startup"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -838,6 +839,10 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 				continue
 			}
 		}
+		// An INT sent while a stream was open was lost on the device where an
+		// INT to the idle server was not, so the way out is reasserted where
+		// a stream begins; startup.ReassertInterrupt says what takes it.
+		startup.ReassertInterrupt("media worker start")
 		var err error
 		if w.spec.Kind == sources.KindSpeaker {
 			err = w.input.Run(ctx, func(packet Packet) { m.publish(w, packet) }, demanded, active)

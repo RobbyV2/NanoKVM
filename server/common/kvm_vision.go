@@ -13,6 +13,8 @@ import (
 	"sync"
 	"unsafe"
 
+	"NanoKVM-Server/service/startup"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -32,6 +34,12 @@ func GetKvmVision() *KvmVision {
 
 		logLevel := C.uint8_t(0)
 		C.kvmv_init(logLevel)
+		// kvmv_init restarts the capture pipeline and starts the HDMI
+		// detection and watchdog threads, all of which write their small
+		// files through system(3), and each of those shells leaves SIGINT
+		// ignored for the process while it runs. The first can already have
+		// run by the time this returns; see startup.ReassertInterrupt.
+		startup.ReassertInterrupt("kvm vision init")
 		log.Debugf("kvm vision initialized")
 	})
 
