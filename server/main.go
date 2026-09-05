@@ -51,7 +51,7 @@ const (
 
 func main() {
 	initialize()
-	defer shutdown()
+	defer shutdown("run returned")
 
 	run()
 }
@@ -94,10 +94,11 @@ func initialize() {
 		go func() {
 			sig := <-sigChan
 			log.Printf("received %v during shutdown: exiting now", sig)
+			startup.Kmsg("shutdown: %v during shutdown, exiting now", sig)
 			os.Exit(1)
 		}()
 
-		shutdown()
+		shutdown(sig.String())
 		os.Exit(0)
 	}()
 }
@@ -222,7 +223,14 @@ func startVNC(conf *config.Config) {
 // vision library's deinit is last because it is the step with no bound of its
 // own; if it does not return, the result says so and the process exits anyway,
 // which is what the init script's SIGKILL used to do twenty seconds later.
-func shutdown() {
+//
+// Every line goes to the kernel log as well as the logger. The init script
+// starts the server with both standard streams on /dev/null and the logger
+// opens no file by default, so the logger's copy is lost on a device, and the
+// question these lines answer, which step took the time, is asked after the
+// process is gone. dmesg on the device shows them.
+func shutdown(reason string) {
+	startup.Kmsg("shutdown: on %s", reason)
 	results := startup.Stop(
 		startup.Step{Name: "media pipeline", Budget: shutdownMediaBudget, Run: func() error {
 			if manager := presentation.Current(); manager != nil {
@@ -247,6 +255,7 @@ func shutdown() {
 	)
 	for _, result := range results {
 		log.Printf("shutdown: %s", result)
+		startup.Kmsg("shutdown: %s", result)
 	}
 }
 

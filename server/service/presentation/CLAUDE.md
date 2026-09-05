@@ -216,7 +216,10 @@ is stopped and not started again therefore leaves the host with no gadget at all
 USB NIC and the virtual disk included; `echo 4340000.usb > g0/UDC` puts it back by hand.
 `presentation.Current` is how main reaches the manager without building one: a signal
 that lands before anything asked for the gadget must not run the boot reconcile on the
-way out.
+way out. Each step's result is written to `/dev/kmsg` as well as the logger
+(`startup.Kmsg`, info level, prefixed `NanoKVM-Server:`), because the init script
+starts the server on `/dev/null` and the question of which step took the time is asked
+after the process is gone; `dmesg` on the device answers it.
 
 ## bcdDevice is the mode marker
 
