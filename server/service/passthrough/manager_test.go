@@ -691,7 +691,6 @@ func (o *recordMkdirOps) BindUDC(string) error            { return nil }
 func (o *recordMkdirOps) UnbindUDC() error                { return nil }
 func (o *recordMkdirOps) SetOTGRole(string) error         { return nil }
 func (o *recordMkdirOps) ResetPHY(context.Context) error  { return nil }
-func (o *recordMkdirOps) Reattach(string) error           { return nil }
 
 func TestHybridRecoveryIsPersistentAndOrdered(t *testing.T) {
 	manager, base, vhci, _ := newTestManager(t)

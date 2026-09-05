@@ -178,7 +178,7 @@ func hidOnlyRecovery(caps CapabilityTable) (recoveryPlan, error) {
 
 func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (err error) {
 	defer func() {
-		if err == nil {
+		if err == nil || m.deferBind {
 			return
 		}
 		if bindErr := m.ensureBound(udc); bindErr != nil {
@@ -337,8 +337,16 @@ func (m *Manager) execute(op Op, udc string) error {
 	case OpRmdir:
 		return m.ops.RemoveDir(op.Path)
 	case OpBind:
+		// A start reconciles with the bind held back for Attach, which makes
+		// it once with the OTG role after it, the way ensureBound does.
+		if m.deferBind {
+			return nil
+		}
 		return m.ops.BindUDC(udc)
 	case OpOTGRole:
+		if m.deferBind {
+			return nil
+		}
 		return m.ops.SetOTGRole(string(op.Data))
 	default:
 		return fmt.Errorf("unknown op kind %s", op.Kind)
@@ -417,6 +425,11 @@ func (m *Manager) unlinkStale(before Snapshot, plan Plan) error {
 // transaction still runs quiesced; withHIDQuiesced reopens them for good on the
 // way out and releases every key there.
 func (m *Manager) verify(udc string, profile Profile) error {
+	// Nothing to read back while the bind is Attach's: the UDC attribute is
+	// empty on purpose and f_hid has not created its nodes yet.
+	if m.deferBind {
+		return nil
+	}
 	if err := m.verifyBind(udc); err != nil {
 		return err
 	}

@@ -114,10 +114,10 @@ func TestReconcileLeavesAMatchingGadgetAlone(t *testing.T) {
 }
 
 // The reconcile runs at boot, before anyone is watching. An apply that fails
-// halfway and leaves no UDC bound would ship a device with no USB at all, so
-// every rung of the ladder ends in a bind and the reconcile reports rather than
-// repairs.
-func TestReconcileLeavesTheGadgetBoundWhenItCannotLand(t *testing.T) {
+// halfway would ship a device with no USB at all if nothing bound after it,
+// so the reconcile reports rather than repairs, every rung of the ladder
+// leaves the bind to Attach, and Attach binds whatever the ladder left linked.
+func TestReconcileLeavesTheBindToAttachWhenItCannotLand(t *testing.T) {
 	manager, ops, _ := divergedManager(t)
 
 	// Target, rollback and hid-only fallback all fail on the same write.
@@ -137,8 +137,14 @@ func TestReconcileLeavesTheGadgetBoundWhenItCannotLand(t *testing.T) {
 	if !strings.Contains(err.Error(), "reassert "+ProfileCurrent) {
 		t.Fatalf("err = %v, want the reassert named", err)
 	}
+	if bound := ops.Bound(); bound != "" {
+		t.Fatalf("bound = %q, want the ladder to leave the bind to Attach", bound)
+	}
+	if err := manager.Attach(context.Background()); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
 	if bound := ops.Bound(); bound != dwc2Device {
-		t.Fatalf("bound = %q, want the controller left bound to %q", bound, dwc2Device)
+		t.Fatalf("bound = %q after Attach, want %q", bound, dwc2Device)
 	}
 }
 
@@ -424,6 +430,9 @@ func TestReconcileFlagsAGadgetThatBoundButNeverCameBack(t *testing.T) {
 	if err := manager.ReconcileGadget(context.Background()); err != nil {
 		t.Fatalf("reconcile: %v", err)
 	}
+	if err := manager.Attach(context.Background()); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
 
 	snapshot, err := manager.Snapshot()
 	if err != nil {
@@ -445,14 +454,20 @@ func TestReconcileDoesNotWaitOnAHostThatWasNeverAttached(t *testing.T) {
 	t.Cleanup(func() { udcDir, enumerateTimeout = oldUDCDir, oldTimeout })
 
 	done := make(chan error, 1)
-	go func() { done <- manager.ReconcileGadget(context.Background()) }()
+	go func() {
+		if err := manager.ReconcileGadget(context.Background()); err != nil {
+			done <- err
+			return
+		}
+		done <- manager.Attach(context.Background())
+	}()
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("reconcile: %v", err)
+			t.Fatalf("reconcile and attach: %v", err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("reconcile waited for a host that was never attached")
+		t.Fatal("the start waited for a host that was never attached")
 	}
 }
 
@@ -621,29 +636,154 @@ func TestReconcileKeepsALoneOSDescUnlink(t *testing.T) {
 	}
 }
 
-// S03usbdev leaves the UDC unbound so the host enumerates once, with the final
-// layout. That only holds if every path out of the reconcile binds: an apply
-// binds as part of its transaction, and the paths that decide there is nothing
-// to apply have to bind for themselves. Miss one and the device never reaches
-// a host at all, which is worse than the double enumeration it replaces.
-func TestReconcileBindsWhenItDecidesNotToApply(t *testing.T) {
-	manager, ops := newTestManager(t)
-	profile := standardProfile()
-	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
-		t.Fatalf("seed apply: %v", err)
-	}
+// The start, in the order router.server runs it: the reconcile when the
+// manager is built, the media observer and the HID writers wired, then Attach.
+// The controller is unbound when it begins, as S03usbdev and Detach both leave
+// it, and the whole start makes exactly one bind, after every other change to
+// the gadget, with the media pipeline built once behind it. It used to be two:
+// one at the reconcile and a pull-up cycle at the end, which the host saw as
+// the device coming and going within a second at every start.
+func startFromUnbound(t *testing.T, manager *Manager, ops *RecordOps) (*stuckObserver, *routingHID) {
+	t.Helper()
 	if err := ops.UnbindUDC(); err != nil {
 		t.Fatalf("unbind: %v", err)
 	}
 	if got := ops.Bound(); got != "" {
 		t.Fatalf("precondition: still bound to %q", got)
 	}
+	ops.mu.Lock()
+	ops.trace = nil
+	ops.mu.Unlock()
 
-	// The gadget now matches the profile, so the reconcile has nothing to apply.
 	if err := manager.ReconcileGadget(context.Background()); err != nil {
 		t.Fatalf("reconcile: %v", err)
 	}
-	if got := ops.Bound(); got == "" {
-		t.Fatal("the reconcile found nothing to apply and left the controller unbound")
+	observer := &stuckObserver{}
+	manager.SetObserver(observer)
+	hid := &routingHID{}
+	manager.SetHID(hid)
+	if err := manager.Attach(context.Background()); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	return observer, hid
+}
+
+func assertOneBindLast(t *testing.T, ops *RecordOps) {
+	t.Helper()
+	trace := ops.Trace()
+	binds := 0
+	for i, op := range trace {
+		switch op.Kind {
+		case OpBind:
+			binds++
+			for _, later := range trace[i+1:] {
+				if later.Kind != OpOTGRole {
+					t.Fatalf("the start touched the gadget after its bind: %s %s", later.Kind, later.Path)
+				}
+			}
+		}
+	}
+	if binds != 1 {
+		t.Fatalf("the start bound %d times, want once: %+v", binds, trace)
+	}
+	if got := ops.Bound(); got != dwc2Device {
+		t.Fatalf("bound = %q, want %q", got, dwc2Device)
+	}
+	if got := ops.Role(); got != OTGRoleDevice {
+		t.Fatalf("otg role = %q, want %q after the bind", got, OTGRoleDevice)
+	}
+}
+
+func TestStartBindsOnceAndLastWhenTheProfileMustBeReasserted(t *testing.T) {
+	manager, ops, collapsed := divergedManager(t)
+	observer, _ := startFromUnbound(t, manager, ops)
+
+	if got := linkedNames(ops); !slices.Equal(got, []string{"hid.GS0"}) {
+		t.Fatalf("linked = %v, want %v", got, []string{"hid.GS0"})
+	}
+	length, ok := readLiveUint(ops, configPrefix+"/hid.GS0/report_length")
+	if !ok || length != uint64(collapsed.Functions[0].HID.ReportLength) {
+		t.Fatalf("report_length = %d ok = %v, want the reasserted profile's %d", length, ok, collapsed.Functions[0].HID.ReportLength)
+	}
+	assertOneBindLast(t, ops)
+	if suspends, applied := observer.counts(); suspends != 0 || applied != 1 {
+		t.Fatalf("observer suspends = %d applied = %d, want 0 and 1: the pipeline is built once, after the bind", suspends, applied)
+	}
+}
+
+func TestStartBindsOnceWhenTheGadgetAlreadyMatches(t *testing.T) {
+	manager, ops := newTestManager(t)
+	if err := manager.ApplyProfile(context.Background(), standardProfile()); err != nil {
+		t.Fatalf("seed apply: %v", err)
+	}
+	observer, hid := startFromUnbound(t, manager, ops)
+
+	trace := ops.Trace()
+	if len(trace) != 2 || trace[0].Kind != OpBind || trace[1].Kind != OpOTGRole {
+		t.Fatalf("a matching gadget cost %+v, want one bind and the otg role", trace)
+	}
+	assertOneBindLast(t, ops)
+	if _, applied := observer.counts(); applied != 1 {
+		t.Fatalf("observer applied = %d, want 1", applied)
+	}
+	// The HID nodes exist only once the function is bound, so the writers are
+	// opened inside the bind's bracket, after it, with the routes pushed.
+	events := hid.events
+	if len(events) < 3 || events[0] != "lock" || events[1] != "close" || !strings.HasPrefix(events[2], "open ") {
+		t.Fatalf("hid events = %v, want the quiesce bracket around the bind", events)
+	}
+}
+
+// A controller that is already bound when the start reaches Attach - the
+// previous process died without its Detach - is left on the bus as it is: the
+// host is enumerated against it, and taking it away would be the second
+// enumeration this path exists to remove. The media pipeline is still built.
+func TestAttachLeavesABoundControllerAlone(t *testing.T) {
+	manager, ops := newTestManager(t)
+	if err := manager.ApplyProfile(context.Background(), standardProfile()); err != nil {
+		t.Fatalf("seed apply: %v", err)
+	}
+	if err := manager.ReconcileGadget(context.Background()); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	observer := &stuckObserver{}
+	manager.SetObserver(observer)
+	before := len(ops.Trace())
+
+	if err := manager.Attach(context.Background()); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	if after := len(ops.Trace()); after != before {
+		t.Fatalf("Attach emitted %d ops against a bound controller, want none: %+v", after-before, ops.Trace()[before:])
+	}
+	if _, applied := observer.counts(); applied != 1 {
+		t.Fatalf("observer applied = %d, want 1", applied)
+	}
+}
+
+// Run-time changes still bind for themselves: the deferral belongs to the
+// reconcile alone, and an apply after the start is the transaction it was.
+func TestAnApplyAfterTheStartStillBindsForItself(t *testing.T) {
+	manager, ops := newTestManager(t)
+	if err := manager.ApplyProfile(context.Background(), standardProfile()); err != nil {
+		t.Fatalf("seed apply: %v", err)
+	}
+	startFromUnbound(t, manager, ops)
+	before := len(ops.Trace())
+
+	if err := manager.ApplyProfile(context.Background(), collapsedProfile(t, ProfileCurrent)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	binds := 0
+	for _, op := range ops.Trace()[before:] {
+		if op.Kind == OpBind {
+			binds++
+		}
+	}
+	if binds != 1 {
+		t.Fatalf("a run-time apply bound %d times, want 1", binds)
+	}
+	if got := ops.Bound(); got != dwc2Device {
+		t.Fatalf("bound = %q after a run-time apply, want %q", got, dwc2Device)
 	}
 }

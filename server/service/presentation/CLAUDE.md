@@ -59,8 +59,30 @@ into what was really the stock eight-byte boot keyboard.
 `Manager.ReconcileGadget` runs from `GetManager` after `Migrate`, compares
 `compareLayout(activeProfile, liveFunctions(ops))` and reapplies the profile when they
 differ. It is what makes a collapsed HID layout survive a reboot at all. A reconcile that
-cannot land the profile is logged and never fatal: every rung of `applyPlan`'s ladder ends
-in a bind, so the controller is left bound whatever happens.
+cannot land the profile is logged and never fatal.
+
+## The start binds once, last
+
+`S03usbdev` leaves the UDC unbound on purpose and `Detach` leaves it unbound on the way
+out, so every start begins with the controller off the bus, and the start makes exactly one
+bind, at the end, through `Manager.Attach` from `router.server`. The reconcile runs first
+thing, before the vision library, the HID writers and the media observer exist, so its apply
+runs with `deferBind` up: `execute` skips `OpBind` and `OpOTGRole`, `verify` reads nothing
+back, and every rung of the rollback ladder leaves the controller unbound too. `Attach` then
+binds under the HID quiesce bracket (the `/dev/hidgN` nodes exist only from the bind), refreshes
+the media observer after it (the camera's video node exists only from the bind, and the hold on
+it is what lets the function activate), and waits for a host that was configured when the start
+began to come back (`confirmEnumeration`, on the state recorded in `startUDC`). A controller
+that is already bound when `Attach` runs is left as it is.
+
+The bind is last for a measured reason. A host that asks for a descriptor while the board is
+still coming up does not retry: after a cold boot Windows had the microphone, speaker and USB
+NIC at `CM_PROB_FAILED_START` with `STATUS_IO_TIMEOUT` while the camera and HID, started
+earlier, were healthy. The old start bound at the reconcile and cycled the pull-up at the end
+to present the finished device, which fixed that and cost a second enumeration 0.7 s after
+the first at every start; binding once at the end presents the finished device without it.
+Run-time paths are untouched: an apply, a LUN change, a PHY reset and a reclaim after
+passthrough all bind for themselves as they did.
 
 **The routes follow the gadget, never the store.** `Manager.hidRoutes` builds
 `[]HIDRoute` from the live functions read back out of configfs, and consults the stored
@@ -155,8 +177,8 @@ reproduced exactly: net function, then hid.GS0, GS1, GS2, then mass_storage.disk
 `udc->driver` is a single pointer, so this gadget and a `usb-proxy` passthrough session
 cannot both hold the controller. `SurrenderUDC` unbinds and records a **loan**; every
 mutator refuses with `ErrUDCLoaned` while one stands. The check sits in `withGadgetLock`,
-which covers `Apply`, `ApplyProfile`, `SetMode`, `SetMediaSlots`, `SetLUN`, `Rebind` and
-`ResetPHY`, and is repeated at the four entry points that test `m.transient` directly:
+which covers `Apply`, `ApplyProfile`, `SetMode`, `SetMediaSlots`, `SetLUN`, `Rebind`,
+`ResetPHY` and `Attach`, and is repeated at the four entry points that test `m.transient` directly:
 `CreateFunctionFS`, `StartFunctionFS`, `RecoverFunctionFS` and `SurrenderUDC` itself. A
 transient and a loan cannot coexist, since each refuses the other, which is why
 `StopFunctionFS` does not check.
@@ -207,11 +229,11 @@ result is in whether or not every step returned. `SuspendMedia` is the observer'
 `Suspend` with no gadget lock around it: nothing is unlinked, so a node it could not
 release is a line in the log and never a reason to keep running, and an apply blocked in
 the kernel on that node is what closing it unblocks. `Detach` is one `UnbindUDC`, guarded
-like `Reattach` (nothing bound is a no-op, a loan or a transient refuses), so the host
+the way every mutator is (nothing bound is a no-op, a loan or a transient refuses), so the host
 sees a disconnect the moment the server goes instead of a camera that stays enumerated
 answering nothing until the next server rebinds. It is an unbind and not a pull-up drop
 because `soft_connect` refuses in OTG mode on this kernel, and because unbound is the
-state `ReconcileGadget`'s `bindIfUnbound` already expects at every start. A server that
+state `Attach` already expects at every start. A server that
 is stopped and not started again therefore leaves the host with no gadget at all, the
 USB NIC and the virtual disk included; `echo 4340000.usb > g0/UDC` puts it back by hand.
 `presentation.Current` is how main reaches the manager without building one: a signal

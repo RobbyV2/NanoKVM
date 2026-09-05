@@ -368,36 +368,23 @@ func (m *Manager) divergence(profile Profile) Divergence {
 // collapsed HID layout survive a reboot at all.
 //
 // It is not a health check with an opinion: a reconcile that cannot land the
-// profile leaves the controller bound, because every rung of applyPlan's
-// rollback ladder ends in a bind, and hidRoutes then follows the gadget that
-// survived rather than the profile that did not.
-// S03usbdev deliberately leaves the UDC unbound so the host enumerates once,
-// with the layout the operator actually saved, rather than once for the stock
-// gadget and again fifteen seconds later for the real one. Windows caches an
-// interface-to-driver mapping per device instance, and the second enumeration
-// hands it a map that does not match the first - which is how the camera, the
-// NIC and the audio functions ended up at CM_PROB_FAILED_START, moving between
-// them from boot to boot depending on which driver was mid-start.
+// profile reports it, and hidRoutes then follows the gadget that survived
+// rather than the profile that did not.
 //
-// So every path out of the reconcile has to end with the controller bound: the
-// apply paths bind as part of the transaction, and the two paths that decide
-// there is nothing to apply bind here instead. The init script's watchdog is
-// the backstop if this process never gets that far at all.
-func (m *Manager) bindIfUnbound() error {
-	if data, err := m.ops.ReadFile(udcAttr); err == nil && strings.TrimSpace(string(data)) != "" {
-		return nil
-	}
-	available, err := m.ops.ListUDC()
-	if err != nil {
-		return fmt.Errorf("list udc: %w", err)
-	}
-	if len(available) == 0 {
-		return fmt.Errorf("no udc to bind")
-	}
-	log.Infof("binding the gadget to %s: the init script left the bind to us", available[0])
-	return m.ensureBound(available[0])
-}
-
+// It never binds. S03usbdev deliberately leaves the UDC unbound so the host
+// enumerates once, with the layout the operator actually saved, rather than
+// once for the stock gadget and again fifteen seconds later for the real one.
+// Windows caches an interface-to-driver mapping per device instance, and the
+// second enumeration hands it a map that does not match the first - which is
+// how the camera, the NIC and the audio functions ended up at
+// CM_PROB_FAILED_START, moving between them from boot to boot depending on
+// which driver was mid-start. The same rule holds inside the process: the
+// reconcile runs first thing, before the vision library, the HID writers and
+// the media pipeline exist, and a bind here followed by a pull-up cycle once
+// they did was measured as two enumerations 0.7 s apart at every start. So the
+// apply below runs with its bind deferred, every rollback rung included, and
+// Attach makes the one bind at the end of start. The init script's watchdog
+// is the backstop if this process never gets that far at all.
 func (m *Manager) ReconcileGadget(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err
@@ -405,15 +392,20 @@ func (m *Manager) ReconcileGadget(ctx context.Context) error {
 	if m.transientUp.Load() {
 		return ErrTransient
 	}
+	// What the host had before anything here touched the controller, for
+	// Attach's wait: a host that was configured and does not come back after
+	// the reapply and the bind is the deactivated gadget confirmEnumeration
+	// describes.
+	m.startUDC = m.udcStatus()
 
 	profile, err := m.activeProfile()
 	if err != nil {
 		return err
 	}
 	// Nothing has claimed the gadget yet, so there is no promise to keep and
-	// whatever the init script built stands - but it still has to reach a host.
+	// whatever the init script built stands.
 	if profile.Name == "" {
-		return m.bindIfUnbound()
+		return nil
 	}
 	// A hybrid is a transient with a process on the other end of ep0.
 	// Reasserting one from a boot path would build a gadget nobody is serving.
@@ -425,16 +417,70 @@ func (m *Manager) ReconcileGadget(ctx context.Context) error {
 
 	divergence := m.divergence(profile)
 	if divergence.Empty() {
-		return m.bindIfUnbound()
+		return nil
 	}
 
 	log.Warnf("usb gadget diverges from active profile %s: it %s; reasserting the profile", profile.Name, divergence)
-	before := m.udcStatus()
+	m.deferBind = true
+	defer func() { m.deferBind = false }()
 	if err := m.ApplyProfile(ctx, profile); err != nil {
 		return fmt.Errorf("reassert %s: %w", profile.Name, err)
 	}
-	m.confirmEnumeration(ctx, before)
 	return nil
+}
+
+// Attach is the one bind of a start, and the last thing the start does to the
+// gadget. Everything that binds at run time - an apply, a LUN change, a PHY
+// reset, a reclaim after passthrough - binds for itself and is untouched by
+// this; a start reaches here with the profile reconciled, the HID writers and
+// the media observer wired, and the controller unbound, whether the init
+// script left it so or Detach did on the way out of the previous process. One
+// bind then puts a finished device on the bus, and a host that asks for a
+// descriptor gets an answer, which is what the pull-up cycle this replaces
+// bought at the cost of a second enumeration.
+//
+// The bind runs inside the HID quiesce bracket, as ReclaimUDC's does, so the
+// /dev/hidgN nodes f_hid creates at bind are opened with the routes pushed,
+// and the media observer is refreshed after it, so the camera's video node -
+// which exists only while the function is bound - is held before the host
+// asks for it. A controller that is already bound is left alone: the host is
+// enumerated against the gadget that is up, and this is not the place to take
+// it away.
+func (m *Manager) Attach(ctx context.Context) error {
+	if err := m.ready(); err != nil {
+		return err
+	}
+	bound := false
+	err := m.withGadgetLock(func() error {
+		var bindErr error
+		bound, bindErr = m.bindIfUnbound()
+		return bindErr
+	})
+	refreshErr := m.refreshObserver(ctx)
+	if err != nil {
+		return err
+	}
+	if bound {
+		m.confirmEnumeration(ctx, m.startUDC)
+	}
+	return refreshErr
+}
+
+// The bind Attach makes, and whether it made one.
+func (m *Manager) bindIfUnbound() (bool, error) {
+	if data, err := m.ops.ReadFile(udcAttr); err == nil && strings.TrimSpace(string(data)) != "" {
+		log.Infof("the gadget is already bound to %s; leaving it on the bus", strings.TrimSpace(string(data)))
+		return false, nil
+	}
+	available, err := m.ops.ListUDC()
+	if err != nil {
+		return false, fmt.Errorf("list udc: %w", err)
+	}
+	if len(available) == 0 {
+		return false, fmt.Errorf("no udc to bind")
+	}
+	log.Infof("binding the gadget to %s: the init script left the bind to us", available[0])
+	return true, m.ensureBound(available[0])
 }
 
 // f_uvc calls usb_function_deactivate() when the last V4L2 handle closes, and

@@ -99,6 +99,14 @@ type Manager struct {
 	statusMu   sync.Mutex
 	lastError  *ApplyFailure
 	powerCycle bool
+
+	// Both belong to the start and are read on its goroutine only. deferBind
+	// is up for the life of ReconcileGadget's apply, so the transaction and
+	// every rung of its rollback ladder leave the controller unbound for
+	// Attach to bind once; startUDC is the controller as the start found it,
+	// which is what tells Attach whether a host was there to wait for.
+	deferBind bool
+	startUDC  UDCStatus
 }
 
 type Transient struct {
@@ -611,7 +619,7 @@ func defaultSpeaker(index int, label string, named bool) Function {
 // It is an unbind and not a pull-up drop because the controller's soft_connect
 // attribute refuses in OTG mode on this kernel (CONFIG_CVITEK_USB_LEGACY), and
 // because unbound is the state every start already handles: S03usbdev leaves
-// the controller unbound on purpose and ReconcileGadget binds it. The cost is
+// the controller unbound on purpose and Attach binds it. The cost is
 // that a server stopped and not started again leaves the host with no gadget
 // at all, the USB NIC and the virtual disk included, where before it kept
 // those two (the keyboard needs the server either way). Nothing is unlinked,
@@ -642,43 +650,6 @@ func (m *Manager) Detach() error {
 // mkdir functions/ffs.hybrid is what registers the ffs instance named "hybrid";
 // mount -t functionfs hybrid returns ENODEV until it exists. The caller mounts
 // and writes ep0 between this and StartFunctionFS, which links and binds.
-// Reattach presents the gadget to the host again without changing it: the
-// pull-up drops and rises, the descriptors and every link stay exactly as they
-// are. Startup calls it once it has finished, because the bind necessarily
-// happens while the board is still busy coming up, and a host that asks this
-// device for a descriptor before it can answer does not retry - it starts the
-// interfaces it managed to reach and abandons the rest. Measured on Windows:
-// after a cold boot the microphone, speaker and the USB NIC sit at
-// CM_PROB_FAILED_START with STATUS_IO_TIMEOUT and the gadget never sees a
-// single class request, while the camera and HID are healthy; one pull-up cycle
-// on the settled device brings all six up with nothing else changed.
-//
-// A no-op when nothing is bound, and it never takes the controller from a
-// passthrough session that has borrowed it.
-func (m *Manager) Reattach() error {
-	if err := m.ready(); err != nil {
-		return err
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.transient != nil {
-		return ErrTransient
-	}
-	if err := m.loanHeld(); err != nil {
-		return err
-	}
-	data, err := m.ops.ReadFile(udcAttr)
-	if err != nil {
-		return fmt.Errorf("read %s: %w", udcAttr, err)
-	}
-	udc := strings.TrimSpace(string(data))
-	if udc == "" {
-		return nil
-	}
-	return m.ops.Reattach(udc)
-}
-
 func (m *Manager) CreateFunctionFS(ctx context.Context) error {
 	if err := m.ready(); err != nil {
 		return err

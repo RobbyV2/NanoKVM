@@ -20,11 +20,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const observerRefreshBudget = 10 * time.Second
-
-// A pull-up cycle is two sysfs writes and a settle; anything longer than this
-// means the controller is wedged, and boot should carry on regardless.
-const reattachBudget = 5 * time.Second
+// One bind, the HID reopen behind it (two seconds of retry at most), the media
+// pipeline's node holds (five seconds each to settle) and a wait of three for
+// a host that was configured before the start to come back. Anything longer is
+// a controller that is wedged, and the listener comes up regardless.
+const attachBudget = 15 * time.Second
 
 func Init(r *gin.Engine) {
 	web(r)
@@ -63,23 +63,24 @@ func server(r *gin.Engine) {
 	// before when the UI happened to poll the virtual-device endpoint first.
 	hid.Manager()
 	startup.Fail("usb presentation", presentationManager.Err())
-	startup.Run("media gadget", observerRefreshBudget, func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), observerRefreshBudget)
+
+	// The one bind of the start, and the last thing the start does to the
+	// gadget. The profile was reconciled when the manager was built, with its
+	// bind held back; the HID writers and the media observer are wired above;
+	// so the gadget that goes on the bus here is finished, and the host that
+	// asks for a descriptor gets an answer. Attach also holds the camera's
+	// video node and builds the media workers, since the node exists only
+	// once the function is bound. It used to be a bind at the reconcile and
+	// a pull-up cycle here, which the host saw as the device coming and going
+	// within a second at every start.
+	startup.Run("usb attach", attachBudget, func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), attachBudget)
 		defer cancel()
-		if err := presentationManager.RefreshObserver(ctx); err != nil {
-			log.Debugf("media gadget unavailable: %s", err)
+		if err := presentationManager.Attach(ctx); err != nil {
+			log.Debugf("usb attach: %s", err)
 			return err
 		}
 		return nil
-	})
-
-	// The bind that put this gadget on the bus necessarily happened while the
-	// board was still coming up, and a host that asked for a descriptor then
-	// may have given up on the interfaces it had not started yet. Everything
-	// above is done, so drop the pull-up and raise it: same gadget, same
-	// descriptors, one clean enumeration against a device that can answer.
-	startup.Run("usb reattach", reattachBudget, func() error {
-		return presentationManager.Reattach()
 	})
 
 	authRouter(r)

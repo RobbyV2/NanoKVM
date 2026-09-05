@@ -38,12 +38,9 @@ var (
 
 	udcDir = "/sys/class/udc"
 
-	// Long enough that a host registers the disconnect as a disconnect rather
-	// than a glitch on the line, short enough to stay inside boot.
-	reattachSettle = 300 * time.Millisecond
-	otgRolePath    = "/proc/cviusb/otg_role"
-	dwc2Bind       = "/sys/bus/platform/drivers/dwc2/bind"
-	dwc2Unbind     = "/sys/bus/platform/drivers/dwc2/unbind"
+	otgRolePath = "/proc/cviusb/otg_role"
+	dwc2Bind    = "/sys/bus/platform/drivers/dwc2/bind"
+	dwc2Unbind  = "/sys/bus/platform/drivers/dwc2/unbind"
 )
 
 var (
@@ -323,31 +320,6 @@ func (o *ConfigFSOps) BindUDC(name string) error {
 		return fmt.Errorf("%w: an empty name is an unbind, not a bind", ErrUDCName)
 	}
 	return o.WriteFile(udcAttr, []byte(name+"\n"))
-}
-
-// Reattach drops the data-line pull-up and raises it again, which is a fresh
-// enumeration to the host without disturbing the gadget: no unbind, no relink,
-// the same descriptors. It exists because a gadget can be correct and still be
-// refused. The bind happens while the board is still finishing boot, and a host
-// that asks for a descriptor while the device is too busy to answer gives up on
-// the interfaces it has not started yet - measured on Windows as audio and the
-// NIC failing with STATUS_IO_TIMEOUT while the camera and HID, started earlier,
-// come up fine. Presenting ourselves once we can actually answer is the whole
-// fix; the descriptors were never wrong.
-func (o *ConfigFSOps) Reattach(name string) error {
-	if strings.TrimSpace(name) == "" {
-		return fmt.Errorf("%w: nothing is bound, so there is nothing to reattach", ErrUDCName)
-	}
-	attr := filepath.Join(udcDir, name, "soft_connect")
-	if err := os.WriteFile(attr, []byte("disconnect\n"), 0o200); err != nil {
-		return fmt.Errorf("disconnect %s: %w", attr, err)
-	}
-	// The host needs to see the line low for longer than it takes to notice.
-	time.Sleep(reattachSettle)
-	if err := os.WriteFile(attr, []byte("connect\n"), 0o200); err != nil {
-		return fmt.Errorf("connect %s: %w", attr, err)
-	}
-	return nil
 }
 
 func (o *ConfigFSOps) UnbindUDC() error {
