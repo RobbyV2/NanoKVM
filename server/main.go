@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -123,12 +122,18 @@ func run() {
 	loopbackHTTPAddr := utils.ListenAddr("127.0.0.1", strconv.Itoa(conf.Port.Http))
 	needsLoopbackHTTP := utils.NeedsDedicatedLoopbackListener(conf.Host)
 
+	// Every listener below comes from utils.Listen and not net.Listen, so the
+	// process never makes the 64 KB read of /proc/sys the standard library's
+	// first listen makes; see utils/listen.go for what that read cost here.
 	if conf.Proto == "https" {
 		httpsPortStr := strconv.Itoa(conf.Port.Https)
 
 		go func() {
-			err := r.RunTLS(utils.ListenAddr(conf.Host, httpsPortStr), conf.Cert.Crt, conf.Cert.Key)
+			listener, err := utils.Listen(utils.ListenAddr(conf.Host, httpsPortStr))
 			if err != nil {
+				panic("start https server failed")
+			}
+			if err := http.ServeTLS(listener, r.Handler(), conf.Cert.Crt, conf.Cert.Key); err != nil {
 				panic("start https server failed")
 			}
 		}()
@@ -158,13 +163,17 @@ func run() {
 	} else {
 		if needsLoopbackHTTP {
 			go func() {
-				if err := r.Run(loopbackHTTPAddr); err != nil {
+				listener, err := utils.Listen(loopbackHTTPAddr)
+				if err != nil {
+					panic("start loopback http server failed")
+				}
+				if err := r.RunListener(listener); err != nil {
 					panic("start loopback http server failed")
 				}
 			}()
 		}
 
-		listener, err := net.Listen("tcp", httpAddr)
+		listener, err := utils.Listen(httpAddr)
 		if err != nil {
 			panic("start http server failed")
 		}

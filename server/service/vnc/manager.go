@@ -5,6 +5,8 @@ import (
 	"net"
 	"sync"
 
+	"NanoKVM-Server/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,7 +46,7 @@ func (m *Manager) Start() error {
 	}
 
 	server := m.build()
-	base, err := net.Listen("tcp", server.Addr)
+	base, err := utils.Listen(server.Addr)
 	if err != nil {
 		return err
 	}

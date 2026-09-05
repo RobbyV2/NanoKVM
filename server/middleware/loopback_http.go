@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"NanoKVM-Server/config"
+	"NanoKVM-Server/utils"
 )
 
 func ListenAndServeLoopbackHTTPRedirect(
@@ -23,7 +24,11 @@ func ListenAndServeLoopbackHTTPRedirect(
 		allowlist[path] = struct{}{}
 	}
 
-	return http.ListenAndServe(httpAddr, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	listener, err := utils.Listen(httpAddr)
+	if err != nil {
+		return err
+	}
+	return http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if isLoopbackAllowedPath(req, allowlist) {
 			if hasValidLoopbackHTTPToken(req) {
 				handler.ServeHTTP(w, req)

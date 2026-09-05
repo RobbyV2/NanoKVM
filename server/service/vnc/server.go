@@ -9,6 +9,7 @@ import (
 	"NanoKVM-Server/authn"
 	"NanoKVM-Server/service/auth"
 	"NanoKVM-Server/service/controlmode"
+	"NanoKVM-Server/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -46,7 +47,7 @@ type Server struct {
 }
 
 func (s *Server) ListenAndServe() error {
-	listener, err := net.Listen("tcp", s.Addr)
+	listener, err := utils.Listen(s.Addr)
 	if err != nil {
 		return err
 	}
