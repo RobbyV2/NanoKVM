@@ -821,6 +821,13 @@ func (m *Manager) run(ctx context.Context, w *worker, fallback Fallback) {
 	// counted as stopped: testing the context up here instead would let a
 	// worker whose goroutine is scheduled after the cancel finish without ever
 	// entering - and without ever leaving - the node it was built to own.
+	//
+	// The black frames come first, once per worker: the cache lives in the
+	// fallback and survives every reopen below. A frame that will not encode
+	// is left for the loop to report, since it asks for the same frame.
+	if err := warmFallback(w.spec, fallback); err != nil {
+		log.Errorf("media slot %s: encode black frames: %s", w.spec.ID, err)
+	}
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if ctx.Err() != nil {
@@ -1063,6 +1070,31 @@ func packetSpan(p Packet) (*byte, int) {
 	return &p.Data[0], len(p.Data)
 }
 
+// The encoder behind the black frame, a variable so a test can count calls.
+var encodeBlack = encodeBlackFrame
+
+// warmFallback encodes the black frame for every geometry the slot declares,
+// so that by the time the host raises the stream the frame it opens on is a
+// lookup. The encoder is the pure Go JPEG encoder, and on this single core it
+// is a visible part of the wait between the host's STREAMON and the first
+// frame; paying it here, on the worker's own goroutine before the node is
+// polled, moves that cost to the worker's start, where nobody is watching. The
+// cache it fills is the one fallbackFor keeps, so the STREAMON path is
+// unchanged and a geometry this did not reach is still encoded on demand.
+func warmFallback(spec SlotSpec, fallback Fallback) error {
+	if spec.Kind != sources.KindCamera || spec.Video == nil {
+		return nil
+	}
+	for _, format := range spec.Video.Formats {
+		for _, frame := range format.Frames {
+			if _, err := fallback(int(frame.Width), int(frame.Height)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func fallbackFor(spec SlotSpec) Fallback {
 	cache := make(map[[2]int][]byte, 1)
 	return func(width, height int) (Packet, error) {
@@ -1085,7 +1117,7 @@ func fallbackFor(spec SlotSpec) Fallback {
 		if !declared {
 			return Packet{}, fmt.Errorf("fallback %dx%d is not declared", width, height)
 		}
-		data, err := encodeBlackFrame(width, height)
+		data, err := encodeBlack(width, height)
 		if err != nil {
 			return Packet{}, err
 		}

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -995,6 +996,139 @@ func startScriptedVideo(t *testing.T) (*scriptedVideo, chan Packet, chan sources
 		}
 	}
 	return video, frames, demands, next
+}
+
+// countEncodes swaps the black-frame encoder for one that counts, for the life
+// of the test.
+func countEncodes(t *testing.T) *atomic.Int32 {
+	t.Helper()
+	var encodes atomic.Int32
+	previous := encodeBlack
+	encodeBlack = func(width, height int) ([]byte, error) {
+		encodes.Add(1)
+		return previous(width, height)
+	}
+	t.Cleanup(func() { encodeBlack = previous })
+	return &encodes
+}
+
+func threeGeometries(id string) SlotSpec {
+	return SlotSpec{ID: id, Kind: sources.KindCamera, Video: &presentation.VideoFunction{
+		FunctionName: "Camera", StreamingMaxPacket: 768, StreamingInterval: 1,
+		Formats: []presentation.VideoFormat{{Codec: "mjpeg", Frames: []presentation.VideoFrame{
+			{Width: 640, Height: 480, Intervals: []uint32{333333}},
+			{Width: 320, Height: 240, Intervals: []uint32{333333}},
+			{Width: 160, Height: 120, Intervals: []uint32{333333}},
+		}}},
+	}}
+}
+
+// The stream opens on a black frame at whatever size the host committed, and
+// the host may commit any of the declared sizes. Encoding that frame on the
+// STREAMON is a visible part of the wait for the first picture on this board,
+// so every declared geometry is encoded before the node is first polled, and
+// the STREAMON only looks its frame up.
+func TestBlackFramesAreReadyBeforeTheHostAsks(t *testing.T) {
+	encodes := countEncodes(t)
+	spec := threeGeometries("uvc.cam0")
+	fallback := fallbackFor(spec)
+	if err := warmFallback(spec, fallback); err != nil {
+		t.Fatal(err)
+	}
+	if got := encodes.Load(); got != 3 {
+		t.Fatalf("warmFallback encoded %d frames, want one per declared geometry (3)", got)
+	}
+
+	video := newScriptedVideo()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- runVideo(ctx, make(chan Packet), fallback, func(sources.Demand) {}, func(bool) {}, video)
+	}()
+	t.Cleanup(func() {
+		close(video.closed)
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("runVideo returned %v", err)
+		}
+	})
+	// The host commits the smallest mode, not the first one, so a cache that
+	// only held the first geometry would encode here.
+	<-video.calls
+	video.steps <- videoStep{edge: edgeStreamOn, width: 160, height: 120, fps: 30}
+	started := <-video.starts
+	if got := encodes.Load(); got != 3 {
+		t.Fatalf("the STREAMON encoded %d more frames, want none", got-3)
+	}
+	config, err := jpeg.DecodeConfig(bytes.NewReader(started.Data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.Width != 160 || config.Height != 120 {
+		t.Fatalf("the stream opened on a %dx%d frame, want the committed 160x120", config.Width, config.Height)
+	}
+}
+
+// An output that reports how many black frames had been encoded by the time it
+// was run, and what asking for them costs after that.
+type warmProbeFactory struct {
+	encodes  *atomic.Int32
+	atRun    chan int32
+	afterAsk chan int32
+}
+
+func (f *warmProbeFactory) Open(SlotSpec, string) (Output, error) { return f, nil }
+
+func (f *warmProbeFactory) OpenInput(SlotSpec, string) (Input, error) {
+	return nil, errors.New("no capture in this factory")
+}
+
+func (f *warmProbeFactory) Run(ctx context.Context, _ <-chan Packet, fallback Fallback, _ func(sources.Demand), _ func(bool)) error {
+	f.atRun <- f.encodes.Load()
+	for _, geometry := range [][2]int{{640, 480}, {320, 240}, {160, 120}} {
+		if _, err := fallback(geometry[0], geometry[1]); err != nil {
+			return err
+		}
+	}
+	f.afterAsk <- f.encodes.Load()
+	<-ctx.Done()
+	return nil
+}
+
+func (f *warmProbeFactory) Close() error { return nil }
+
+// The worker does the encoding, before it runs its output, so a reconcile is
+// not held up by it and the node is not polled until the frames are ready.
+func TestWorkerEncodesEveryBlackFrameBeforeRunningItsOutput(t *testing.T) {
+	encodes := countEncodes(t)
+	factory := &warmProbeFactory{encodes: encodes, atRun: make(chan int32, 1), afterAsk: make(chan int32, 1)}
+	manager := newTestManager(&fakeRegistry{}, fakeResolver{nodes: map[string]string{"uvc.cam0": "/dev/video0"}}, factory)
+	function := cameraFunction("cam0")
+	function.Video.Formats = threeGeometries("uvc.cam0").Video.Formats
+	if err := manager.Reconcile(context.Background(), presentation.Profile{Functions: []presentation.Function{function}}, presentation.Plan{}); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Suspend()
+
+	select {
+	case atRun := <-factory.atRun:
+		if atRun != 3 {
+			t.Fatalf("%d frames encoded when the output started, want all 3 declared geometries", atRun)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the output never ran")
+	}
+	if afterAsk := <-factory.afterAsk; afterAsk != 3 {
+		t.Fatalf("asking for the declared geometries encoded %d more frames, want none", afterAsk-3)
+	}
+}
+
+func BenchmarkEncodeBlackFrame640x480(b *testing.B) {
+	for b.Loop() {
+		if _, err := encodeBlackFrame(640, 480); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
 
 func blackFrame(t *testing.T, spec SlotSpec, width, height int) []byte {
