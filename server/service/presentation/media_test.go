@@ -582,3 +582,13 @@ func TestSetMediaSlotsNamesTheHostOnlyWhereTheKernelCan(t *testing.T) {
 		})
 	}
 }
+
+// 3072 loses fewer isochronous payloads on this controller and the Windows
+// Camera app streams at it, but the application the operator runs does not
+// open the camera at that width at all, while it opens it at 768. A default
+// some applications cannot open is not a default.
+func TestDefaultCameraStreamsAtTheWidthEveryApplicationOpens(t *testing.T) {
+	if got := defaultCamera(0, "Camera", false).Video.StreamingMaxPacket; got != 768 {
+		t.Fatalf("default streaming_maxpacket = %d, want 768", got)
+	}
+}
