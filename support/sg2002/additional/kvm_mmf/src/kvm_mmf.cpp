@@ -11,6 +11,9 @@
 #include <inttypes.h>
 
 #include <fcntl.h>		/* low-level i/o */
+#include <signal.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #include "cvi_buffer.h"
 #include "cvi_ae_comm.h"
 #include "cvi_awb_comm.h"
@@ -233,22 +236,61 @@ static int _is_module_in_use(const char *module_name) {
     return 0;
 }
 
+extern char **environ;
+
+/* Runs a program by name through PATH and waits for it. system(3) did the
+ * same through a shell, and musl's system() ignores SIGINT for the whole
+ * process while the shell runs, which took interrupts away from the Go
+ * server. posix_spawn leaves this process's signal dispositions alone; the
+ * child gets an empty signal mask and default INT and QUIT, as a shell
+ * child would. Returns the wait status, or -1 when the program did not start. */
+static int run_program(const char *const argv[])
+{
+	pid_t pid;
+	int status;
+	int err;
+	posix_spawnattr_t attr;
+	sigset_t set;
+
+	posix_spawnattr_init(&attr);
+	sigemptyset(&set);
+	posix_spawnattr_setsigmask(&attr, &set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGQUIT);
+	posix_spawnattr_setsigdefault(&attr, &set);
+	posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF);
+	err = posix_spawnp(&pid, argv[0], NULL, &attr, (char *const *)argv, environ);
+	posix_spawnattr_destroy(&attr);
+	if (err != 0) return -1;
+	while (waitpid(pid, &status, 0) < 0) {
+		if (errno != EINTR) return -1;
+	}
+	return status;
+}
+
+static void insmod(const char *ko)
+{
+	const char *const argv[] = {"insmod", ko, NULL};
+	run_program(argv);
+}
+
 static int reinit_soph_vb(void)
 {
 	printf("mmf insmod..\r\n");
-	system("rmmod soph_ive soph_vc_driver soph_rgn soph_dwa soph_vpss soph_vi soph_snsr_i2c soph_mipi_rx soph_fast_image soph_rtos_cmdqu soph_base");
-	// system("insmod /mnt/system/ko/soph_sys.ko");
-	system("insmod /mnt/system/ko/soph_base.ko");
-	system("insmod /mnt/system/ko/soph_rtos_cmdqu.ko");
-	system("insmod /mnt/system/ko/soph_fast_image.ko");
-	system("insmod /mnt/system/ko/soph_mipi_rx.ko");
-	system("insmod /mnt/system/ko/soph_snsr_i2c.ko");
-	system("insmod /mnt/system/ko/soph_vi.ko");
-	system("insmod /mnt/system/ko/soph_vpss.ko");
-	system("insmod /mnt/system/ko/soph_dwa.ko");
-	system("insmod /mnt/system/ko/soph_rgn.ko");
-	system("insmod /mnt/system/ko/soph_vc_driver.ko");
-	system("insmod /mnt/system/ko/soph_ive.ko");
+	static const char *const rmmod_argv[] = {"rmmod", "soph_ive", "soph_vc_driver", "soph_rgn", "soph_dwa", "soph_vpss", "soph_vi", "soph_snsr_i2c", "soph_mipi_rx", "soph_fast_image", "soph_rtos_cmdqu", "soph_base", NULL};
+	run_program(rmmod_argv);
+	// insmod("/mnt/system/ko/soph_sys.ko");
+	insmod("/mnt/system/ko/soph_base.ko");
+	insmod("/mnt/system/ko/soph_rtos_cmdqu.ko");
+	insmod("/mnt/system/ko/soph_fast_image.ko");
+	insmod("/mnt/system/ko/soph_mipi_rx.ko");
+	insmod("/mnt/system/ko/soph_snsr_i2c.ko");
+	insmod("/mnt/system/ko/soph_vi.ko");
+	insmod("/mnt/system/ko/soph_vpss.ko");
+	insmod("/mnt/system/ko/soph_dwa.ko");
+	insmod("/mnt/system/ko/soph_rgn.ko");
+	insmod("/mnt/system/ko/soph_vc_driver.ko");
+	insmod("/mnt/system/ko/soph_ive.ko");
 
 	return 0;
 }

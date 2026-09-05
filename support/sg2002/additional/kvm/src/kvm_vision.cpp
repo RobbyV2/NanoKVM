@@ -14,7 +14,12 @@
 #include "internal/vi_state_writer.hpp"
 
 #include <errno.h>
+#include <signal.h>
+#include <spawn.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+
+extern char **environ;
 
 #define default_venc_chn        1
 
@@ -293,22 +298,66 @@ uint8_t check_res(uint16_t _width, uint16_t _height)
     return UNKNOWN_RES;
 }
 
+/* Writes text to path the way "echo text > path" did: create or truncate,
+ * mode 0666 under the umask, one write, errors ignored as the shell's were. */
+static void write_text_file(const char *path, const char *text)
+{
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) return;
+    ssize_t written = write(fd, text, strlen(text));
+    (void)written;
+    close(fd);
+}
+
+/* The digits and a newline, as echo printed them. */
+static void write_int_file(const char *path, int value)
+{
+    char text[16];
+    snprintf(text, sizeof(text), "%d\n", value);
+    write_text_file(path, text);
+}
+
+/* Runs a program by name through PATH and waits for it. system(3) did the
+ * same through a shell, and musl's system() ignores SIGINT for the whole
+ * process while the shell runs, which took interrupts away from the Go
+ * server. posix_spawn leaves this process's signal dispositions alone; the
+ * child gets an empty signal mask and default INT and QUIT, as a shell
+ * child would. Returns the wait status, or -1 when the program did not start. */
+static int run_program(const char *const argv[])
+{
+    pid_t pid;
+    int status;
+    int err;
+    posix_spawnattr_t attr;
+    sigset_t set;
+
+    posix_spawnattr_init(&attr);
+    sigemptyset(&set);
+    posix_spawnattr_setsigmask(&attr, &set);
+    sigaddset(&set, SIGINT);
+    sigaddset(&set, SIGQUIT);
+    posix_spawnattr_setsigdefault(&attr, &set);
+    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF);
+    err = posix_spawnp(&pid, argv[0], NULL, &attr, (char *const *)argv, environ);
+    posix_spawnattr_destroy(&attr);
+    if (err != 0) return -1;
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) return -1;
+    }
+    return status;
+}
+
 void write_res_to_file(uint16_t _width, uint16_t _height)
 {
-	char Cmd[100]={0};
-    sprintf(Cmd, "echo %d > %s", _width, vi_width_path);
-    system(Cmd);
-    sprintf(Cmd, "echo %d > %s", _height, vi_height_path);
-    system(Cmd);
-    system("sync");
+    write_int_file(vi_width_path, _width);
+    write_int_file(vi_height_path, _height);
+    sync();
 }
 
 int set_hdmi_mode(uint8_t _hdmi_mode)
 {
     if(_hdmi_mode >= 0 && _hdmi_mode <= 2){
-        char Cmd[100]={0};
-        sprintf(Cmd, "echo %d > %s", _hdmi_mode, hdmi_mode_path);
-        system(Cmd);
+        write_int_file(hdmi_mode_path, _hdmi_mode);
         return 1;
     } else {
         debug("[kvmv] Incorrect HDMI mode.\n");
@@ -334,9 +383,7 @@ int get_hdmi_mode(void)
         tmp8 = atoi((char*)RW_Data);
         if(tmp8 > 2) {
             tmp8 = 0;
-	        char Cmd[100]={0};
-            sprintf(Cmd, "echo 0 > %s", hdmi_mode_path);
-            system(Cmd);
+            write_int_file(hdmi_mode_path, 0);
         }
         if(tmp8 != kvmv_cfg.hdmi_mode){
             kvmv_cfg.hdmi_mode = tmp8;
@@ -408,28 +455,20 @@ int get_manual_resolution(void)
     // res min limit
     if(tmp_width < vi_min_width){
         tmp_width = vi_min_width;
-	    char Cmd[100]={0};
-        sprintf(Cmd, "echo %d > %s", vi_min_width, vi_width_path);
-	    system(Cmd);
+        write_int_file(vi_width_path, vi_min_width);
     }
     if(tmp_height < vi_min_height){
         tmp_height = vi_min_height;
-	    char Cmd[100]={0};
-        sprintf(Cmd, "echo %d > %s", vi_min_height, vi_height_path);
-	    system(Cmd);
+        write_int_file(vi_height_path, vi_min_height);
     }
     // res max limit
     if(tmp_width > vi_max_width){
         tmp_width = vi_max_width;
-	    char Cmd[100]={0};
-        sprintf(Cmd, "echo %d > %s", vi_max_width, vi_width_path);
-	    system(Cmd);
+        write_int_file(vi_width_path, vi_max_width);
     }
     if(tmp_height > vi_max_height){
         tmp_height = vi_max_height;
-	    char Cmd[100]={0};
-        sprintf(Cmd, "echo %d > %s", vi_max_height, vi_height_path);
-	    system(Cmd);
+        write_int_file(vi_height_path, vi_max_height);
     }
 
     // res change ?
@@ -448,7 +487,6 @@ int get_manual_resolution(void)
 
 uint8_t auto_try_res()
 {
-    char Cmd[100]={0};
     uint8_t err_code;
     uint8_t auto_trying_times = 0;
 
@@ -477,10 +515,8 @@ uint8_t auto_try_res()
             // CSI abnormal due to resolution error
             // The test list is short; sequential testing can be performed
             printf("[kvmv] Trying %d * %d res ..\n", hdmi_res_list[auto_trying_times][0], hdmi_res_list[auto_trying_times][1]);
-            sprintf(Cmd, "echo %d > %s", hdmi_res_list[auto_trying_times][0], vi_width_path);
-            system(Cmd);
-            sprintf(Cmd, "echo %d > %s", hdmi_res_list[auto_trying_times][1], vi_height_path);
-            system(Cmd);
+            write_int_file(vi_width_path, hdmi_res_list[auto_trying_times][0]);
+            write_int_file(vi_height_path, hdmi_res_list[auto_trying_times][1]);
 
             kvmv_cfg.vi_width = hdmi_res_list[auto_trying_times][0];
             kvmv_cfg.vi_height = hdmi_res_list[auto_trying_times][1];
@@ -1127,7 +1163,8 @@ void* watchdog_sf_feed(void * arg)
         if (watchdog_sf_is_open()){
             if (chack_ion() == 1){
                 debug("[kvmv] Ion memory is full reboot now!\n");
-                system("reboot");
+                static const char *const reboot_argv[] = {"reboot", NULL};
+                run_program(reboot_argv);
             }
             // debug("[kvmv] watchdog_sf_feed now!\n");
             vision_update_watchdog();
@@ -1139,7 +1176,8 @@ void get_hdmi_version()
 {
 	FILE *fp;
 	uint8_t RW_Data[2];
-    system("/kvmapp/system/init.d/S15kvmhwd get_hdmi_version");
+    static const char *const kvmhwd_argv[] = {"/kvmapp/system/init.d/S15kvmhwd", "get_hdmi_version", NULL};
+    run_program(kvmhwd_argv);
 	if(access("/etc/kvm/hdmi_version", F_OK) == 0){
         fp = fopen("/etc/kvm/hdmi_version", "r");
         fread(RW_Data, sizeof(char), 2, fp);
@@ -1225,9 +1263,7 @@ void* vi_subsystem_detection(void * arg)
             if(get_new_hdmi_mode == 1){
                 kvmv_cfg.vi_detect_state = 0;
                 // reset hdmi_state
-                char Cmd[100]={0};
-                sprintf(Cmd, "echo 0 > %s", hdmi_state_path);
-                system(Cmd);
+                write_int_file(hdmi_state_path, 0);
                 // reset hdmi
                 kvmv_hdmi_control(0);
                 time::sleep_ms(10);
@@ -2019,17 +2055,17 @@ uint8_t kvmv_hdmi_control(uint8_t _en)
         return -1;
     }
     if(access("/sys/class/gpio/gpio451/value", F_OK) != 0){
-        system("echo 451 > /sys/class/gpio/export");
-        system("echo out > /sys/class/gpio/gpio451/direction");
+        write_text_file("/sys/class/gpio/export", "451\n");
+        write_text_file("/sys/class/gpio/gpio451/direction", "out\n");
     }
     if(_en == 0){
         kvmv_cfg.hdmi_stop_flag = 1;
         while(kvmv_cfg.hdmi_reading_flag == 1) time::sleep_ms(10);
-        system("echo 0 > /sys/class/gpio/gpio451/value");
+        write_text_file("/sys/class/gpio/gpio451/value", "0\n");
         return 0;
     } else {
         kvmv_cfg.hdmi_stop_flag = 0;
-        system("echo 1 > /sys/class/gpio/gpio451/value");
+        write_text_file("/sys/class/gpio/gpio451/value", "1\n");
 
         // Keep the existing VI channel and consume queued frames after idle.
         // Reopening it here or from kvmv_read_img can exhaust the carveout
