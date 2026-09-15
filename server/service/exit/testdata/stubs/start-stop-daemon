@@ -1,0 +1,27 @@
+#!/bin/sh
+# Stub start-stop-daemon. -S writes $STUB_ALIVE_PID (the test process, so the
+# pid stays alive across invocations) into the pidfile and refuses when the
+# pidfile already names a live process, as BusyBox does; -K only records.
+echo "start-stop-daemon $*" >> "$STUB_TRACE"
+mode=$1
+shift
+pidfile=
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-p) pidfile=$2; shift 2 ;;
+	--) shift; break ;;
+	*) shift ;;
+	esac
+done
+case "$mode" in
+-S)
+	if [ -r "$pidfile" ] && read -r pid < "$pidfile" && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+		exit 1
+	fi
+	echo "$STUB_ALIVE_PID" > "$pidfile"
+	;;
+-K)
+	[ -r "$pidfile" ] || exit 1
+	;;
+esac
+exit 0

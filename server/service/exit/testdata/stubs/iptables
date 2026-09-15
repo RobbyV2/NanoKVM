@@ -1,0 +1,69 @@
+#!/bin/sh
+# Stub iptables/ip6tables for the S94exit shell test. One file per table and
+# chain under $STUB_STATE/<tool>/, one rule per line, with the real tool's
+# semantics for the operations the script uses: -N fails on an existing chain,
+# -X refuses a non-empty one, -C and -D match a rule by its exact text, -I
+# prepends, -A appends, -L -v -n -x prints a counter line per rule.
+tool=${0##*/}
+echo "$tool $*" >> "$STUB_TRACE"
+S=$STUB_STATE/$tool
+mkdir -p "$S"
+
+table=filter
+if [ "$1" = -t ]; then
+	table=$2
+	shift 2
+fi
+op=$1
+chain=$2
+shift 2
+f="$S/$table.$chain"
+
+case "$op" in
+-N)
+	[ -e "$f" ] && { echo "iptables: Chain already exists." >&2; exit 1; }
+	: > "$f"
+	;;
+-F)
+	[ -e "$f" ] || { echo "iptables: No chain/target/match by that name." >&2; exit 1; }
+	: > "$f"
+	;;
+-X)
+	[ -e "$f" ] || exit 1
+	[ -s "$f" ] && { echo "iptables: Directory not empty." >&2; exit 1; }
+	rm -f "$f"
+	;;
+-A)
+	[ -e "$f" ] || { echo "iptables: No chain/target/match by that name." >&2; exit 1; }
+	echo "$*" >> "$f"
+	;;
+-I)
+	[ -e "$f" ] || { echo "iptables: No chain/target/match by that name." >&2; exit 1; }
+	{ echo "$*"; cat "$f"; } > "$f.tmp"
+	mv "$f.tmp" "$f"
+	;;
+-C)
+	[ -e "$f" ] || exit 1
+	grep -qxF -- "$*" "$f" || { echo "iptables: Bad rule (does a matching rule exist in that chain?)." >&2; exit 1; }
+	;;
+-D)
+	[ -e "$f" ] || exit 1
+	grep -qxF -- "$*" "$f" || { echo "iptables: Bad rule (does a matching rule exist in that chain?)." >&2; exit 1; }
+	awk -v m="$*" 'BEGIN { done = 0 } { if (!done && $0 == m) { done = 1; next } print }' "$f" > "$f.tmp"
+	mv "$f.tmp" "$f"
+	;;
+-L)
+	[ -e "$f" ] || exit 1
+	echo "Chain $chain (1 references)"
+	echo "    pkts      bytes target     prot opt in     out     source               destination"
+	while read -r rule; do
+		target=${rule##*-j }
+		target=${target%% *}
+		echo "       2      140 $target       all  --  *      *       0.0.0.0/0            0.0.0.0/0"
+	done < "$f"
+	;;
+*)
+	exit 1
+	;;
+esac
+exit 0
