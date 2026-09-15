@@ -9,7 +9,7 @@ PWD := $(shell pwd)
 VERSION ?=
 # Upstream tag the third_party/newt fork branched from; baked into the binary
 # through -X main.newtVersion.
-NEWT_VERSION ?= 1.16.0
+NEWT_VERSION ?= 1.17.0
 
 # Docker run common parameters. Allocating a TTY breaks in environments without
 # one, so it can be overridden with DOCKER_TTY=
