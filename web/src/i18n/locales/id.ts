@@ -1056,6 +1056,146 @@ const id = {
         okBtn: 'Ya',
         cancelBtn: 'Tidak'
       },
+      exit: {
+        title: 'Tunnel keluar',
+        description:
+          'Menjadikan antarmuka jaringan USB sebagai akses internet bagi komputer target: lalu lintasnya keluar melalui perangkat Anda yang tersambung lewat alamat web ini.',
+        loading: 'Memuat...',
+        noSlots: 'Tidak ada slot keluar yang dikonfigurasi di perangkat ini.',
+        slot: 'Slot {{slot}}',
+        enable: 'Tunnel keluar',
+        pending: 'menerapkan...',
+        statusStale: 'status tidak diperbarui',
+        enableConfirm: 'Aktifkan tunnel keluar?',
+        disableConfirm: 'Nonaktifkan tunnel keluar?',
+        reenumerate:
+          'Gadget USB dienumerasi ulang agar target menerima gateway dan DNS barunya. Keyboard, mouse, kamera, dan disk virtual terputus sekitar dua detik.',
+        okBtn: 'Ya',
+        cancelBtn: 'Tidak',
+        copy: 'Salin',
+        copied: 'Tersalin',
+        copyFailed: 'Gagal menyalin, pilih teks lalu salin secara manual',
+        state: {
+          disconnected: 'Terputus',
+          connecting: 'Menghubungkan',
+          connected: 'Terhubung'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Putuskan keluar',
+          disconnectDesc:
+            'Memutus perangkat keluar yang terhubung. Kliennya akan tersambung kembali sendiri kecuali Anda menghentikannya dulu.',
+          tunnel: 'Tunnel',
+          uptime: 'aktif {{uptime}}',
+          lastConnected: 'terakhir terhubung {{time}}',
+          never: 'belum pernah',
+          peer: 'Perangkat keluar',
+          noPeer: 'Tidak ada perangkat keluar yang terhubung',
+          peerChanged: 'Menggantikan {{addr}} pada {{time}}',
+          nic: 'NIC target',
+          nicUp: 'aktif',
+          nicDown: 'nonaktif',
+          nicMissing: 'Belum ditentukan',
+          nicNone:
+            'Profil USB saat ini tidak memuat fungsi jaringan. Aktifkan adaptor jaringan USB di bagian Jaringan agar target mendapat NIC.',
+          upstream: 'Internet',
+          reachable: 'Terjangkau',
+          unreachable: 'Tidak terjangkau',
+          latency: '{{ms}} ms',
+          notProbed: 'Tidak diperiksa selama belum ada keluar yang terhubung',
+          downstream: 'Downstream',
+          downstreamOff: 'Mati selama tunnel dinonaktifkan',
+          downstreamDegraded:
+            'Sebagian jalur downstream hilang. Watchdog mencoba lagi setiap 30 detik; log di bawah menunjukkan apa yang gagal.',
+          downstreamTip: {
+            forward: 'Penerusan IPv4 aktif',
+            routing: 'Aturan policy routing dan rute pagar sudah terpasang',
+            tun: 'Perangkat tun ada dan memiliki pembaca yang terpasang',
+            hev: 'Penerjemah tun2socks berjalan',
+            wstunnel: 'Server wstunnel berjalan (selalu benar dalam mode native)',
+            dns: 'Forwarder DNS terikat ke alamat jaringan USB',
+            nat: 'Rantai firewall ada dan sudah dihubungkan'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} kueri, {{failures}} gagal, {{redirected}} dialihkan',
+          traffic: 'Lalu lintas',
+          trafficUp: '{{bytes}} ke keluar',
+          trafficDown: '{{bytes}} dari keluar'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Bagian dari setiap perintah di bawah, sehingga tersimpan di riwayat shell perangkat keluar.',
+          regenerate: 'Buat ulang',
+          regenerateConfirm: 'Buat ulang token?',
+          regenerateDesc:
+            'Hentikan klien yang berjalan terlebih dahulu. Semua keluar yang terhubung diputus dan perintah lama berhenti berfungsi.'
+        },
+        mode: {
+          title: 'Mode',
+          native: 'Native',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Skrip kecil yang diambil dari NanoKVM ini berjalan di perangkat keluar. Tidak ada yang perlu diinstal.',
+          wstunnelDesc:
+            'Perangkat keluar mengunduh biner {{version}} yang disematkan dan memverifikasi SHA-256-nya sebelum dijalankan.',
+          whileEnabled: 'Nonaktifkan tunnel untuk berganti mode.'
+        },
+        commands: {
+          title: 'Jalankan di perangkat keluar',
+          description:
+            'Tempel satu perintah di mesin yang internetnya akan dipakai target. Perintah ini terus tersambung kembali sampai Anda menghentikannya.',
+          warnDownload:
+            'Perintah ini mengunduh skrip dari NanoKVM ini dan menjalankannya sebagai pengguna Anda.',
+          warnSecret:
+            'Perintah ini memuat rahasia yang mengendalikan internet target dan akan tersimpan di riwayat shell Anda.',
+          warnReach:
+            'Apa pun yang dapat dijangkau perangkat keluar menjadi terjangkau dari target.',
+          warnFingerprint:
+            'Keluar hanya tersambung setelah memverifikasi sidik jari sertifikat {{fingerprint}}.',
+          warnCleartext:
+            'Halaman ini disajikan lewat http biasa: token dan seluruh lalu lintas antara keluar dan NanoKVM tidak terenkripsi.',
+          warnWstunnelUnverified:
+            'wstunnel tidak dapat menyematkan sidik jari sertifikat. Tanpa sertifikat yang ditandatangani CA, koneksinya ke NanoKVM tidak terautentikasi.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Lihat skrip',
+          scriptTitle: 'Skrip {{name}}',
+          scriptFailed: 'Gagal mengambil skrip',
+          rewritten: 'Dialamatkan ke {{host}}, alamat yang dijangkau peramban ini.',
+          unavailable: 'Tidak ada perintah untuk platform ini.',
+          regenerateHint:
+            'Sebuah keluar telah terhubung. Setelah perintah yang ditempel tidak lagi diperlukan, buat ulang token; keluar kemudian harus dimulai ulang dengan perintah baru.',
+          security:
+            'Target sudah dapat menjangkau antarmuka web, SSH, dan VNC NanoKVM ini di alamat jaringan USB. Fitur ini tidak mengubah hal itu.'
+        },
+        advanced: {
+          title: 'Lanjutan',
+          dns: 'Server DNS',
+          dnsTip:
+            'Hingga empat resolver, dijangkau melalui keluar. Target diberi NanoKVM sebagai resolver dan setiap kueri DNS teks biasa dialihkan ke sini.',
+          dnsAdd: 'Tambah server',
+          dnsInvalid: 'Masukkan alamat IP saja',
+          mtu: 'MTU',
+          mtuTip: '{{min}} hingga {{max}}. 1280 menyisakan ruang untuk header tunnel.',
+          allowPrivate: 'Izinkan tujuan privat',
+          allowPrivateTip:
+            'Membiarkan target menjangkau LAN milik perangkat keluar: 10/8, 172.16/12, 192.168/16, 100.64/10, dan fc00::/7. Jika mati, tujuan tersebut ditolak.',
+          pinPeer: 'Sematkan ke keluar pertama',
+          pinPeerTip:
+            'Menolak koneksi dari alamat lain sampai dimatikan. Jika tidak, koneksi valid yang baru menggantikan yang lama.',
+          save: 'Simpan',
+          saved: 'Tersimpan'
+        },
+        logs: {
+          title: 'Log',
+          empty: 'Belum ada log',
+          refresh: 'Segarkan',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'server wstunnel'
+        }
+      },
       update: {
         title: 'Periksa pembaruan',
         queryFailed: 'Gagal mendapatkan versi',

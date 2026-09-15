@@ -1052,6 +1052,144 @@ const se = {
         okBtn: 'Ja',
         cancelBtn: 'Nej'
       },
+      exit: {
+        title: 'Exit-tunnel',
+        description:
+          'Gör USB-nätverksgränssnittet till en internetanslutning för måldatorn: dess trafik lämnar nätet via en enhet hos dig som ringer in via den här webbadressen.',
+        loading: 'Laddar...',
+        noSlots: 'Ingen exit-plats är konfigurerad på den här enheten.',
+        slot: 'Plats {{slot}}',
+        enable: 'Exit-tunnel',
+        pending: 'tillämpar...',
+        statusStale: 'statusen uppdateras inte',
+        enableConfirm: 'Aktivera exit-tunneln?',
+        disableConfirm: 'Inaktivera exit-tunneln?',
+        reenumerate:
+          'USB-gadgeten registreras om så att måldatorn får sin nya gateway och DNS. Tangentbord, mus, kamera och virtuell disk faller bort i ungefär två sekunder.',
+        okBtn: 'Ja',
+        cancelBtn: 'Nej',
+        copy: 'Kopiera',
+        copied: 'Kopierat',
+        copyFailed: 'Kopieringen misslyckades, markera texten och kopiera den för hand',
+        state: {
+          disconnected: 'Frånkopplad',
+          connecting: 'Ansluter',
+          connected: 'Ansluten'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Koppla från exit',
+          disconnectDesc:
+            'Kopplar från den anslutna exit-enheten. Dess klient återansluter av sig själv om du inte stoppar den först.',
+          tunnel: 'Tunnel',
+          uptime: 'uppe {{uptime}}',
+          lastConnected: 'senast ansluten {{time}}',
+          never: 'aldrig',
+          peer: 'Exit-enhet',
+          noPeer: 'Ingen exit-enhet ansluten',
+          peerChanged: 'Ersatte {{addr}} kl. {{time}}',
+          nic: 'Målets nätverkskort',
+          nicUp: 'uppe',
+          nicDown: 'nere',
+          nicMissing: 'Inte fastställt ännu',
+          nicNone:
+            'Den aktuella USB-profilen innehåller ingen nätverksfunktion. Slå på USB-nätverkskortet under Nätverk för att ge måldatorn ett nätverkskort.',
+          upstream: 'Internet',
+          reachable: 'Nåbart',
+          unreachable: 'Onåbart',
+          latency: '{{ms}} ms',
+          notProbed: 'Kontrolleras inte så länge ingen exit är ansluten',
+          downstream: 'Downstream',
+          downstreamOff: 'Av så länge tunneln är inaktiverad',
+          downstreamDegraded:
+            'En del av downstream-vägen saknas. Vakthunden försöker igen var 30:e sekund; loggen nedan visar vad som misslyckades.',
+          downstreamTip: {
+            forward: 'IPv4-vidarebefordran är på',
+            routing: 'Policy-routingreglerna och spärrvägen finns på plats',
+            tun: 'tun-enheten finns och har en läsare kopplad',
+            hev: 'tun2socks-översättaren kör',
+            wstunnel: 'wstunnel-servern kör (alltid sant i native-läge)',
+            dns: 'DNS-forwardern är bunden till USB-nätverksadressen',
+            nat: 'Brandväggskedjorna finns och är inkopplade'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} frågor, {{failures}} misslyckades, {{redirected}} omdirigerade',
+          traffic: 'Trafik',
+          trafficUp: '{{bytes}} till exit',
+          trafficDown: '{{bytes}} från exit'
+        },
+        token: {
+          title: 'Token',
+          history: 'Ingår i varje kommando nedan och hamnar därför i exit-enhetens shell-historik.',
+          regenerate: 'Generera om',
+          regenerateConfirm: 'Generera om token?',
+          regenerateDesc:
+            'Stoppa den körande klienten först. Alla anslutna exits kopplas från och de gamla kommandona slutar fungera.'
+        },
+        mode: {
+          title: 'Läge',
+          native: 'Native',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Ett litet skript hämtat från den här NanoKVM körs på exit-enheten. Inget att installera.',
+          wstunnelDesc:
+            'Exit-enheten hämtar den fastlåsta {{version}}-binären och kontrollerar dess SHA-256 innan den körs.',
+          whileEnabled: 'Inaktivera tunneln för att byta läge.'
+        },
+        commands: {
+          title: 'Kör på exit-enheten',
+          description:
+            'Klistra in ett kommando på den dator vars internet måldatorn ska använda. Det fortsätter återansluta tills du stoppar det.',
+          warnDownload:
+            'Kommandot hämtar ett skript från den här NanoKVM och kör det som din användare.',
+          warnSecret:
+            'Det innehåller en hemlighet som styr måldatorns internet och sparas i din shell-historik.',
+          warnReach: 'Allt exit-enheten kan nå blir nåbart från måldatorn.',
+          warnFingerprint:
+            'Exit ansluter först efter att certifikatets fingeravtryck {{fingerprint}} har verifierats.',
+          warnCleartext:
+            'Den här sidan levereras över vanlig http: token och all trafik mellan exit och NanoKVM går i klartext.',
+          warnWstunnelUnverified:
+            'wstunnel kan inte låsa ett certifikat-fingeravtryck. Utan ett CA-signerat certifikat är dess anslutning till NanoKVM inte autentiserad.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Visa skript',
+          scriptTitle: 'Skript {{name}}',
+          scriptFailed: 'Kunde inte hämta skriptet',
+          rewritten: 'Adresserat till {{host}}, adressen som den här webbläsaren nådde.',
+          unavailable: 'Inget kommando för den här plattformen.',
+          regenerateHint:
+            'En exit har anslutit. Generera om token när det inklistrade kommandot inte längre behövs; exit måste sedan startas om med det nya.',
+          security:
+            'Måldatorn når redan den här NanoKVM:s webbgränssnitt, SSH och VNC på USB-nätverksadressen. Den här funktionen ändrar inte det.'
+        },
+        advanced: {
+          title: 'Avancerat',
+          dns: 'DNS-servrar',
+          dnsTip:
+            'Upp till fyra resolvrar, nådda via exit. Måldatorn får NanoKVM som resolver och alla okrypterade DNS-frågor omdirigeras hit.',
+          dnsAdd: 'Lägg till server',
+          dnsInvalid: 'Ange endast IP-adresser',
+          mtu: 'MTU',
+          mtuTip: '{{min}} till {{max}}. 1280 lämnar plats för tunnelhuvudena.',
+          allowPrivate: 'Tillåt privata destinationer',
+          allowPrivateTip:
+            'Låter måldatorn nå exit-enhetens eget LAN: 10/8, 172.16/12, 192.168/16, 100.64/10 och fc00::/7. Av: dessa avvisas.',
+          pinPeer: 'Lås till första exit',
+          pinPeerTip:
+            'Avvisar anslutningar från en annan adress tills det slås av. Annars ersätter en ny giltig anslutning den gamla.',
+          save: 'Spara',
+          saved: 'Sparat'
+        },
+        logs: {
+          title: 'Logg',
+          empty: 'Inga loggposter ännu',
+          refresh: 'Uppdatera',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel-server'
+        }
+      },
       update: {
         title: 'Sök efter uppdateringar',
         queryFailed: 'Kunde inte hämta version',

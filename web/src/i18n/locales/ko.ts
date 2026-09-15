@@ -1036,6 +1036,142 @@ const ko = {
         okBtn: '네',
         cancelBtn: '아니오'
       },
+      exit: {
+        title: '출구 터널',
+        description:
+          'USB 네트워크 인터페이스를 대상 컴퓨터의 인터넷 회선으로 만듭니다. 대상의 트래픽은 이 웹 주소로 접속해 온 사용자의 기기를 통해 밖으로 나갑니다.',
+        loading: '불러오는 중...',
+        noSlots: '이 장치에 설정된 출구 슬롯이 없습니다.',
+        slot: '슬롯 {{slot}}',
+        enable: '출구 터널',
+        pending: '적용 중...',
+        statusStale: '상태가 갱신되지 않습니다',
+        enableConfirm: '출구 터널을 켜시겠습니까?',
+        disableConfirm: '출구 터널을 끄시겠습니까?',
+        reenumerate:
+          '대상 컴퓨터가 새 게이트웨이와 DNS를 받도록 USB 가젯을 다시 인식시킵니다. 키보드, 마우스, 카메라, 가상 디스크가 약 2초간 끊어집니다.',
+        okBtn: '네',
+        cancelBtn: '아니오',
+        copy: '복사',
+        copied: '복사됨',
+        copyFailed: '복사에 실패했습니다. 텍스트를 선택해 직접 복사하세요',
+        state: {
+          disconnected: '연결 안 됨',
+          connecting: '연결 중',
+          connected: '연결됨'
+        },
+        status: {
+          title: '상태',
+          disconnect: '출구 연결 끊기',
+          disconnectDesc:
+            '연결된 출구 기기를 끊습니다. 먼저 클라이언트를 중지하지 않으면 스스로 다시 연결됩니다.',
+          tunnel: '터널',
+          uptime: '가동 {{uptime}}',
+          lastConnected: '마지막 연결 {{time}}',
+          never: '없음',
+          peer: '출구 기기',
+          noPeer: '연결된 출구 기기가 없습니다',
+          peerChanged: '{{time}}에 {{addr}}에서 바뀌었습니다',
+          nic: '대상 NIC',
+          nicUp: '켜짐',
+          nicDown: '꺼짐',
+          nicMissing: '아직 확인되지 않음',
+          nicNone:
+            '현재 USB 프로필에 네트워크 기능이 없습니다. 네트워크 설정에서 USB 네트워크 어댑터를 켜서 대상에 NIC를 제공하세요.',
+          upstream: '인터넷',
+          reachable: '연결 가능',
+          unreachable: '연결 불가',
+          latency: '{{ms}} ms',
+          notProbed: '출구가 연결될 때까지 확인하지 않습니다',
+          downstream: '다운스트림',
+          downstreamOff: '터널이 꺼진 동안에는 비활성',
+          downstreamDegraded:
+            '다운스트림 경로의 일부가 빠져 있습니다. 워치독이 30초마다 재시도합니다. 무엇이 실패했는지는 아래 로그를 확인하세요.',
+          downstreamTip: {
+            forward: 'IPv4 포워딩이 켜져 있음',
+            routing: '정책 라우팅 규칙과 차단 경로가 설정됨',
+            tun: 'tun 장치가 존재하고 읽기 측이 연결됨',
+            hev: 'tun2socks 변환기가 실행 중',
+            wstunnel: 'wstunnel 서버가 실행 중 (네이티브 모드에서는 항상 참)',
+            dns: 'DNS 포워더가 USB 네트워크 주소에 바인딩됨',
+            nat: '방화벽 체인이 존재하고 연결됨'
+          },
+          dns: 'DNS',
+          dnsStats: '질의 {{queries}}건, 실패 {{failures}}건, 리디렉션 {{redirected}}건',
+          traffic: '트래픽',
+          trafficUp: '출구로 {{bytes}}',
+          trafficDown: '출구에서 {{bytes}}'
+        },
+        token: {
+          title: '토큰',
+          history: '아래 모든 명령에 포함되므로 출구 기기의 셸 기록에 남습니다.',
+          regenerate: '재생성',
+          regenerateConfirm: '토큰을 재생성하시겠습니까?',
+          regenerateDesc:
+            '먼저 실행 중인 클라이언트를 중지하세요. 연결된 모든 출구가 끊어지고 이전 명령은 더 이상 동작하지 않습니다.'
+        },
+        mode: {
+          title: '모드',
+          native: '네이티브',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            '이 NanoKVM에서 받은 작은 스크립트가 출구 기기에서 실행됩니다. 설치할 것이 없습니다.',
+          wstunnelDesc:
+            '출구 기기가 고정된 {{version}} 바이너리를 내려받고 실행 전에 SHA-256을 검증합니다.',
+          whileEnabled: '모드를 바꾸려면 터널을 끄세요.'
+        },
+        commands: {
+          title: '출구 기기에서 실행',
+          description:
+            '대상이 사용할 인터넷을 가진 컴퓨터에 명령 하나를 붙여 넣으세요. 중지할 때까지 계속 다시 연결합니다.',
+          warnDownload: '이 명령은 NanoKVM에서 스크립트를 내려받아 사용자 권한으로 실행합니다.',
+          warnSecret:
+            '대상 컴퓨터의 인터넷을 제어하는 비밀 값이 포함되어 있으며 셸 기록에 저장됩니다.',
+          warnReach: '출구 기기가 접근할 수 있는 모든 것에 대상 컴퓨터도 접근할 수 있게 됩니다.',
+          warnFingerprint: '출구는 인증서 지문 {{fingerprint}}을(를) 검증한 뒤에만 연결합니다.',
+          warnCleartext:
+            '이 페이지는 평문 http로 제공됩니다. 토큰과 출구-NanoKVM 사이의 모든 트래픽이 암호화되지 않습니다.',
+          warnWstunnelUnverified:
+            'wstunnel은 인증서 지문을 고정할 수 없습니다. CA 서명 인증서가 없으면 NanoKVM으로의 연결은 인증되지 않습니다.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: '스크립트 보기',
+          scriptTitle: '스크립트 {{name}}',
+          scriptFailed: '스크립트를 가져오지 못했습니다',
+          rewritten: '이 브라우저가 접속한 주소인 {{host}} 기준으로 다시 작성되었습니다.',
+          unavailable: '이 플랫폼용 명령이 없습니다.',
+          regenerateHint:
+            '출구가 연결되었습니다. 붙여 넣은 명령이 더 필요하지 않으면 토큰을 재생성하세요. 그 뒤에는 출구를 새 명령으로 다시 시작해야 합니다.',
+          security:
+            '대상 컴퓨터는 이미 USB 네트워크 주소로 이 NanoKVM의 웹 UI, SSH, VNC에 접근할 수 있습니다. 이 기능은 그 점을 바꾸지 않습니다.'
+        },
+        advanced: {
+          title: '고급',
+          dns: 'DNS 서버',
+          dnsTip:
+            '출구를 통해 접근하는 최대 4개의 리졸버입니다. 대상에는 NanoKVM이 리졸버로 전달되며, 모든 평문 DNS 질의는 여기로 리디렉션됩니다.',
+          dnsAdd: '서버 추가',
+          dnsInvalid: 'IP 주소만 입력하세요',
+          mtu: 'MTU',
+          mtuTip: '{{min}}부터 {{max}}까지. 1280이면 터널 헤더 공간이 확보됩니다.',
+          allowPrivate: '사설 대상 허용',
+          allowPrivateTip:
+            '대상이 출구 기기의 자체 LAN(10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7)에 접근할 수 있게 합니다. 꺼져 있으면 거부됩니다.',
+          pinPeer: '첫 출구에 고정',
+          pinPeerTip:
+            '끄기 전까지 다른 주소에서 오는 연결을 거부합니다. 그렇지 않으면 새 유효 연결이 기존 연결을 대체합니다.',
+          save: '저장',
+          saved: '저장됨'
+        },
+        logs: {
+          title: '로그',
+          empty: '아직 로그가 없습니다',
+          refresh: '새로고침',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel 서버'
+        }
+      },
       update: {
         title: '업데이트 확인',
         queryFailed: '버전 확인 실패',

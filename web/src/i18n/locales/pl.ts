@@ -1057,6 +1057,146 @@ const pl = {
         okBtn: 'Tak',
         cancelBtn: 'Nie'
       },
+      exit: {
+        title: 'Tunel wyjściowy',
+        description:
+          'Zamienia interfejs sieciowy USB w dostęp do Internetu dla komputera docelowego: jego ruch wychodzi przez Twoje urządzenie, które łączy się przez ten adres WWW.',
+        loading: 'Ładowanie...',
+        noSlots: 'Na tym urządzeniu nie skonfigurowano żadnego slotu wyjściowego.',
+        slot: 'Slot {{slot}}',
+        enable: 'Tunel wyjściowy',
+        pending: 'stosowanie...',
+        statusStale: 'stan nie jest aktualizowany',
+        enableConfirm: 'Włączyć tunel wyjściowy?',
+        disableConfirm: 'Wyłączyć tunel wyjściowy?',
+        reenumerate:
+          'Gadżet USB zgłasza się ponownie, aby komputer docelowy przyjął nową bramę i DNS. Klawiatura, mysz, kamera i dysk wirtualny znikają na około dwie sekundy.',
+        okBtn: 'Tak',
+        cancelBtn: 'Nie',
+        copy: 'Kopiuj',
+        copied: 'Skopiowano',
+        copyFailed: 'Kopiowanie nie powiodło się, zaznacz tekst i skopiuj go ręcznie',
+        state: {
+          disconnected: 'Rozłączono',
+          connecting: 'Łączenie',
+          connected: 'Połączono'
+        },
+        status: {
+          title: 'Stan',
+          disconnect: 'Rozłącz wyjście',
+          disconnectDesc:
+            'Rozłącza podłączone urządzenie wyjściowe. Jego klient połączy się ponownie sam, jeśli wcześniej go nie zatrzymasz.',
+          tunnel: 'Tunel',
+          uptime: 'działa {{uptime}}',
+          lastConnected: 'ostatnie połączenie {{time}}',
+          never: 'nigdy',
+          peer: 'Urządzenie wyjściowe',
+          noPeer: 'Brak podłączonego urządzenia wyjściowego',
+          peerChanged: 'Zastąpiło {{addr}} o {{time}}',
+          nic: 'Karta sieciowa celu',
+          nicUp: 'aktywna',
+          nicDown: 'nieaktywna',
+          nicMissing: 'Jeszcze nie ustalono',
+          nicNone:
+            'Bieżący profil USB nie zawiera funkcji sieciowej. Włącz kartę sieciową USB w sekcji Sieć, aby komputer docelowy otrzymał kartę sieciową.',
+          upstream: 'Internet',
+          reachable: 'Osiągalny',
+          unreachable: 'Nieosiągalny',
+          latency: '{{ms}} ms',
+          notProbed: 'Nie sprawdzane, dopóki nie podłączy się wyjście',
+          downstream: 'Downstream',
+          downstreamOff: 'Wyłączone, dopóki tunel jest wyłączony',
+          downstreamDegraded:
+            'Brakuje części ścieżki downstream. Watchdog próbuje ponownie co 30 sekund; dzienniki poniżej pokazują, co się nie powiodło.',
+          downstreamTip: {
+            forward: 'Przekazywanie IPv4 jest włączone',
+            routing: 'Reguły routingu opartego na politykach i trasa odgradzająca są na miejscu',
+            tun: 'Urządzenie tun istnieje i ma podłączonego czytelnika',
+            hev: 'Translator tun2socks działa',
+            wstunnel: 'Serwer wstunnel działa (w trybie natywnym zawsze prawda)',
+            dns: 'Forwarder DNS jest związany z adresem sieci USB',
+            nat: 'Łańcuchy zapory istnieją i są podpięte'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} zapytań, {{failures}} nieudanych, {{redirected}} przekierowanych',
+          traffic: 'Ruch',
+          trafficUp: '{{bytes}} do wyjścia',
+          trafficDown: '{{bytes}} z wyjścia'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Jest częścią każdego polecenia poniżej, więc trafia do historii powłoki urządzenia wyjściowego.',
+          regenerate: 'Wygeneruj ponownie',
+          regenerateConfirm: 'Wygenerować token ponownie?',
+          regenerateDesc:
+            'Najpierw zatrzymaj działającego klienta. Każde podłączone wyjście zostanie rozłączone, a stare polecenia przestaną działać.'
+        },
+        mode: {
+          title: 'Tryb',
+          native: 'Natywny',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Na urządzeniu wyjściowym działa mały skrypt pobrany z tego NanoKVM. Nic nie trzeba instalować.',
+          wstunnelDesc:
+            'Urządzenie wyjściowe pobiera przypięty plik binarny {{version}} i przed uruchomieniem sprawdza jego SHA-256.',
+          whileEnabled: 'Wyłącz tunel, aby zmienić tryb.'
+        },
+        commands: {
+          title: 'Uruchom na urządzeniu wyjściowym',
+          description:
+            'Wklej jedno polecenie na komputerze, z którego Internetu ma korzystać cel. Będzie łączyć się ponownie, dopóki go nie zatrzymasz.',
+          warnDownload:
+            'Polecenie pobiera skrypt z tego NanoKVM i uruchamia go jako Twój użytkownik.',
+          warnSecret:
+            'Zawiera sekret sterujący Internetem komputera docelowego i zostanie zapisane w historii Twojej powłoki.',
+          warnReach:
+            'Wszystko, do czego dociera urządzenie wyjściowe, staje się osiągalne z komputera docelowego.',
+          warnFingerprint:
+            'Wyjście łączy się dopiero po sprawdzeniu odcisku certyfikatu {{fingerprint}}.',
+          warnCleartext:
+            'Ta strona jest serwowana przez zwykłe http: token i cały ruch między wyjściem a NanoKVM są nieszyfrowane.',
+          warnWstunnelUnverified:
+            'wstunnel nie potrafi przypiąć odcisku certyfikatu. Bez certyfikatu podpisanego przez CA jego połączenie z NanoKVM nie jest uwierzytelnione.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Pokaż skrypt',
+          scriptTitle: 'Skrypt {{name}}',
+          scriptFailed: 'Nie udało się pobrać skryptu',
+          rewritten: 'Zaadresowane do {{host}}, adresu, pod który dotarła ta przeglądarka.',
+          unavailable: 'Brak polecenia dla tej platformy.',
+          regenerateHint:
+            'Wyjście się połączyło. Gdy wklejone polecenie nie będzie już potrzebne, wygeneruj token ponownie; wyjście trzeba będzie wtedy uruchomić z nowym poleceniem.',
+          security:
+            'Komputer docelowy już dociera do interfejsu WWW, SSH i VNC tego NanoKVM przez adres sieci USB. Ta funkcja tego nie zmienia.'
+        },
+        advanced: {
+          title: 'Zaawansowane',
+          dns: 'Serwery DNS',
+          dnsTip:
+            'Do czterech resolverów, osiąganych przez wyjście. Komputer docelowy otrzymuje NanoKVM jako resolver, a każde nieszyfrowane zapytanie DNS jest przekierowywane tutaj.',
+          dnsAdd: 'Dodaj serwer',
+          dnsInvalid: 'Wpisuj tylko adresy IP',
+          mtu: 'MTU',
+          mtuTip: 'Od {{min}} do {{max}}. 1280 zostawia miejsce na nagłówki tunelu.',
+          allowPrivate: 'Zezwalaj na cele prywatne',
+          allowPrivateTip:
+            'Pozwala komputerowi docelowemu docierać do własnej sieci LAN urządzenia wyjściowego: 10/8, 172.16/12, 192.168/16, 100.64/10 i fc00::/7. Wyłączone: te cele są odrzucane.',
+          pinPeer: 'Przypnij do pierwszego wyjścia',
+          pinPeerTip:
+            'Odrzuca połączenia z innego adresu, dopóki nie zostanie wyłączone. W przeciwnym razie nowe poprawne połączenie zastępuje stare.',
+          save: 'Zapisz',
+          saved: 'Zapisano'
+        },
+        logs: {
+          title: 'Dzienniki',
+          empty: 'Brak wpisów w dzienniku',
+          refresh: 'Odśwież',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'serwer wstunnel'
+        }
+      },
       update: {
         title: 'Sprawdź aktualizacje',
         queryFailed: 'Uzyskanie wersji nie powiodło się',

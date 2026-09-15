@@ -1046,6 +1046,145 @@ const en = {
         okBtn: 'Yes',
         cancelBtn: 'No'
       },
+      exit: {
+        title: 'Exit Tunnel',
+        description:
+          'Turns the USB network interface into an internet uplink for the target: its traffic leaves through a device of yours that dials in over this web address.',
+        loading: 'Loading...',
+        noSlots: 'No exit slot is configured on this device.',
+        slot: 'Slot {{slot}}',
+        enable: 'Exit tunnel',
+        pending: 'applying...',
+        statusStale: 'status not updating',
+        enableConfirm: 'Enable the exit tunnel?',
+        disableConfirm: 'Disable the exit tunnel?',
+        reenumerate:
+          'The USB gadget re-enumerates so the target picks up its new gateway and DNS. Keyboard, mouse, camera and virtual disk drop for about two seconds.',
+        okBtn: 'Yes',
+        cancelBtn: 'No',
+        copy: 'Copy',
+        copied: 'Copied',
+        copyFailed: 'Copy failed, select the text and copy it by hand',
+        state: {
+          disconnected: 'Disconnected',
+          connecting: 'Connecting',
+          connected: 'Connected'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Disconnect exit',
+          disconnectDesc:
+            'Drops the connected exit device. Its client reconnects on its own unless you stop it first.',
+          tunnel: 'Tunnel',
+          uptime: 'up {{uptime}}',
+          lastConnected: 'last connected {{time}}',
+          never: 'never',
+          peer: 'Exit device',
+          noPeer: 'No exit device connected',
+          peerChanged: 'Changed from {{addr}} at {{time}}',
+          nic: 'Target NIC',
+          nicUp: 'up',
+          nicDown: 'down',
+          nicMissing: 'Not resolved yet',
+          nicNone:
+            'The current USB profile links no network function. Turn on the USB Network Adapter under Network to give the target a NIC.',
+          upstream: 'Internet',
+          reachable: 'Reachable',
+          unreachable: 'Unreachable',
+          latency: '{{ms}} ms',
+          notProbed: 'Not probed while no exit is connected',
+          downstream: 'Downstream',
+          downstreamOff: 'Off while the tunnel is disabled',
+          downstreamDegraded:
+            'Part of the downstream path is missing. The watchdog retries every 30 seconds; the logs below say what failed.',
+          downstreamTip: {
+            forward: 'IPv4 forwarding is on',
+            routing: 'Policy routing rules and the fence route are in place',
+            tun: 'The tun device exists and has a reader attached',
+            hev: 'The tun2socks translator is running',
+            wstunnel: 'The wstunnel server is running (always true in native mode)',
+            dns: 'The DNS forwarder is bound to the USB network address',
+            nat: 'The firewall chains are present and jumped to'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} queries, {{failures}} failed, {{redirected}} redirected',
+          traffic: 'Traffic',
+          trafficUp: '{{bytes}} to the exit',
+          trafficDown: '{{bytes}} from the exit'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Part of every command below, so it lands in the shell history of the exit device.',
+          regenerate: 'Regenerate',
+          regenerateConfirm: 'Regenerate the token?',
+          regenerateDesc:
+            'Stop the running client first. Every connected exit is dropped and the old commands stop working.'
+        },
+        mode: {
+          title: 'Mode',
+          native: 'Native',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'A small script fetched from this NanoKVM runs on the exit device. Nothing to install.',
+          wstunnelDesc:
+            'The exit device downloads the pinned {{version}} binary and verifies its SHA-256 before running it.',
+          whileEnabled: 'Disable the tunnel to switch mode.'
+        },
+        commands: {
+          title: 'Run on the exit device',
+          description:
+            'Paste one command on the machine whose internet the target should use. It keeps reconnecting until you stop it.',
+          warnDownload:
+            'The command downloads a script from this NanoKVM and runs it as your user.',
+          warnSecret:
+            "It contains a secret that controls the target's internet and will be saved in your shell history.",
+          warnReach: 'Anything the exit device can reach becomes reachable from the target.',
+          warnFingerprint:
+            'The exit connects only after verifying the certificate fingerprint {{fingerprint}}.',
+          warnCleartext:
+            'This page is served over plain http: the token and all traffic between the exit and the NanoKVM are cleartext.',
+          warnWstunnelUnverified:
+            'wstunnel cannot pin a certificate fingerprint. Without a CA-signed certificate its connection to the NanoKVM is unauthenticated.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'View script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Failed to fetch the script',
+          rewritten: 'Addressed to {{host}}, the address this browser reached.',
+          unavailable: 'No command for this platform.',
+          regenerateHint:
+            'An exit has connected. Once the pasted command is no longer needed, regenerate the token; the exit then has to be restarted with the new one.',
+          security:
+            "The target already reaches this NanoKVM's web UI, SSH and VNC on the USB network address. This feature does not change that."
+        },
+        advanced: {
+          title: 'Advanced',
+          dns: 'DNS servers',
+          dnsTip:
+            'Up to four resolvers, reached through the exit. The target is handed the NanoKVM as its resolver and every plaintext DNS query is redirected here.',
+          dnsAdd: 'Add server',
+          dnsInvalid: 'Enter IP addresses only',
+          mtu: 'MTU',
+          mtuTip: '{{min}} to {{max}}. 1280 leaves room for the tunnel headers.',
+          allowPrivate: 'Allow private destinations',
+          allowPrivateTip:
+            "Lets the target reach the exit device's own LAN: 10/8, 172.16/12, 192.168/16, 100.64/10 and fc00::/7. Off, those are refused.",
+          pinPeer: 'Pin to the first exit',
+          pinPeerTip:
+            'Refuses a connection from a different address until turned off. Otherwise a new valid connection replaces the old one.',
+          save: 'Save',
+          saved: 'Saved'
+        },
+        logs: {
+          title: 'Logs',
+          empty: 'No logs yet',
+          refresh: 'Refresh',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel server'
+        }
+      },
       update: {
         title: 'Check for Updates',
         queryFailed: 'Get version failed',

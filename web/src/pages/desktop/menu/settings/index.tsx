@@ -12,6 +12,7 @@ import {
   NetworkIcon,
   PaletteIcon,
   PanelsTopLeftIcon,
+  RouteIcon,
   ScreenShareIcon,
   SettingsIcon,
   SmartphoneIcon,
@@ -34,6 +35,7 @@ import { Account } from './account';
 import { Appearance } from './appearance';
 import { Device } from './device';
 import { Display } from './display';
+import { Exit } from './exit';
 import { MCP } from './mcp';
 import { Network } from './network';
 import { Passthrough } from './passthrough';
@@ -91,6 +93,11 @@ export const Settings = () => {
             id: 'newt',
             icon: <NewtIcon size={16} />,
             component: <Tunnel service="newt" setIsLocked={setIsLocked} />
+          },
+          {
+            id: 'exit',
+            icon: <RouteIcon size={16} />,
+            component: <Exit setIsLocked={setIsLocked} />
           },
           {
             id: 'update',

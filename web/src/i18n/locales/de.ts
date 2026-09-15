@@ -1066,6 +1066,144 @@ const de = {
         okBtn: 'Ja',
         cancelBtn: 'Nein'
       },
+      exit: {
+        title: 'Exit-Tunnel',
+        description:
+          'Macht die USB-Netzwerkschnittstelle zum Internetzugang für das Zielgerät: dessen Verkehr verlässt das Netz über ein Gerät von Ihnen, das sich über diese Webadresse einwählt.',
+        loading: 'Lädt...',
+        noSlots: 'Auf diesem Gerät ist kein Exit-Slot konfiguriert.',
+        slot: 'Slot {{slot}}',
+        enable: 'Exit-Tunnel',
+        pending: 'wird angewendet...',
+        statusStale: 'Status wird nicht aktualisiert',
+        enableConfirm: 'Exit-Tunnel aktivieren?',
+        disableConfirm: 'Exit-Tunnel deaktivieren?',
+        reenumerate:
+          'Das USB-Gadget meldet sich neu an, damit das Zielgerät Gateway und DNS übernimmt. Tastatur, Maus, Kamera und virtuelles Laufwerk fallen etwa zwei Sekunden aus.',
+        okBtn: 'Ja',
+        cancelBtn: 'Nein',
+        copy: 'Kopieren',
+        copied: 'Kopiert',
+        copyFailed: 'Kopieren fehlgeschlagen, bitte Text markieren und manuell kopieren',
+        state: {
+          disconnected: 'Getrennt',
+          connecting: 'Verbindet',
+          connected: 'Verbunden'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Exit trennen',
+          disconnectDesc:
+            'Trennt das verbundene Exit-Gerät. Dessen Client verbindet sich von selbst wieder, sofern Sie ihn nicht zuerst beenden.',
+          tunnel: 'Tunnel',
+          uptime: 'seit {{uptime}}',
+          lastConnected: 'zuletzt verbunden {{time}}',
+          never: 'nie',
+          peer: 'Exit-Gerät',
+          noPeer: 'Kein Exit-Gerät verbunden',
+          peerChanged: 'Gewechselt von {{addr}} um {{time}}',
+          nic: 'Ziel-NIC',
+          nicUp: 'aktiv',
+          nicDown: 'inaktiv',
+          nicMissing: 'Noch nicht ermittelt',
+          nicNone:
+            'Das aktuelle USB-Profil enthält keine Netzwerkfunktion. Aktivieren Sie den USB-Netzwerkadapter unter Netzwerk, damit das Zielgerät eine NIC erhält.',
+          upstream: 'Internet',
+          reachable: 'Erreichbar',
+          unreachable: 'Nicht erreichbar',
+          latency: '{{ms}} ms',
+          notProbed: 'Wird nicht geprüft, solange kein Exit verbunden ist',
+          downstream: 'Downstream',
+          downstreamOff: 'Aus, solange der Tunnel deaktiviert ist',
+          downstreamDegraded:
+            'Ein Teil des Downstream-Pfads fehlt. Der Watchdog versucht es alle 30 Sekunden erneut; die Protokolle unten zeigen, was fehlgeschlagen ist.',
+          downstreamTip: {
+            forward: 'IPv4-Weiterleitung ist aktiv',
+            routing: 'Policy-Routing-Regeln und Sperrroute sind gesetzt',
+            tun: 'Das tun-Gerät existiert und hat einen Leser',
+            hev: 'Der tun2socks-Übersetzer läuft',
+            wstunnel: 'Der wstunnel-Server läuft (im nativen Modus immer wahr)',
+            dns: 'Der DNS-Forwarder ist an die USB-Netzwerkadresse gebunden',
+            nat: 'Die Firewall-Ketten sind vorhanden und eingehängt'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} Anfragen, {{failures}} fehlgeschlagen, {{redirected}} umgeleitet',
+          traffic: 'Verkehr',
+          trafficUp: '{{bytes}} zum Exit',
+          trafficDown: '{{bytes}} vom Exit'
+        },
+        token: {
+          title: 'Token',
+          history: 'Teil jedes Befehls unten und landet daher im Shell-Verlauf des Exit-Geräts.',
+          regenerate: 'Neu erzeugen',
+          regenerateConfirm: 'Token neu erzeugen?',
+          regenerateDesc:
+            'Beenden Sie zuerst den laufenden Client. Jeder verbundene Exit wird getrennt und die alten Befehle funktionieren nicht mehr.'
+        },
+        mode: {
+          title: 'Modus',
+          native: 'Nativ',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Ein kleines Skript von diesem NanoKVM läuft auf dem Exit-Gerät. Nichts zu installieren.',
+          wstunnelDesc:
+            'Das Exit-Gerät lädt die festgelegte Binärdatei {{version}} herunter und prüft ihre SHA-256-Summe vor dem Start.',
+          whileEnabled: 'Deaktivieren Sie den Tunnel, um den Modus zu wechseln.'
+        },
+        commands: {
+          title: 'Auf dem Exit-Gerät ausführen',
+          description:
+            'Fügen Sie einen Befehl auf dem Rechner ein, dessen Internet das Zielgerät nutzen soll. Er verbindet sich immer wieder neu, bis Sie ihn beenden.',
+          warnDownload:
+            'Der Befehl lädt ein Skript von diesem NanoKVM herunter und führt es unter Ihrem Benutzer aus.',
+          warnSecret:
+            'Er enthält ein Geheimnis, das über das Internet des Zielgeräts bestimmt, und wird in Ihrem Shell-Verlauf gespeichert.',
+          warnReach: 'Alles, was das Exit-Gerät erreichen kann, wird vom Zielgerät aus erreichbar.',
+          warnFingerprint:
+            'Der Exit verbindet sich erst nach Prüfung des Zertifikat-Fingerabdrucks {{fingerprint}}.',
+          warnCleartext:
+            'Diese Seite wird über einfaches http ausgeliefert: Token und sämtlicher Verkehr zwischen Exit und NanoKVM sind unverschlüsselt.',
+          warnWstunnelUnverified:
+            'wstunnel kann keinen Zertifikat-Fingerabdruck festlegen. Ohne CA-signiertes Zertifikat ist seine Verbindung zum NanoKVM nicht authentifiziert.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Skript anzeigen',
+          scriptTitle: 'Skript {{name}}',
+          scriptFailed: 'Skript konnte nicht abgerufen werden',
+          rewritten: 'Adressiert an {{host}}, die Adresse, die dieser Browser erreicht hat.',
+          unavailable: 'Kein Befehl für diese Plattform.',
+          regenerateHint:
+            'Ein Exit hat sich verbunden. Sobald der eingefügte Befehl nicht mehr gebraucht wird, erzeugen Sie das Token neu; der Exit muss dann mit dem neuen Befehl neu gestartet werden.',
+          security:
+            'Das Zielgerät erreicht die Weboberfläche, SSH und VNC dieses NanoKVM bereits über die USB-Netzwerkadresse. Diese Funktion ändert daran nichts.'
+        },
+        advanced: {
+          title: 'Erweitert',
+          dns: 'DNS-Server',
+          dnsTip:
+            'Bis zu vier Resolver, erreicht über den Exit. Das Zielgerät erhält den NanoKVM als Resolver, und jede unverschlüsselte DNS-Anfrage wird hierher umgeleitet.',
+          dnsAdd: 'Server hinzufügen',
+          dnsInvalid: 'Nur IP-Adressen eingeben',
+          mtu: 'MTU',
+          mtuTip: '{{min}} bis {{max}}. 1280 lässt Platz für die Tunnel-Header.',
+          allowPrivate: 'Private Ziele erlauben',
+          allowPrivateTip:
+            'Lässt das Zielgerät das eigene LAN des Exit-Geräts erreichen: 10/8, 172.16/12, 192.168/16, 100.64/10 und fc00::/7. Aus: diese werden abgewiesen.',
+          pinPeer: 'An ersten Exit binden',
+          pinPeerTip:
+            'Weist Verbindungen von einer anderen Adresse ab, bis die Option ausgeschaltet wird. Sonst ersetzt eine neue gültige Verbindung die alte.',
+          save: 'Speichern',
+          saved: 'Gespeichert'
+        },
+        logs: {
+          title: 'Protokoll',
+          empty: 'Noch keine Protokolleinträge',
+          refresh: 'Aktualisieren',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel-Server'
+        }
+      },
       update: {
         title: 'Nach Aktualisierungen suchen',
         queryFailed: 'Version konnte nicht abgefragt werden',
