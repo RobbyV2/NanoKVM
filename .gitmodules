@@ -10,3 +10,7 @@
 	path = third_party/usb-proxy
 	url = https://github.com/RobbyV2/usb-proxy.git
 	branch = NanoKVM
+[submodule "third_party/hev-socks5-tunnel"]
+	path = third_party/hev-socks5-tunnel
+	url = https://github.com/RobbyV2/hev-socks5-tunnel.git
+	branch = NanoKVM
