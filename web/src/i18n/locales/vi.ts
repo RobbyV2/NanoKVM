@@ -1048,6 +1048,143 @@ const vi = {
         okBtn: 'Có',
         cancelBtn: 'Không'
       },
+      exit: {
+        title: 'Đường hầm thoát',
+        description:
+          'Biến giao diện mạng USB thành đường ra Internet cho máy đích: lưu lượng của nó đi ra qua một thiết bị của bạn kết nối vào qua địa chỉ web này.',
+        loading: 'Đang tải...',
+        noSlots: 'Thiết bị này chưa cấu hình khe thoát nào.',
+        slot: 'Khe {{slot}}',
+        enable: 'Đường hầm thoát',
+        pending: 'đang áp dụng...',
+        statusStale: 'trạng thái không cập nhật',
+        enableConfirm: 'Bật đường hầm thoát?',
+        disableConfirm: 'Tắt đường hầm thoát?',
+        reenumerate:
+          'Thiết bị USB sẽ liệt kê lại để máy đích nhận gateway và DNS mới. Bàn phím, chuột, camera và ổ đĩa ảo bị ngắt khoảng hai giây.',
+        okBtn: 'Có',
+        cancelBtn: 'Không',
+        copy: 'Sao chép',
+        copied: 'Đã sao chép',
+        copyFailed: 'Sao chép thất bại, hãy chọn văn bản và sao chép thủ công',
+        state: {
+          disconnected: 'Đã ngắt kết nối',
+          connecting: 'Đang kết nối',
+          connected: 'Đã kết nối'
+        },
+        status: {
+          title: 'Trạng thái',
+          disconnect: 'Ngắt thiết bị thoát',
+          disconnectDesc:
+            'Ngắt thiết bị thoát đang kết nối. Trình khách của nó sẽ tự kết nối lại trừ khi bạn dừng nó trước.',
+          tunnel: 'Đường hầm',
+          uptime: 'hoạt động {{uptime}}',
+          lastConnected: 'kết nối gần nhất {{time}}',
+          never: 'chưa bao giờ',
+          peer: 'Thiết bị thoát',
+          noPeer: 'Chưa có thiết bị thoát nào kết nối',
+          peerChanged: 'Đã thay {{addr}} lúc {{time}}',
+          nic: 'Card mạng máy đích',
+          nicUp: 'bật',
+          nicDown: 'tắt',
+          nicMissing: 'Chưa xác định',
+          nicNone:
+            'Hồ sơ USB hiện tại không có chức năng mạng. Hãy bật card mạng USB trong mục Mạng để máy đích có card mạng.',
+          upstream: 'Internet',
+          reachable: 'Truy cập được',
+          unreachable: 'Không truy cập được',
+          latency: '{{ms}} ms',
+          notProbed: 'Không kiểm tra khi chưa có thiết bị thoát kết nối',
+          downstream: 'Chiều xuống',
+          downstreamOff: 'Tắt khi đường hầm bị vô hiệu',
+          downstreamDegraded:
+            'Một phần đường chiều xuống bị thiếu. Watchdog thử lại mỗi 30 giây; nhật ký bên dưới cho biết phần nào lỗi.',
+          downstreamTip: {
+            forward: 'Chuyển tiếp IPv4 đang bật',
+            routing: 'Các quy tắc định tuyến theo chính sách và tuyến chặn đã có',
+            tun: 'Thiết bị tun tồn tại và có trình đọc gắn vào',
+            hev: 'Bộ chuyển đổi tun2socks đang chạy',
+            wstunnel: 'Máy chủ wstunnel đang chạy (luôn đúng ở chế độ gốc)',
+            dns: 'Bộ chuyển tiếp DNS đã gắn vào địa chỉ mạng USB',
+            nat: 'Các chuỗi tường lửa đã có và được nối vào'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} truy vấn, {{failures}} thất bại, {{redirected}} được chuyển hướng',
+          traffic: 'Lưu lượng',
+          trafficUp: '{{bytes}} đến thiết bị thoát',
+          trafficDown: '{{bytes}} từ thiết bị thoát'
+        },
+        token: {
+          title: 'Mã thông báo',
+          history: 'Có trong mọi lệnh bên dưới, nên sẽ nằm trong lịch sử shell của thiết bị thoát.',
+          regenerate: 'Tạo lại',
+          regenerateConfirm: 'Tạo lại mã thông báo?',
+          regenerateDesc:
+            'Hãy dừng trình khách đang chạy trước. Mọi thiết bị thoát đang kết nối sẽ bị ngắt và các lệnh cũ không còn dùng được.'
+        },
+        mode: {
+          title: 'Chế độ',
+          native: 'Gốc',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Một script nhỏ tải từ NanoKVM này chạy trên thiết bị thoát. Không cần cài gì.',
+          wstunnelDesc:
+            'Thiết bị thoát tải tệp nhị phân {{version}} đã ghim và kiểm tra SHA-256 trước khi chạy.',
+          whileEnabled: 'Tắt đường hầm để đổi chế độ.'
+        },
+        commands: {
+          title: 'Chạy trên thiết bị thoát',
+          description:
+            'Dán một lệnh lên máy có Internet mà máy đích sẽ dùng. Lệnh sẽ liên tục kết nối lại cho đến khi bạn dừng nó.',
+          warnDownload: 'Lệnh này tải một script từ NanoKVM và chạy với quyền người dùng của bạn.',
+          warnSecret:
+            'Lệnh chứa một bí mật điều khiển Internet của máy đích và sẽ được lưu vào lịch sử shell của bạn.',
+          warnReach: 'Mọi thứ thiết bị thoát truy cập được sẽ truy cập được từ máy đích.',
+          warnFingerprint:
+            'Thiết bị thoát chỉ kết nối sau khi xác minh dấu vân tay chứng chỉ {{fingerprint}}.',
+          warnCleartext:
+            'Trang này được phục vụ qua http thường: mã thông báo và toàn bộ lưu lượng giữa thiết bị thoát và NanoKVM đều không mã hóa.',
+          warnWstunnelUnverified:
+            'wstunnel không thể ghim dấu vân tay chứng chỉ. Không có chứng chỉ do CA ký, kết nối của nó tới NanoKVM không được xác thực.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Xem script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Không lấy được script',
+          rewritten: 'Đã trỏ tới {{host}}, địa chỉ mà trình duyệt này đã truy cập.',
+          unavailable: 'Không có lệnh cho nền tảng này.',
+          regenerateHint:
+            'Một thiết bị thoát đã kết nối. Khi không còn cần lệnh đã dán, hãy tạo lại mã thông báo; sau đó phải khởi động lại thiết bị thoát bằng lệnh mới.',
+          security:
+            'Máy đích vốn đã truy cập được giao diện web, SSH và VNC của NanoKVM này qua địa chỉ mạng USB. Tính năng này không thay đổi điều đó.'
+        },
+        advanced: {
+          title: 'Nâng cao',
+          dns: 'Máy chủ DNS',
+          dnsTip:
+            'Tối đa bốn bộ phân giải, truy cập qua thiết bị thoát. Máy đích được cấp NanoKVM làm bộ phân giải và mọi truy vấn DNS thuần đều được chuyển hướng về đây.',
+          dnsAdd: 'Thêm máy chủ',
+          dnsInvalid: 'Chỉ nhập địa chỉ IP',
+          mtu: 'MTU',
+          mtuTip: 'Từ {{min}} đến {{max}}. 1280 chừa chỗ cho phần đầu của đường hầm.',
+          allowPrivate: 'Cho phép đích riêng tư',
+          allowPrivateTip:
+            'Cho máy đích truy cập LAN riêng của thiết bị thoát: 10/8, 172.16/12, 192.168/16, 100.64/10 và fc00::/7. Khi tắt, các đích này bị từ chối.',
+          pinPeer: 'Ghim thiết bị thoát đầu tiên',
+          pinPeerTip:
+            'Từ chối kết nối từ địa chỉ khác cho đến khi tắt. Nếu không, kết nối hợp lệ mới sẽ thay thế kết nối cũ.',
+          save: 'Lưu',
+          saved: 'Đã lưu'
+        },
+        logs: {
+          title: 'Nhật ký',
+          empty: 'Chưa có nhật ký',
+          refresh: 'Làm mới',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'máy chủ wstunnel'
+        }
+      },
       update: {
         title: 'Kiểm tra cập nhật',
         queryFailed: 'Lấy phiên bản thất bại',

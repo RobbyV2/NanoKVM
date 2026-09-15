@@ -1003,6 +1003,134 @@ const zh = {
         okBtn: '确定',
         cancelBtn: '取消'
       },
+      exit: {
+        title: '出口隧道',
+        description:
+          '把 USB 网络接口变成目标机的上网出口：目标机的流量经由通过此网页地址接入的你的设备流出。',
+        loading: '加载中...',
+        noSlots: '此设备未配置任何出口槽位。',
+        slot: '槽位 {{slot}}',
+        enable: '出口隧道',
+        pending: '正在应用...',
+        statusStale: '状态未更新',
+        enableConfirm: '启用出口隧道？',
+        disableConfirm: '禁用出口隧道？',
+        reenumerate:
+          'USB 设备将重新枚举，以便目标机获得新的网关和 DNS。键盘、鼠标、摄像头和虚拟磁盘会中断约两秒。',
+        okBtn: '确定',
+        cancelBtn: '取消',
+        copy: '复制',
+        copied: '已复制',
+        copyFailed: '复制失败，请选中文本手动复制',
+        state: {
+          disconnected: '未连接',
+          connecting: '连接中',
+          connected: '已连接'
+        },
+        status: {
+          title: '状态',
+          disconnect: '断开出口',
+          disconnectDesc: '断开已连接的出口设备。除非先停止其客户端，否则它会自动重连。',
+          tunnel: '隧道',
+          uptime: '已运行 {{uptime}}',
+          lastConnected: '上次连接 {{time}}',
+          never: '从未',
+          peer: '出口设备',
+          noPeer: '没有已连接的出口设备',
+          peerChanged: '于 {{time}} 从 {{addr}} 切换',
+          nic: '目标机网卡',
+          nicUp: '已启用',
+          nicDown: '未启用',
+          nicMissing: '尚未识别',
+          nicNone: '当前 USB 配置不包含网络功能。请在“网络”中开启 USB 网卡，为目标机提供网卡。',
+          upstream: '互联网',
+          reachable: '可达',
+          unreachable: '不可达',
+          latency: '{{ms}} ms',
+          notProbed: '出口连接前不探测',
+          downstream: '下行链路',
+          downstreamOff: '隧道禁用期间关闭',
+          downstreamDegraded:
+            '下行链路缺失了一部分。看门狗每 30 秒重试一次；下方日志会说明失败原因。',
+          downstreamTip: {
+            forward: 'IPv4 转发已开启',
+            routing: '策略路由规则和围栏路由已就位',
+            tun: 'tun 设备存在且有读取端接入',
+            hev: 'tun2socks 转换器正在运行',
+            wstunnel: 'wstunnel 服务端正在运行（原生模式下始终为真）',
+            dns: 'DNS 转发器已绑定到 USB 网络地址',
+            nat: '防火墙链已存在并已挂接'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} 次查询，{{failures}} 次失败，{{redirected}} 次重定向',
+          traffic: '流量',
+          trafficUp: '发往出口 {{bytes}}',
+          trafficDown: '来自出口 {{bytes}}'
+        },
+        token: {
+          title: '令牌',
+          history: '包含在下方每条命令中，因此会留在出口设备的 shell 历史里。',
+          regenerate: '重新生成',
+          regenerateConfirm: '重新生成令牌？',
+          regenerateDesc: '请先停止正在运行的客户端。所有已连接的出口都会被断开，旧命令将失效。'
+        },
+        mode: {
+          title: '模式',
+          native: '原生',
+          wstunnel: 'wstunnel',
+          nativeDesc: '从此 NanoKVM 获取的小脚本在出口设备上运行，无需安装。',
+          wstunnelDesc: '出口设备下载固定版本 {{version}} 的二进制文件，并在运行前校验其 SHA-256。',
+          whileEnabled: '请先禁用隧道再切换模式。'
+        },
+        commands: {
+          title: '在出口设备上运行',
+          description:
+            '在你希望目标机借用其网络的那台机器上粘贴一条命令。它会持续重连，直到你停止它。',
+          warnDownload: '该命令会从此 NanoKVM 下载脚本，并以你的用户身份运行。',
+          warnSecret: '它包含控制目标机上网的密钥，并会保存在你的 shell 历史中。',
+          warnReach: '出口设备能访问的一切，目标机也将能访问。',
+          warnFingerprint: '出口只会在验证证书指纹 {{fingerprint}} 后才连接。',
+          warnCleartext: '本页通过明文 http 提供：令牌以及出口与 NanoKVM 之间的所有流量均未加密。',
+          warnWstunnelUnverified:
+            'wstunnel 无法固定证书指纹。没有 CA 签发的证书时，它到 NanoKVM 的连接不经身份验证。',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: '查看脚本',
+          scriptTitle: '脚本 {{name}}',
+          scriptFailed: '获取脚本失败',
+          rewritten: '已改为指向 {{host}}，即本浏览器访问的地址。',
+          unavailable: '该平台没有可用命令。',
+          regenerateHint:
+            '已有出口连接。不再需要粘贴的命令后，请重新生成令牌；之后需用新命令重新启动出口。',
+          security:
+            '目标机本来就能通过 USB 网络地址访问此 NanoKVM 的网页界面、SSH 和 VNC。此功能不改变这一点。'
+        },
+        advanced: {
+          title: '高级',
+          dns: 'DNS 服务器',
+          dnsTip:
+            '最多四个解析器，经由出口访问。目标机会把 NanoKVM 当作解析器，所有明文 DNS 查询都会被重定向到这里。',
+          dnsAdd: '添加服务器',
+          dnsInvalid: '只能输入 IP 地址',
+          mtu: 'MTU',
+          mtuTip: '{{min}} 到 {{max}}。1280 可为隧道头部留出空间。',
+          allowPrivate: '允许私有目标地址',
+          allowPrivateTip:
+            '允许目标机访问出口设备自己的局域网：10/8、172.16/12、192.168/16、100.64/10 和 fc00::/7。关闭时这些地址会被拒绝。',
+          pinPeer: '固定到首个出口',
+          pinPeerTip: '在关闭前拒绝来自其他地址的连接。否则新的有效连接会替换旧连接。',
+          save: '保存',
+          saved: '已保存'
+        },
+        logs: {
+          title: '日志',
+          empty: '暂无日志',
+          refresh: '刷新',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel 服务端'
+        }
+      },
       update: {
         title: '检查更新',
         queryFailed: '获取版本号失败',

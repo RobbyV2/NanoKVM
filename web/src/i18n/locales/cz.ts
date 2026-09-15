@@ -1048,6 +1048,143 @@ const cz = {
         okBtn: 'Ano',
         cancelBtn: 'Ne'
       },
+      exit: {
+        title: 'Výstupní tunel',
+        description:
+          'Udělá z USB síťového rozhraní přístup k internetu pro cílový počítač: jeho provoz odchází přes vaše zařízení, které se připojuje přes tuto webovou adresu.',
+        loading: 'Načítání...',
+        noSlots: 'Na tomto zařízení není nakonfigurován žádný výstupní slot.',
+        slot: 'Slot {{slot}}',
+        enable: 'Výstupní tunel',
+        pending: 'aplikuje se...',
+        statusStale: 'stav se neaktualizuje',
+        enableConfirm: 'Zapnout výstupní tunel?',
+        disableConfirm: 'Vypnout výstupní tunel?',
+        reenumerate:
+          'USB gadget se znovu přihlásí, aby cílový počítač převzal novou bránu a DNS. Klávesnice, myš, kamera a virtuální disk vypadnou přibližně na dvě sekundy.',
+        okBtn: 'Ano',
+        cancelBtn: 'Ne',
+        copy: 'Kopírovat',
+        copied: 'Zkopírováno',
+        copyFailed: 'Kopírování se nezdařilo, označte text a zkopírujte ho ručně',
+        state: {
+          disconnected: 'Odpojeno',
+          connecting: 'Připojování',
+          connected: 'Připojeno'
+        },
+        status: {
+          title: 'Stav',
+          disconnect: 'Odpojit výstup',
+          disconnectDesc:
+            'Odpojí připojené výstupní zařízení. Jeho klient se sám znovu připojí, pokud ho nejdřív nezastavíte.',
+          tunnel: 'Tunel',
+          uptime: 'běží {{uptime}}',
+          lastConnected: 'poslední připojení {{time}}',
+          never: 'nikdy',
+          peer: 'Výstupní zařízení',
+          noPeer: 'Není připojeno žádné výstupní zařízení',
+          peerChanged: 'Nahradilo {{addr}} v {{time}}',
+          nic: 'Síťová karta cíle',
+          nicUp: 'aktivní',
+          nicDown: 'neaktivní',
+          nicMissing: 'Zatím nezjištěno',
+          nicNone:
+            'Aktuální USB profil neobsahuje žádnou síťovou funkci. Zapněte síťový adaptér přes USB v části Síť, aby cílový počítač dostal síťovou kartu.',
+          upstream: 'Internet',
+          reachable: 'Dostupný',
+          unreachable: 'Nedostupný',
+          latency: '{{ms}} ms',
+          notProbed: 'Nekontroluje se, dokud není připojen výstup',
+          downstream: 'Downstream',
+          downstreamOff: 'Vypnuto, dokud je tunel vypnutý',
+          downstreamDegraded:
+            'Část downstream cesty chybí. Hlídač to zkouší znovu každých 30 sekund; protokoly níže ukazují, co selhalo.',
+          downstreamTip: {
+            forward: 'Předávání IPv4 je zapnuto',
+            routing: 'Pravidla politiky směrování a uzavírací trasa jsou nastaveny',
+            tun: 'Zařízení tun existuje a má připojeného čtenáře',
+            hev: 'Překladač tun2socks běží',
+            wstunnel: 'Server wstunnel běží (v nativním režimu vždy pravda)',
+            dns: 'DNS forwarder je navázán na adresu USB sítě',
+            nat: 'Řetězce firewallu existují a jsou napojeny'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} dotazů, {{failures}} selhalo, {{redirected}} přesměrováno',
+          traffic: 'Provoz',
+          trafficUp: '{{bytes}} k výstupu',
+          trafficDown: '{{bytes}} od výstupu'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Je součástí každého příkazu níže, takže skončí v historii shellu výstupního zařízení.',
+          regenerate: 'Vygenerovat znovu',
+          regenerateConfirm: 'Vygenerovat token znovu?',
+          regenerateDesc:
+            'Nejdřív zastavte běžícího klienta. Každý připojený výstup bude odpojen a staré příkazy přestanou fungovat.'
+        },
+        mode: {
+          title: 'Režim',
+          native: 'Nativní',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Na výstupním zařízení běží malý skript stažený z tohoto NanoKVM. Nic se neinstaluje.',
+          wstunnelDesc:
+            'Výstupní zařízení stáhne připnutý binární soubor {{version}} a před spuštěním ověří jeho SHA-256.',
+          whileEnabled: 'Pro změnu režimu tunel vypněte.'
+        },
+        commands: {
+          title: 'Spusťte na výstupním zařízení',
+          description:
+            'Vložte jeden příkaz na počítači, jehož internet má cíl používat. Připojuje se znovu, dokud ho nezastavíte.',
+          warnDownload: 'Příkaz stáhne skript z tohoto NanoKVM a spustí ho pod vaším uživatelem.',
+          warnSecret:
+            'Obsahuje tajemství, které řídí internet cílového počítače, a uloží se do historie vašeho shellu.',
+          warnReach: 'Vše, na co výstupní zařízení dosáhne, bude dostupné z cílového počítače.',
+          warnFingerprint: 'Výstup se připojí jen po ověření otisku certifikátu {{fingerprint}}.',
+          warnCleartext:
+            'Tato stránka je poskytována přes nešifrované http: token i veškerý provoz mezi výstupem a NanoKVM jsou v otevřené podobě.',
+          warnWstunnelUnverified:
+            'wstunnel neumí připnout otisk certifikátu. Bez certifikátu podepsaného CA není jeho spojení s NanoKVM ověřené.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Zobrazit skript',
+          scriptTitle: 'Skript {{name}}',
+          scriptFailed: 'Skript se nepodařilo načíst',
+          rewritten: 'Adresováno na {{host}}, adresu, kterou tento prohlížeč použil.',
+          unavailable: 'Pro tuto platformu není žádný příkaz.',
+          regenerateHint:
+            'Výstup se připojil. Až vložený příkaz nebudete potřebovat, vygenerujte token znovu; výstup pak bude nutné spustit s novým příkazem.',
+          security:
+            'Cílový počítač už dosáhne na webové rozhraní, SSH a VNC tohoto NanoKVM přes adresu USB sítě. Tato funkce na tom nic nemění.'
+        },
+        advanced: {
+          title: 'Pokročilé',
+          dns: 'DNS servery',
+          dnsTip:
+            'Až čtyři resolvery, dostupné přes výstup. Cílový počítač dostane NanoKVM jako resolver a každý nešifrovaný DNS dotaz je přesměrován sem.',
+          dnsAdd: 'Přidat server',
+          dnsInvalid: 'Zadávejte pouze IP adresy',
+          mtu: 'MTU',
+          mtuTip: '{{min}} až {{max}}. 1280 nechává místo pro hlavičky tunelu.',
+          allowPrivate: 'Povolit privátní cíle',
+          allowPrivateTip:
+            'Umožní cílovému počítači dosáhnout na vlastní LAN výstupního zařízení: 10/8, 172.16/12, 192.168/16, 100.64/10 a fc00::/7. Vypnuto: tyto cíle jsou odmítnuty.',
+          pinPeer: 'Připnout k prvnímu výstupu',
+          pinPeerTip:
+            'Odmítá připojení z jiné adresy, dokud se nevypne. Jinak nové platné připojení nahradí to staré.',
+          save: 'Uložit',
+          saved: 'Uloženo'
+        },
+        logs: {
+          title: 'Protokoly',
+          empty: 'Zatím žádné záznamy',
+          refresh: 'Obnovit',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'server wstunnel'
+        }
+      },
       update: {
         title: 'Zkontrolovat aktualizaci',
         queryFailed: 'Nepodařilo se získat verzi',

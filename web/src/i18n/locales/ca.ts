@@ -1052,6 +1052,146 @@ const ca = {
         okBtn: 'Sí',
         cancelBtn: 'No'
       },
+      exit: {
+        title: 'Túnel de sortida',
+        description:
+          "Converteix la interfície de xarxa USB en un accés a Internet per a l'equip de destinació: el seu trànsit surt per un dispositiu vostre que es connecta a través d'aquesta adreça web.",
+        loading: 'Carregant...',
+        noSlots: 'No hi ha cap ranura de sortida configurada en aquest dispositiu.',
+        slot: 'Ranura {{slot}}',
+        enable: 'Túnel de sortida',
+        pending: 'aplicant...',
+        statusStale: "l'estat no s'actualitza",
+        enableConfirm: 'Activar el túnel de sortida?',
+        disableConfirm: 'Desactivar el túnel de sortida?',
+        reenumerate:
+          "El dispositiu USB es torna a enumerar perquè l'equip de destinació rebi la nova passarel·la i el DNS. Teclat, ratolí, càmera i disc virtual es desconnecten uns dos segons.",
+        okBtn: 'Sí',
+        cancelBtn: 'No',
+        copy: 'Copia',
+        copied: 'Copiat',
+        copyFailed: "No s'ha pogut copiar, seleccioneu el text i copieu-lo a mà",
+        state: {
+          disconnected: 'Desconnectat',
+          connecting: 'Connectant',
+          connected: 'Connectat'
+        },
+        status: {
+          title: 'Estat',
+          disconnect: 'Desconnecta la sortida',
+          disconnectDesc:
+            'Desconnecta el dispositiu de sortida. El seu client es torna a connectar tot sol si no el pareu abans.',
+          tunnel: 'Túnel',
+          uptime: 'actiu {{uptime}}',
+          lastConnected: 'darrera connexió {{time}}',
+          never: 'mai',
+          peer: 'Dispositiu de sortida',
+          noPeer: 'Cap dispositiu de sortida connectat',
+          peerChanged: 'Ha substituït {{addr}} a les {{time}}',
+          nic: 'NIC de destinació',
+          nicUp: 'activa',
+          nicDown: 'inactiva',
+          nicMissing: 'Encara per determinar',
+          nicNone:
+            "El perfil USB actual no inclou cap funció de xarxa. Activeu l'adaptador de xarxa USB a Xarxa per donar una NIC a l'equip de destinació.",
+          upstream: 'Internet',
+          reachable: 'Accessible',
+          unreachable: 'Inaccessible',
+          latency: '{{ms}} ms',
+          notProbed: 'No es comprova mentre no hi hagi cap sortida connectada',
+          downstream: 'Descendent',
+          downstreamOff: 'Apagat mentre el túnel està desactivat',
+          downstreamDegraded:
+            'Falta part del camí descendent. El vigilant ho torna a provar cada 30 segons; els registres de sota indiquen què ha fallat.',
+          downstreamTip: {
+            forward: 'El reenviament IPv4 està activat',
+            routing: "Les regles d'encaminament per política i la ruta de tancament hi són",
+            tun: 'El dispositiu tun existeix i té un lector connectat',
+            hev: 'El traductor tun2socks està en execució',
+            wstunnel: 'El servidor wstunnel està en execució (sempre cert en mode natiu)',
+            dns: "El reenviador DNS està vinculat a l'adreça de la xarxa USB",
+            nat: 'Les cadenes del tallafoc existeixen i estan enllaçades'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} consultes, {{failures}} fallides, {{redirected}} redirigides',
+          traffic: 'Trànsit',
+          trafficUp: '{{bytes}} cap a la sortida',
+          trafficDown: '{{bytes}} des de la sortida'
+        },
+        token: {
+          title: 'Testimoni',
+          history:
+            "Forma part de cada ordre de sota, així que queda a l'historial de l'intèrpret d'ordres del dispositiu de sortida.",
+          regenerate: 'Regenera',
+          regenerateConfirm: 'Regenerar el testimoni?',
+          regenerateDesc:
+            'Pareu abans el client en execució. Tota sortida connectada es desconnecta i les ordres antigues deixen de funcionar.'
+        },
+        mode: {
+          title: 'Mode',
+          native: 'Natiu',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            "Un petit script baixat d'aquest NanoKVM s'executa al dispositiu de sortida. No cal instal·lar res.",
+          wstunnelDesc:
+            'El dispositiu de sortida baixa el binari {{version}} fixat i en verifica el SHA-256 abans d’executar-lo.',
+          whileEnabled: 'Desactiveu el túnel per canviar de mode.'
+        },
+        commands: {
+          title: 'Executeu al dispositiu de sortida',
+          description:
+            "Enganxeu una ordre a la màquina l'Internet de la qual ha d'utilitzar l'equip de destinació. Es torna a connectar contínuament fins que la pareu.",
+          warnDownload:
+            "L'ordre baixa un script d'aquest NanoKVM i l'executa amb el vostre usuari.",
+          warnSecret:
+            "Conté un secret que controla l'Internet de l'equip de destinació i quedarà desat a l'historial de l'intèrpret d'ordres.",
+          warnReach:
+            "Tot el que pugui assolir el dispositiu de sortida passa a ser accessible des de l'equip de destinació.",
+          warnFingerprint:
+            "La sortida només es connecta després de verificar l'empremta del certificat {{fingerprint}}.",
+          warnCleartext:
+            'Aquesta pàgina se serveix per http sense xifrar: el testimoni i tot el trànsit entre la sortida i el NanoKVM van en clar.',
+          warnWstunnelUnverified:
+            'wstunnel no pot fixar una empremta de certificat. Sense un certificat signat per una CA, la seva connexió amb el NanoKVM no està autenticada.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Mostra el script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: "No s'ha pogut obtenir el script",
+          rewritten: "Adreçada a {{host}}, l'adreça a què ha arribat aquest navegador.",
+          unavailable: 'No hi ha cap ordre per a aquesta plataforma.',
+          regenerateHint:
+            "Una sortida s'ha connectat. Quan ja no necessiteu l'ordre enganxada, regenereu el testimoni; la sortida s'haurà de reiniciar amb la nova ordre.",
+          security:
+            "L'equip de destinació ja arriba a la interfície web, SSH i VNC d'aquest NanoKVM per l'adreça de la xarxa USB. Aquesta funció no ho canvia."
+        },
+        advanced: {
+          title: 'Avançat',
+          dns: 'Servidors DNS',
+          dnsTip:
+            "Fins a quatre resolutors, assolits a través de la sortida. L'equip de destinació rep el NanoKVM com a resolutor i tota consulta DNS en clar es redirigeix aquí.",
+          dnsAdd: 'Afegeix un servidor',
+          dnsInvalid: 'Introduïu només adreces IP',
+          mtu: 'MTU',
+          mtuTip: 'De {{min}} a {{max}}. 1280 deixa espai per a les capçaleres del túnel.',
+          allowPrivate: 'Permet destinacions privades',
+          allowPrivateTip:
+            "Permet a l'equip de destinació arribar a la LAN pròpia del dispositiu de sortida: 10/8, 172.16/12, 192.168/16, 100.64/10 i fc00::/7. Desactivat, es rebutgen.",
+          pinPeer: 'Fixa la primera sortida',
+          pinPeerTip:
+            "Rebutja connexions des d'una altra adreça fins que es desactivi. Si no, una nova connexió vàlida substitueix l'anterior.",
+          save: 'Desa',
+          saved: 'Desat'
+        },
+        logs: {
+          title: 'Registres',
+          empty: 'Encara no hi ha registres',
+          refresh: 'Actualitza',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'servidor wstunnel'
+        }
+      },
       update: {
         title: 'Comprova actualitzacions',
         queryFailed: 'Error en obtenir la versió',

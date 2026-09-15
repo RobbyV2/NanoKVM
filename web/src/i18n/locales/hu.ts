@@ -1061,6 +1061,144 @@ const hu = {
         okBtn: 'Igen',
         cancelBtn: 'Nem'
       },
+      exit: {
+        title: 'Kilépő tunnel',
+        description:
+          'Az USB hálózati interfészt internetkapcsolattá alakítja a célgép számára: a forgalma az Ön egyik eszközén keresztül távozik, amely ezen a webcímen keresztül csatlakozik be.',
+        loading: 'Betöltés...',
+        noSlots: 'Ezen az eszközön nincs kilépő hely beállítva.',
+        slot: '{{slot}}. hely',
+        enable: 'Kilépő tunnel',
+        pending: 'alkalmazás...',
+        statusStale: 'az állapot nem frissül',
+        enableConfirm: 'Bekapcsolja a kilépő tunnelt?',
+        disableConfirm: 'Kikapcsolja a kilépő tunnelt?',
+        reenumerate:
+          'Az USB-eszköz újra bejelentkezik, hogy a célgép átvegye az új átjárót és DNS-t. A billentyűzet, az egér, a kamera és a virtuális lemez körülbelül két másodpercre kiesik.',
+        okBtn: 'Igen',
+        cancelBtn: 'Nem',
+        copy: 'Másolás',
+        copied: 'Kimásolva',
+        copyFailed: 'A másolás nem sikerült, jelölje ki a szöveget és másolja kézzel',
+        state: {
+          disconnected: 'Nincs kapcsolat',
+          connecting: 'Csatlakozás',
+          connected: 'Csatlakozva'
+        },
+        status: {
+          title: 'Állapot',
+          disconnect: 'Kilépő bontása',
+          disconnectDesc:
+            'Bontja a csatlakozott kilépő eszközt. A kliense magától újracsatlakozik, ha előbb nem állítja le.',
+          tunnel: 'Tunnel',
+          uptime: 'fut {{uptime}}',
+          lastConnected: 'utoljára csatlakozva {{time}}',
+          never: 'soha',
+          peer: 'Kilépő eszköz',
+          noPeer: 'Nincs csatlakoztatott kilépő eszköz',
+          peerChanged: '{{addr}} helyére lépett ekkor: {{time}}',
+          nic: 'Célgép hálózati kártyája',
+          nicUp: 'aktív',
+          nicDown: 'inaktív',
+          nicMissing: 'Még nem ismert',
+          nicNone:
+            'A jelenlegi USB-profil nem tartalmaz hálózati funkciót. Kapcsolja be az USB hálózati adaptert a Hálózat alatt, hogy a célgép hálózati kártyát kapjon.',
+          upstream: 'Internet',
+          reachable: 'Elérhető',
+          unreachable: 'Nem elérhető',
+          latency: '{{ms}} ms',
+          notProbed: 'Nincs ellenőrzés, amíg nem csatlakozik kilépő',
+          downstream: 'Downstream',
+          downstreamOff: 'Kikapcsolva, amíg a tunnel le van tiltva',
+          downstreamDegraded:
+            'A downstream útvonal egy része hiányzik. A watchdog 30 másodpercenként újrapróbálja; a lenti naplók mutatják, mi hibázott.',
+          downstreamTip: {
+            forward: 'Az IPv4-továbbítás be van kapcsolva',
+            routing: 'A szabályalapú útválasztási szabályok és a lezáró útvonal a helyükön vannak',
+            tun: 'A tun eszköz létezik és van hozzá olvasó csatolva',
+            hev: 'A tun2socks fordító fut',
+            wstunnel: 'A wstunnel szerver fut (natív módban mindig igaz)',
+            dns: 'A DNS-továbbító az USB hálózati címhez van kötve',
+            nat: 'A tűzfalláncok léteznek és be vannak fűzve'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} lekérdezés, {{failures}} sikertelen, {{redirected}} átirányított',
+          traffic: 'Forgalom',
+          trafficUp: '{{bytes}} a kilépő felé',
+          trafficDown: '{{bytes}} a kilépőtől'
+        },
+        token: {
+          title: 'Token',
+          history: 'Minden lenti parancs része, így a kilépő eszköz shell-előzményeibe kerül.',
+          regenerate: 'Újragenerálás',
+          regenerateConfirm: 'Újragenerálja a tokent?',
+          regenerateDesc:
+            'Először állítsa le a futó klienst. Minden csatlakozott kilépő bontásra kerül, és a régi parancsok nem működnek tovább.'
+        },
+        mode: {
+          title: 'Mód',
+          native: 'Natív',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Egy erről a NanoKVM-ről letöltött kis szkript fut a kilépő eszközön. Nincs mit telepíteni.',
+          wstunnelDesc:
+            'A kilépő eszköz letölti a rögzített {{version}} binárist, és futtatás előtt ellenőrzi az SHA-256 értékét.',
+          whileEnabled: 'A mód váltásához kapcsolja ki a tunnelt.'
+        },
+        commands: {
+          title: 'Futtassa a kilépő eszközön',
+          description:
+            'Illesszen be egy parancsot azon a gépen, amelynek internetét a célgépnek használnia kell. Addig csatlakozik újra, amíg le nem állítja.',
+          warnDownload:
+            'A parancs letölt egy szkriptet erről a NanoKVM-ről, és az Ön felhasználójaként futtatja.',
+          warnSecret:
+            'Titkot tartalmaz, amely a célgép internetét vezérli, és a shell-előzményeibe kerül.',
+          warnReach: 'Minden, amit a kilépő eszköz elér, elérhetővé válik a célgépről.',
+          warnFingerprint:
+            'A kilépő csak a {{fingerprint}} tanúsítvány-ujjlenyomat ellenőrzése után csatlakozik.',
+          warnCleartext:
+            'Ez az oldal sima http-n érkezik: a token és a kilépő és a NanoKVM közti minden forgalom titkosítatlan.',
+          warnWstunnelUnverified:
+            'A wstunnel nem tud tanúsítvány-ujjlenyomatot rögzíteni. CA által aláírt tanúsítvány nélkül a NanoKVM-hez való kapcsolata nem hitelesített.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Szkript megtekintése',
+          scriptTitle: '{{name}} szkript',
+          scriptFailed: 'A szkript letöltése nem sikerült',
+          rewritten: 'Címzett: {{host}}, a cím, amelyet ez a böngésző elért.',
+          unavailable: 'Ehhez a platformhoz nincs parancs.',
+          regenerateHint:
+            'Egy kilépő csatlakozott. Ha a beillesztett parancsra már nincs szükség, generálja újra a tokent; a kilépőt ezután az új paranccsal kell újraindítani.',
+          security:
+            'A célgép már most eléri ennek a NanoKVM-nek a webes felületét, SSH-ját és VNC-jét az USB hálózati címen. Ez a funkció ezen nem változtat.'
+        },
+        advanced: {
+          title: 'Haladó',
+          dns: 'DNS-kiszolgálók',
+          dnsTip:
+            'Legfeljebb négy feloldó, a kilépőn keresztül elérve. A célgép a NanoKVM-et kapja feloldónak, és minden titkosítatlan DNS-lekérdezés ide van átirányítva.',
+          dnsAdd: 'Kiszolgáló hozzáadása',
+          dnsInvalid: 'Csak IP-címeket adjon meg',
+          mtu: 'MTU',
+          mtuTip: '{{min}} és {{max}} között. Az 1280 helyet hagy a tunnel fejléceinek.',
+          allowPrivate: 'Privát célok engedélyezése',
+          allowPrivateTip:
+            'Engedi, hogy a célgép elérje a kilépő eszköz saját LAN-ját: 10/8, 172.16/12, 192.168/16, 100.64/10 és fc00::/7. Kikapcsolva ezek visszautasításra kerülnek.',
+          pinPeer: 'Rögzítés az első kilépőhöz',
+          pinPeerTip:
+            'Kikapcsolásig visszautasítja a más címről érkező kapcsolatot. Egyébként egy új érvényes kapcsolat lecseréli a régit.',
+          save: 'Mentés',
+          saved: 'Mentve'
+        },
+        logs: {
+          title: 'Naplók',
+          empty: 'Még nincsenek naplóbejegyzések',
+          refresh: 'Frissítés',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel szerver'
+        }
+      },
       update: {
         title: 'Frissítés keresése',
         queryFailed: 'Verzió lekérdezése sikertelen',

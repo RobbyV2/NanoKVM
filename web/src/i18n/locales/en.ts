@@ -1087,7 +1087,7 @@ const en = {
           nicDown: 'down',
           nicMissing: 'Not resolved yet',
           nicNone:
-            'The current USB profile links no network function. Turn on Virtual Network under Device to give the target a NIC.',
+            'The current USB profile links no network function. Turn on the USB Network Adapter under Network to give the target a NIC.',
           upstream: 'Internet',
           reachable: 'Reachable',
           unreachable: 'Unreachable',

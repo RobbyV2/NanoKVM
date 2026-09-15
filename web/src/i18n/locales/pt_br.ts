@@ -1057,6 +1057,145 @@ const pt_br = {
         okBtn: 'Sim',
         cancelBtn: 'Não'
       },
+      exit: {
+        title: 'Túnel de saída',
+        description:
+          'Transforma a interface de rede USB em um acesso à Internet para o computador de destino: o tráfego dele sai por um dispositivo seu que se conecta através deste endereço web.',
+        loading: 'Carregando...',
+        noSlots: 'Nenhum slot de saída está configurado neste dispositivo.',
+        slot: 'Slot {{slot}}',
+        enable: 'Túnel de saída',
+        pending: 'aplicando...',
+        statusStale: 'o status não está atualizando',
+        enableConfirm: 'Ativar o túnel de saída?',
+        disableConfirm: 'Desativar o túnel de saída?',
+        reenumerate:
+          'O gadget USB é reenumerado para que o destino receba o novo gateway e DNS. Teclado, mouse, câmera e disco virtual caem por cerca de dois segundos.',
+        okBtn: 'Sim',
+        cancelBtn: 'Não',
+        copy: 'Copiar',
+        copied: 'Copiado',
+        copyFailed: 'Falha ao copiar, selecione o texto e copie manualmente',
+        state: {
+          disconnected: 'Desconectado',
+          connecting: 'Conectando',
+          connected: 'Conectado'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Desconectar saída',
+          disconnectDesc:
+            'Derruba o dispositivo de saída conectado. O cliente dele reconecta sozinho, a menos que você o pare antes.',
+          tunnel: 'Túnel',
+          uptime: 'ativo há {{uptime}}',
+          lastConnected: 'última conexão {{time}}',
+          never: 'nunca',
+          peer: 'Dispositivo de saída',
+          noPeer: 'Nenhum dispositivo de saída conectado',
+          peerChanged: 'Substituiu {{addr}} às {{time}}',
+          nic: 'NIC do destino',
+          nicUp: 'ativa',
+          nicDown: 'inativa',
+          nicMissing: 'Ainda não determinada',
+          nicNone:
+            'O perfil USB atual não inclui nenhuma função de rede. Ative o adaptador de rede USB em Rede para dar uma NIC ao destino.',
+          upstream: 'Internet',
+          reachable: 'Acessível',
+          unreachable: 'Inacessível',
+          latency: '{{ms}} ms',
+          notProbed: 'Não verificado enquanto nenhuma saída estiver conectada',
+          downstream: 'Descendente',
+          downstreamOff: 'Desligado enquanto o túnel está desativado',
+          downstreamDegraded:
+            'Parte do caminho descendente está faltando. O watchdog tenta de novo a cada 30 segundos; os logs abaixo mostram o que falhou.',
+          downstreamTip: {
+            forward: 'O encaminhamento IPv4 está ativo',
+            routing: 'As regras de roteamento por política e a rota de bloqueio estão no lugar',
+            tun: 'O dispositivo tun existe e tem um leitor conectado',
+            hev: 'O tradutor tun2socks está em execução',
+            wstunnel: 'O servidor wstunnel está em execução (sempre verdadeiro no modo nativo)',
+            dns: 'O encaminhador DNS está vinculado ao endereço da rede USB',
+            nat: 'As cadeias do firewall existem e estão encadeadas'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} consultas, {{failures}} falharam, {{redirected}} redirecionadas',
+          traffic: 'Tráfego',
+          trafficUp: '{{bytes}} para a saída',
+          trafficDown: '{{bytes}} da saída'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Faz parte de todo comando abaixo, então fica no histórico do shell do dispositivo de saída.',
+          regenerate: 'Regenerar',
+          regenerateConfirm: 'Regenerar o token?',
+          regenerateDesc:
+            'Pare o cliente em execução primeiro. Toda saída conectada é derrubada e os comandos antigos deixam de funcionar.'
+        },
+        mode: {
+          title: 'Modo',
+          native: 'Nativo',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Um pequeno script baixado deste NanoKVM roda no dispositivo de saída. Nada para instalar.',
+          wstunnelDesc:
+            'O dispositivo de saída baixa o binário {{version}} fixado e verifica o SHA-256 antes de executá-lo.',
+          whileEnabled: 'Desative o túnel para trocar o modo.'
+        },
+        commands: {
+          title: 'Executar no dispositivo de saída',
+          description:
+            'Cole um comando na máquina cuja Internet o destino deve usar. Ele continua reconectando até que você o pare.',
+          warnDownload: 'O comando baixa um script deste NanoKVM e o executa com o seu usuário.',
+          warnSecret:
+            'Ele contém um segredo que controla a Internet do destino e ficará salvo no histórico do seu shell.',
+          warnReach:
+            'Tudo o que o dispositivo de saída alcança passa a ser acessível a partir do destino.',
+          warnFingerprint:
+            'A saída só se conecta depois de verificar a impressão digital do certificado {{fingerprint}}.',
+          warnCleartext:
+            'Esta página é servida por http simples: o token e todo o tráfego entre a saída e o NanoKVM trafegam em texto claro.',
+          warnWstunnelUnverified:
+            'O wstunnel não consegue fixar uma impressão digital de certificado. Sem um certificado assinado por uma CA, a conexão dele com o NanoKVM não é autenticada.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Ver script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Falha ao obter o script',
+          rewritten: 'Endereçado a {{host}}, o endereço que este navegador alcançou.',
+          unavailable: 'Nenhum comando para esta plataforma.',
+          regenerateHint:
+            'Uma saída se conectou. Quando o comando colado não for mais necessário, regenere o token; a saída terá então de ser reiniciada com o novo comando.',
+          security:
+            'O destino já alcança a interface web, o SSH e o VNC deste NanoKVM pelo endereço da rede USB. Este recurso não muda isso.'
+        },
+        advanced: {
+          title: 'Avançado',
+          dns: 'Servidores DNS',
+          dnsTip:
+            'Até quatro resolvedores, alcançados através da saída. O destino recebe o NanoKVM como resolvedor e toda consulta DNS em texto claro é redirecionada para aqui.',
+          dnsAdd: 'Adicionar servidor',
+          dnsInvalid: 'Informe apenas endereços IP',
+          mtu: 'MTU',
+          mtuTip: 'De {{min}} a {{max}}. 1280 deixa espaço para os cabeçalhos do túnel.',
+          allowPrivate: 'Permitir destinos privados',
+          allowPrivateTip:
+            'Permite ao destino alcançar a LAN do próprio dispositivo de saída: 10/8, 172.16/12, 192.168/16, 100.64/10 e fc00::/7. Desligado, esses destinos são recusados.',
+          pinPeer: 'Fixar na primeira saída',
+          pinPeerTip:
+            'Recusa conexões de outro endereço até ser desligado. Caso contrário, uma nova conexão válida substitui a anterior.',
+          save: 'Salvar',
+          saved: 'Salvo'
+        },
+        logs: {
+          title: 'Logs',
+          empty: 'Ainda não há logs',
+          refresh: 'Atualizar',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'servidor wstunnel'
+        }
+      },
       update: {
         title: 'Verificar Atualizações',
         queryFailed: 'Falha ao obter a versão',

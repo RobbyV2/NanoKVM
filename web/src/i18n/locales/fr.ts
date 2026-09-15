@@ -1066,6 +1066,146 @@ const fr = {
         okBtn: 'Oui',
         cancelBtn: 'Non'
       },
+      exit: {
+        title: 'Tunnel de sortie',
+        description:
+          "Transforme l'interface réseau USB en accès Internet pour la cible : son trafic sort par un appareil à vous qui se connecte via cette adresse web.",
+        loading: 'Chargement...',
+        noSlots: "Aucun emplacement de sortie n'est configuré sur cet appareil.",
+        slot: 'Emplacement {{slot}}',
+        enable: 'Tunnel de sortie',
+        pending: 'application...',
+        statusStale: "l'état ne se met plus à jour",
+        enableConfirm: 'Activer le tunnel de sortie ?',
+        disableConfirm: 'Désactiver le tunnel de sortie ?',
+        reenumerate:
+          'Le périphérique USB se réénumère pour que la cible reçoive sa nouvelle passerelle et son DNS. Clavier, souris, caméra et disque virtuel sont coupés environ deux secondes.',
+        okBtn: 'Oui',
+        cancelBtn: 'Non',
+        copy: 'Copier',
+        copied: 'Copié',
+        copyFailed: 'Copie impossible, sélectionnez le texte et copiez-le à la main',
+        state: {
+          disconnected: 'Déconnecté',
+          connecting: 'Connexion',
+          connected: 'Connecté'
+        },
+        status: {
+          title: 'État',
+          disconnect: 'Déconnecter la sortie',
+          disconnectDesc:
+            "Coupe l'appareil de sortie connecté. Son client se reconnecte de lui-même sauf si vous l'arrêtez d'abord.",
+          tunnel: 'Tunnel',
+          uptime: 'depuis {{uptime}}',
+          lastConnected: 'dernière connexion {{time}}',
+          never: 'jamais',
+          peer: 'Appareil de sortie',
+          noPeer: 'Aucun appareil de sortie connecté',
+          peerChanged: 'Remplace {{addr}} depuis {{time}}',
+          nic: 'Carte réseau cible',
+          nicUp: 'active',
+          nicDown: 'inactive',
+          nicMissing: 'Pas encore déterminée',
+          nicNone:
+            "Le profil USB actuel n'inclut aucune fonction réseau. Activez l'adaptateur réseau USB dans Réseau pour donner une carte réseau à la cible.",
+          upstream: 'Internet',
+          reachable: 'Joignable',
+          unreachable: 'Injoignable',
+          latency: '{{ms}} ms',
+          notProbed: "Non testé tant qu'aucune sortie n'est connectée",
+          downstream: 'Aval',
+          downstreamOff: 'Inactif tant que le tunnel est désactivé',
+          downstreamDegraded:
+            'Une partie du chemin aval manque. Le chien de garde réessaie toutes les 30 secondes ; les journaux ci-dessous indiquent ce qui a échoué.',
+          downstreamTip: {
+            forward: 'Le routage IPv4 est activé',
+            routing: 'Les règles de routage par politique et la route barrière sont en place',
+            tun: "L'interface tun existe et un lecteur y est attaché",
+            hev: 'Le traducteur tun2socks fonctionne',
+            wstunnel: 'Le serveur wstunnel fonctionne (toujours vrai en mode natif)',
+            dns: "Le relais DNS est lié à l'adresse du réseau USB",
+            nat: 'Les chaînes du pare-feu sont présentes et référencées'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} requêtes, {{failures}} échouées, {{redirected}} redirigées',
+          traffic: 'Trafic',
+          trafficUp: '{{bytes}} vers la sortie',
+          trafficDown: '{{bytes}} depuis la sortie'
+        },
+        token: {
+          title: 'Jeton',
+          history:
+            "Présent dans chaque commande ci-dessous, il finit donc dans l'historique du shell de l'appareil de sortie.",
+          regenerate: 'Régénérer',
+          regenerateConfirm: 'Régénérer le jeton ?',
+          regenerateDesc:
+            "Arrêtez d'abord le client en cours. Toute sortie connectée est coupée et les anciennes commandes cessent de fonctionner."
+        },
+        mode: {
+          title: 'Mode',
+          native: 'Natif',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            "Un petit script récupéré depuis ce NanoKVM s'exécute sur l'appareil de sortie. Rien à installer.",
+          wstunnelDesc:
+            "L'appareil de sortie télécharge le binaire {{version}} épinglé et vérifie son SHA-256 avant de le lancer.",
+          whileEnabled: 'Désactivez le tunnel pour changer de mode.'
+        },
+        commands: {
+          title: "À exécuter sur l'appareil de sortie",
+          description:
+            "Collez une commande sur la machine dont la cible doit utiliser l'Internet. Elle se reconnecte en boucle jusqu'à ce que vous l'arrêtiez.",
+          warnDownload:
+            "La commande télécharge un script depuis ce NanoKVM et l'exécute sous votre utilisateur.",
+          warnSecret:
+            "Elle contient un secret qui contrôle l'Internet de la cible et sera enregistrée dans l'historique de votre shell.",
+          warnReach:
+            "Tout ce que l'appareil de sortie peut atteindre devient accessible depuis la cible.",
+          warnFingerprint:
+            "La sortie ne se connecte qu'après vérification de l'empreinte du certificat {{fingerprint}}.",
+          warnCleartext:
+            'Cette page est servie en http simple : le jeton et tout le trafic entre la sortie et le NanoKVM circulent en clair.',
+          warnWstunnelUnverified:
+            "wstunnel ne peut pas épingler une empreinte de certificat. Sans certificat signé par une AC, sa connexion au NanoKVM n'est pas authentifiée.",
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Voir le script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Impossible de récupérer le script',
+          rewritten: "Adressée à {{host}}, l'adresse atteinte par ce navigateur.",
+          unavailable: 'Aucune commande pour cette plateforme.',
+          regenerateHint:
+            "Une sortie s'est connectée. Quand la commande collée n'est plus nécessaire, régénérez le jeton ; la sortie devra alors être relancée avec la nouvelle commande.",
+          security:
+            "La cible atteint déjà l'interface web, SSH et VNC de ce NanoKVM par l'adresse du réseau USB. Cette fonction n'y change rien."
+        },
+        advanced: {
+          title: 'Avancé',
+          dns: 'Serveurs DNS',
+          dnsTip:
+            "Jusqu'à quatre résolveurs, joints via la sortie. La cible reçoit le NanoKVM comme résolveur et toute requête DNS en clair est redirigée ici.",
+          dnsAdd: 'Ajouter un serveur',
+          dnsInvalid: 'Saisissez uniquement des adresses IP',
+          mtu: 'MTU',
+          mtuTip: 'De {{min}} à {{max}}. 1280 laisse de la place aux en-têtes du tunnel.',
+          allowPrivate: 'Autoriser les destinations privées',
+          allowPrivateTip:
+            "Permet à la cible d'atteindre le LAN de l'appareil de sortie : 10/8, 172.16/12, 192.168/16, 100.64/10 et fc00::/7. Désactivé, ces destinations sont refusées.",
+          pinPeer: 'Épingler la première sortie',
+          pinPeerTip:
+            "Refuse toute connexion venant d'une autre adresse jusqu'à désactivation. Sinon une nouvelle connexion valide remplace l'ancienne.",
+          save: 'Enregistrer',
+          saved: 'Enregistré'
+        },
+        logs: {
+          title: 'Journaux',
+          empty: 'Aucun journal pour le moment',
+          refresh: 'Actualiser',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'serveur wstunnel'
+        }
+      },
       update: {
         title: 'Vérifier les mises à jour',
         queryFailed: 'Impossible de vérifier les mises à jour. Veuillez réessayer.',

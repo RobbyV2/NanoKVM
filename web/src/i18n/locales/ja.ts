@@ -1051,6 +1051,145 @@ const ja = {
         okBtn: 'はい',
         cancelBtn: 'いいえ'
       },
+      exit: {
+        title: '出口トンネル',
+        description:
+          'USB ネットワークインターフェースをターゲット機のインターネット回線にします。ターゲットの通信は、この Web アドレスに接続してきたあなたの機器から外へ出ます。',
+        loading: '読み込み中...',
+        noSlots: 'このデバイスには出口スロットが設定されていません。',
+        slot: 'スロット {{slot}}',
+        enable: '出口トンネル',
+        pending: '適用中...',
+        statusStale: '状態が更新されていません',
+        enableConfirm: '出口トンネルを有効にしますか？',
+        disableConfirm: '出口トンネルを無効にしますか？',
+        reenumerate:
+          'ターゲット機に新しいゲートウェイと DNS を渡すため、USB ガジェットを再認識させます。キーボード、マウス、カメラ、仮想ディスクが約 2 秒間切断されます。',
+        okBtn: 'はい',
+        cancelBtn: 'いいえ',
+        copy: 'コピー',
+        copied: 'コピーしました',
+        copyFailed: 'コピーできませんでした。テキストを選択して手動でコピーしてください',
+        state: {
+          disconnected: '未接続',
+          connecting: '接続中',
+          connected: '接続済み'
+        },
+        status: {
+          title: '状態',
+          disconnect: '出口を切断',
+          disconnectDesc:
+            '接続中の出口機器を切断します。先にクライアントを停止しない限り、自動的に再接続されます。',
+          tunnel: 'トンネル',
+          uptime: '稼働 {{uptime}}',
+          lastConnected: '最終接続 {{time}}',
+          never: 'なし',
+          peer: '出口機器',
+          noPeer: '出口機器は接続されていません',
+          peerChanged: '{{time}} に {{addr}} から切り替わりました',
+          nic: 'ターゲットの NIC',
+          nicUp: '稼働中',
+          nicDown: '停止中',
+          nicMissing: 'まだ判別できていません',
+          nicNone:
+            '現在の USB プロファイルにはネットワーク機能が含まれていません。ネットワーク設定の USB ネットワークアダプターをオンにして、ターゲットに NIC を与えてください。',
+          upstream: 'インターネット',
+          reachable: '到達可能',
+          unreachable: '到達不能',
+          latency: '{{ms}} ms',
+          notProbed: '出口が接続されるまで確認しません',
+          downstream: 'ダウンストリーム',
+          downstreamOff: 'トンネルが無効の間はオフ',
+          downstreamDegraded:
+            'ダウンストリーム経路の一部が欠けています。ウォッチドッグが 30 秒ごとに再試行します。何が失敗したかは下のログを確認してください。',
+          downstreamTip: {
+            forward: 'IPv4 フォワーディングが有効',
+            routing: 'ポリシールーティングの規則とフェンス経路が設定済み',
+            tun: 'tun デバイスが存在し、読み取り側が接続済み',
+            hev: 'tun2socks 変換器が稼働中',
+            wstunnel: 'wstunnel サーバーが稼働中（ネイティブモードでは常に真）',
+            dns: 'DNS フォワーダーが USB ネットワークアドレスに束縛済み',
+            nat: 'ファイアウォールのチェーンが存在し、接続済み'
+          },
+          dns: 'DNS',
+          dnsStats:
+            '{{queries}} 件の問い合わせ、{{failures}} 件失敗、{{redirected}} 件リダイレクト',
+          traffic: 'トラフィック',
+          trafficUp: '出口へ {{bytes}}',
+          trafficDown: '出口から {{bytes}}'
+        },
+        token: {
+          title: 'トークン',
+          history: '下のすべてのコマンドに含まれるため、出口機器のシェル履歴に残ります。',
+          regenerate: '再生成',
+          regenerateConfirm: 'トークンを再生成しますか？',
+          regenerateDesc:
+            '先に実行中のクライアントを停止してください。接続中の出口はすべて切断され、以前のコマンドは使えなくなります。'
+        },
+        mode: {
+          title: 'モード',
+          native: 'ネイティブ',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'この NanoKVM から取得した小さなスクリプトを出口機器で実行します。インストールは不要です。',
+          wstunnelDesc:
+            '出口機器が固定バージョン {{version}} のバイナリをダウンロードし、実行前に SHA-256 を検証します。',
+          whileEnabled: 'モードを切り替えるにはトンネルを無効にしてください。'
+        },
+        commands: {
+          title: '出口機器で実行',
+          description:
+            'ターゲット機に使わせたいインターネット回線を持つマシンで、コマンドを 1 つ貼り付けてください。停止するまで再接続を続けます。',
+          warnDownload:
+            'このコマンドは NanoKVM からスクリプトをダウンロードし、あなたのユーザー権限で実行します。',
+          warnSecret:
+            'ターゲット機のインターネットを制御する秘密情報が含まれ、シェル履歴に保存されます。',
+          warnReach: '出口機器から到達できるものはすべて、ターゲット機からも到達可能になります。',
+          warnFingerprint:
+            '出口は証明書フィンガープリント {{fingerprint}} を検証してから接続します。',
+          warnCleartext:
+            'このページは平文の http で提供されています。トークンと、出口と NanoKVM 間のすべての通信は暗号化されません。',
+          warnWstunnelUnverified:
+            'wstunnel は証明書フィンガープリントを固定できません。CA 署名の証明書がない場合、NanoKVM への接続は認証されません。',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'スクリプトを表示',
+          scriptTitle: 'スクリプト {{name}}',
+          scriptFailed: 'スクリプトを取得できませんでした',
+          rewritten: 'このブラウザーがアクセスしたアドレス {{host}} 宛てに書き換えています。',
+          unavailable: 'このプラットフォーム向けのコマンドはありません。',
+          regenerateHint:
+            '出口が接続しました。貼り付けたコマンドが不要になったらトークンを再生成してください。その後、出口は新しいコマンドで再起動する必要があります。',
+          security:
+            'ターゲット機は USB ネットワークアドレス経由で、すでにこの NanoKVM の Web UI、SSH、VNC に到達できます。この機能はそれを変えません。'
+        },
+        advanced: {
+          title: '詳細設定',
+          dns: 'DNS サーバー',
+          dnsTip:
+            '出口経由で到達する最大 4 つのリゾルバー。ターゲット機には NanoKVM がリゾルバーとして渡され、平文の DNS 問い合わせはすべてここへリダイレクトされます。',
+          dnsAdd: 'サーバーを追加',
+          dnsInvalid: 'IP アドレスのみ入力してください',
+          mtu: 'MTU',
+          mtuTip: '{{min}} から {{max}} まで。1280 ならトンネルヘッダーの余裕が確保できます。',
+          allowPrivate: 'プライベート宛先を許可',
+          allowPrivateTip:
+            'ターゲット機から出口機器自身の LAN（10/8、172.16/12、192.168/16、100.64/10、fc00::/7）への到達を許可します。オフの場合は拒否されます。',
+          pinPeer: '最初の出口に固定',
+          pinPeerTip:
+            'オフにするまで、別のアドレスからの接続を拒否します。オフの場合、新しい有効な接続が以前の接続を置き換えます。',
+          save: '保存',
+          saved: '保存しました'
+        },
+        logs: {
+          title: 'ログ',
+          empty: 'ログはまだありません',
+          refresh: '更新',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel サーバー'
+        }
+      },
       update: {
         title: 'アップデート',
         queryFailed: 'バージョン番号の取得に失敗しました',

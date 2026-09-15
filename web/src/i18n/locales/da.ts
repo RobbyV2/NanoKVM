@@ -1052,6 +1052,145 @@ const da = {
         okBtn: 'Ja',
         cancelBtn: 'Nej'
       },
+      exit: {
+        title: 'Exit-tunnel',
+        description:
+          'Gør USB-netværksgrænsefladen til en internetforbindelse for målmaskinen: dens trafik forlader nettet via en enhed hos dig, der ringer ind via denne webadresse.',
+        loading: 'Indlæser...',
+        noSlots: 'Der er ikke konfigureret nogen exit-plads på denne enhed.',
+        slot: 'Plads {{slot}}',
+        enable: 'Exit-tunnel',
+        pending: 'anvender...',
+        statusStale: 'status opdateres ikke',
+        enableConfirm: 'Aktivér exit-tunnelen?',
+        disableConfirm: 'Deaktivér exit-tunnelen?',
+        reenumerate:
+          'USB-gadgetten genoptælles, så målmaskinen får sin nye gateway og DNS. Tastatur, mus, kamera og virtuel disk falder ud i cirka to sekunder.',
+        okBtn: 'Ja',
+        cancelBtn: 'Nej',
+        copy: 'Kopiér',
+        copied: 'Kopieret',
+        copyFailed: 'Kopiering mislykkedes, markér teksten og kopiér den manuelt',
+        state: {
+          disconnected: 'Afbrudt',
+          connecting: 'Forbinder',
+          connected: 'Forbundet'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Afbryd exit',
+          disconnectDesc:
+            'Afbryder den forbundne exit-enhed. Dens klient forbinder igen af sig selv, medmindre du stopper den først.',
+          tunnel: 'Tunnel',
+          uptime: 'oppe {{uptime}}',
+          lastConnected: 'senest forbundet {{time}}',
+          never: 'aldrig',
+          peer: 'Exit-enhed',
+          noPeer: 'Ingen exit-enhed forbundet',
+          peerChanged: 'Erstattede {{addr}} kl. {{time}}',
+          nic: 'Målets netkort',
+          nicUp: 'oppe',
+          nicDown: 'nede',
+          nicMissing: 'Ikke fastlagt endnu',
+          nicNone:
+            'Den aktuelle USB-profil indeholder ingen netværksfunktion. Slå USB-netværkskortet til under Netværk for at give målmaskinen et netkort.',
+          upstream: 'Internet',
+          reachable: 'Tilgængeligt',
+          unreachable: 'Utilgængeligt',
+          latency: '{{ms}} ms',
+          notProbed: 'Testes ikke, så længe ingen exit er forbundet',
+          downstream: 'Downstream',
+          downstreamOff: 'Slukket, mens tunnelen er deaktiveret',
+          downstreamDegraded:
+            'En del af downstream-stien mangler. Vagthunden forsøger igen hvert 30. sekund; loggen nedenfor viser, hvad der fejlede.',
+          downstreamTip: {
+            forward: 'IPv4-videresendelse er slået til',
+            routing: 'Policy-routingreglerne og spærreruten er på plads',
+            tun: 'tun-enheden findes og har en læser tilknyttet',
+            hev: 'tun2socks-oversætteren kører',
+            wstunnel: 'wstunnel-serveren kører (altid sand i native-tilstand)',
+            dns: 'DNS-forwarderen er bundet til USB-netværksadressen',
+            nat: 'Firewall-kæderne findes og er koblet ind'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} forespørgsler, {{failures}} fejlede, {{redirected}} omdirigeret',
+          traffic: 'Trafik',
+          trafficUp: '{{bytes}} til exit',
+          trafficDown: '{{bytes}} fra exit'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Indgår i hver kommando nedenfor og ender derfor i shell-historikken på exit-enheden.',
+          regenerate: 'Generér igen',
+          regenerateConfirm: 'Generér token igen?',
+          regenerateDesc:
+            'Stop den kørende klient først. Alle forbundne exits afbrydes, og de gamle kommandoer holder op med at virke.'
+        },
+        mode: {
+          title: 'Tilstand',
+          native: 'Native',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Et lille script hentet fra denne NanoKVM kører på exit-enheden. Intet at installere.',
+          wstunnelDesc:
+            'Exit-enheden downloader den fastlåste {{version}}-binær og kontrollerer dens SHA-256, før den køres.',
+          whileEnabled: 'Deaktivér tunnelen for at skifte tilstand.'
+        },
+        commands: {
+          title: 'Kør på exit-enheden',
+          description:
+            'Indsæt én kommando på den maskine, hvis internet målmaskinen skal bruge. Den bliver ved med at forbinde igen, indtil du stopper den.',
+          warnDownload:
+            'Kommandoen downloader et script fra denne NanoKVM og kører det som din bruger.',
+          warnSecret:
+            'Den indeholder en hemmelighed, der styrer målmaskinens internet, og gemmes i din shell-historik.',
+          warnReach: 'Alt, hvad exit-enheden kan nå, bliver tilgængeligt fra målmaskinen.',
+          warnFingerprint:
+            'Exit forbinder først efter kontrol af certifikatets fingeraftryk {{fingerprint}}.',
+          warnCleartext:
+            'Denne side leveres over almindelig http: tokenet og al trafik mellem exit og NanoKVM er ukrypteret.',
+          warnWstunnelUnverified:
+            'wstunnel kan ikke fastlåse et certifikat-fingeraftryk. Uden et CA-signeret certifikat er dens forbindelse til NanoKVM ikke autentificeret.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Vis script',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Kunne ikke hente scriptet',
+          rewritten: 'Adresseret til {{host}}, den adresse denne browser nåede.',
+          unavailable: 'Ingen kommando til denne platform.',
+          regenerateHint:
+            'En exit har forbundet. Generér tokenet igen, når den indsatte kommando ikke længere er nødvendig; exit skal derefter genstartes med den nye.',
+          security:
+            'Målmaskinen når allerede denne NanoKVMs webgrænseflade, SSH og VNC på USB-netværksadressen. Denne funktion ændrer ikke på det.'
+        },
+        advanced: {
+          title: 'Avanceret',
+          dns: 'DNS-servere',
+          dnsTip:
+            'Op til fire resolvere, nået via exit. Målmaskinen får NanoKVM som resolver, og alle ukrypterede DNS-forespørgsler omdirigeres hertil.',
+          dnsAdd: 'Tilføj server',
+          dnsInvalid: 'Indtast kun IP-adresser',
+          mtu: 'MTU',
+          mtuTip: '{{min}} til {{max}}. 1280 giver plads til tunnel-headerne.',
+          allowPrivate: 'Tillad private destinationer',
+          allowPrivateTip:
+            'Lader målmaskinen nå exit-enhedens eget LAN: 10/8, 172.16/12, 192.168/16, 100.64/10 og fc00::/7. Slået fra afvises de.',
+          pinPeer: 'Fastlås til første exit',
+          pinPeerTip:
+            'Afviser forbindelser fra en anden adresse, indtil det slås fra. Ellers erstatter en ny gyldig forbindelse den gamle.',
+          save: 'Gem',
+          saved: 'Gemt'
+        },
+        logs: {
+          title: 'Log',
+          empty: 'Ingen logposter endnu',
+          refresh: 'Opdater',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel-server'
+        }
+      },
       update: {
         title: 'Kontroller for opdatering',
         queryFailed: 'Opdateringskontrol mislykkedes',

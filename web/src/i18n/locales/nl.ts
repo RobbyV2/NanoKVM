@@ -1063,6 +1063,146 @@ const nl = {
         okBtn: 'Ja',
         cancelBtn: 'Nee'
       },
+      exit: {
+        title: 'Exit-tunnel',
+        description:
+          'Maakt van de USB-netwerkinterface een internetverbinding voor het doelsysteem: zijn verkeer verlaat het netwerk via een apparaat van u dat via dit webadres inbelt.',
+        loading: 'Laden...',
+        noSlots: 'Op dit apparaat is geen exit-slot geconfigureerd.',
+        slot: 'Slot {{slot}}',
+        enable: 'Exit-tunnel',
+        pending: 'wordt toegepast...',
+        statusStale: 'status wordt niet bijgewerkt',
+        enableConfirm: 'Exit-tunnel inschakelen?',
+        disableConfirm: 'Exit-tunnel uitschakelen?',
+        reenumerate:
+          'Het USB-gadget meldt zich opnieuw aan zodat het doelsysteem zijn nieuwe gateway en DNS overneemt. Toetsenbord, muis, camera en virtuele schijf vallen ongeveer twee seconden weg.',
+        okBtn: 'Ja',
+        cancelBtn: 'Nee',
+        copy: 'Kopiëren',
+        copied: 'Gekopieerd',
+        copyFailed: 'Kopiëren mislukt, selecteer de tekst en kopieer handmatig',
+        state: {
+          disconnected: 'Verbroken',
+          connecting: 'Verbinden',
+          connected: 'Verbonden'
+        },
+        status: {
+          title: 'Status',
+          disconnect: 'Exit verbreken',
+          disconnectDesc:
+            'Verbreekt het verbonden exit-apparaat. Zijn client maakt vanzelf opnieuw verbinding, tenzij u die eerst stopt.',
+          tunnel: 'Tunnel',
+          uptime: 'actief {{uptime}}',
+          lastConnected: 'laatst verbonden {{time}}',
+          never: 'nooit',
+          peer: 'Exit-apparaat',
+          noPeer: 'Geen exit-apparaat verbonden',
+          peerChanged: 'Vervangt {{addr}} sinds {{time}}',
+          nic: 'NIC van het doel',
+          nicUp: 'actief',
+          nicDown: 'inactief',
+          nicMissing: 'Nog niet bepaald',
+          nicNone:
+            'Het huidige USB-profiel bevat geen netwerkfunctie. Schakel de USB-netwerkadapter in onder Netwerk om het doelsysteem een NIC te geven.',
+          upstream: 'Internet',
+          reachable: 'Bereikbaar',
+          unreachable: 'Onbereikbaar',
+          latency: '{{ms}} ms',
+          notProbed: 'Niet gecontroleerd zolang er geen exit verbonden is',
+          downstream: 'Downstream',
+          downstreamOff: 'Uit zolang de tunnel is uitgeschakeld',
+          downstreamDegraded:
+            'Een deel van het downstream-pad ontbreekt. De watchdog probeert het elke 30 seconden opnieuw; de logboeken hieronder tonen wat mislukte.',
+          downstreamTip: {
+            forward: 'IPv4-doorsturen staat aan',
+            routing: 'De policy-routingregels en de afsluitroute zijn aanwezig',
+            tun: 'Het tun-apparaat bestaat en heeft een lezer',
+            hev: 'De tun2socks-vertaler draait',
+            wstunnel: 'De wstunnel-server draait (in native modus altijd waar)',
+            dns: 'De DNS-forwarder is gebonden aan het USB-netwerkadres',
+            nat: 'De firewall-ketens bestaan en zijn gekoppeld'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} verzoeken, {{failures}} mislukt, {{redirected}} omgeleid',
+          traffic: 'Verkeer',
+          trafficUp: '{{bytes}} naar de exit',
+          trafficDown: '{{bytes}} van de exit'
+        },
+        token: {
+          title: 'Token',
+          history:
+            'Onderdeel van elk commando hieronder, en komt dus in de shell-geschiedenis van het exit-apparaat terecht.',
+          regenerate: 'Opnieuw genereren',
+          regenerateConfirm: 'Token opnieuw genereren?',
+          regenerateDesc:
+            'Stop eerst de draaiende client. Elke verbonden exit wordt verbroken en de oude commando’s werken niet meer.'
+        },
+        mode: {
+          title: 'Modus',
+          native: 'Native',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Een klein script, opgehaald van deze NanoKVM, draait op het exit-apparaat. Niets te installeren.',
+          wstunnelDesc:
+            'Het exit-apparaat downloadt de vastgezette {{version}}-binary en controleert de SHA-256 voordat het die uitvoert.',
+          whileEnabled: 'Schakel de tunnel uit om van modus te wisselen.'
+        },
+        commands: {
+          title: 'Uitvoeren op het exit-apparaat',
+          description:
+            'Plak één commando op de machine waarvan het doelsysteem het internet moet gebruiken. Het blijft opnieuw verbinden tot u het stopt.',
+          warnDownload:
+            'Het commando downloadt een script van deze NanoKVM en voert het uit als uw gebruiker.',
+          warnSecret:
+            'Het bevat een geheim dat het internet van het doelsysteem bepaalt en wordt opgeslagen in uw shell-geschiedenis.',
+          warnReach:
+            'Alles wat het exit-apparaat kan bereiken, wordt bereikbaar vanaf het doelsysteem.',
+          warnFingerprint:
+            'De exit verbindt pas na controle van de certificaatvingerafdruk {{fingerprint}}.',
+          warnCleartext:
+            'Deze pagina wordt via gewoon http geserveerd: het token en al het verkeer tussen de exit en de NanoKVM zijn onversleuteld.',
+          warnWstunnelUnverified:
+            'wstunnel kan geen certificaatvingerafdruk vastzetten. Zonder door een CA ondertekend certificaat is zijn verbinding met de NanoKVM niet geauthenticeerd.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Script bekijken',
+          scriptTitle: 'Script {{name}}',
+          scriptFailed: 'Script ophalen mislukt',
+          rewritten: 'Geadresseerd aan {{host}}, het adres dat deze browser heeft bereikt.',
+          unavailable: 'Geen commando voor dit platform.',
+          regenerateHint:
+            'Er is een exit verbonden. Genereer het token opnieuw zodra het geplakte commando niet meer nodig is; de exit moet dan met het nieuwe commando worden herstart.',
+          security:
+            'Het doelsysteem bereikt de webinterface, SSH en VNC van deze NanoKVM al via het USB-netwerkadres. Deze functie verandert daar niets aan.'
+        },
+        advanced: {
+          title: 'Geavanceerd',
+          dns: 'DNS-servers',
+          dnsTip:
+            'Tot vier resolvers, bereikt via de exit. Het doelsysteem krijgt de NanoKVM als resolver en elke onversleutelde DNS-vraag wordt hierheen omgeleid.',
+          dnsAdd: 'Server toevoegen',
+          dnsInvalid: 'Voer alleen IP-adressen in',
+          mtu: 'MTU',
+          mtuTip: '{{min}} tot {{max}}. 1280 laat ruimte voor de tunnel-headers.',
+          allowPrivate: 'Privébestemmingen toestaan',
+          allowPrivateTip:
+            'Laat het doelsysteem het eigen LAN van het exit-apparaat bereiken: 10/8, 172.16/12, 192.168/16, 100.64/10 en fc00::/7. Uit: deze worden geweigerd.',
+          pinPeer: 'Vastzetten op de eerste exit',
+          pinPeerTip:
+            'Weigert een verbinding vanaf een ander adres tot dit wordt uitgeschakeld. Anders vervangt een nieuwe geldige verbinding de oude.',
+          save: 'Opslaan',
+          saved: 'Opgeslagen'
+        },
+        logs: {
+          title: 'Logboek',
+          empty: 'Nog geen logregels',
+          refresh: 'Vernieuwen',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel-server'
+        }
+      },
       update: {
         title: 'Controleren op updates',
         queryFailed: 'Ophalen versie mislukt',

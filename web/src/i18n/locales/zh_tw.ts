@@ -1004,6 +1004,134 @@ const zh_tw = {
         okBtn: '確定',
         cancelBtn: '取消'
       },
+      exit: {
+        title: '出口隧道',
+        description:
+          '把 USB 網路介面變成目標機的上網出口：目標機的流量經由透過此網頁位址接入的你的裝置流出。',
+        loading: '載入中...',
+        noSlots: '此裝置未設定任何出口插槽。',
+        slot: '插槽 {{slot}}',
+        enable: '出口隧道',
+        pending: '正在套用...',
+        statusStale: '狀態未更新',
+        enableConfirm: '啟用出口隧道？',
+        disableConfirm: '停用出口隧道？',
+        reenumerate:
+          'USB 裝置將重新列舉，讓目標機取得新的閘道和 DNS。鍵盤、滑鼠、攝影機和虛擬磁碟會中斷約兩秒。',
+        okBtn: '確定',
+        cancelBtn: '取消',
+        copy: '複製',
+        copied: '已複製',
+        copyFailed: '複製失敗，請選取文字手動複製',
+        state: {
+          disconnected: '未連線',
+          connecting: '連線中',
+          connected: '已連線'
+        },
+        status: {
+          title: '狀態',
+          disconnect: '中斷出口',
+          disconnectDesc: '中斷已連線的出口裝置。除非先停止其用戶端，否則它會自動重新連線。',
+          tunnel: '隧道',
+          uptime: '已執行 {{uptime}}',
+          lastConnected: '上次連線 {{time}}',
+          never: '從未',
+          peer: '出口裝置',
+          noPeer: '沒有已連線的出口裝置',
+          peerChanged: '於 {{time}} 從 {{addr}} 切換',
+          nic: '目標機網卡',
+          nicUp: '已啟用',
+          nicDown: '未啟用',
+          nicMissing: '尚未識別',
+          nicNone: '目前的 USB 設定檔不含網路功能。請在「網路」中開啟 USB 網卡，為目標機提供網卡。',
+          upstream: '網際網路',
+          reachable: '可達',
+          unreachable: '不可達',
+          latency: '{{ms}} ms',
+          notProbed: '出口連線前不探測',
+          downstream: '下行鏈路',
+          downstreamOff: '隧道停用期間關閉',
+          downstreamDegraded:
+            '下行鏈路缺少了一部分。看門狗每 30 秒重試一次；下方日誌會說明失敗原因。',
+          downstreamTip: {
+            forward: 'IPv4 轉送已開啟',
+            routing: '策略路由規則與圍欄路由已就位',
+            tun: 'tun 裝置存在且有讀取端接入',
+            hev: 'tun2socks 轉換器正在執行',
+            wstunnel: 'wstunnel 伺服器正在執行（原生模式下始終為真）',
+            dns: 'DNS 轉送器已繫結到 USB 網路位址',
+            nat: '防火牆鏈已存在並已掛接'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} 次查詢，{{failures}} 次失敗，{{redirected}} 次重新導向',
+          traffic: '流量',
+          trafficUp: '送往出口 {{bytes}}',
+          trafficDown: '來自出口 {{bytes}}'
+        },
+        token: {
+          title: '權杖',
+          history: '包含在下方每條命令中，因此會留在出口裝置的 shell 歷史紀錄裡。',
+          regenerate: '重新產生',
+          regenerateConfirm: '重新產生權杖？',
+          regenerateDesc: '請先停止正在執行的用戶端。所有已連線的出口都會被中斷，舊命令將失效。'
+        },
+        mode: {
+          title: '模式',
+          native: '原生',
+          wstunnel: 'wstunnel',
+          nativeDesc: '從此 NanoKVM 取得的小型指令碼在出口裝置上執行，無需安裝。',
+          wstunnelDesc: '出口裝置下載固定版本 {{version}} 的二進位檔，並在執行前驗證其 SHA-256。',
+          whileEnabled: '請先停用隧道再切換模式。'
+        },
+        commands: {
+          title: '在出口裝置上執行',
+          description:
+            '在你希望目標機借用其網路的那台機器上貼上一條命令。它會持續重新連線，直到你停止它。',
+          warnDownload: '該命令會從此 NanoKVM 下載指令碼，並以你的使用者身分執行。',
+          warnSecret: '它包含控制目標機上網的密鑰，並會儲存在你的 shell 歷史紀錄中。',
+          warnReach: '出口裝置能存取的一切，目標機也將能存取。',
+          warnFingerprint: '出口只會在驗證憑證指紋 {{fingerprint}} 後才連線。',
+          warnCleartext: '本頁透過明文 http 提供：權杖以及出口與 NanoKVM 之間的所有流量均未加密。',
+          warnWstunnelUnverified:
+            'wstunnel 無法固定憑證指紋。沒有 CA 簽發的憑證時，它到 NanoKVM 的連線不經身分驗證。',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: '檢視指令碼',
+          scriptTitle: '指令碼 {{name}}',
+          scriptFailed: '取得指令碼失敗',
+          rewritten: '已改為指向 {{host}}，即本瀏覽器存取的位址。',
+          unavailable: '該平台沒有可用命令。',
+          regenerateHint:
+            '已有出口連線。不再需要貼上的命令後，請重新產生權杖；之後需用新命令重新啟動出口。',
+          security:
+            '目標機本來就能透過 USB 網路位址存取此 NanoKVM 的網頁介面、SSH 和 VNC。此功能不改變這一點。'
+        },
+        advanced: {
+          title: '進階',
+          dns: 'DNS 伺服器',
+          dnsTip:
+            '最多四個解析器，經由出口存取。目標機會把 NanoKVM 當作解析器，所有明文 DNS 查詢都會被重新導向到這裡。',
+          dnsAdd: '新增伺服器',
+          dnsInvalid: '只能輸入 IP 位址',
+          mtu: 'MTU',
+          mtuTip: '{{min}} 到 {{max}}。1280 可為隧道標頭留出空間。',
+          allowPrivate: '允許私有目的位址',
+          allowPrivateTip:
+            '允許目標機存取出口裝置自己的區域網路：10/8、172.16/12、192.168/16、100.64/10 和 fc00::/7。關閉時這些位址會被拒絕。',
+          pinPeer: '固定到首個出口',
+          pinPeerTip: '在關閉前拒絕來自其他位址的連線。否則新的有效連線會取代舊連線。',
+          save: '儲存',
+          saved: '已儲存'
+        },
+        logs: {
+          title: '日誌',
+          empty: '尚無日誌',
+          refresh: '重新整理',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel 伺服器'
+        }
+      },
       update: {
         title: '檢查更新',
         queryFailed: '取得版本號失敗',

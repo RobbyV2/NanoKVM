@@ -1052,6 +1052,145 @@ const tr = {
         okBtn: 'Evet',
         cancelBtn: 'Hayır'
       },
+      exit: {
+        title: 'Çıkış tüneli',
+        description:
+          'USB ağ arabirimini hedef bilgisayar için bir internet bağlantısına dönüştürür: trafiği, bu web adresi üzerinden bağlanan kendi cihazınızdan çıkar.',
+        loading: 'Yükleniyor...',
+        noSlots: 'Bu cihazda yapılandırılmış çıkış yuvası yok.',
+        slot: 'Yuva {{slot}}',
+        enable: 'Çıkış tüneli',
+        pending: 'uygulanıyor...',
+        statusStale: 'durum güncellenmiyor',
+        enableConfirm: 'Çıkış tüneli etkinleştirilsin mi?',
+        disableConfirm: 'Çıkış tüneli devre dışı bırakılsın mı?',
+        reenumerate:
+          'Hedefin yeni ağ geçidini ve DNS’i alması için USB aygıtı yeniden tanıtılır. Klavye, fare, kamera ve sanal disk yaklaşık iki saniye kesilir.',
+        okBtn: 'Evet',
+        cancelBtn: 'Hayır',
+        copy: 'Kopyala',
+        copied: 'Kopyalandı',
+        copyFailed: 'Kopyalanamadı, metni seçip elle kopyalayın',
+        state: {
+          disconnected: 'Bağlı değil',
+          connecting: 'Bağlanıyor',
+          connected: 'Bağlandı'
+        },
+        status: {
+          title: 'Durum',
+          disconnect: 'Çıkışı ayır',
+          disconnectDesc:
+            'Bağlı çıkış cihazının bağlantısını keser. Önce durdurmazsanız istemcisi kendiliğinden yeniden bağlanır.',
+          tunnel: 'Tünel',
+          uptime: '{{uptime}} boyunca açık',
+          lastConnected: 'son bağlantı {{time}}',
+          never: 'hiç',
+          peer: 'Çıkış cihazı',
+          noPeer: 'Bağlı çıkış cihazı yok',
+          peerChanged: '{{time}} itibarıyla {{addr}} yerine geçti',
+          nic: 'Hedefin ağ kartı',
+          nicUp: 'açık',
+          nicDown: 'kapalı',
+          nicMissing: 'Henüz belirlenmedi',
+          nicNone:
+            'Geçerli USB profili ağ işlevi içermiyor. Hedefe bir ağ kartı vermek için Ağ altında USB ağ bağdaştırıcısını açın.',
+          upstream: 'İnternet',
+          reachable: 'Erişilebilir',
+          unreachable: 'Erişilemez',
+          latency: '{{ms}} ms',
+          notProbed: 'Bir çıkış bağlanmadıkça denetlenmez',
+          downstream: 'Aşağı yol',
+          downstreamOff: 'Tünel devre dışıyken kapalı',
+          downstreamDegraded:
+            'Aşağı yolun bir kısmı eksik. Bekçi 30 saniyede bir yeniden dener; aşağıdaki günlükler neyin başarısız olduğunu gösterir.',
+          downstreamTip: {
+            forward: 'IPv4 yönlendirme açık',
+            routing: 'İlke tabanlı yönlendirme kuralları ve kapama rotası yerinde',
+            tun: 'tun aygıtı var ve bir okuyucu bağlı',
+            hev: 'tun2socks çevirici çalışıyor',
+            wstunnel: 'wstunnel sunucusu çalışıyor (yerel modda her zaman doğru)',
+            dns: 'DNS iletici USB ağ adresine bağlı',
+            nat: 'Güvenlik duvarı zincirleri mevcut ve bağlanmış'
+          },
+          dns: 'DNS',
+          dnsStats: '{{queries}} sorgu, {{failures}} başarısız, {{redirected}} yönlendirildi',
+          traffic: 'Trafik',
+          trafficUp: 'çıkışa {{bytes}}',
+          trafficDown: 'çıkıştan {{bytes}}'
+        },
+        token: {
+          title: 'Belirteç',
+          history:
+            'Aşağıdaki her komutun parçasıdır, dolayısıyla çıkış cihazının kabuk geçmişine düşer.',
+          regenerate: 'Yeniden oluştur',
+          regenerateConfirm: 'Belirteç yeniden oluşturulsun mu?',
+          regenerateDesc:
+            'Önce çalışan istemciyi durdurun. Bağlı tüm çıkışlar kesilir ve eski komutlar çalışmayı bırakır.'
+        },
+        mode: {
+          title: 'Mod',
+          native: 'Yerel',
+          wstunnel: 'wstunnel',
+          nativeDesc:
+            'Bu NanoKVM’den alınan küçük bir betik çıkış cihazında çalışır. Kurulacak bir şey yok.',
+          wstunnelDesc:
+            'Çıkış cihazı sabitlenmiş {{version}} ikili dosyasını indirir ve çalıştırmadan önce SHA-256 değerini doğrular.',
+          whileEnabled: 'Modu değiştirmek için tüneli devre dışı bırakın.'
+        },
+        commands: {
+          title: 'Çıkış cihazında çalıştırın',
+          description:
+            'Hedefin internetini kullanacağı makinede tek bir komut yapıştırın. Siz durdurana kadar yeniden bağlanmaya devam eder.',
+          warnDownload:
+            'Komut bu NanoKVM’den bir betik indirir ve onu sizin kullanıcınızla çalıştırır.',
+          warnSecret:
+            'Hedefin internetini denetleyen bir sır içerir ve kabuk geçmişinize kaydedilir.',
+          warnReach: 'Çıkış cihazının erişebildiği her şey hedeften erişilebilir olur.',
+          warnFingerprint:
+            'Çıkış yalnızca {{fingerprint}} sertifika parmak izini doğruladıktan sonra bağlanır.',
+          warnCleartext:
+            'Bu sayfa düz http üzerinden sunuluyor: belirteç ve çıkış ile NanoKVM arasındaki tüm trafik şifresizdir.',
+          warnWstunnelUnverified:
+            'wstunnel bir sertifika parmak izi sabitleyemez. CA imzalı bir sertifika olmadan NanoKVM’e bağlantısı kimliği doğrulanmamıştır.',
+          windows: 'Windows PowerShell',
+          macos: 'macOS',
+          linux: 'Linux',
+          viewScript: 'Betiği görüntüle',
+          scriptTitle: '{{name}} betiği',
+          scriptFailed: 'Betik alınamadı',
+          rewritten: 'Bu tarayıcının ulaştığı adres olan {{host}} için düzenlendi.',
+          unavailable: 'Bu platform için komut yok.',
+          regenerateHint:
+            'Bir çıkış bağlandı. Yapıştırılan komuta artık gerek kalmadığında belirteci yeniden oluşturun; çıkış daha sonra yeni komutla yeniden başlatılmalıdır.',
+          security:
+            'Hedef, bu NanoKVM’in web arayüzüne, SSH ve VNC’sine USB ağ adresi üzerinden zaten erişiyor. Bu özellik bunu değiştirmez.'
+        },
+        advanced: {
+          title: 'Gelişmiş',
+          dns: 'DNS sunucuları',
+          dnsTip:
+            'Çıkış üzerinden erişilen en fazla dört çözümleyici. Hedefe çözümleyici olarak NanoKVM verilir ve her düz metin DNS sorgusu buraya yönlendirilir.',
+          dnsAdd: 'Sunucu ekle',
+          dnsInvalid: 'Yalnızca IP adresi girin',
+          mtu: 'MTU',
+          mtuTip: '{{min}} ile {{max}} arası. 1280, tünel başlıklarına yer bırakır.',
+          allowPrivate: 'Özel hedeflere izin ver',
+          allowPrivateTip:
+            'Hedefin çıkış cihazının kendi yerel ağına erişmesini sağlar: 10/8, 172.16/12, 192.168/16, 100.64/10 ve fc00::/7. Kapalıyken bunlar reddedilir.',
+          pinPeer: 'İlk çıkışa sabitle',
+          pinPeerTip:
+            'Kapatılana kadar farklı bir adresten gelen bağlantıyı reddeder. Aksi halde yeni geçerli bir bağlantı eskisinin yerine geçer.',
+          save: 'Kaydet',
+          saved: 'Kaydedildi'
+        },
+        logs: {
+          title: 'Günlükler',
+          empty: 'Henüz günlük kaydı yok',
+          refresh: 'Yenile',
+          hev: 'tun2socks (hev-socks5-tunnel)',
+          wstunnel: 'wstunnel sunucusu'
+        }
+      },
       update: {
         title: 'Güncelleştirmeleri kontrol et',
         queryFailed: 'Sürüm bilgisi alınamadı',
