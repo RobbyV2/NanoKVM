@@ -118,6 +118,7 @@ load_slot() {
 	MASQ_CHAIN=EXIT${n}_MASQ
 	WS_PORT=$((10810 + n))
 	LOCK="$RUN_DIR/$NAME.lock"
+	REDIR_FILE="$RUN_DIR/$NAME.dns_redirected"
 	HEV_PID="$RUN_DIR/$NAME-hev.pid"
 	WS_PID="$RUN_DIR/$NAME-wstunnel.pid"
 	HEV_LOG="$LOG_DIR/$NAME-hev.log"
@@ -260,6 +261,28 @@ ipt() {
 	iptables "$@" || { log "iptables $*: failed"; ok=0; }
 }
 
+# Packets the two DNS DNAT rules have matched since the chain was last
+# populated (D3: the consumer's plaintext DNS is redirected to the forwarder).
+dnat_hits() {
+	iptables -t nat -L "$NAT_CHAIN" -v -n -x 2>/dev/null | awk '$3 == "DNAT" { s += $1 } END { print s + 0 }'
+}
+
+# The chain is flushed on every converge, which zeroes its counters, so the
+# hits so far are carried over in a tmpfs file; status reports carried + live,
+# a total since enable (or boot), and stop removes the file.
+carried_hits() {
+	prev=0
+	[ -r "$REDIR_FILE" ] && read -r prev < "$REDIR_FILE"
+	case "$prev" in
+		''|*[!0-9]*) prev=0 ;;
+	esac
+	echo "$prev"
+}
+
+carry_hits() {
+	echo $(( $(carried_hits) + $(dnat_hits) )) > "$REDIR_FILE"
+}
+
 # EXIT<n>, flushed and repopulated (D6). The MSS clamps come before the
 # ACCEPTs because ACCEPT ends traversal in the filter table; TCPMSS is not
 # terminating, so the clamp sees the SYN and the ACCEPT that follows lets it
@@ -286,6 +309,7 @@ apply_chains() {
 	iptables -C FORWARD -j "$CHAIN" 2>/dev/null || ipt -I FORWARD -j "$CHAIN"
 
 	iptables -t nat -N "$NAT_CHAIN" 2>/dev/null
+	carry_hits
 	ipt -t nat -F "$NAT_CHAIN"
 	if [ -n "$gw" ]
 	then
@@ -342,6 +366,7 @@ do_stop() {
 	while iptables -t nat -D POSTROUTING -j "$MASQ_CHAIN" 2>/dev/null; do :; done
 	iptables -t nat -F "$MASQ_CHAIN" 2>/dev/null
 	iptables -t nat -X "$MASQ_CHAIN" 2>/dev/null
+	rm -f "$REDIR_FILE"
 
 	nic=$(gadget_nic)
 	if [ -n "$nic" ] && command -v ip6tables >/dev/null 2>&1
@@ -421,7 +446,7 @@ status_slot() {
 
 	gw=
 	[ -n "$nic" ] && gw=$(nic_gateway "$nic")
-	redirected=$(iptables -t nat -L "$NAT_CHAIN" -v -n -x 2>/dev/null | awk '$3 == "DNAT" { s += $1 } END { print s + 0 }')
+	redirected=$(( $(carried_hits) + $(dnat_hits) ))
 
 	printf 'forward=%s\nrouting=%s\ntun=%s\nhev=%s\nwstunnel=%s\nnat=%s\nnic=%s\ngw=%s\ndns_redirected=%s\n' \
 		"$forward" "$routing" "$tun" "$hev" "$wstunnel" "$nat" "$nic" "$gw" "${redirected:-0}"

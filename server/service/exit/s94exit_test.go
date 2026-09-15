@@ -388,6 +388,12 @@ func TestS94exitStatusVectorAndStop(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(h.runDir, "exit0-wstunnel.pid")); !os.IsNotExist(err) {
 		t.Fatal("wstunnel pidfile survived the switch to native")
 	}
+	// The converge flushed the NAT chain (counters zeroed) after carrying its
+	// 4 hits over; the stub reports 4 live hits again, so the total is 8.
+	out, _ = h.run("status", "0")
+	if report, ok := parseStatus(out); !ok || report.DNSRedirected != 8 {
+		t.Fatalf("dns_redirected after a second converge = %d (ok=%v), want 8:\n%s", report.DNSRedirected, ok, out)
+	}
 
 	// Stop reverses everything by identity.
 	if out, code := h.run("stop", "0"); code != 0 {
@@ -423,6 +429,9 @@ func TestS94exitStatusVectorAndStop(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(h.runDir, "exit0-hev.pid")); !os.IsNotExist(err) {
 		t.Error("hev pidfile survived stop")
+	}
+	if _, err := os.Stat(filepath.Join(h.runDir, "exit0.dns_redirected")); !os.IsNotExist(err) {
+		t.Error("dns_redirected total survived stop")
 	}
 
 	// A second stop is harmless.
