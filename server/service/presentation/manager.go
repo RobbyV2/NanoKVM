@@ -82,7 +82,7 @@ type Manager struct {
 	wireMu  sync.Mutex
 	hid     HIDQuiescer
 	media   GadgetObserver
-	rebound func(context.Context)
+	rebound []func(context.Context)
 
 	mu sync.Mutex
 
@@ -216,12 +216,17 @@ func (m *Manager) SetObserver(observer GadgetObserver) {
 
 // Every gadget mutation below unbinds the UDC and binds it again, which
 // destroys and recreates the gadget NIC. The bridge registers here so that br0
-// regains the port it just lost; nothing else in this package knows a bridge
-// can exist.
+// regains the port it just lost, and the exit tunnel registers to re-key its
+// routing on the new netdev; nothing in this package knows either exists.
+// Subscribers accumulate and every one fires, in registration order, on every
+// notification.
 func (m *Manager) OnRebind(fn func(context.Context)) {
+	if fn == nil {
+		return
+	}
 	m.wireMu.Lock()
 	defer m.wireMu.Unlock()
-	m.rebound = fn
+	m.rebound = append(m.rebound, fn)
 }
 
 func (m *Manager) Snapshot() (Snapshot, error) {
@@ -1185,9 +1190,10 @@ func (m *Manager) observer() GadgetObserver {
 
 func (m *Manager) notifyRebound(ctx context.Context) {
 	m.wireMu.Lock()
-	fn := m.rebound
+	subscribers := make([]func(context.Context), len(m.rebound))
+	copy(subscribers, m.rebound)
 	m.wireMu.Unlock()
-	if fn != nil {
+	for _, fn := range subscribers {
 		fn(ctx)
 	}
 }
