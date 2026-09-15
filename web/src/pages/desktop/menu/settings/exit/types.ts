@@ -112,7 +112,8 @@ export type SetExitConfigReq = {
 
 export type ExitCommand = {
   platform: ExitPlatform;
-  shell: 'powershell' | 'bash' | string;
+  // powershell or bash
+  shell: string;
   command: string;
   notes?: string;
 };

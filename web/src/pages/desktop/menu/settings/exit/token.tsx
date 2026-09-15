@@ -71,14 +71,18 @@ export const ExitToken = ({ token, regenerating, onRegenerate }: ExitTokenProps)
             disabled={regenerating}
             onConfirm={onRegenerate}
           >
-            <Tooltip title={t('settings.exit.token.regenerate')} placement="bottom">
-              <Button
-                type="text"
-                size="small"
-                loading={regenerating}
-                icon={<RefreshCcwIcon size={15} />}
-              />
-            </Tooltip>
+            {/* the confirm binds its click to this span, the tooltip its hover to
+                the button, so neither has to pass handlers through the other */}
+            <span>
+              <Tooltip title={t('settings.exit.token.regenerate')} placement="bottom">
+                <Button
+                  type="text"
+                  size="small"
+                  loading={regenerating}
+                  icon={<RefreshCcwIcon size={15} />}
+                />
+              </Tooltip>
+            </span>
           </Popconfirm>
         </div>
       </div>
