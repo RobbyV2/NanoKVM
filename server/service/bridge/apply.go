@@ -129,6 +129,14 @@ func (m *Manager) Enable(ctx context.Context) (proto.SetBridgeRsp, error) {
 	// the transaction would run all the way to step 11 and roll back, with the
 	// device holding no address for the minute in between. Nothing here mutates,
 	// so a refusal leaves no snapshot, no marker and no bridge.
+	//
+	// The gadget NIC can be a bridge port or the exit tunnel's routed
+	// downstream, never both (exit-tunnel design, D17). The exit side refuses
+	// symmetrically while br0 exists or the bridge is recorded enabled.
+	if slot, owned := m.exitOwner(); owned {
+		err := fmt.Errorf("%w: exit tunnel slot %s owns the gadget NIC; disable it first", ErrPreflight, slot)
+		return proto.SetBridgeRsp{State: proto.BridgeDisabled, Uplink: ReadUplink(), Message: err.Error()}, err
+	}
 	if err := m.preflight(ctx); err != nil {
 		return proto.SetBridgeRsp{State: proto.BridgeDisabled, Uplink: ReadUplink(), Message: err.Error()}, err
 	}

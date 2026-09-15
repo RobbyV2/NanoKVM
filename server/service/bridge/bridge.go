@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/exit"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -605,6 +606,10 @@ type Manager struct {
 	gadget   Gadget
 	store    *Store
 
+	// exitOwner answers whether an exit tunnel slot has the gadget NIC, and
+	// which; exit.AnyEnabled in production, a stub in tests.
+	exitOwner func() (slot string, owned bool)
+
 	window time.Duration
 	now    func() time.Time
 
@@ -628,6 +633,11 @@ type Config struct {
 	// transaction unchanged and simply skips step 13.
 	Gadget Gadget
 
+	// ExitOwner may be nil, which takes exit.AnyEnabled: the file-level
+	// question of whether any exit slot is enabled, which a test answers
+	// without an exit manager.
+	ExitOwner func() (slot string, owned bool)
+
 	Store  *Store
 	Window time.Duration
 	Now    func() time.Time
@@ -640,15 +650,19 @@ func New(cfg Config) *Manager {
 	}
 
 	m := &Manager{
-		ip:       cfg.IP,
-		scripts:  cfg.Scripts,
-		firewall: cfg.Firewall,
-		pinger:   cfg.Pinger,
-		live:     cfg.Liveness,
-		gadget:   cfg.Gadget,
-		store:    cfg.Store,
-		window:   cfg.Window,
-		now:      cfg.Now,
+		ip:        cfg.IP,
+		scripts:   cfg.Scripts,
+		firewall:  cfg.Firewall,
+		pinger:    cfg.Pinger,
+		live:      cfg.Liveness,
+		gadget:    cfg.Gadget,
+		exitOwner: cfg.ExitOwner,
+		store:     cfg.Store,
+		window:    cfg.Window,
+		now:       cfg.Now,
+	}
+	if m.exitOwner == nil {
+		m.exitOwner = exit.AnyEnabled
 	}
 
 	if m.ip == nil {
