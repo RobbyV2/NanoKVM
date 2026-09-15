@@ -1,10 +1,12 @@
 package exit
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"net/netip"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -67,21 +69,34 @@ func recordListen(addr string) {
 	listenLog.addrs = append(listenLog.addrs, addr)
 }
 
+// conformanceRun reports whether the -run filter selects the conformance
+// suite (conformance_test.go, build tag conformance), which drives the real
+// Python and Perl clients and needs the production protocol timers: a real
+// client cannot be asked to answer a 100 ms ping cadence. Everything else
+// gets the short timers, so the two are never mixed in one binary.
+func conformanceRun() bool {
+	f := flag.Lookup("test.run")
+	return f != nil && strings.Contains(f.Value.String(), "Conformance")
+}
+
 // TestMain shortens every protocol timer once for the whole binary and
 // installs the address indirections. Setting them per test would race with
 // goroutines of the previous test that still read them.
 func TestMain(m *testing.M) {
-	helloTimeout = 300 * time.Millisecond
-	openTimeout = 500 * time.Millisecond
-	pingInterval = 100 * time.Millisecond
-	pingMisses = 2
-	udpIdleTimeout = 400 * time.Millisecond
-	probeInterval = 100 * time.Millisecond
-	probeTimeout = 500 * time.Millisecond
-	probeInitialDelay = 20 * time.Millisecond
-	dnsQueryBudget = time.Second
-	reverseProbeInterval = 20 * time.Millisecond
-	relayDialTimeout = time.Second
+	flag.Parse()
+	if !conformanceRun() {
+		helloTimeout = 300 * time.Millisecond
+		openTimeout = 500 * time.Millisecond
+		pingInterval = 100 * time.Millisecond
+		pingMisses = 2
+		udpIdleTimeout = 400 * time.Millisecond
+		probeInterval = 100 * time.Millisecond
+		probeTimeout = 500 * time.Millisecond
+		probeInitialDelay = 20 * time.Millisecond
+		dnsQueryBudget = time.Second
+		reverseProbeInterval = 20 * time.Millisecond
+		relayDialTimeout = time.Second
+	}
 	dnsPort = 0
 
 	socksListenAddr = func(Slot) string { return "127.0.0.1:0" }

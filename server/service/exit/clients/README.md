@@ -29,8 +29,16 @@ Placeholders replaced by `commands.go` when serving (never argv):
 | `__FINGERPRINT__` | sha256 hex of the served leaf certificate, or empty on http; colons and upper case are tolerated | same |
 | `__ALLOW_PRIVATE__` | `1` or `0` | not used |
 
-Every client refuses to run with the placeholders still in place. W1 should embed with
-`//go:embed clients/client.*` so `testdata/` does not end up in the binary.
+Every client refuses to run with the placeholders still in place. `clients_embed.go` embeds
+exactly the four `client.*` files, so this README and `testdata/` stay out of the binary.
+
+The Go conformance suite (`server/service/exit/conformance_test.go`, build tag `conformance`)
+runs `client.py` and `client.pl` as subprocesses against the real Mux and FrontDoor:
+
+    cd server && go test -race -tags conformance -run Conformance ./service/exit/ -v
+
+It needs `python3`, `perl` and a non-loopback IPv4 address on the host (the policy always
+denies 127/8, so the echo servers listen on the LAN address, as `host_tests.py --bind` does).
 
 ## Behaviour common to the three clients
 
