@@ -1,3 +1,0 @@
-# Placeholder so the exit package embeds this directory before the native
-# clients land here. Remove once client.sh, client.ps1, client.pl and
-# client.py exist and the embed pattern names them.

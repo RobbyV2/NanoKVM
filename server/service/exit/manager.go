@@ -82,12 +82,8 @@ type components struct {
 	Probe reachProber
 }
 
-// newComponents builds one set of dataplane components for a slot. It is set
-// by the file that wires the real constructors; nil means the dataplane is not
-// linked into this build, and every enable refuses with a clear message.
-var newComponents func(slot Slot, deps componentDeps) components
-
 // Deps are the manager's external dependencies, every one substitutable.
+// Components defaults to newComponents (wire.go), the real dataplane.
 type Deps struct {
 	NIC        NICResolver
 	Rebind     Rebinder
@@ -135,19 +131,15 @@ type Manager struct {
 	convergeMu sync.Mutex
 	slots      map[string]*slotState
 
-	initOnce       sync.Once
-	stop           chan struct{}
-	stopOnce       sync.Once
-	defaultFactory bool
+	initOnce sync.Once
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 var (
 	managerOnce    sync.Once
 	defaultManager *Manager
 )
-
-// ErrNoDataplane is the enable refusal when newComponents is unset.
-var ErrNoDataplane = errors.New("exit dataplane is not linked into this build")
 
 // ErrUnknownSlot is returned for a slot id that has no config.
 var ErrUnknownSlot = errors.New("unknown exit slot")
@@ -213,11 +205,8 @@ func NewManager(deps Deps) *Manager {
 	if deps.Now == nil {
 		deps.Now = time.Now
 	}
-	defaultFactory := deps.Components == nil
-	if defaultFactory {
-		deps.Components = func(slot Slot, d componentDeps) components {
-			return newComponents(slot, d)
-		}
+	if deps.Components == nil {
+		deps.Components = newComponents
 	}
 	if deps.NICInfo == nil {
 		deps.NICInfo = readNICInfo
@@ -229,20 +218,12 @@ func NewManager(deps Deps) *Manager {
 		deps.Bridge = fileBridgeGate{}
 	}
 	return &Manager{
-		deps:           deps,
-		down:           downstream{run: deps.Runner},
-		limiter:        deps.Limiter,
-		slots:          make(map[string]*slotState),
-		stop:           make(chan struct{}),
-		defaultFactory: defaultFactory,
+		deps:    deps,
+		down:    downstream{run: deps.Runner},
+		limiter: deps.Limiter,
+		slots:   make(map[string]*slotState),
+		stop:    make(chan struct{}),
 	}
-}
-
-// hasDataplane is false only in a build where nothing set newComponents and
-// no test supplied a factory: then every enable refuses with ErrNoDataplane
-// instead of dereferencing nil.
-func (m *Manager) hasDataplane() bool {
-	return !m.defaultFactory || newComponents != nil
 }
 
 // readNICInfo is the real NICInfo: link state and the first 10.x address.
@@ -466,9 +447,6 @@ func (m *Manager) refreshDownstream(ctx context.Context, s *slotState) {
 // forwarder to gw when it is known. Bind errors are returned; the front door's
 // listen error is fatal to an enable.
 func (m *Manager) startComponents(s *slotState, gw netip.Addr) error {
-	if !m.hasDataplane() {
-		return ErrNoDataplane
-	}
 	m.mu.Lock()
 	if s.comps != nil {
 		m.mu.Unlock()
@@ -659,10 +637,7 @@ func (m *Manager) Enable(ctx context.Context, slot Slot) error {
 		return m.fail(s, fmt.Errorf("read the gadget network function: %w", err))
 	}
 	if protocol == "" {
-		return m.fail(s, errors.New("the USB profile links no network function: turn on Virtual Network under Settings, Device"))
-	}
-	if !m.hasDataplane() {
-		return m.fail(s, ErrNoDataplane)
+		return m.fail(s, errors.New("the USB profile links no network function: turn on the USB Network Adapter under Network"))
 	}
 
 	cfg := m.config(s)

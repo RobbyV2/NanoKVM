@@ -383,7 +383,7 @@ func TestEnableRefusals(t *testing.T) {
 		want  string
 	}{
 		{"bridge", func(h *harness) { h.bridge.active, h.bridge.why = true, "br0 exists" }, "L2 bridge"},
-		{"no network function", func(h *harness) { h.nic.protocol = "" }, "Virtual Network"},
+		{"no network function", func(h *harness) { h.nic.protocol = "" }, "USB Network Adapter"},
 		{"gadget unreadable", func(h *harness) { h.nic.err = errors.New("no gadget") }, "no gadget"},
 	}
 	for _, tc := range cases {
@@ -730,17 +730,5 @@ func TestLogsRedactTokens(t *testing.T) {
 	last := logs.Wstunnel[len(logs.Wstunnel)-1]
 	if strings.Contains(last, cfg.Token) || strings.Contains(last, "abcdefgh") || !strings.Contains(last, "********") {
 		t.Fatalf("token not redacted: %q", last)
-	}
-}
-
-func TestEnableWithoutADataplaneRefuses(t *testing.T) {
-	h := newHarness(t)
-	h.mgr.defaultFactory = true
-	old := newComponents
-	newComponents = nil
-	t.Cleanup(func() { newComponents = old })
-	h.mgr.Init()
-	if err := h.mgr.Enable(context.Background(), MustSlot("0")); !errors.Is(err, ErrNoDataplane) {
-		t.Fatalf("enable without a dataplane: %v", err)
 	}
 }
