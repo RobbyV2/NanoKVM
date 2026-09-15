@@ -20,23 +20,6 @@ import (
 	"NanoKVM-Server/proto"
 )
 
-// TestMain shortens every protocol timer once for the whole binary. Setting
-// them per test would race with goroutines of the previous test that still
-// read them.
-func TestMain(m *testing.M) {
-	helloTimeout = 300 * time.Millisecond
-	openTimeout = 500 * time.Millisecond
-	pingInterval = 100 * time.Millisecond
-	pingMisses = 2
-	udpIdleTimeout = 400 * time.Millisecond
-	probeInterval = 100 * time.Millisecond
-	probeTimeout = 500 * time.Millisecond
-	probeInitialDelay = 20 * time.Millisecond
-	dnsQueryBudget = time.Second
-	reverseProbeInterval = 20 * time.Millisecond
-	os.Exit(m.Run())
-}
-
 // tcpPair returns two ends of one loopback TCP connection, so tests can
 // half-close (net.Pipe cannot).
 func tcpPair(t *testing.T) (net.Conn, net.Conn) {
