@@ -7,7 +7,7 @@ import { updateScreen } from '@/api/vm';
 import { setQuality as setCookie } from '@/lib/localstorage.ts';
 import { videoModeAtom } from '@/jotai/screen.ts';
 
-import { BitRateMap, QualityMap } from './constants.ts';
+import { getQualityMap } from './constants.ts';
 
 type QualityProps = {
   quality: number;
@@ -26,7 +26,11 @@ export const Quality = ({ quality, setQuality }: QualityProps) => {
   ];
 
   async function update(key: number) {
-    const value = videoMode === 'mjpeg' ? QualityMap.get(key)! : BitRateMap.get(key)!;
+    const qualityMap = getQualityMap(videoMode);
+    const value = qualityMap?.get(key);
+    if (value === undefined) {
+      return;
+    }
 
     const rsp = await updateScreen('quality', value);
     if (rsp.code !== 0) {
