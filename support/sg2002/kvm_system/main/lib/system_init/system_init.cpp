@@ -100,6 +100,11 @@ void new_app_init(void)
 	system("cp -f /kvmapp/system/init.d/S03usbdev /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S15kvmhwd /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S29bridge /etc/init.d/");
+	// The exit tunnel's converge script (exit-tunnel design, D18). The server
+	// refreshes it at every start too, but the boot before that start is what
+	// brings the persistent tun and its routing table up, so it has to be in
+	// /etc/init.d from the first boot after an update.
+	system("cp -f /kvmapp/system/init.d/S94exit /etc/init.d/");
 	system("cp -f /kvmapp/system/init.d/S30eth /etc/init.d/");
 	// The stock S30rndis addresses the gadget NIC and starts its udhcpd against
 	// the literal usb0, which is the wrong interface on any device whose net

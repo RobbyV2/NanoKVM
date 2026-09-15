@@ -204,6 +204,10 @@ func validateExtractedPackage(rootDir, expectedVersion string) (*kernelPayload, 
 		"server/NanoKVM-Server",
 		"kvm_system/kvm_system",
 		"system/init.d/S95nanokvm",
+		// The exit tunnel's converge script. The server refreshes it into
+		// /etc/init.d at every start and runs it for every enabled slot, so a
+		// package without it would leave the routed downstream unconverged.
+		"system/init.d/S94exit",
 	} {
 		info, err := os.Stat(filepath.Join(rootDir, filepath.FromSlash(required)))
 		if err != nil || !info.Mode().IsRegular() {

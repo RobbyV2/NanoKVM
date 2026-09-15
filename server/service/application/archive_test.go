@@ -74,12 +74,13 @@ func TestInspectAndExtractArchive(t *testing.T) {
 		{name: root + "/server/NanoKVM-Server", typeFlag: tar.TypeReg, data: "server"},
 		{name: root + "/kvm_system/kvm_system", typeFlag: tar.TypeReg, data: "system"},
 		{name: root + "/system/init.d/S95nanokvm", typeFlag: tar.TypeReg, data: "init"},
+		{name: root + "/system/init.d/S94exit", typeFlag: tar.TypeReg, data: "exit"},
 	})
 	info, err := inspectUpdateArchive(archive, root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.expandedBytes != 22 { // data totals: 6 + 6 + 6 + 4
+	if info.expandedBytes != 26 { // data totals: 6 + 6 + 6 + 4 + 4
 		t.Fatalf("unexpected expanded size %d", info.expandedBytes)
 	}
 	destination := t.TempDir()
@@ -93,6 +94,27 @@ func TestInspectAndExtractArchive(t *testing.T) {
 	}
 	if kernel != nil {
 		t.Fatalf("an application package reported a kernel payload %+v", kernel)
+	}
+}
+
+// The exit tunnel's converge script is required in every application package:
+// the server refreshes /etc/init.d from it at every start and runs it for
+// every enabled slot.
+func TestApplicationPackageRequiresS94exit(t *testing.T) {
+	root := "nanokvm_1.2.3"
+	archive := writeTestArchive(t, []archiveEntry{
+		{name: root, typeFlag: tar.TypeDir},
+		{name: root + "/version", typeFlag: tar.TypeReg, data: "1.2.3\n"},
+		{name: root + "/server/NanoKVM-Server", typeFlag: tar.TypeReg, data: "server"},
+		{name: root + "/kvm_system/kvm_system", typeFlag: tar.TypeReg, data: "system"},
+		{name: root + "/system/init.d/S95nanokvm", typeFlag: tar.TypeReg, data: "init"},
+	})
+	extracted, err := extractUpdateArchive(archive, t.TempDir(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateExtractedPackage(extracted, "1.2.3"); err == nil || !strings.Contains(err.Error(), "S94exit") {
+		t.Fatalf("a package without S94exit was accepted: %v", err)
 	}
 }
 
