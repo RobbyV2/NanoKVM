@@ -82,6 +82,7 @@ func TestMain(m *testing.M) {
 	dnsQueryBudget = time.Second
 	reverseProbeInterval = 20 * time.Millisecond
 	relayDialTimeout = time.Second
+	dnsPort = 0
 
 	socksListenAddr = func(Slot) string { return "127.0.0.1:0" }
 	socksDialAddr = func(s Slot) string { return lookupTestAddr(testAddrs.socks, s) }

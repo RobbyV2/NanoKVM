@@ -533,7 +533,13 @@ func TestMuxKvmSendsWindowAtHalf(t *testing.T) {
 	if err != nil || len(got) != len(src) {
 		t.Fatalf("read %d bytes, %v", len(got), err)
 	}
-	waitFor(t, "stream WINDOW", func() bool { return windows.Load() == StreamWindow })
+	// WINDOW fires once half the window has been passed to hev; what is
+	// consumed after that (less than half) is not credited before the
+	// stream is released, so the total lands in [half, full].
+	waitFor(t, "stream WINDOW", func() bool { return windows.Load() >= StreamWindow/2 })
+	if w := windows.Load(); w > StreamWindow {
+		t.Fatalf("over-credited: %d", w)
+	}
 	// The connection window is only credited at half of ConnWindow; one
 	// stream window is far below that, so no conn WINDOW yet.
 	if connWindows.Load() != 0 {
