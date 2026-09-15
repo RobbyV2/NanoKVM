@@ -92,8 +92,9 @@ type Backend interface {
 // RelayGate is what the front door consults in Mode B before relaying a SOCKS
 // connection byte-for-byte into the slot's WstunnelReverseAddr.
 type RelayGate interface {
-	// Connected reports whether at least one upgraded wstunnel connection is
-	// tracked and the reverse listener accepts (probed on the first upgrade).
+	// Connected reports whether the peer holds a wstunnel connection here,
+	// upgraded or still pending its upgrade (or left within the relay grace),
+	// and the reverse listener accepts (probed on the first upgrade).
 	Connected() bool
 	Peer() *proto.ExitPeer
 	ConnectedAt() *time.Time

@@ -19,10 +19,12 @@ import (
 )
 
 // Reverse-listener probe cadence (D13, plan: Connected() needs one successful
-// TCP probe of the reverse listener since the first tracked upgrade).
+// TCP probe of the reverse listener since the first tracked upgrade), and the
+// grace a proven peer keeps after its last connection (see maybeClearLocked).
 var (
 	reverseProbeInterval = 500 * time.Millisecond
 	reverseProbeDial     = time.Second
+	relayGrace           = 750 * time.Millisecond
 	wstunnelServerAddr   = func(s Slot) string { return s.WstunnelAddr() }
 )
 
@@ -30,8 +32,19 @@ var (
 // forwards only WebSocket upgrades whose path ends in /events, rewrites
 // /exit/<n>/<rest> to /exit<n>/<rest>, keeps Authorization, strips Cookie and
 // any incoming Forwarded / X-Forwarded-* before setting its own, tracks the
-// hijacked connections by RemoteAddr and supersedes on a new source (D12).
+// peer's connections by RemoteAddr and supersedes on a new source (D12).
 // It implements RelayGate for the front door.
+//
+// wstunnel's reverse tunnel model shapes the tracking: the client keeps
+// exactly one upgrade request open and the server answers it (101) only when
+// a downstream connection has completed its SOCKS handshake on the reverse
+// listener, at which point the client opens the next one. So an idle exit is
+// one pending, un-upgraded request; a busy one is hijacked connections plus
+// at most one pending request; and between a short relay ending and the next
+// request landing (one client round trip) the exit holds nothing here at all.
+// Pending requests are therefore tracked, closed and counted like hijacked
+// connections, and a proven peer keeps its state for relayGrace after its
+// last one goes away.
 type WSProxy struct {
 	slot         Slot
 	bytes        ByteCounter
@@ -40,14 +53,22 @@ type WSProxy struct {
 
 	mu          sync.Mutex
 	conns       map[*trackedConn]struct{}
-	pending     int
+	pending     map[*pendingReq]struct{}
 	peer        *proto.ExitPeer
 	connectedAt *time.Time
 	probed      bool
 	probeCancel context.CancelFunc
+	grace       *time.Timer
 	pinPeer     bool
 	pinnedHost  string
 	wg          sync.WaitGroup
+}
+
+// pendingReq is an upgrade request wstunnel has not answered yet; cancel
+// aborts the proxied round trip, which answers the client 502.
+type pendingReq struct {
+	host   string
+	cancel context.CancelFunc
 }
 
 // NewWSProxy builds the proxy toward slot.WstunnelAddr(). onPeerChange may be nil.
@@ -57,6 +78,7 @@ func NewWSProxy(slot Slot, bytes ByteCounter, onPeerChange func(prev, next proto
 		bytes:        bytes,
 		onPeerChange: onPeerChange,
 		conns:        make(map[*trackedConn]struct{}),
+		pending:      make(map[*pendingReq]struct{}),
 	}
 	p.proxy = &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
@@ -91,13 +113,23 @@ func (p *WSProxy) SetPinPeer(pin bool) {
 	}
 }
 
-// CloseAll drops every tracked connection.
+// CloseAll drops every connection of the peer, upgraded or still pending,
+// and forgets the peer at once: an operator's disconnect or a regenerated
+// token must not leave the exit one more relay.
 func (p *WSProxy) CloseAll(reason string) {
 	p.mu.Lock()
 	conns := p.snapshotLocked()
+	pending := make([]*pendingReq, 0, len(p.pending))
+	for q := range p.pending {
+		pending = append(pending, q)
+	}
+	p.clearLocked()
 	p.mu.Unlock()
-	if len(conns) > 0 {
-		log.Infof("%s: closing %d wstunnel connection(s): %s", p.slot.Name(), len(conns), reason)
+	if len(conns)+len(pending) > 0 {
+		log.Infof("%s: closing %d wstunnel connection(s) and %d pending upgrade(s): %s", p.slot.Name(), len(conns), len(pending), reason)
+	}
+	for _, q := range pending {
+		q.cancel()
 	}
 	for _, c := range conns {
 		_ = c.Close()
@@ -115,10 +147,14 @@ func (p *WSProxy) snapshotLocked() []*trackedConn {
 
 // RelayGate.
 
+// Connected is true once the reverse listener has been proven and the peer
+// still holds a connection here, upgraded or pending, or left within the
+// grace. Counting only hijacked connections would leave the front door
+// waiting for a relay that waits for the front door.
 func (p *WSProxy) Connected() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.conns) > 0 && p.probed
+	return p.probed && (len(p.conns) > 0 || len(p.pending) > 0 || p.grace != nil)
 }
 
 func (p *WSProxy) Peer() *proto.ExitPeer {
@@ -170,6 +206,12 @@ func (p *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			stale = append(stale, c)
 		}
 	}
+	var stalePending []*pendingReq
+	for q := range p.pending {
+		if q.host != host {
+			stalePending = append(stalePending, q)
+		}
+	}
 	var prev *proto.ExitPeer
 	next := proto.ExitPeer{Addr: host, Transport: proto.ExitModeWstunnel}
 	if p.peer == nil || p.peer.Addr != host {
@@ -183,31 +225,43 @@ func (p *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.probed = false
 		p.startProbeLocked()
 	}
+	if p.grace != nil {
+		// The peer is back within its grace; it never left.
+		p.grace.Stop()
+		p.grace = nil
+	}
 	if p.pinPeer {
 		p.pinnedHost = host
 	}
-	p.pending++
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	pr := &pendingReq{host: host, cancel: cancel}
+	p.pending[pr] = struct{}{}
 	p.mu.Unlock()
 
 	for _, c := range stale {
 		log.Warnf("%s: wstunnel peer %s superseded by %s", p.slot.Name(), c.RemoteAddr(), r.RemoteAddr)
 		_ = c.Close()
 	}
+	for _, q := range stalePending {
+		log.Warnf("%s: wstunnel peer %s (pending upgrade) superseded by %s", p.slot.Name(), q.host, r.RemoteAddr)
+		q.cancel()
+	}
 	if prev != nil && p.onPeerChange != nil {
 		p.onPeerChange(*prev, next)
 	}
 
-	r2 := r.Clone(r.Context())
+	r2 := r.Clone(ctx)
 	r2.URL.Path = "/" + p.slot.ServerPathPrefix() + "/" + rest
 	r2.URL.RawPath = ""
-	hw := &hijackWriter{ResponseWriter: w, p: p, host: host}
+	hw := &hijackWriter{ResponseWriter: w, p: p, req: pr}
 	p.proxy.ServeHTTP(hw, r2)
 
-	// A hijacked request handed its pending count over to the tracked
-	// connection; only a request that never upgraded still holds one.
+	// A hijacked request handed itself over to the tracked connection; only
+	// a request that never upgraded is still pending here.
 	if !hw.hijacked.Load() {
 		p.mu.Lock()
-		p.pending--
+		delete(p.pending, pr)
 		p.maybeClearLocked()
 		p.mu.Unlock()
 	}
@@ -285,25 +339,55 @@ func (p *WSProxy) probeOnce(ctx context.Context) bool {
 	return true
 }
 
+// maybeClearLocked runs when a connection or pending request goes away. A
+// peer that never proved its listener is forgotten at once. A proven peer
+// whose last connection just ended is most likely between a relay and its
+// next upgrade request (one round trip away), so it keeps its state for
+// relayGrace; if nothing arrives by then it is gone. p.mu must be held.
 func (p *WSProxy) maybeClearLocked() {
-	if len(p.conns) == 0 && p.pending == 0 {
-		p.peer = nil
-		p.connectedAt = nil
-		p.probed = false
-		if p.probeCancel != nil {
-			p.probeCancel()
-			p.probeCancel = nil
-		}
+	if len(p.conns) > 0 || len(p.pending) > 0 || p.peer == nil {
+		return
+	}
+	if !p.probed {
+		p.clearLocked()
+		return
+	}
+	if p.grace == nil {
+		p.grace = time.AfterFunc(relayGrace, p.expireGrace)
 	}
 }
 
-// track registers a hijacked connection and retires the pending count of
-// the request that produced it.
-func (p *WSProxy) track(c net.Conn, host string) *trackedConn {
-	tc := &trackedConn{Conn: c, p: p, host: host}
+func (p *WSProxy) expireGrace() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.grace == nil || len(p.conns) > 0 || len(p.pending) > 0 {
+		return
+	}
+	p.clearLocked()
+}
+
+// clearLocked forgets the peer. p.mu must be held.
+func (p *WSProxy) clearLocked() {
+	p.peer = nil
+	p.connectedAt = nil
+	p.probed = false
+	if p.probeCancel != nil {
+		p.probeCancel()
+		p.probeCancel = nil
+	}
+	if p.grace != nil {
+		p.grace.Stop()
+		p.grace = nil
+	}
+}
+
+// track registers a hijacked connection in place of the pending request
+// that produced it.
+func (p *WSProxy) track(c net.Conn, pr *pendingReq) *trackedConn {
+	tc := &trackedConn{Conn: c, p: p, host: pr.host}
 	p.mu.Lock()
 	p.conns[tc] = struct{}{}
-	p.pending--
+	delete(p.pending, pr)
 	p.mu.Unlock()
 	return tc
 }
@@ -319,7 +403,7 @@ func (p *WSProxy) untrack(tc *trackedConn) {
 type hijackWriter struct {
 	http.ResponseWriter
 	p        *WSProxy
-	host     string
+	req      *pendingReq
 	hijacked atomic.Bool
 }
 
@@ -329,7 +413,7 @@ func (h *hijackWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return nil, nil, err
 	}
 	h.hijacked.Store(true)
-	return h.p.track(c, h.host), rw, nil
+	return h.p.track(c, h.req), rw, nil
 }
 
 func (h *hijackWriter) Flush() {
