@@ -2,6 +2,8 @@ package tunnel
 
 import (
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -163,7 +165,11 @@ func shellQuote(s string) string {
 }
 
 func extractSeed(name proto.TunnelName) error {
-	source, err := os.Open(seedPath(name))
+	return extractSeedFrom(seedPath(name), binaryFile(name))
+}
+
+func extractSeedFrom(seed, target string) error {
+	source, err := os.Open(seed)
 	if err != nil {
 		return fmt.Errorf("open tunnel seed: %w", err)
 	}
@@ -175,7 +181,7 @@ func extractSeed(name proto.TunnelName) error {
 	}
 	defer func() { _ = reader.Close() }()
 
-	file, err := utils.NewAtomicFile(binaryFile(name), 0o755)
+	file, err := utils.NewAtomicFile(target, 0o755)
 	if err != nil {
 		return err
 	}
@@ -188,22 +194,80 @@ func extractSeed(name proto.TunnelName) error {
 }
 
 func binaryPath(name proto.TunnelName) (string, error) {
-	target := binaryFile(name)
+	return EnsureBinary(string(name))
+}
+
+// EnsureBinary returns /etc/kvm/bin/<name>, extracting it from the seed in
+// /kvmapp/tunnels when it is missing or when the seed has changed since the
+// last extraction. The exit package's hev daemon has its seed elsewhere and
+// goes through EnsureBinaryFrom.
+func EnsureBinary(name string) (string, error) {
+	return EnsureBinaryFrom(name, seedPath(proto.TunnelName(name)))
+}
+
+// EnsureBinaryFrom is EnsureBinary with an explicit seed. The staleness record
+// is /etc/kvm/bin/.<name>.seed, the sha256 of the seed the binary was extracted
+// from: an update that ships a new seed re-extracts once, and a device that
+// already has the matching binary never touches the flash. An operator's
+// uploaded binary, marked by .<name>.custom, is never replaced (D18).
+func EnsureBinaryFrom(name, seed string) (string, error) {
+	if name == "" || name != filepath.Base(name) {
+		return "", fmt.Errorf("invalid binary name %q", name)
+	}
+	target := filepath.Join(binDir, name)
 
 	info, err := os.Stat(target)
+	present := err == nil && !info.IsDir()
 	switch {
-	case err == nil && !info.IsDir():
-		return target, nil
 	case err != nil && !errors.Is(err, os.ErrNotExist):
 		return "", fmt.Errorf("stat tunnel binary: %w", err)
-	case err == nil:
+	case err == nil && info.IsDir():
 		return "", fmt.Errorf("tunnel binary %s is a directory", target)
 	}
 
-	if err := extractSeed(name); err != nil {
+	if present {
+		if _, err := os.Stat(filepath.Join(binDir, "."+name+".custom")); err == nil {
+			return target, nil
+		}
+	}
+
+	hash, err := fileSHA256(seed)
+	if err != nil {
+		if present {
+			// No seed to compare against: the binary that exists is the one
+			// there is, and nothing here can improve on it.
+			return target, nil
+		}
+		return "", fmt.Errorf("open tunnel seed: %w", err)
+	}
+
+	recordPath := filepath.Join(binDir, "."+name+".seed")
+	if present {
+		if record, err := os.ReadFile(recordPath); err == nil && strings.TrimSpace(string(record)) == hash {
+			return target, nil
+		}
+	}
+
+	if err := extractSeedFrom(seed, target); err != nil {
 		return "", err
 	}
+	if err := utils.WriteFileAtomic(recordPath, []byte(hash+"\n"), 0o600); err != nil {
+		return "", fmt.Errorf("record tunnel seed hash: %w", err)
+	}
 	return target, nil
+}
+
+func fileSHA256(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = file.Close() }()
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
 func isCustom(name proto.TunnelName) bool {
