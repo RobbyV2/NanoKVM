@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stub flock: macOS has none, and the test runs one converge at a time.
+echo "flock $*" >> "$STUB_TRACE"
+exit 0

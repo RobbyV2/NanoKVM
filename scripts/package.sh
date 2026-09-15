@@ -20,6 +20,8 @@
 #                                   under build/tunnels/ for the arch check
 #   kvmapp/passthrough/usb-proxy.gz gzipped usb-proxy seed, staged uncompressed
 #                                   under build/passthrough/ for the arch check
+#   kvmapp/exit/hev-socks5-tunnel.gz gzipped tun2socks seed for the exit tunnel,
+#                                   staged uncompressed under build/exit/
 #   web/dist/                       built frontend
 #
 # Usage: scripts/package.sh <version>
@@ -174,6 +176,11 @@ else
     # Same for the usb-proxy seed the passthrough manager extracts on first use.
     require_file "$ROOT/build/passthrough/usb-proxy" "run: make passthrough"
     require_file "$ROOT/kvmapp/passthrough/usb-proxy.gz" "run: make passthrough"
+    # And the exit tunnel's tun2socks seed, extracted by the exit manager or
+    # by S94exit at boot.
+    require_file "$ROOT/build/exit/hev-socks5-tunnel" "run: make exit"
+    require_file "$ROOT/kvmapp/exit/hev-socks5-tunnel.gz" "run: make exit"
+    require_file "$ROOT/kvmapp/system/init.d/S94exit" "the exit converge script is tracked; restore it"
 
     require_riscv64 "$ROOT/server/NanoKVM-Server"
     require_runpath "$ROOT/server/NanoKVM-Server"
@@ -183,13 +190,16 @@ else
     require_riscv64 "$ROOT/build/tunnels/wstunnel"
     require_riscv64 "$ROOT/build/tunnels/newt"
     require_riscv64 "$ROOT/build/passthrough/usb-proxy"
+    require_riscv64 "$ROOT/build/exit/hev-socks5-tunnel"
 
     require_fresh "$ROOT/build/tunnels/wstunnel" "$ROOT/third_party/wstunnel" "make tunnels"
     require_fresh "$ROOT/build/tunnels/newt" "$ROOT/third_party/newt" "make tunnels"
     require_fresh "$ROOT/build/passthrough/usb-proxy" "$ROOT/third_party/usb-proxy" "make passthrough"
+    require_fresh "$ROOT/build/exit/hev-socks5-tunnel" "$ROOT/third_party/hev-socks5-tunnel" "make exit"
     require_same_gz "$ROOT/kvmapp/tunnels/wstunnel.gz" "$ROOT/build/tunnels/wstunnel" "make tunnels"
     require_same_gz "$ROOT/kvmapp/tunnels/newt.gz" "$ROOT/build/tunnels/newt" "make tunnels"
     require_same_gz "$ROOT/kvmapp/passthrough/usb-proxy.gz" "$ROOT/build/passthrough/usb-proxy" "make passthrough"
+    require_same_gz "$ROOT/kvmapp/exit/hev-socks5-tunnel.gz" "$ROOT/build/exit/hev-socks5-tunnel" "make exit"
 
     echo "[INFO] staging nanokvm_$VERSION"
     # Clear the whole output directory: release.yml uploads build/release/nanokvm_*

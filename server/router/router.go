@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"NanoKVM-Server/service/controlmode"
+	"NanoKVM-Server/service/exit"
 	"NanoKVM-Server/service/hid"
 	"NanoKVM-Server/service/media"
 	"NanoKVM-Server/service/picoclaw"
@@ -80,6 +81,11 @@ func server(r *gin.Engine) {
 			log.Debugf("usb attach: %s", err)
 			return err
 		}
+		// The gadget netdev exists from this bind. The exit manager re-keys
+		// its routing on it and addresses it; this is also what builds and
+		// initialises the manager, so its rebind subscription is in place
+		// before any later mutation (exit-tunnel design, D25).
+		exit.GetManager().OnAttach(ctx)
 		return nil
 	})
 
@@ -98,6 +104,7 @@ func server(r *gin.Engine) {
 	sourcesRouter(r, sourceService)
 	downloadRouter(r)
 	extensionsRouter(r)
+	exitRouter(r)
 }
 
 func LoopbackHTTPAllowedPaths() []string {

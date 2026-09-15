@@ -1,0 +1,20 @@
+#!/bin/sh
+# Stub sysctl: -w key=value stores, -n key reads back (0 when never written).
+echo "sysctl $*" >> "$STUB_TRACE"
+S=$STUB_STATE/sysctl
+mkdir -p "$S"
+[ "$1" = -q ] && shift
+case "$1" in
+-w)
+	key=${2%%=*}
+	value=${2#*=}
+	echo "$value" > "$S/$key"
+	;;
+-n)
+	if [ -r "$S/$2" ]; then cat "$S/$2"; else echo 0; fi
+	;;
+*)
+	exit 1
+	;;
+esac
+exit 0

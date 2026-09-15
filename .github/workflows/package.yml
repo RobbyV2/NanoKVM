@@ -212,6 +212,7 @@ jobs:
           {
             echo "newt=$(git rev-parse HEAD:third_party/newt)"
             echo "wstunnel=$(git rev-parse HEAD:third_party/wstunnel)"
+            echo "hev=$(git rev-parse HEAD:third_party/hev-socks5-tunnel)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Cache tunnel builds
@@ -219,11 +220,14 @@ jobs:
         with:
           # CARGO_HOME is redirected into build/cargo by the "tunnels" target,
           # so both the registry and the target dir live inside the workspace.
+          # The hev revision is in the key so a bump of that submodule never
+          # restores a cache whose build/ predates it.
           path: |
             build/cargo/registry
             third_party/wstunnel/target
-          key: tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-${{ steps.submodules.outputs.newt }}
+          key: tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-${{ steps.submodules.outputs.newt }}-${{ steps.submodules.outputs.hev }}
           restore-keys: |
+            tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-${{ steps.submodules.outputs.newt }}-
             tunnels-${{ runner.os }}-${{ steps.submodules.outputs.wstunnel }}-
             tunnels-${{ runner.os }}-
 
@@ -239,10 +243,16 @@ jobs:
             DOCKER_TTY= \
             IMAGE_NAME="${{ steps.image.outputs.ref }}"
 
+      - name: Build hev-socks5-tunnel
+        run: |
+          make exit \
+            DOCKER_TTY= \
+            IMAGE_NAME="${{ steps.image.outputs.ref }}"
+
       - name: Assemble package
-        # package now depends on tunnels and passthrough, so it needs the pulled
-        # builder image too; without IMAGE_NAME make would fall back to building
-        # one locally.
+        # package now depends on tunnels, passthrough and exit, so it needs the
+        # pulled builder image too; without IMAGE_NAME make would fall back to
+        # building one locally.
         run: |
           make package \
             VERSION="${{ steps.version.outputs.version }}" \

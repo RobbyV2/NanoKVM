@@ -74,8 +74,18 @@ JSONCPP_BUILD_CMD := cd $(PASSTHROUGH_DIR) && wget -qO jsoncpp.tar.gz $(JSONCPP_
 USB_PROXY_BUILD_CMD := cd /home/build/NanoKVM/third_party/usb-proxy && make clean && PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$(PASSTHROUGH_DEPS)/lib/pkgconfig PKG_CONFIG_SYSROOT_DIR= CXX=riscv64-unknown-linux-musl-g++ CFLAGS="-Wall -Wextra -Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections -I$(PASSTHROUGH_DEPS)/include -I$(PASSTHROUGH_DEPS)/include/libusb-1.0" LDFLAGS="-static -Wl,--gc-sections -L$(PASSTHROUGH_DEPS)/lib" make && riscv64-unknown-linux-musl-strip usb-proxy && cp -f usb-proxy $(PASSTHROUGH_DIR)/usb-proxy
 PASSTHROUGH_BUILD_CMD := rm -rf $(PASSTHROUGH_DEPS) $(PASSTHROUGH_DIR)/libusb-$(LIBUSB_VERSION) $(PASSTHROUGH_DIR)/jsoncpp-$(JSONCPP_VERSION) && mkdir -p $(PASSTHROUGH_DEPS)/include $(PASSTHROUGH_DEPS)/lib && $(LIBUSB_BUILD_CMD) && $(JSONCPP_BUILD_CMD) && $(USB_PROXY_BUILD_CMD)
 
+# hev-socks5-tunnel is the exit tunnel's tun2socks translator (exit-tunnel
+# design, D2 and D27): plain C over its vendored lwip, yaml and task system,
+# cross-built statically with the same musl toolchain and arch flags as
+# usb-proxy, stripped by its own Makefile. The arch flags reach the link line
+# through LFLAGS for the same loader reason usb-proxy carries them. Its
+# third-part Makefiles read CROSS_PREFIX and CFLAGS from the command line, which
+# make propagates to the sub-makes, so one invocation covers all four trees.
+EXIT_DIR := /home/build/NanoKVM/build/exit
+HEV_BUILD_CMD := cd /home/build/NanoKVM/third_party/hev-socks5-tunnel && make clean && make -j$$(nproc) CROSS_PREFIX=riscv64-unknown-linux-musl- CFLAGS="-Os $(RISCV_ARCH_FLAGS) -ffunction-sections -fdata-sections" LFLAGS="$(RISCV_ARCH_FLAGS) -static -Wl,--gc-sections" ENABLE_STATIC=1 && mkdir -p $(EXIT_DIR) && cp -f bin/hev-socks5-tunnel $(EXIT_DIR)/hev-socks5-tunnel
+
 .PHONY: help check-root check-version builder-image rebuild-image check-image shell app support vision \
-        web tunnels passthrough edid-profiles release-build package release all clean \
+        web tunnels passthrough exit edid-profiles release-build package release all clean \
         kernelint kernelint-tier1 kernelint-tier2 kernelint-watchdog kernelint-zram
 
 # Default target
@@ -97,6 +107,7 @@ help:
 	@echo "  web           - Build the frontend into web/dist"
 	@echo "  tunnels       - Build wstunnel + newt seeds into kvmapp/tunnels"
 	@echo "  passthrough   - Build the usb-proxy seed into kvmapp/passthrough"
+	@echo "  exit          - Build the hev-socks5-tunnel seed into kvmapp/exit"
 	@echo "  edid-profiles - Regenerate the shipped EDID profile table"
 	@echo "  kernelint-tier1 - Kernel tests needing netns and vhci_hcd"
 	@echo "  kernelint-tier2 - Kernel tests needing a UDC, in a QEMU VM"
@@ -223,8 +234,17 @@ passthrough: check-root builder-image
 	@mkdir -p kvmapp/passthrough
 	@gzip -9 -n -c build/passthrough/usb-proxy > kvmapp/passthrough/usb-proxy.gz
 
+# Cross-build hev-socks5-tunnel and seed it into kvmapp/exit, on the same terms
+# as the tunnels and usb-proxy: staged uncompressed under build/ for
+# package.sh's arch check, shipped gzipped, gzip -n for reproducibility.
+exit: check-root builder-image
+	@echo "Building hev-socks5-tunnel..."
+	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(HEV_BUILD_CMD)'
+	@mkdir -p kvmapp/exit
+	@gzip -9 -n -c build/exit/hev-socks5-tunnel > kvmapp/exit/hev-socks5-tunnel.gz
+
 # Assemble the release package and its manifest
-package: check-version tunnels passthrough
+package: check-version tunnels passthrough exit
 	@scripts/package.sh "$(VERSION)"
 
 # Full local release: riscv64 artifacts + frontend + package.

@@ -28,17 +28,29 @@ GADGET_CONFIG=/sys/kernel/config/usb_gadget/g0/configs/c.1
 # The authority is the ifname attribute of whichever net function is linked into
 # the config, which is readable on both ncm.* and rndis.*. Only one is ever
 # linked, so the first hit is the answer.
+#
+# A netdev the kernel has not registered yet reads "(unnamed net_device)", and
+# a name still carrying its "usb%d" template was never allocated. Both mean
+# there is no NIC to address yet, not a NIC with a strange name.
 gadget_nic() {
 	for fn in "$GADGET_CONFIG"/ncm.* "$GADGET_CONFIG"/rndis.* "$GADGET_CONFIG"/eem.*
 	do
 		[ -r "$fn/ifname" ] || continue
 		read -r name < "$fn/ifname"
 		[ -n "$name" ] || continue
+		case "$name" in *"("*|*%*) continue ;; esac
 		echo "$name"
 		return 0
 	done
 	return 0
 }
+
+# The exit tunnel's marker (exit-tunnel design, D4). While a slot with the
+# gadget NIC is enabled the server writes it, and the lease then carries the
+# NanoKVM's own address as router and DNS so the attached host routes through
+# the tunnel. Without it the lease is the stock one: no router, no DNS, and the
+# host keeps whatever other uplink it has.
+EXIT_GADGET_ROUTE=/etc/kvm/exit/gadget.route
 
 gen_udhcpd_conf() {
 	interface=${1}
@@ -50,6 +62,11 @@ gen_udhcpd_conf() {
 	echo "lease_file /var/lib/misc/udhcpd.${interface}.leases"
 	echo "option subnet 255.255.255.0"
 	echo "option lease 864000"
+	if [ -e "$EXIT_GADGET_ROUTE" ]
+	then
+		echo "opt router ${ipv4_prefix}.1"
+		echo "opt dns ${ipv4_prefix}.1"
+	fi
 }
 
 start() {
