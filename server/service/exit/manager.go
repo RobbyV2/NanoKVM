@@ -163,11 +163,15 @@ func (p presentationNIC) UDCBound() bool {
 
 // fileBridgeGate is D17's evidence, read from the bridge's own files so this
 // package does not import the bridge (which imports this one for AnyEnabled).
+// The paths are the bridge package's StateDir, UplinkPath, SysClassNetDir and
+// RNDISNoDHCPDPath; the pattern is the one S29bridge greps.
 type fileBridgeGate struct{}
+
+var bridgeEnabledPattern = regexp.MustCompile(`"enabled"\s*:\s*true`)
 
 func (fileBridgeGate) BridgeActive() (bool, string) {
 	if data, err := os.ReadFile("/etc/kvm/presentation/network/last-known-good.json"); err == nil &&
-		regexp.MustCompile(`"enabled"\s*:\s*true`).Match(data) {
+		bridgeEnabledPattern.Match(data) {
 		return true, "the L2 bridge is enabled (last-known-good)"
 	}
 	if data, err := os.ReadFile("/etc/kvm/network/l2-uplink"); err == nil && strings.TrimSpace(string(data)) == "br0" {
@@ -327,12 +331,11 @@ func (m *Manager) Init() {
 			if err := m.down.Start(ctx, s.slot); err != nil {
 				log.Warnf("exit: slot %s: %s", s.slot.ID, err)
 			}
-			nic, gw := m.resolveNIC(ctx, s)
+			_, gw := m.resolveNIC(ctx, s)
 			if err := m.startComponents(s, gw); err != nil {
 				log.Errorf("exit: slot %s: %s", s.slot.ID, err)
 				m.setMessage(s, err.Error())
 			}
-			_ = nic
 			m.refreshDownstream(ctx, s)
 		}
 
@@ -529,6 +532,14 @@ func (m *Manager) config(s *slotState) Config {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return s.cfg
+}
+
+// view snapshots the fields a transaction reads before it starts running
+// commands, in one critical section.
+func (m *Manager) view(s *slotState) (cfg Config, nic string, c *components, gw netip.Addr) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return s.cfg, s.nic.Ifname, s.comps, s.gw
 }
 
 func (m *Manager) connected(s *slotState) bool {
@@ -739,13 +750,18 @@ func (m *Manager) Enable(ctx context.Context, slot Slot) error {
 		log.Warnf("exit: slot %s: %s", slot.ID, err)
 	}
 
-	// Re-lease the consumer, best effort (D5).
+	// Re-lease the consumer, best effort (D5). The rebind fires the D25
+	// subscriber on its own; this closing converge covers a rebind that was
+	// refused, and takes convergeMu like every other converge so it never
+	// runs beside the watchdog's.
 	if m.deps.Rebind != nil {
 		if err := m.deps.Rebind.Rebind(ctx); err != nil {
 			m.setMessage(s, "re-plug the USB cable to pick up the new gateway: "+err.Error())
 		}
 	}
+	m.convergeMu.Lock()
 	m.convergeSlot(ctx, s)
+	m.convergeMu.Unlock()
 	return nil
 }
 
@@ -789,14 +805,13 @@ func (m *Manager) Disable(ctx context.Context, slot Slot) error {
 	if err != nil {
 		return err
 	}
-	cfg := m.config(s)
-	if !cfg.Enabled && !cfg.Pending && s.comps == nil {
+	cfg, nic, c, _ := m.view(s)
+	if !cfg.Enabled && !cfg.Pending && c == nil {
 		return nil
 	}
 
 	_ = RemoveGadgetRoute(slot)
 	cfg.Enabled, cfg.Pending = false, false
-	nic := s.nic.Ifname
 	if err := m.persist(cfg, nic); err != nil {
 		return m.fail(s, fmt.Errorf("write config: %w", err))
 	}
@@ -840,7 +855,7 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 	if err != nil {
 		return err
 	}
-	old := m.config(s)
+	old, nic, _, gw := m.view(s)
 	cfg := old
 	if req.Mode != nil {
 		cfg.Mode = *req.Mode
@@ -863,7 +878,7 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 			return m.fail(s, err)
 		}
 	}
-	if err := m.persist(cfg, s.nic.Ifname); err != nil {
+	if err := m.persist(cfg, nic); err != nil {
 		return m.fail(s, fmt.Errorf("write config: %w", err))
 	}
 	m.mu.Lock()
@@ -889,7 +904,7 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 		if err := m.down.Start(ctx, slot); err != nil {
 			return m.fail(s, err)
 		}
-		if err := m.startComponents(s, s.gw); err != nil {
+		if err := m.startComponents(s, gw); err != nil {
 			return m.fail(s, err)
 		}
 	case cfg.AllowPrivate != old.AllowPrivate:
@@ -916,10 +931,10 @@ func (m *Manager) RegenerateToken(ctx context.Context, slot Slot) (string, error
 	if err != nil {
 		return "", err
 	}
-	cfg := m.config(s)
+	cfg, nic, _, _ := m.view(s)
 	cfg.Token = token
 	cfg.TokenCreatedAt = m.deps.Now().UTC().Truncate(time.Second)
-	if err := m.persist(cfg, s.nic.Ifname); err != nil {
+	if err := m.persist(cfg, nic); err != nil {
 		return "", m.fail(s, fmt.Errorf("write config: %w", err))
 	}
 	m.mu.Lock()
@@ -985,14 +1000,13 @@ func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 		if err := m.down.StartRNDIS(ctx); err != nil {
 			log.Warnf("exit: slot %s: %s", s.slot.ID, err)
 		}
-		nic, gw = m.resolveNIC(ctx, s)
+		_, gw = m.resolveNIC(ctx, s)
 		if gw.IsValid() {
 			if err := m.down.Start(ctx, s.slot); err != nil {
 				log.Warnf("exit: slot %s converge: %s", s.slot.ID, err)
 			}
 		}
 	}
-	_ = nic
 
 	m.mu.Lock()
 	c := s.comps
