@@ -8,7 +8,7 @@ import * as ls from '@/lib/localstorage';
 import { resolutionAtom, videoModeAtom } from '@/jotai/screen.ts';
 import { MenuItem } from '@/components/menu-item.tsx';
 
-import { BitRateMap, QualityMap } from './constants.ts';
+import { getQualityMap, getScreenType } from './constants.ts';
 import { Fps } from './fps';
 import { FrameDetect } from './frame-detect';
 import { Gop } from './gop.tsx';
@@ -23,12 +23,16 @@ export const Screen = () => {
 
   const videoMode = useAtomValue(videoModeAtom);
   const resolution = useAtomValue(resolutionAtom);
+  const isMjpeg = videoMode === 'mjpeg';
   const [fps, setFps] = useState(30);
   const [quality, setQuality] = useState(2);
   const [gop, setGop] = useState(30);
 
   useEffect(() => {
-    updateScreen('type', videoMode === 'mjpeg' ? 0 : 1);
+    const screenType = getScreenType(videoMode);
+    if (screenType !== null) {
+      updateScreen('type', screenType);
+    }
     updateScreen('resolution', resolution!.height);
     updateQuality();
     updateFps();
@@ -40,7 +44,9 @@ export const Screen = () => {
     if (!cookieQuality) return;
 
     const key = cookieQuality >= 1 && cookieQuality <= 4 ? cookieQuality : 2;
-    const value = videoMode === 'mjpeg' ? QualityMap.get(key)! : BitRateMap.get(key)!;
+    const qualityMap = getQualityMap(videoMode);
+    const value = qualityMap?.get(key);
+    if (value === undefined) return;
 
     const rsp = await updateScreen('quality', value);
     if (rsp.code === 0) {
@@ -75,8 +81,8 @@ export const Screen = () => {
       <Quality quality={quality} setQuality={setQuality} />
       <Fps fps={fps} setFps={setFps} />
       <Scale />
-      {videoMode !== 'mjpeg' && <Gop gop={gop} setGop={setGop} />}
-      {videoMode === 'mjpeg' && <FrameDetect />}
+      {!isMjpeg && <Gop gop={gop} setGop={setGop} />}
+      {isMjpeg && <FrameDetect />}
       <Reset />
     </div>
   );

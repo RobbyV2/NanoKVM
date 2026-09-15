@@ -11,3 +11,23 @@ export const BitRateMap = new Map([
   [3, 2000],
   [4, 1000]
 ]);
+
+export function getQualityMap(videoMode: string) {
+  if (videoMode === 'mjpeg') {
+    return QualityMap;
+  }
+  if (videoMode === 'direct' || videoMode === 'h264') {
+    return BitRateMap;
+  }
+  return null;
+}
+
+export function getScreenType(videoMode: string) {
+  if (videoMode === 'mjpeg') {
+    return 0;
+  }
+  if (videoMode === 'direct' || videoMode === 'h264') {
+    return 1;
+  }
+  return null;
+}
