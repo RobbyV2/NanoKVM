@@ -2,11 +2,9 @@ package exit
 
 import "embed"
 
-// The native clients (client.sh, client.ps1, client.pl, client.py) are written
-// by the clients package brief and templated at request time by RenderClient.
-// The directory is embedded whole and looked up by name, so this package
-// compiles before the clients land and serves whatever is present; a missing
-// script is a 404 like every other rejection on the token-gated surface.
+// The four native clients, templated at request time by RenderClient. Exactly
+// these names are embedded: clients/README.md and clients/testdata (the mock
+// kvm, the host test driver, the Windows checklist) stay out of the binary.
 //
-//go:embed all:clients
+//go:embed clients/client.sh clients/client.ps1 clients/client.pl clients/client.py
 var clientFiles embed.FS

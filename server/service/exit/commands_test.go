@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -174,18 +175,49 @@ func TestRenderClientTemplating(t *testing.T) {
 	if _, ok := RenderClient("client.nope", slot, cfg, origin, ""); ok {
 		t.Fatal("unknown client rendered")
 	}
-	// The clients land with the clients package; when present, every
-	// placeholder must be gone after templating.
+	// Every placeholder must be gone after templating (client.sh keeps a
+	// literal `__*)` guard that refuses to run untemplated, so the check is by
+	// placeholder name). client.sh fetches and gets the http scheme; the three
+	// clients open the socket and get the ws scheme (plan, W3 <-> W1).
+	placeholders := []string{phScheme, phHost, phSlot, phToken, phFingerprint, phAllowPrivate}
 	for name := range clientNames {
-		body, ok := RenderClient(name, slot, cfg, origin, "ab12")
-		if !ok {
-			continue
+		for _, o := range []Origin{origin, {Scheme: "http", Host: "10.1.2.1"}} {
+			body, ok := RenderClient(name, slot, cfg, o, "ab12")
+			if !ok {
+				t.Fatalf("%s is not embedded", name)
+			}
+			text := string(body)
+			for _, ph := range placeholders {
+				if strings.Contains(text, ph) {
+					t.Fatalf("%s (%s) still carries %s", name, o.Scheme, ph)
+				}
+			}
+			if !strings.Contains(text, cfg.Token) || !strings.Contains(text, o.Host) {
+				t.Fatalf("%s lacks the token or host", name)
+			}
+			want := o.WSScheme()
+			if name == "client.sh" {
+				want = o.Scheme
+			}
+			if !strings.Contains(text, `"`+want+`"`) && !strings.Contains(text, `'`+want+`'`) {
+				t.Fatalf("%s (%s) was not templated with scheme %q", name, o.Scheme, want)
+			}
 		}
-		if strings.Contains(string(body), "__") {
-			t.Fatalf("%s still carries a placeholder", name)
-		}
-		if !strings.Contains(string(body), cfg.Token) {
-			t.Fatalf("%s lacks the token", name)
-		}
+	}
+}
+
+func TestEmbeddedClientsAreExactlyTheFour(t *testing.T) {
+	entries, err := clientFiles.ReadDir("clients")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	sort.Strings(names)
+	want := []string{"client.pl", "client.ps1", "client.py", "client.sh"}
+	if strings.Join(names, ",") != strings.Join(want, ",") {
+		t.Fatalf("embedded %v, want %v (README.md and testdata must stay out of the binary)", names, want)
 	}
 }
