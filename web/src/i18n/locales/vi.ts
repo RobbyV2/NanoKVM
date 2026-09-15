@@ -1130,7 +1130,8 @@ const vi = {
             'Một script nhỏ tải từ NanoKVM này chạy trên thiết bị thoát. Không cần cài gì.',
           wstunnelDesc:
             'Thiết bị thoát tải tệp nhị phân {{version}} đã ghim và kiểm tra SHA-256 trước khi chạy.',
-          whileEnabled: 'Tắt đường hầm để đổi chế độ.'
+          whileEnabled:
+            'Đổi chế độ khi đường hầm đang bật sẽ ngắt thiết bị thoát đang kết nối; hãy khởi động lại nó bằng lệnh của chế độ mới.'
         },
         commands: {
           title: 'Chạy trên thiết bị thoát',

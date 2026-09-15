@@ -1143,7 +1143,8 @@ const hu = {
             'Egy erről a NanoKVM-ről letöltött kis szkript fut a kilépő eszközön. Nincs mit telepíteni.',
           wstunnelDesc:
             'A kilépő eszköz letölti a rögzített {{version}} binárist, és futtatás előtt ellenőrzi az SHA-256 értékét.',
-          whileEnabled: 'A mód váltásához kapcsolja ki a tunnelt.'
+          whileEnabled:
+            'A mód váltása bekapcsolt tunnel mellett bontja a csatlakozott kilépő eszköz kapcsolatát; indítsa újra az új mód parancsával.'
         },
         commands: {
           title: 'Futtassa a kilépő eszközön',

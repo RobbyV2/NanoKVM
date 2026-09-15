@@ -1134,7 +1134,8 @@ const se = {
             'Ett litet skript hämtat från den här NanoKVM körs på exit-enheten. Inget att installera.',
           wstunnelDesc:
             'Exit-enheten hämtar den fastlåsta {{version}}-binären och kontrollerar dess SHA-256 innan den körs.',
-          whileEnabled: 'Inaktivera tunneln för att byta läge.'
+          whileEnabled:
+            'Att byta läge medan tunneln är aktiv kopplar från den anslutna exit-enheten; starta den igen med det nya lägets kommando.'
         },
         commands: {
           title: 'Kör på exit-enheten',

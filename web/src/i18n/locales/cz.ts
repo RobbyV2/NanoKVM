@@ -1131,7 +1131,8 @@ const cz = {
             'Na výstupním zařízení běží malý skript stažený z tohoto NanoKVM. Nic se neinstaluje.',
           wstunnelDesc:
             'Výstupní zařízení stáhne připnutý binární soubor {{version}} a před spuštěním ověří jeho SHA-256.',
-          whileEnabled: 'Pro změnu režimu tunel vypněte.'
+          whileEnabled:
+            'Změna režimu při zapnutém tunelu odpojí připojené výstupní zařízení; spusťte ho znovu příkazem nového režimu.'
         },
         commands: {
           title: 'Spusťte na výstupním zařízení',

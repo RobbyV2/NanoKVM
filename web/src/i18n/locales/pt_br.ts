@@ -1140,7 +1140,8 @@ const pt_br = {
             'Um pequeno script baixado deste NanoKVM roda no dispositivo de saída. Nada para instalar.',
           wstunnelDesc:
             'O dispositivo de saída baixa o binário {{version}} fixado e verifica o SHA-256 antes de executá-lo.',
-          whileEnabled: 'Desative o túnel para trocar o modo.'
+          whileEnabled:
+            'Trocar o modo com o túnel ativado desconecta o dispositivo de saída conectado; reinicie-o com o comando do novo modo.'
         },
         commands: {
           title: 'Executar no dispositivo de saída',

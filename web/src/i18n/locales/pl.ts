@@ -1140,7 +1140,8 @@ const pl = {
             'Na urządzeniu wyjściowym działa mały skrypt pobrany z tego NanoKVM. Nic nie trzeba instalować.',
           wstunnelDesc:
             'Urządzenie wyjściowe pobiera przypięty plik binarny {{version}} i przed uruchomieniem sprawdza jego SHA-256.',
-          whileEnabled: 'Wyłącz tunel, aby zmienić tryb.'
+          whileEnabled:
+            'Zmiana trybu przy włączonym tunelu rozłącza podłączone urządzenie wyjściowe; uruchom je ponownie poleceniem nowego trybu.'
         },
         commands: {
           title: 'Uruchom na urządzeniu wyjściowym',

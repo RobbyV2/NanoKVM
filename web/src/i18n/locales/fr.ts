@@ -1149,7 +1149,8 @@ const fr = {
             "Un petit script récupéré depuis ce NanoKVM s'exécute sur l'appareil de sortie. Rien à installer.",
           wstunnelDesc:
             "L'appareil de sortie télécharge le binaire {{version}} épinglé et vérifie son SHA-256 avant de le lancer.",
-          whileEnabled: 'Désactivez le tunnel pour changer de mode.'
+          whileEnabled:
+            "Changer de mode avec le tunnel activé déconnecte l'appareil de sortie connecté ; relancez-le avec la commande du nouveau mode."
         },
         commands: {
           title: "À exécuter sur l'appareil de sortie",

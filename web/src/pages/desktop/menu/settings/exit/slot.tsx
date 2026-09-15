@@ -205,6 +205,9 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
 
   const mode = config?.mode ?? status.mode;
   const isBusy = action !== '' || status.pending;
+  // the manager switches mode live (restart of the daemons through S94exit,
+  // restrict yaml rewritten, front door rewired); the price is that the
+  // connected exit is dropped, which the hint under the selector says
 
   return (
     <>
@@ -281,7 +284,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
           </div>
 
           <Segmented
-            disabled={isBusy || !config || status.enabled}
+            disabled={isBusy || !config}
             value={mode}
             onChange={(value) => selectMode(value as ExitMode)}
             options={exitModes.map((value) => ({

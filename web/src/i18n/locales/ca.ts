@@ -1135,7 +1135,8 @@ const ca = {
             "Un petit script baixat d'aquest NanoKVM s'executa al dispositiu de sortida. No cal instal·lar res.",
           wstunnelDesc:
             'El dispositiu de sortida baixa el binari {{version}} fixat i en verifica el SHA-256 abans d’executar-lo.',
-          whileEnabled: 'Desactiveu el túnel per canviar de mode.'
+          whileEnabled:
+            "Canviar de mode amb el túnel activat desconnecta el dispositiu de sortida connectat; torneu-lo a iniciar amb l'ordre del nou mode."
         },
         commands: {
           title: 'Executeu al dispositiu de sortida',

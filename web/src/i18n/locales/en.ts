@@ -1129,7 +1129,8 @@ const en = {
             'A small script fetched from this NanoKVM runs on the exit device. Nothing to install.',
           wstunnelDesc:
             'The exit device downloads the pinned {{version}} binary and verifies its SHA-256 before running it.',
-          whileEnabled: 'Disable the tunnel to switch mode.'
+          whileEnabled:
+            "Switching mode while the tunnel is enabled drops the connected exit device; restart it with the new mode's command."
         },
         commands: {
           title: 'Run on the exit device',

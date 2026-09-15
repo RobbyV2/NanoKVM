@@ -1139,7 +1139,8 @@ const id = {
             'Skrip kecil yang diambil dari NanoKVM ini berjalan di perangkat keluar. Tidak ada yang perlu diinstal.',
           wstunnelDesc:
             'Perangkat keluar mengunduh biner {{version}} yang disematkan dan memverifikasi SHA-256-nya sebelum dijalankan.',
-          whileEnabled: 'Nonaktifkan tunnel untuk berganti mode.'
+          whileEnabled:
+            'Berganti mode saat tunnel aktif memutus perangkat exit yang terhubung; jalankan lagi dengan perintah mode baru.'
         },
         commands: {
           title: 'Jalankan di perangkat keluar',

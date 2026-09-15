@@ -1135,7 +1135,8 @@ const tr = {
             'Bu NanoKVM’den alınan küçük bir betik çıkış cihazında çalışır. Kurulacak bir şey yok.',
           wstunnelDesc:
             'Çıkış cihazı sabitlenmiş {{version}} ikili dosyasını indirir ve çalıştırmadan önce SHA-256 değerini doğrular.',
-          whileEnabled: 'Modu değiştirmek için tüneli devre dışı bırakın.'
+          whileEnabled:
+            'Tünel etkinken mod değiştirmek bağlı çıkış cihazının bağlantısını keser; yeni modun komutuyla yeniden başlatın.'
         },
         commands: {
           title: 'Çıkış cihazında çalıştırın',

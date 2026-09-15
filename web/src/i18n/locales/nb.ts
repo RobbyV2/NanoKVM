@@ -1137,7 +1137,8 @@ const nb = {
             'Et lite skript hentet fra denne NanoKVM kjører på exit-enheten. Ingenting å installere.',
           wstunnelDesc:
             'Exit-enheten laster ned den fastlåste {{version}}-binæren og kontrollerer SHA-256 før den kjøres.',
-          whileEnabled: 'Deaktiver tunnelen for å bytte modus.'
+          whileEnabled:
+            'Bytte av modus mens tunnelen er aktiv kobler fra den tilkoblede exit-enheten; start den igjen med den nye modusens kommando.'
         },
         commands: {
           title: 'Kjør på exit-enheten',

@@ -1146,7 +1146,8 @@ const nl = {
             'Een klein script, opgehaald van deze NanoKVM, draait op het exit-apparaat. Niets te installeren.',
           wstunnelDesc:
             'Het exit-apparaat downloadt de vastgezette {{version}}-binary en controleert de SHA-256 voordat het die uitvoert.',
-          whileEnabled: 'Schakel de tunnel uit om van modus te wisselen.'
+          whileEnabled:
+            'Van modus wisselen terwijl de tunnel actief is verbreekt het verbonden exit-apparaat; start het opnieuw met het commando van de nieuwe modus.'
         },
         commands: {
           title: 'Uitvoeren op het exit-apparaat',

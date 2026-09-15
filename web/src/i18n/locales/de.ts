@@ -1148,7 +1148,8 @@ const de = {
             'Ein kleines Skript von diesem NanoKVM läuft auf dem Exit-Gerät. Nichts zu installieren.',
           wstunnelDesc:
             'Das Exit-Gerät lädt die festgelegte Binärdatei {{version}} herunter und prüft ihre SHA-256-Summe vor dem Start.',
-          whileEnabled: 'Deaktivieren Sie den Tunnel, um den Modus zu wechseln.'
+          whileEnabled:
+            'Ein Moduswechsel bei aktivem Tunnel trennt das verbundene Exit-Gerät; starten Sie es mit dem Befehl des neuen Modus neu.'
         },
         commands: {
           title: 'Auf dem Exit-Gerät ausführen',
