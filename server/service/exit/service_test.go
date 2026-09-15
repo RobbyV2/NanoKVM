@@ -3,10 +3,12 @@ package exit
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"NanoKVM-Server/proto"
 
@@ -238,4 +240,160 @@ func TestAdminHandlersEnvelope(t *testing.T) {
 	if _, rsp := call(http.MethodPost, "/api/extensions/exit/0/disable", ""); rsp.Code != 0 {
 		t.Fatalf("disable = %+v", rsp)
 	}
+}
+
+// Every rejection on the token-gated surface, whoever produces it (the
+// handler, the real Mux, the real WSProxy), must be the response gin writes
+// for an unknown route: same status, same body, same headers minus Date. This
+// runs over a real listener so Content-Length and the server's own headers
+// are part of the comparison.
+func TestRejectionPathsAreOneGin404(t *testing.T) {
+	h := newHarness(t)
+	slot := MustSlot("0")
+	// Real mux and proxy, fake door/dns/probe (the dns forwarder would need
+	// the gadget address to bind on).
+	var mux *Mux
+	var pxy *WSProxy
+	h.mgr.deps.Components = func(slot Slot, d componentDeps) components {
+		mux = NewMux(slot, MuxHooks{OnSession: d.OnSession, OnClose: d.OnClose, Policy: d.Policy, Bytes: d.Bytes})
+		pxy = NewWSProxy(slot, nil, d.OnPeerChange)
+		return components{Door: h.door, Mux: mux, Proxy: pxy, DNS: h.dns, Probe: h.probe}
+	}
+	h.mgr.Init()
+	svc := NewService(h.mgr)
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// Tests play several exits from one machine: the peer address comes from
+	// a header when present.
+	r.Use(func(c *gin.Context) {
+		if remote := c.GetHeader("X-Test-Remote"); remote != "" {
+			c.Request.RemoteAddr = remote
+		}
+	})
+	r.GET("/exit/:slot", svc.Gate)
+	r.GET("/exit/:slot/*rest", svc.Gate)
+	srv := httptest.NewServer(r)
+	t.Cleanup(srv.Close)
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, _ := LoadConfig(slot)
+
+	get := func(t *testing.T, path, token, remote string, upgrade bool) (*http.Response, string) {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodGet, srv.URL+path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		if remote != "" {
+			req.Header.Set("X-Test-Remote", remote)
+		}
+		if upgrade {
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+		}
+		rsp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rsp.Body.Close()
+		body, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return rsp, string(body)
+	}
+
+	reference, refBody := get(t, "/nowhere/at/all", "", "203.0.113.1:1", false)
+	if reference.StatusCode != http.StatusNotFound || refBody != default404Body {
+		t.Fatalf("unknown route = %d %q", reference.StatusCode, refBody)
+	}
+	same := func(t *testing.T, path, token, remote string, upgrade bool) {
+		t.Helper()
+		rsp, body := get(t, path, token, remote, upgrade)
+		if rsp.StatusCode != reference.StatusCode {
+			t.Fatalf("status %d, want %d", rsp.StatusCode, reference.StatusCode)
+		}
+		if body != refBody {
+			t.Fatalf("body %q, want %q", body, refBody)
+		}
+		got, want := stripDate(rsp.Header), stripDate(reference.Header)
+		if len(got) != len(want) {
+			t.Fatalf("headers %v, want %v", got, want)
+		}
+		for k, v := range want {
+			if strings.Join(got[k], ",") != strings.Join(v, ",") {
+				t.Fatalf("header %s = %v, want %v", k, got[k], v)
+			}
+		}
+		if rsp.ContentLength != reference.ContentLength {
+			t.Fatalf("content length %d, want %d", rsp.ContentLength, reference.ContentLength)
+		}
+	}
+
+	// Handler rejections.
+	for name, tc := range map[string]struct{ path, token, remote string }{
+		"no token":     {"/exit/0/native", "", "203.0.113.2:1"},
+		"wrong token":  {"/exit/0/native", "k7m2p9vx", "203.0.113.3:1"},
+		"unknown slot": {"/exit/7/native", cfg.Token, "203.0.113.4:1"},
+		"bare slot":    {"/exit/0", cfg.Token, "203.0.113.5:1"},
+		"mode B path":  {"/exit/0/events", cfg.Token, "203.0.113.6:1"},
+	} {
+		t.Run(name, func(t *testing.T) { same(t, tc.path, tc.token, tc.remote, false) })
+	}
+	t.Run("locked source", func(t *testing.T) {
+		for i := 0; i < limiterFreeAttempts+1; i++ {
+			get(t, "/exit/0/native", "wrongtok", "198.51.100.1:5", false)
+		}
+		same(t, "/exit/0/native", cfg.Token, "198.51.100.1:6", false)
+	})
+
+	// Mux pin-peer refusal: one exit attached, another host knocks.
+	t.Run("mux pinned peer", func(t *testing.T) {
+		pin := true
+		if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{PinPeer: &pin}); err != nil {
+			t.Fatal(err)
+		}
+		f := NewFakeExit()
+		hdr := http.Header{}
+		hdr.Set("Authorization", "Bearer "+cfg.Token)
+		hdr.Set("X-Test-Remote", "198.51.100.10:1000")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := f.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/exit/0/native", hdr); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(f.Close)
+		waitFor(t, "session attached", func() bool { return mux.Current() != nil })
+		same(t, "/exit/0/native", cfg.Token, "198.51.100.11:1000", true)
+		if mux.Current() == nil {
+			t.Fatal("the refused knock disturbed the pinned session")
+		}
+	})
+
+	// WSProxy rejections in Mode B.
+	mode := proto.ExitModeWstunnel
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{Mode: &mode}); err != nil {
+		t.Fatal(err)
+	}
+	t.Run("proxy non-upgrade", func(t *testing.T) { same(t, "/exit/0/events", cfg.Token, "203.0.113.7:1", false) })
+	t.Run("proxy other path", func(t *testing.T) { same(t, "/exit/0/whatever", cfg.Token, "203.0.113.8:1", true) })
+	t.Run("proxy pinned peer", func(t *testing.T) {
+		// The first upgrade pins its host even though wstunnel is not there
+		// to answer it (the proxy reports that as 502, not 404).
+		if rsp, _ := get(t, "/exit/0/events", cfg.Token, "198.51.100.20:1000", true); rsp.StatusCode == http.StatusNotFound {
+			t.Fatal("the pinning upgrade itself was refused")
+		}
+		same(t, "/exit/0/events", cfg.Token, "198.51.100.21:1000", true)
+	})
+	t.Run("native in mode B", func(t *testing.T) { same(t, "/exit/0/native", cfg.Token, "203.0.113.9:1", true) })
+
+	// Disabled slot, right token.
+	if err := h.mgr.Disable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	t.Run("disabled slot", func(t *testing.T) { same(t, "/exit/0/events", cfg.Token, "203.0.113.10:1", true) })
 }

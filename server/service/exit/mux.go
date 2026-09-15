@@ -230,14 +230,6 @@ func hostOf(remote string) string {
 	return remote
 }
 
-// writeNotFound mirrors gin's default 404 so a refusal is indistinguishable
-// from an unknown route. The handler in front of the mux does the same.
-func writeNotFound(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusNotFound)
-	_, _ = w.Write([]byte("404 page not found"))
-}
-
 // session is one attached exit. It implements Backend.
 type session struct {
 	mux    *Mux

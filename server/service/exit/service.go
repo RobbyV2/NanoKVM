@@ -177,10 +177,23 @@ func (s *Service) Gate(c *gin.Context) {
 	NotFound(c)
 }
 
-// NotFound mirrors gin's serveError for StatusNotFound.
+// NotFound is the gin-side wrapper of writeNotFound.
 func NotFound(c *gin.Context) {
-	c.Data(http.StatusNotFound, "text/plain", []byte(default404Body))
+	writeNotFound(c.Writer)
 	c.Abort()
+}
+
+// writeNotFound is the one place a rejection on the token-gated surface is
+// rendered: the handler (unknown slot, wrong token, locked source, disabled
+// slot, wrong mode), the mux (pin-peer refusal) and the proxy (pin-peer
+// refusal, non-upgrade or non-/events request) all call it, so every path is
+// byte-identical to gin's serveError for an unknown route: text/plain, the
+// default body, nothing else. TestRejectionPathsAreOneGin404 proves it over a
+// real listener.
+func writeNotFound(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write([]byte(default404Body))
 }
 
 const default404Body = "404 page not found"
