@@ -931,3 +931,27 @@ func TestWatchdogHealsASlotWithoutComponents(t *testing.T) {
 		t.Fatal("a healthy tick rebuilt the components")
 	}
 }
+
+// TestOnAttachOutlivesTheAttachBudget: the router calls OnAttach with the
+// startup budget's context, which may already be past its deadline by the
+// time the post-attach converge runs; the converge must still run its
+// scripts, or the consumer gets a NIC with no address and no lease until the
+// first watchdog tick.
+func TestOnAttachOutlivesTheAttachBudget(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.reset()
+	expired, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-expired.Done()
+	h.mgr.OnAttach(expired)
+	h.mustContain("S94exit start 0", "S94exit status 0")
+	status, _ := h.mgr.Status(slot)
+	if !status.Downstream.Hev || !status.Downstream.Routing {
+		t.Fatalf("downstream after an over-budget attach = %+v", status.Downstream)
+	}
+}

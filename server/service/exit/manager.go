@@ -966,8 +966,12 @@ func (m *Manager) Disconnect(slot Slot) error {
 }
 
 // OnAttach is the post-attach hook the router calls once the UDC is bound:
-// the gadget netdev exists from this point (D25).
-func (m *Manager) OnAttach(ctx context.Context) { m.onRebind(ctx) }
+// the gadget netdev exists from this point (D25). The router's context is
+// the startup budget's, which may be past its deadline by now; the converge
+// runs regardless, bounded by execRunner's per-command timeout, since a
+// converge cut short leaves the consumer a NIC with no address and no lease
+// until the next watchdog tick.
+func (m *Manager) OnAttach(ctx context.Context) { m.onRebind(detached(ctx)) }
 
 // onRebind is the presentation manager's rebind subscriber (D25).
 func (m *Manager) onRebind(ctx context.Context) {

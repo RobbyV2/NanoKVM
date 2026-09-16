@@ -65,6 +65,18 @@ func server(r *gin.Engine) {
 	hid.Manager()
 	startup.Fail("usb presentation", presentationManager.Err())
 
+	// The exit manager is built and initialised here, ahead of the attach:
+	// Init installs the scripts, loads the slots and runs S94exit start and
+	// status for every enabled slot, none of which needs the gadget netdev
+	// (the NIC-keyed half waits for OnAttach). Doing it outside the attach
+	// budget keeps that budget for the attach, puts the rebind subscription
+	// in place before the first bind (exit-tunnel design, D25), and means
+	// exitRouter never blocks on an Init still running inside the hook. The
+	// elapsed time is logged because the spec leaves its cost unmeasured.
+	initStart := time.Now()
+	exitManager := exit.GetManager()
+	log.Infof("exit: manager initialised in %s", time.Since(initStart).Round(time.Millisecond))
+
 	// The one bind of the start, and the last thing the start does to the
 	// gadget. The profile was reconciled when the manager was built, with its
 	// bind held back; the HID writers and the media observer are wired above;
@@ -82,10 +94,13 @@ func server(r *gin.Engine) {
 			return err
 		}
 		// The gadget netdev exists from this bind. The exit manager re-keys
-		// its routing on it and addresses it; this is also what builds and
-		// initialises the manager, so its rebind subscription is in place
-		// before any later mutation (exit-tunnel design, D25).
-		exit.GetManager().OnAttach(ctx)
+		// its routing on it and addresses it. The budget bounds how long the
+		// start waits, not the converge: startup.Run abandons this goroutine
+		// at the deadline but the goroutine keeps going, and a converge on
+		// an expired context would have its scripts refused or killed,
+		// leaving the consumer without an address until the next watchdog
+		// tick. The converge is bounded per command by the exit runner.
+		exitManager.OnAttach(context.WithoutCancel(ctx))
 		return nil
 	})
 
