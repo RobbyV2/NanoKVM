@@ -119,6 +119,14 @@ then
 	do
 		ls -l "/proc/$pid/fd" 2>/dev/null | grep -q "exit0.lock" && fail "daemon $pid inherited the lock fd"
 	done
+	# -b gives the daemon /dev/null for stdio, so what wstunnel and hev write
+	# on stderr reaches /tmp/exit0-*.log only through the wrapper that redirects
+	# after the fork; without it the UI's log tail is always empty.
+	sleep 1
+	grep -q "fake wstunnel server --restrict-config" "$work/tmp/exit0-wstunnel.log" \
+		|| fail "wstunnel stderr did not reach its log: $(cat "$work/tmp/exit0-wstunnel.log" 2>&1)"
+	grep -q "fake hev-socks5-tunnel $work/etc/kvm/exit/0/hev.yml" "$work/tmp/exit0-hev.log" \
+		|| fail "hev stderr did not reach its log: $(cat "$work/tmp/exit0-hev.log" 2>&1)"
 fi
 
 : > "$work/trace"

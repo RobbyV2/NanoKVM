@@ -84,6 +84,10 @@ func newS94(t *testing.T) *s94 {
 	return h
 }
 
+// daemonWrapper is the -c body start_daemon hands /bin/sh: redirect to the
+// log named by $1, then become the daemon.
+const daemonWrapper = `exec >>"$1" 2>&1; shift; exec "$@"`
+
 func writeExec(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -199,7 +203,9 @@ func TestS94exitConvergeIsIdempotent(t *testing.T) {
 		"sysctl -q -w net.ipv4.conf.exit0.rp_filter=2",
 		"sysctl -q -w net.ipv4.conf.usb0.route_localnet=0",
 		"sysctl -q -w net.ipv6.conf.usb0.disable_ipv6=1",
-		"start-stop-daemon -S -bmq -p " + h.runDir + "/exit0-hev.pid -x " + h.root + "/bin/hev-socks5-tunnel -- " + h.exitDir + "/0/hev.yml",
+		// The daemon runs through a shell that redirects to its log after the
+		// daemonising fork and execs the binary (-b would hand it /dev/null).
+		"start-stop-daemon -S -bmq -p " + h.runDir + "/exit0-hev.pid -x /bin/sh -- -c " + daemonWrapper + " sh " + h.root + "/tmp/exit0-hev.log " + h.root + "/bin/hev-socks5-tunnel " + h.exitDir + "/0/hev.yml",
 		"ip6tables -A FORWARD -i usb0 -j REJECT --reject-with icmp6-adm-prohibited",
 	} {
 		if h.count(first, want) != 1 {
@@ -348,7 +354,7 @@ func TestS94exitStatusVectorAndStop(t *testing.T) {
 		t.Fatalf("start exited %d:\n%s", code, out)
 	}
 	trace := strings.Join(h.traceLines(), "\n")
-	if !strings.Contains(trace, "-x "+h.root+"/bin/wstunnel -- server --restrict-config "+h.exitDir+"/0/wstunnel-restrict.yml ws://127.0.0.1:10810") {
+	if !strings.Contains(trace, "-p "+h.runDir+"/exit0-wstunnel.pid -x /bin/sh -- -c "+daemonWrapper+" sh "+h.root+"/tmp/exit0-wstunnel.log "+h.root+"/bin/wstunnel server --restrict-config "+h.exitDir+"/0/wstunnel-restrict.yml ws://127.0.0.1:10810") {
 		t.Fatalf("wstunnel server not started for Mode B:\n%s", trace)
 	}
 

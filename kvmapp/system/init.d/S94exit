@@ -160,19 +160,31 @@ ensure_binary() {
 	return 1
 }
 
+# start_daemon PIDFILE LOGFILE BINARY ARGS...
+#
 # start-stop-daemon -S with a live pidfile answers "already running" and exits
 # non-zero; here that is success, so the pidfile is checked first and a stale
-# one is cleared before the start. The slot lock is fd 9 of the with_lock
-# subshell; an exec redirection is not close-on-exec and BusyBox's -b closes
-# only the low fds, so without the 9>&- the daemon would inherit the open file
-# description, hold the flock for its whole lifetime and block every later
-# converge and the stop.
+# one is cleared before the start.
+#
+# BusyBox's -b hands the daemon /dev/null for stdin, stdout and stderr, so a
+# redirection on this line would only ever catch start-stop-daemon's own
+# output and wstunnel's log (it writes to stderr alone) would stay empty. The
+# daemon is therefore started through a shell that redirects to the log after
+# the fork and then becomes the binary by exec, so -m records the daemon's
+# own pid.
+#
+# The slot lock is fd 9 of the with_lock subshell; an exec redirection is not
+# close-on-exec and -b closes only the low fds, so without the 9>&- the daemon
+# would inherit the open file description, hold the flock for its whole
+# lifetime and block every later converge and the stop.
 start_daemon() {
 	pidfile=$1
-	shift
+	logfile=$2
+	shift 2
 	pid_alive "$pidfile" && return 0
 	rm -f "$pidfile"
-	start-stop-daemon -S -bmq -p "$pidfile" -x "$@" 9>&-
+	start-stop-daemon -S -bmq -p "$pidfile" -x /bin/sh -- \
+		-c 'exec >>"$1" 2>&1; shift; exec "$@"' sh "$logfile" "$@" 9>&-
 }
 
 stop_daemon() {
@@ -209,15 +221,15 @@ start_daemons() {
 		# The subshell scopes the address-space cap to the daemon.
 		(
 			ulimit -v "$HEV_AS_KB" 2>/dev/null
-			start_daemon "$HEV_PID" "$BIN_DIR/hev-socks5-tunnel" -- "$HEV_CONF" >>"$HEV_LOG" 2>&1
+			start_daemon "$HEV_PID" "$HEV_LOG" "$BIN_DIR/hev-socks5-tunnel" "$HEV_CONF"
 		) || { log "start hev-socks5-tunnel failed"; ok=0; }
 	fi
 	if [ "$MODE" = wstunnel ]
 	then
 		if ensure_binary wstunnel
 		then
-			start_daemon "$WS_PID" "$BIN_DIR/wstunnel" -- server \
-				--restrict-config "$WS_CONF" "ws://127.0.0.1:$WS_PORT" >>"$WS_LOG" 2>&1 \
+			start_daemon "$WS_PID" "$WS_LOG" "$BIN_DIR/wstunnel" server \
+				--restrict-config "$WS_CONF" "ws://127.0.0.1:$WS_PORT" \
 				|| { log "start wstunnel failed"; ok=0; }
 		else
 			ok=0
