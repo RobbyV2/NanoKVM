@@ -1208,8 +1208,16 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 	}
 	match := subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) == 1
 	ok := valid && match
-	if s == nil || !ok || !cfg.Enabled || c == nil {
+	if s == nil || !ok {
+		// A token attempt that failed: unknown slot or wrong token.
 		m.limiter.Fail(source)
+		return false
+	}
+	if !cfg.Enabled || c == nil {
+		// The right token on a slot that is off (or mid-transaction) leaks
+		// nothing and is not counted: the exit's own reconnect loop while the
+		// operator has the slot disabled must not lock the exit out of the
+		// slot it is about to be re-enabled on.
 		return false
 	}
 

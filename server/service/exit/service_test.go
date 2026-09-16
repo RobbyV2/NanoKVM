@@ -446,3 +446,38 @@ func TestGateNeverAdmitsAnEmptyHeaderAgainstAnEmptyToken(t *testing.T) {
 		t.Fatalf("placeholder token admitted: %d served=%d", rec.Code, h.mux.served)
 	}
 }
+
+// SEC-2: the limiter counts token attempts (D10). A correct token presented to
+// a slot that is merely disabled leaks nothing, so the exit's own reconnect
+// loop while the operator has the slot off must not lock the exit out of the
+// slot it is about to re-enable.
+func TestGateDoesNotCountACorrectTokenOnADisabledSlot(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	svc := NewService(h.mgr)
+	r := gateEngine(svc)
+	cfg, _, _ := LoadConfig(MustSlot("0"))
+
+	for i := 0; i < limiterFreeAttempts+1; i++ {
+		if rec := perform(r, "/exit/0/native", cfg.Token, "198.51.100.1:5"); rec.Code != http.StatusNotFound {
+			t.Fatalf("disabled slot answered %d", rec.Code)
+		}
+	}
+	if h.mgr.limiter.Locked("198.51.100.1") {
+		t.Fatal("correct token on a disabled slot counted as brute force")
+	}
+	if err := h.mgr.Enable(context.Background(), MustSlot("0")); err != nil {
+		t.Fatal(err)
+	}
+	if rec := perform(r, "/exit/0/native", cfg.Token, "198.51.100.1:6"); rec.Code != http.StatusSwitchingProtocols {
+		t.Fatalf("the exit is refused after re-enable: %d", rec.Code)
+	}
+
+	// Wrong tokens and unknown slots still count.
+	for i := 0; i < limiterFreeAttempts+1; i++ {
+		perform(r, "/exit/7/native", cfg.Token, "198.51.100.2:5")
+	}
+	if !h.mgr.limiter.Locked("198.51.100.2") {
+		t.Fatal("an unknown slot did not count")
+	}
+}
