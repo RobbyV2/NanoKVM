@@ -60,7 +60,7 @@ REJECT4="0.0.0.0/8 127.0.0.0/8 169.254.0.0/16 198.18.0.0/15 224.0.0.0/3 10.0.0.0
 ENV
 
 export PATH="$work/stubs:$PATH"
-export STUB_STATE="$work/state" STUB_TRACE="$work/trace" STUB_ALIVE_PID=$$
+export STUB_STATE="$work/state" STUB_TRACE="$work/trace"
 export EXIT_DIR="$work/etc/kvm/exit" BIN_DIR="$work/bin" SEED_DIR="$work/seed"
 export RUN_DIR="$work/var/run" LOG_DIR="$work/tmp" SYS_NET="$work/sys/class/net"
 export GADGET_CONFIG="$work/sys/kernel/config/usb_gadget/g0/configs/c.1"
@@ -147,6 +147,23 @@ case "$out" in
 	*"forward=1"*"routing=1"*"tun=1"*"hev=1"*"wstunnel=1"*"nat=1"*"nic=usb0"*"gw=10.1.2.1"*) ;;
 	*) fail "status vector: $out" ;;
 esac
+
+if [ "$real" = 1 ]
+then
+	# hev died and its pid was recycled by a process that is not hev: this
+	# shell. status must not count it, and start must start a real hev.
+	kill "$hevpid"; sleep 1
+	echo $$ > "$work/var/run/exit0-hev.pid"
+	out=$(s94 status 0) && fail "status exited 0 with a recycled hev pid: $out"
+	case "$out" in
+		*"hev=0"*) ;;
+		*) fail "a recycled pid was reported as hev: $out" ;;
+	esac
+	s94 start 0 || fail "start with a recycled pid exited $?"
+	hevpid=$(cat "$work/var/run/exit0-hev.pid")
+	[ "$hevpid" != "$$" ] || fail "start trusted the recycled pid"
+	kill -0 "$hevpid" 2>/dev/null || fail "restarted hev $hevpid is not running"
+fi
 
 s94 stop 0 || fail "stop exited $?"
 [ ! -s "$work/state/rules" ] || fail "rules survived stop"

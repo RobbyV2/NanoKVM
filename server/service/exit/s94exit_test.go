@@ -62,16 +62,18 @@ func newS94(t *testing.T) *s94 {
 			t.Fatal(err)
 		}
 	}
-	// The daemons are present so no seed extraction runs.
+	// The daemons are present so no seed extraction runs. They live until
+	// killed, like the real ones, so a pidfile the stub start-stop-daemon
+	// writes names a process whose command line carries the binary's path.
 	for _, bin := range []string{HevBinary, WstunnelBinary} {
-		writeExec(t, filepath.Join(root, "bin", bin), "#!/bin/sh\nexit 0\n")
+		writeExec(t, filepath.Join(root, "bin", bin), "#!/bin/sh\nwhile :; do sleep 1; done\n")
 	}
+	t.Cleanup(h.killDaemons)
 
 	h.env = append(os.Environ(),
 		"PATH="+stubs+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"STUB_STATE="+h.state,
 		"STUB_TRACE="+h.trace,
-		"STUB_ALIVE_PID="+strconv.Itoa(os.Getpid()),
 		"EXIT_DIR="+h.exitDir,
 		"BIN_DIR="+filepath.Join(root, "bin"),
 		"SEED_DIR="+filepath.Join(root, "seed"),
@@ -82,6 +84,21 @@ func newS94(t *testing.T) *s94 {
 		"S94EXIT_SCRIPT="+script,
 	)
 	return h
+}
+
+// killDaemons reaps every process the stub start-stop-daemon spawned.
+func (h *s94) killDaemons() {
+	data, err := os.ReadFile(filepath.Join(h.state, "daemons"))
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if pid, err := strconv.Atoi(strings.TrimSpace(line)); err == nil && pid > 1 {
+			if p, err := os.FindProcess(pid); err == nil {
+				_ = p.Kill()
+			}
+		}
+	}
 }
 
 // daemonWrapper is the -c body start_daemon hands /bin/sh: redirect to the
@@ -485,5 +502,61 @@ func TestS94exitNoArgumentHonoursEnabledAndPending(t *testing.T) {
 	}
 	if _, code := h.run("frobnicate"); code == 0 {
 		t.Fatal("unknown verb accepted")
+	}
+}
+
+// A pidfile whose pid is alive but belongs to another process (pids wrap
+// every few hours on the device) is not the daemon: status must not report
+// it, stop must not signal it, and start must start a real one.
+func TestS94exitIgnoresARecycledPid(t *testing.T) {
+	h := newS94(t)
+	slot := MustSlot("0")
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, testConfig(slot), "usb0")
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	pidfile := filepath.Join(h.runDir, "exit0-hev.pid")
+	if err := os.WriteFile(filepath.Join(h.sysNet, "exit0", "carrier"), []byte("1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, code := h.run("status", "0"); code != 0 {
+		t.Fatalf("status with the real daemon exited %d:\n%s", code, out)
+	}
+
+	// hev died and its pid was handed to this test process, which is alive
+	// and is not hev.
+	h.killDaemons()
+	impostor := strconv.Itoa(os.Getpid()) + "\n"
+	if err := os.WriteFile(pidfile, []byte(impostor), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, code := h.run("status", "0")
+	report, ok := parseStatus(out)
+	if !ok || report.Down.Hev || code == 0 {
+		t.Fatalf("a recycled pid was reported as hev (code=%d):\n%s", code, out)
+	}
+
+	if out, code := h.run("stop", "0"); code != 0 {
+		t.Fatalf("stop exited %d:\n%s", code, out)
+	}
+	if trace := strings.Join(h.traceLines(), "\n"); strings.Contains(trace, "start-stop-daemon -K -q -p "+pidfile) {
+		t.Fatalf("stop signalled a pid that is not hev:\n%s", trace)
+	}
+	if _, err := os.Stat(pidfile); !os.IsNotExist(err) {
+		t.Fatal("stop left the stale pidfile behind")
+	}
+
+	if err := os.WriteFile(pidfile, []byte(impostor), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	if trace := strings.Join(h.traceLines(), "\n"); !strings.Contains(trace, "start-stop-daemon -S -bmq -p "+pidfile) {
+		t.Fatalf("start trusted a recycled pid and did not restart hev:\n%s", trace)
+	}
+	if now, _ := os.ReadFile(pidfile); string(now) == impostor {
+		t.Fatal("the pidfile still names the impostor after start")
 	}
 }

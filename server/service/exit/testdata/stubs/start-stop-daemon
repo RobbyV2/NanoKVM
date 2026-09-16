@@ -1,14 +1,20 @@
 #!/bin/sh
-# Stub start-stop-daemon. -S writes $STUB_ALIVE_PID (the test process, so the
-# pid stays alive across invocations) into the pidfile and refuses when the
-# pidfile already names a live process, as BusyBox does; -K only records.
+# Stub start-stop-daemon. -S runs the -x command with its arguments as a real
+# background process (stdio to /dev/null, as -b does), writes its pid into the
+# pidfile and refuses when the pidfile already names a live process, as
+# BusyBox does; every pid it spawned is listed in $STUB_STATE/daemons so the
+# test can reap them. -K signals the pidfile's pid, but only one this stub
+# spawned: a script that signals a recycled pid must show up in the trace,
+# not kill the test process.
 echo "start-stop-daemon $*" >> "$STUB_TRACE"
 mode=$1
 shift
 pidfile=
+exe=
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-p) pidfile=$2; shift 2 ;;
+	-x) exe=$2; shift 2 ;;
 	--) shift; break ;;
 	*) shift ;;
 	esac
@@ -18,10 +24,17 @@ case "$mode" in
 	if [ -r "$pidfile" ] && read -r pid < "$pidfile" && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
 		exit 1
 	fi
-	echo "$STUB_ALIVE_PID" > "$pidfile"
+	[ -n "$exe" ] || exit 1
+	"$exe" "$@" </dev/null >/dev/null 2>&1 &
+	echo $! > "$pidfile"
+	echo $! >> "$STUB_STATE/daemons"
 	;;
 -K)
 	[ -r "$pidfile" ] || exit 1
+	read -r pid < "$pidfile"
+	if grep -qx -- "$pid" "$STUB_STATE/daemons" 2>/dev/null; then
+		kill "$pid" 2>/dev/null
+	fi
 	;;
 esac
 exit 0
