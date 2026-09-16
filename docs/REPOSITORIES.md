@@ -163,15 +163,16 @@ default is `-it` and fails without a TTY. CI does this plus `IMAGE_NAME=<digest>
 | `make web` | **host** | `web/dist`; needs Node ≥22 / pnpm ≥11 — the builder image has no Node |
 | `make tunnels` | container | `kvmapp/tunnels/{wstunnel,newt}.gz` |
 | `make passthrough` | container | `kvmapp/passthrough/usb-proxy.gz`, with libusb 1.0.26 + jsoncpp 1.9.5 cross-built statically first |
+| `make exit` | container | `kvmapp/exit/hev-socks5-tunnel.gz`, staged uncompressed under `build/exit/` (`HEV_BUILD_CMD`) |
 | `make edid-profiles` | container | regenerates `server/service/edid/profiles_gen.go` (needs network) |
 | `make release-build` | container | all riscv64 artifacts in one pass (`scripts/build-in-container.sh`) |
-| `make package VERSION=x.y.z` | host | `build/release/nanokvm_<v>.tar.gz` + `latest.json`; depends on `tunnels` + `passthrough` |
+| `make package VERSION=x.y.z` | host | `build/release/nanokvm_<v>.tar.gz` + `latest.json`; depends on `tunnels` + `passthrough` + `exit` |
 | `make release VERSION=x.y.z` | both | `release-build` → `web` → `package` |
 | `make kernelint[-tier1\|-tier2\|-watchdog\|-zram]` | QEMU | the `//go:build kernelint` tests |
 
-`kvmapp/tunnels/*.gz` and `kvmapp/passthrough/*.gz` are **gitignored**, so a fresh
-clone has no seeds and `make tunnels` / `make passthrough` are required before
-`make package`. `package.sh`'s `require_fresh` refuses a seed older than the
+`kvmapp/tunnels/*.gz`, `kvmapp/passthrough/*.gz` and `kvmapp/exit/*.gz` are
+**gitignored**, so a fresh clone has no seeds and `make tunnels` /
+`make passthrough` / `make exit` are required before `make package`. `package.sh`'s `require_fresh` refuses a seed older than the
 submodule it came from — that is how 2.7.0 shipped a stale `usb-proxy`. `gzip -9
 -n` is mandatory; the `-n` keeps the timestamp out, which is what makes the
 tarball reproducible.
@@ -189,15 +190,19 @@ line, or `ld` selects `/lib/ld-musl-riscv64xthead.so.1` while the device runs
 `RUSTFLAGS="--cfg uuid_unstable -C target-feature=+crt-static"`, never
 `--all-features`.
 
-`hev-socks5-tunnel` cross-builds statically to about 190 KB with:
+`hev-socks5-tunnel` cross-builds statically to about 190 KB with `make exit`,
+whose recipe (`HEV_BUILD_CMD` in the Makefile) is, with `$(RISCV_ARCH_FLAGS)`
+on both the compile and the link line:
 
   ```sh
   make CROSS_PREFIX=riscv64-unknown-linux-musl- ENABLE_STATIC=1 \
        CFLAGS="-Os -mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d -ffunction-sections -fdata-sections" \
-       LFLAGS="-static -Wl,--gc-sections"
+       LFLAGS="-mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d -static -Wl,--gc-sections"
   ```
 
-  It is not yet wired into the `Makefile`, `scripts/package.sh` or `.gitignore`.
+  `scripts/package.sh` checks the seed with `require_file`, `require_riscv64`,
+  `require_fresh` (against `third_party/hev-socks5-tunnel`) and
+  `require_same_gz`; `.gitignore` has `kvmapp/exit/*.gz`.
 
 ### Host-side checks
 
@@ -276,7 +281,7 @@ git fetch upstream && git checkout NanoKVM && git merge upstream/main
 # resolve, build, test
 git push origin NanoKVM
 cd ../.. && git add third_party/<name> && git commit
-make tunnels     # or make passthrough — the seeds must be rebuilt after a bump
+make tunnels     # or make passthrough / make exit — the seeds must be rebuilt after a bump
 ```
 
 The superproject commit message must name the upstream sha the fork now contains
@@ -461,8 +466,8 @@ rather than merge-committed. Do not use three-dot `git diff main...<branch>` her
 3. `git submodule update --init --recursive`, then `git add third_party/<name>`
    for each that moved and commit with the upstream sha and the resolutions in
    the message. Bump `NEWT_VERSION` if the newt fork's base tag moved.
-4. Rebuild the gitignored seeds: `make tunnels && make passthrough` (add
-   `DOCKER_TTY=` in a non-interactive shell).
+4. Rebuild the gitignored seeds: `make tunnels && make passthrough && make exit`
+   (add `DOCKER_TTY=` in a non-interactive shell).
 5. Container-build the server with `make app` (if it fails on
    `/home/build/.cache` permissions, `make rebuild-image`) and type-check the
    frontend on the host with `cd web && pnpm exec tsc --noEmit`.
@@ -499,8 +504,8 @@ Only entries verified against the trees on disk.
 - **Seeds are gitignored and must be rebuilt after any submodule bump**, or
   `require_fresh` refuses the package; `make package` on macOS is also not
   byte-reproducible, so cut releases in CI.
-- **`hev-socks5-tunnel` needs `--recursive`** and is not yet referenced by the
-  `Makefile`, `scripts/package.sh` or `.gitignore`. **`NEWT_VERSION` is manual.**
+- **`hev-socks5-tunnel` needs `--recursive`** (it vendors lwip and hev-task-system
+  as submodules of its own). **`NEWT_VERSION` is manual.**
 - **The six sibling branches look unmerged but are not.** Use `git cherry` and
   two-dot diffs.
 - **`S99*` init scripts are deleted on every app update.**
