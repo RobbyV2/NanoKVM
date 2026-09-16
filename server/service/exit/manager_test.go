@@ -797,3 +797,78 @@ func TestWatchdogStopsAnOrphanedDisabledSlot(t *testing.T) {
 	h.mustContain("S94exit status 0")
 	h.mustNotContain("S94exit stop")
 }
+
+// gatedRunner parks one named call until released, so a test can hold a
+// converge mid-flight while a transaction arrives.
+type gatedRunner struct {
+	inner   Runner
+	call    string
+	parked  chan struct{} // closed when the call is parked
+	release chan struct{}
+	once    sync.Once
+}
+
+func (g *gatedRunner) Run(ctx context.Context, name string, args ...string) (string, error) {
+	if filepath.Base(name)+" "+strings.Join(args, " ") == g.call {
+		g.once.Do(func() { close(g.parked) })
+		<-g.release
+	}
+	return g.inner.Run(ctx, name, args...)
+}
+
+// TestWatchdogYieldsToDisable: a tick that has passed the enabled check and
+// is inside S94exit start must not re-converge the slot after Disable's
+// S94exit stop, or hev, the rules and the chains come back on a slot
+// recorded disabled and nothing ever stops them again.
+func TestWatchdogYieldsToDisable(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.reset()
+
+	gate := &gatedRunner{inner: h.runner, call: "S94exit start 0", parked: make(chan struct{}), release: make(chan struct{})}
+	h.mgr.deps.Runner = gate
+	h.mgr.down = downstream{run: gate}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		h.mgr.Tick(context.Background())
+	}()
+	select {
+	case <-gate.parked:
+	case <-time.After(3 * time.Second):
+		t.Fatal("tick never reached S94exit start")
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := h.mgr.Disable(context.Background(), slot); err != nil {
+			t.Errorf("disable: %v", err)
+		}
+	}()
+	time.Sleep(50 * time.Millisecond) // let a non-yielding Disable run ahead of the parked tick
+	close(gate.release)
+	wg.Wait()
+
+	stop := h.index("S94exit stop 0")
+	if stop < 0 {
+		t.Fatalf("no stop in:\n%s", strings.Join(h.trace, "\n"))
+	}
+	for i, line := range h.trace {
+		if i > stop && (strings.Contains(line, "S94exit start") || strings.Contains(line, "S30rndis start") || strings.Contains(line, "dns.bind")) {
+			t.Fatalf("%q re-converged the slot after its stop:\n%s", line, strings.Join(h.trace, "\n"))
+		}
+	}
+	cfg, _, _ := LoadConfig(slot)
+	if cfg.Enabled {
+		t.Fatalf("config after disable = %+v", cfg)
+	}
+	if h.dns.bound {
+		t.Fatal("forwarder left bound on a disabled slot")
+	}
+}

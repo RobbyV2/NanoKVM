@@ -124,8 +124,13 @@ type Manager struct {
 
 	// mu guards slots and every slotState field. opMu serialises the
 	// transactions (enable, disable, config, token). convergeMu serialises
-	// the converge paths (attach, rebind, watchdog), which a transaction may
-	// trigger through Rebind, so the two are distinct on purpose.
+	// the converge paths (attach, rebind, watchdog). A converge also takes
+	// opMu, but only by TryLock: one that arrives while a transaction runs
+	// simply skips, since S94exit start does not check ENABLED and a tick
+	// that had passed the enabled check could otherwise queue its start
+	// behind Disable's stop and bring the slot back. A transaction's own
+	// Rebind fires onRebind on this goroutine, which is why it must not
+	// block: Enable's closing convergeSlot covers that rebind itself.
 	mu         sync.Mutex
 	opMu       sync.Mutex
 	convergeMu sync.Mutex
@@ -966,6 +971,10 @@ func (m *Manager) OnAttach(ctx context.Context) { m.onRebind(ctx) }
 
 // onRebind is the presentation manager's rebind subscriber (D25).
 func (m *Manager) onRebind(ctx context.Context) {
+	if !m.opMu.TryLock() {
+		return // a transaction is running; it converges on its own
+	}
+	defer m.opMu.Unlock()
 	m.convergeMu.Lock()
 	defer m.convergeMu.Unlock()
 	for _, s := range m.snapshot() {
@@ -1024,8 +1033,14 @@ func (m *Manager) watchdog() {
 	}
 }
 
-// Tick is one watchdog pass, exported for tests.
+// Tick is one watchdog pass, exported for tests. It yields to a running
+// transaction: the next tick is 30 s away and the transaction leaves the
+// slot converged.
 func (m *Manager) Tick(ctx context.Context) {
+	if !m.opMu.TryLock() {
+		return
+	}
+	defer m.opMu.Unlock()
 	m.convergeMu.Lock()
 	defer m.convergeMu.Unlock()
 	for _, s := range m.snapshot() {
