@@ -887,6 +887,11 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 	if req.PinPeer != nil {
 		cfg.PinPeer = *req.PinPeer
 	}
+	if req.DNS != nil {
+		if err := ValidateResolvers(cfg); err != nil {
+			return m.fail(s, err)
+		}
+	}
 	cfg.Normalize()
 	if cfg.Mode == proto.ExitModeWstunnel && cfg.Enabled {
 		if err := m.ensureBinaries(cfg); err != nil {

@@ -114,9 +114,16 @@ func (c *Config) Normalize() {
 	if c.NIC == "" {
 		c.NIC = NICGadget
 	}
-	if len(c.Upstreams()) == 0 {
-		c.DNS = append([]string(nil), DefaultDNS...)
+	reachable := make([]string, 0, len(c.DNS))
+	for _, up := range c.Upstreams() {
+		if resolverReachable(up, c.Policy()) {
+			reachable = append(reachable, up.String())
+		}
 	}
+	if len(reachable) == 0 {
+		reachable = append([]string(nil), DefaultDNS...)
+	}
+	c.DNS = reachable
 	if c.MTU < 576 || c.MTU > 1400 {
 		c.MTU = DefaultMTU
 	}
@@ -134,6 +141,34 @@ func (c Config) Upstreams() []netip.Addr {
 		}
 	}
 	return out
+}
+
+// resolverReachable reports whether up can be used as a DNS upstream for a
+// slot with this policy: the forwarder dials it through the front door, which
+// denies anything the policy denies and answers atyp 4 for IPv6 (D22), so a
+// resolver the slot can never reach is not a resolver (MGR-8).
+func resolverReachable(up netip.Addr, policy Policy) bool {
+	return up.Is4() && policy.Allow(up)
+}
+
+// ValidateResolvers rejects a DNS list with an entry the slot can never
+// reach, naming the offender so the operator sees why (MGR-8). Parse-invalid
+// entries are ignored here; Normalize drops them.
+func ValidateResolvers(cfg Config) error {
+	policy := cfg.Policy()
+	for _, s := range cfg.DNS {
+		up, err := netip.ParseAddr(strings.TrimSpace(s))
+		if err != nil || !up.IsValid() || up.IsUnspecified() {
+			continue
+		}
+		if up.Is6() {
+			return fmt.Errorf("dns resolver %s: IPv6 resolvers are not supported yet", up)
+		}
+		if !policy.Allow(up) {
+			return fmt.Errorf("dns resolver %s is unreachable under this slot's policy", up)
+		}
+	}
+	return nil
 }
 
 // LoadConfig reads the slot's config. ok is false when the file is absent.

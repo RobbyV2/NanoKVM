@@ -1020,3 +1020,38 @@ func TestReconnectAfterRebootIsNotASupersede(t *testing.T) {
 		t.Fatalf("a reconnect after reboot was recorded as a supersede: %+v", status)
 	}
 }
+
+// TestSetConfigRejectsUnreachableResolvers: a DNS resolver the slot can never
+// reach (loopback, private with allowPrivate off, IPv6) is refused by name
+// rather than persisted to SERVFAIL every query (MGR-8).
+func TestSetConfigRejectsUnreachableResolvers(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"127.0.0.1", "10.0.0.1", "192.168.1.1", "2606:4700:4700::1111"} {
+		dns := []string{"1.1.1.1", bad}
+		err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{DNS: &dns})
+		if err == nil || !strings.Contains(err.Error(), bad) {
+			t.Fatalf("resolver %q accepted (err=%v)", bad, err)
+		}
+		cfg, _ := h.mgr.Config(slot)
+		for _, up := range cfg.DNS {
+			if up == bad {
+				t.Fatalf("resolver %q was persisted", bad)
+			}
+		}
+	}
+	// A private resolver is allowed once the slot allows private destinations.
+	allow := true
+	priv := []string{"10.0.0.1"}
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{AllowPrivate: &allow, DNS: &priv}); err != nil {
+		t.Fatalf("private resolver with allowPrivate: %v", err)
+	}
+	cfg, _ := h.mgr.Config(slot)
+	if len(cfg.DNS) != 1 || cfg.DNS[0] != "10.0.0.1" {
+		t.Fatalf("dns after allowing private = %v", cfg.DNS)
+	}
+}
