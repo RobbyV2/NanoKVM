@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/netip"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -472,5 +473,25 @@ func TestDNSCacheBounds(t *testing.T) {
 	q.Name = dnsmessage.MustNewName(strings.ToUpper(q.Name.String()))
 	if _, ok := c.get(q); !ok {
 		t.Fatal("case-insensitive lookup failed")
+	}
+}
+
+// TestForwarderBindStopAreSerialised hammers Bind and Stop concurrently: with
+// them serialised, the run never trips the WaitGroup misuse panic and the
+// forwarder is unbound once the last Stop returns, rather than left with an
+// orphaned :53 listener (MGR-10).
+func TestForwarderBindStopAreSerialised(t *testing.T) {
+	f := NewForwarder(MustSlot("0"), func() []netip.Addr { return nil }, func() bool { return false })
+	addr := netip.MustParseAddr("127.0.0.1")
+	var wg sync.WaitGroup
+	for i := 0; i < 300; i++ {
+		wg.Add(2)
+		go func() { defer wg.Done(); _ = f.Bind(addr) }()
+		go func() { defer wg.Done(); f.Stop() }()
+	}
+	wg.Wait()
+	f.Stop()
+	if f.Bound() {
+		t.Fatal("forwarder still bound after the final Stop")
 	}
 }

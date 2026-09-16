@@ -39,6 +39,12 @@ type Forwarder struct {
 	upstreams func() []netip.Addr
 	connected func() bool
 
+	// opMu serialises Bind against Stop (and Bind against Bind): without it a
+	// Stop could Wait on the WaitGroup while a concurrent Bind then Add(2)s to
+	// it (the documented misuse that panics), or a Bind could finish after a
+	// Stop and leave :53 bound on a forwarder nobody references (MGR-10). mu
+	// guards only the published listeners.
+	opMu sync.Mutex
 	mu   sync.Mutex
 	udp  net.PacketConn
 	tcp  net.Listener
@@ -65,7 +71,9 @@ func NewForwarder(slot Slot, upstreams func() []netip.Addr, connected func() boo
 // Bind (re)binds UDP and TCP :53 on addr. Any failure leaves nothing bound
 // and surfaces as downstream.dns=false.
 func (f *Forwarder) Bind(addr netip.Addr) error {
-	f.Stop()
+	f.opMu.Lock()
+	defer f.opMu.Unlock()
+	f.stopLocked()
 	hostport := net.JoinHostPort(addr.String(), strconv.Itoa(dnsPort))
 	network := "udp4"
 	if addr.Is6() {
@@ -80,10 +88,12 @@ func (f *Forwarder) Bind(addr netip.Addr) error {
 		_ = udp.Close()
 		return fmt.Errorf("%s dns tcp: %w", f.slot.Name(), err)
 	}
+	// Add before publishing and before the goroutines: opMu keeps this the
+	// only Add, so a Stop's Wait can never race it.
+	f.wg.Add(2)
 	f.mu.Lock()
 	f.udp, f.tcp, f.addr = udp, tcp, addr
 	f.mu.Unlock()
-	f.wg.Add(2)
 	go f.serveUDP(udp)
 	go f.serveTCP(tcp)
 	return nil
@@ -91,6 +101,14 @@ func (f *Forwarder) Bind(addr netip.Addr) error {
 
 // Stop closes both listeners.
 func (f *Forwarder) Stop() {
+	f.opMu.Lock()
+	defer f.opMu.Unlock()
+	f.stopLocked()
+}
+
+// stopLocked closes both listeners and waits for their goroutines. opMu must
+// be held, so it never runs beside a Bind.
+func (f *Forwarder) stopLocked() {
 	f.mu.Lock()
 	udp, tcp := f.udp, f.tcp
 	f.udp, f.tcp = nil, nil
