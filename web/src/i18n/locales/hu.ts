@@ -1167,6 +1167,9 @@ const hu = {
           viewScript: 'Szkript megtekintése',
           scriptTitle: '{{name}} szkript',
           scriptFailed: 'A szkript letöltése nem sikerült',
+          scriptGated:
+            'A szkript csak bekapcsolt alagút és érvényes token mellett érhető el; minden elutasított kérés korlátozza ezt a címet.',
+          viewScriptDisabled: 'A szkript letöltéséhez kapcsolja be az alagutat.',
           rewritten: 'Címzett: {{host}}, a cím, amelyet ez a böngésző elért.',
           warnSchemeMismatch:
             'A NanoKVM ezt az oldalt {{server}} címen kérve látta, a böngésző viszont a {{local}} címen érte el. A parancsok a {{server}} címre szólnak; állítsa be a proxyt, hogy X-Forwarded-Proto fejlécet küldjön, így az Ön által használt címet követik.',

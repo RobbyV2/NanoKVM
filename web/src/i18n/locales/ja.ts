@@ -1158,6 +1158,9 @@ const ja = {
           viewScript: 'スクリプトを表示',
           scriptTitle: 'スクリプト {{name}}',
           scriptFailed: 'スクリプトを取得できませんでした',
+          scriptGated:
+            'スクリプトはトンネルが有効でトークンが最新のときだけ提供されます。拒否された要求ごとにこのアドレスがレート制限されます。',
+          viewScriptDisabled: 'スクリプトを取得するにはトンネルを有効にしてください。',
           rewritten: 'このブラウザーがアクセスしたアドレス {{host}} 宛てに書き換えています。',
           warnSchemeMismatch:
             'NanoKVM はこのページが {{server}} で要求されたと認識していますが、ブラウザーは {{local}} でアクセスしています。コマンドは {{server}} 宛てです。プロキシに X-Forwarded-Proto を送らせると、使用中のアドレスに合わせられます。',

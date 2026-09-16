@@ -1171,6 +1171,9 @@ const nl = {
           viewScript: 'Script bekijken',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Script ophalen mislukt',
+          scriptGated:
+            'Het script wordt alleen geleverd zolang de tunnel is ingeschakeld en het token actueel is; elk geweigerd verzoek beperkt dit adres.',
+          viewScriptDisabled: 'Schakel de tunnel in om het script op te halen.',
           rewritten: 'Geadresseerd aan {{host}}, het adres dat deze browser heeft bereikt.',
           warnSchemeMismatch:
             'De NanoKVM zag deze pagina opgevraagd via {{server}}, maar de browser bereikte hem op {{local}}. De opdrachten zijn geadresseerd aan {{server}}; laat de proxy X-Forwarded-Proto sturen zodat ze het adres volgen dat u gebruikt.',

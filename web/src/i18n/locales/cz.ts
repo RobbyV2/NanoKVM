@@ -1153,6 +1153,9 @@ const cz = {
           viewScript: 'Zobrazit skript',
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Skript se nepodařilo načíst',
+          scriptGated:
+            'Skript se poskytuje jen při zapnutém tunelu a platném tokenu; každý odmítnutý požadavek omezí tuto adresu.',
+          viewScriptDisabled: 'Pro načtení skriptu zapněte tunel.',
           rewritten: 'Adresováno na {{host}}, adresu, kterou tento prohlížeč použil.',
           warnSchemeMismatch:
             'NanoKVM viděl požadavek na tuto stránku přes {{server}}, ale prohlížeč ji otevřel na {{local}}. Příkazy jsou adresovány na {{server}}; nastavte proxy, aby posílala X-Forwarded-Proto, a příkazy budou používat vaši adresu.',

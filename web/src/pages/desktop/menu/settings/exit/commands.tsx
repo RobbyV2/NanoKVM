@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Modal, Tabs } from 'antd';
+import { Button, Input, Modal, Tabs, Tooltip } from 'antd';
 import { CheckIcon, CopyIcon, FileCodeIcon, LoaderCircleIcon, ShieldAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +7,7 @@ import { copyText } from '@/lib/clipboard.ts';
 import { getBaseUrl } from '@/lib/service.ts';
 import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
-import { detectPlatform, parseOrigin, presentCommand } from './state.ts';
+import { detectPlatform, parseOrigin, presentCommand, scriptErrorKey } from './state.ts';
 import { exitPlatforms } from './types.ts';
 import type { ExitCommands as Commands, ExitMode, ExitPlatform } from './types.ts';
 
@@ -17,6 +17,8 @@ type ExitCommandsProps = {
   token: string;
   commands?: Commands;
   hasConnected: boolean;
+  // the gate serves the script only while the slot is enabled and settled
+  scriptServed: boolean;
 };
 
 // what each platform's one-liner fetches, and therefore what "view script" shows
@@ -26,7 +28,14 @@ const scriptNames: Record<ExitPlatform, string> = {
   linux: 'client.sh'
 };
 
-export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: ExitCommandsProps) => {
+export const ExitCommands = ({
+  slot,
+  mode,
+  token,
+  commands,
+  hasConnected,
+  scriptServed
+}: ExitCommandsProps) => {
   const { t } = useTranslation();
 
   const [platform, setPlatform] = useState<ExitPlatform>(() => detectPlatform(navigator.userAgent));
@@ -61,9 +70,11 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
   }
 
   // the script route is token-gated outside /api, so a plain link would 404;
-  // the panel fetches it with the header the one-liner would send
+  // the panel fetches it with the header the one-liner would send. Every
+  // rejection there counts against this address (D10), so the button is dead
+  // while the gate would refuse anyway
   function viewScript() {
-    if (isScriptLoading) return;
+    if (isScriptLoading || !scriptServed) return;
     setIsScriptLoading(true);
     setErrMsg('');
 
@@ -74,15 +85,16 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
     })
       .then((rsp) => {
         if (!rsp.ok) {
-          throw new Error(`${rsp.status}`);
+          throw new Error(String(rsp.status));
         }
         return rsp.text();
       })
       .then((body) => {
         setScript({ name, body });
       })
-      .catch(() => {
-        setErrMsg(t('settings.exit.commands.scriptFailed'));
+      .catch((err) => {
+        const httpStatus = Number((err as Error)?.message);
+        setErrMsg(t(`settings.exit.commands.${scriptErrorKey(httpStatus)}`));
       })
       .finally(() => {
         setIsScriptLoading(false);
@@ -163,15 +175,21 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
                   </Button>
 
                   {mode === 'native' && (
-                    <Button
-                      size="small"
-                      type="text"
-                      icon={<FileCodeIcon size={14} />}
-                      loading={isScriptLoading}
-                      onClick={viewScript}
+                    <Tooltip
+                      title={scriptServed ? '' : t('settings.exit.commands.viewScriptDisabled')}
+                      placement="bottom"
                     >
-                      {t('settings.exit.commands.viewScript')}
-                    </Button>
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<FileCodeIcon size={14} />}
+                        loading={isScriptLoading}
+                        disabled={!scriptServed}
+                        onClick={viewScript}
+                      >
+                        {t('settings.exit.commands.viewScript')}
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
 

@@ -1099,6 +1099,8 @@ const zh = {
           viewScript: '查看脚本',
           scriptTitle: '脚本 {{name}}',
           scriptFailed: '获取脚本失败',
+          scriptGated: '只有在隧道启用且令牌有效时才会提供脚本；每次被拒绝的请求都会对此地址限速。',
+          viewScriptDisabled: '启用隧道后才能获取脚本。',
           rewritten: '已改为指向 {{host}}，即本浏览器访问的地址。',
           warnSchemeMismatch:
             'NanoKVM 看到此页面是通过 {{server}} 请求的，但浏览器是经由 {{local}} 访问的。命令指向 {{server}}；请让代理发送 X-Forwarded-Proto，命令便会采用您使用的地址。',

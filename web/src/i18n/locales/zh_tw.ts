@@ -1100,6 +1100,9 @@ const zh_tw = {
           viewScript: '檢視指令碼',
           scriptTitle: '指令碼 {{name}}',
           scriptFailed: '取得指令碼失敗',
+          scriptGated:
+            '只有在隧道啟用且權杖有效時才會提供指令碼；每次被拒絕的請求都會對此位址限速。',
+          viewScriptDisabled: '啟用隧道後才能取得指令碼。',
           rewritten: '已改為指向 {{host}}，即本瀏覽器存取的位址。',
           warnSchemeMismatch:
             'NanoKVM 看到此頁面是透過 {{server}} 請求的，但瀏覽器是經由 {{local}} 存取。命令指向 {{server}}；請讓代理伺服器傳送 X-Forwarded-Proto，命令便會採用您使用的位址。',

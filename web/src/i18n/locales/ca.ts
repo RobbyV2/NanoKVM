@@ -1160,6 +1160,9 @@ const ca = {
           viewScript: 'Mostra el script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: "No s'ha pogut obtenir el script",
+          scriptGated:
+            "L'script només se serveix mentre el túnel està activat i el token és vigent; cada petició refusada limita aquesta adreça.",
+          viewScriptDisabled: "Activa el túnel per obtenir l'script.",
           rewritten: "Adreçada a {{host}}, l'adreça a què ha arribat aquest navegador.",
           warnSchemeMismatch:
             "El NanoKVM ha vist aquesta pàgina sol·licitada per {{server}}, però el navegador hi ha arribat per {{local}}. Les ordres s'adrecen a {{server}}; feu que el proxy enviï X-Forwarded-Proto perquè segueixin l'adreça que feu servir.",

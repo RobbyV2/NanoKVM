@@ -1164,6 +1164,9 @@ const id = {
           viewScript: 'Lihat skrip',
           scriptTitle: 'Skrip {{name}}',
           scriptFailed: 'Gagal mengambil skrip',
+          scriptGated:
+            'Skrip hanya dilayani saat tunnel aktif dan token masih berlaku; setiap permintaan yang ditolak membatasi alamat ini.',
+          viewScriptDisabled: 'Aktifkan tunnel untuk mengambil skrip.',
           rewritten: 'Dialamatkan ke {{host}}, alamat yang dijangkau peramban ini.',
           warnSchemeMismatch:
             'NanoKVM melihat halaman ini diminta melalui {{server}}, tetapi peramban mencapainya di {{local}}. Perintah ditujukan ke {{server}}; atur proxy agar mengirim X-Forwarded-Proto supaya perintah mengikuti alamat yang Anda gunakan.',

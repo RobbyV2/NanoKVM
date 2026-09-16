@@ -1153,6 +1153,9 @@ const vi = {
           viewScript: 'Xem script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Không lấy được script',
+          scriptGated:
+            'Script chỉ được cung cấp khi tunnel đang bật và token còn hiệu lực; mỗi yêu cầu bị từ chối sẽ giới hạn địa chỉ này.',
+          viewScriptDisabled: 'Bật tunnel để lấy script.',
           rewritten: 'Đã trỏ tới {{host}}, địa chỉ mà trình duyệt này đã truy cập.',
           warnSchemeMismatch:
             'NanoKVM thấy trang này được yêu cầu qua {{server}}, nhưng trình duyệt truy cập tại {{local}}. Các lệnh được gửi tới {{server}}; hãy cấu hình proxy gửi X-Forwarded-Proto để các lệnh dùng địa chỉ bạn đang dùng.',

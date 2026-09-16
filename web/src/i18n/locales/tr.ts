@@ -1159,6 +1159,9 @@ const tr = {
           viewScript: 'Betiği görüntüle',
           scriptTitle: '{{name}} betiği',
           scriptFailed: 'Betik alınamadı',
+          scriptGated:
+            'Betik yalnızca tünel etkin ve belirteç güncelken sunulur; reddedilen her istek bu adresi hız sınırına sokar.',
+          viewScriptDisabled: 'Betiği almak için tüneli etkinleştirin.',
           rewritten: 'Bu tarayıcının ulaştığı adres olan {{host}} için düzenlendi.',
           warnSchemeMismatch:
             "NanoKVM bu sayfanın {{server}} üzerinden istendiğini gördü, ancak tarayıcı ona {{local}} adresinden ulaştı. Komutlar {{server}} adresine yönelik; kullandığınız adresi izlemeleri için proxy'nin X-Forwarded-Proto göndermesini sağlayın.",

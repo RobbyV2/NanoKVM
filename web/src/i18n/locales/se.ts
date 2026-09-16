@@ -1158,6 +1158,9 @@ const se = {
           viewScript: 'Visa skript',
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Kunde inte hämta skriptet',
+          scriptGated:
+            'Skriptet levereras bara medan tunneln är aktiverad och token är aktuell; varje avvisad begäran begränsar den här adressen.',
+          viewScriptDisabled: 'Aktivera tunneln för att hämta skriptet.',
           rewritten: 'Adresserat till {{host}}, adressen som den här webbläsaren nådde.',
           warnSchemeMismatch:
             'NanoKVM såg den här sidan begärd över {{server}}, men webbläsaren nådde den på {{local}}. Kommandona är adresserade till {{server}}; låt proxyn skicka X-Forwarded-Proto så att de följer adressen du använder.',

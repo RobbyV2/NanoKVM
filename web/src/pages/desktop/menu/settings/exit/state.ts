@@ -108,6 +108,20 @@ export function presentCommand(
   };
 }
 
+// The token gate answers a disabled or pending slot with the same 404 as a
+// wrong token and charges the source a failure (D10), so the panel asks for
+// the script only while the gate would serve it: a few clicks on a disabled
+// slot would otherwise lock the operator's own address out of /exit/:slot/*.
+export function isScriptServed(status: { enabled: boolean; pending: boolean }): boolean {
+  return status.enabled && !status.pending;
+}
+
+// a 404 is the gate (disabled slot, stale token, rate-limited source), not a
+// broken server, and the message has to say so
+export function scriptErrorKey(httpStatus: number): 'scriptGated' | 'scriptFailed' {
+  return httpStatus === 404 ? 'scriptGated' : 'scriptFailed';
+}
+
 export function formatUptime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   const days = Math.floor(total / 86400);

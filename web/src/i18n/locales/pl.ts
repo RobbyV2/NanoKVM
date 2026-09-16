@@ -1165,6 +1165,9 @@ const pl = {
           viewScript: 'Pokaż skrypt',
           scriptTitle: 'Skrypt {{name}}',
           scriptFailed: 'Nie udało się pobrać skryptu',
+          scriptGated:
+            'Skrypt jest udostępniany tylko przy włączonym tunelu i aktualnym tokenie; każde odrzucone żądanie ogranicza ten adres.',
+          viewScriptDisabled: 'Włącz tunel, aby pobrać skrypt.',
           rewritten: 'Zaadresowane do {{host}}, adresu, pod który dotarła ta przeglądarka.',
           warnSchemeMismatch:
             'NanoKVM widział żądanie tej strony przez {{server}}, ale przeglądarka dotarła do niej pod {{local}}. Polecenia są adresowane do {{server}}; skonfiguruj proxy, by wysyłało X-Forwarded-Proto, a polecenia użyją Twojego adresu.',

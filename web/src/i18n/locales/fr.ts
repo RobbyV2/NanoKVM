@@ -1174,6 +1174,9 @@ const fr = {
           viewScript: 'Voir le script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Impossible de récupérer le script',
+          scriptGated:
+            "Le script n'est servi que lorsque le tunnel est activé et le jeton à jour ; chaque requête refusée limite cette adresse.",
+          viewScriptDisabled: 'Activez le tunnel pour récupérer le script.',
           rewritten: "Adressée à {{host}}, l'adresse atteinte par ce navigateur.",
           warnSchemeMismatch:
             "Le NanoKVM a vu cette page demandée via {{server}}, mais le navigateur l'a atteinte à {{local}}. Les commandes sont adressées à {{server}} ; faites envoyer X-Forwarded-Proto par le proxy pour qu'elles suivent l'adresse que vous utilisez.",

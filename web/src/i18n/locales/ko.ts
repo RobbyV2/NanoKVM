@@ -1140,6 +1140,9 @@ const ko = {
           viewScript: '스크립트 보기',
           scriptTitle: '스크립트 {{name}}',
           scriptFailed: '스크립트를 가져오지 못했습니다',
+          scriptGated:
+            '스크립트는 터널이 활성화되고 토큰이 최신일 때만 제공됩니다. 거부된 요청마다 이 주소가 속도 제한됩니다.',
+          viewScriptDisabled: '스크립트를 가져오려면 터널을 활성화하세요.',
           rewritten: '이 브라우저가 접속한 주소인 {{host}} 기준으로 다시 작성되었습니다.',
           warnSchemeMismatch:
             'NanoKVM은 이 페이지가 {{server}}로 요청된 것으로 보았지만 브라우저는 {{local}}로 접속했습니다. 명령은 {{server}}로 향합니다. 프록시가 X-Forwarded-Proto를 보내도록 설정하면 사용 중인 주소를 따릅니다.',

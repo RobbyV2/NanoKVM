@@ -1172,6 +1172,9 @@ const de = {
           viewScript: 'Skript anzeigen',
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Skript konnte nicht abgerufen werden',
+          scriptGated:
+            'Das Skript wird nur ausgeliefert, solange der Tunnel aktiviert und das Token aktuell ist; jede abgewiesene Anfrage drosselt diese Adresse.',
+          viewScriptDisabled: 'Tunnel aktivieren, um das Skript abzurufen.',
           rewritten: 'Adressiert an {{host}}, die Adresse, die dieser Browser erreicht hat.',
           warnSchemeMismatch:
             'Der NanoKVM hat diese Seite über {{server}} angefordert gesehen, der Browser hat sie aber unter {{local}} erreicht. Die Befehle sind an {{server}} adressiert; lassen Sie den Proxy X-Forwarded-Proto senden, damit sie der von Ihnen genutzten Adresse folgen.',

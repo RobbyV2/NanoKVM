@@ -1169,6 +1169,9 @@ const es = {
           viewScript: 'Ver script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'No se pudo obtener el script',
+          scriptGated:
+            'El script solo se sirve mientras el túnel está activado y el token es vigente; cada petición rechazada limita esta dirección.',
+          viewScriptDisabled: 'Activa el túnel para obtener el script.',
           rewritten: 'Dirigido a {{host}}, la dirección a la que llegó este navegador.',
           warnSchemeMismatch:
             'El NanoKVM vio esta página solicitada por {{server}}, pero el navegador llegó a ella por {{local}}. Los comandos están dirigidos a {{server}}; haga que el proxy envíe X-Forwarded-Proto para que sigan la dirección que usted usa.',

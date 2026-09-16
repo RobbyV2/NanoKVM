@@ -1161,6 +1161,9 @@ const nb = {
           viewScript: 'Vis skript',
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Kunne ikke hente skriptet',
+          scriptGated:
+            'Skriptet leveres bare mens tunnelen er aktivert og tokenet er gyldig; hver avviste forespørsel begrenser denne adressen.',
+          viewScriptDisabled: 'Aktiver tunnelen for å hente skriptet.',
           rewritten: 'Adressert til {{host}}, adressen denne nettleseren nådde.',
           warnSchemeMismatch:
             'NanoKVM så denne siden forespurt over {{server}}, men nettleseren nådde den på {{local}}. Kommandoene er adressert til {{server}}; la proxyen sende X-Forwarded-Proto så de følger adressen du bruker.',

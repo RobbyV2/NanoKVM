@@ -1164,6 +1164,9 @@ const pt_br = {
           viewScript: 'Ver script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Falha ao obter o script',
+          scriptGated:
+            'O script só é servido enquanto o túnel está ativado e o token é atual; cada requisição recusada limita este endereço.',
+          viewScriptDisabled: 'Ative o túnel para obter o script.',
           rewritten: 'Endereçado a {{host}}, o endereço que este navegador alcançou.',
           warnSchemeMismatch:
             'O NanoKVM viu esta página solicitada por {{server}}, mas o navegador a alcançou em {{local}}. Os comandos são endereçados a {{server}}; faça o proxy enviar X-Forwarded-Proto para que sigam o endereço que você usa.',

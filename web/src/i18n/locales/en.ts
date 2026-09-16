@@ -1153,6 +1153,9 @@ const en = {
           viewScript: 'View script',
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Failed to fetch the script',
+          scriptGated:
+            'The script is served only while the tunnel is enabled and the token is current; every refused request rate-limits this address.',
+          viewScriptDisabled: 'Enable the tunnel to fetch the script.',
           rewritten: 'Addressed to {{host}}, the address this browser reached.',
           warnSchemeMismatch:
             'The NanoKVM saw this page requested over {{server}}, but the browser reached it at {{local}}. The commands are addressed to {{server}}; have the proxy send X-Forwarded-Proto so they follow the address you use.',

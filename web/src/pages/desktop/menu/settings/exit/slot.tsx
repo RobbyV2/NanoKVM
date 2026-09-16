@@ -8,6 +8,7 @@ import * as api from '@/api/extensions/exit.ts';
 import { ExitAdvanced } from './advanced.tsx';
 import { ExitCommands } from './commands.tsx';
 import { ExitLogs } from './logs.tsx';
+import { isScriptServed } from './state.ts';
 import { ExitStatusCard } from './status.tsx';
 import { ExitToken } from './token.tsx';
 import { exitModes } from './types.ts';
@@ -307,6 +308,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
         token={status.token}
         commands={commands}
         hasConnected={!!status.lastConnectedAt}
+        scriptServed={isScriptServed(status)}
       />
 
       <Divider className="opacity-50" />
