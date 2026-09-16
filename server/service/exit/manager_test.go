@@ -872,3 +872,62 @@ func TestWatchdogYieldsToDisable(t *testing.T) {
 		t.Fatal("forwarder left bound on a disabled slot")
 	}
 }
+
+// TestWatchdogHealsASlotWithoutComponents: an enabled slot whose listeners
+// failed to start (the SOCKS port held by a stale process at boot, or a mode
+// switch whose restart failed) gets them retried by the watchdog like every
+// other part of the slot, instead of staying enabled with hev pointed at a
+// closed port until an operator toggles it.
+func TestWatchdogHealsASlotWithoutComponents(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.door.startEr = errors.New("address in use")
+	mode := proto.ExitModeWstunnel
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{Mode: &mode}); err == nil {
+		t.Fatal("mode switch with a dead front door succeeded")
+	}
+	cfg, _, _ := LoadConfig(slot)
+	if !cfg.Enabled {
+		t.Fatalf("config after a failed mode switch = %+v", cfg)
+	}
+	h.mgr.mu.Lock()
+	comps := h.mgr.slots["0"].comps
+	h.mgr.mu.Unlock()
+	if comps != nil {
+		t.Fatal("components survived the failed start")
+	}
+	status, _ := h.mgr.Status(slot)
+	if !strings.Contains(status.Message, "address in use") {
+		t.Fatalf("status message = %q", status.Message)
+	}
+
+	// The port is free again: the next tick starts the listeners.
+	h.door.startEr = nil
+	h.reset()
+	h.mgr.Tick(context.Background())
+	h.mustContain("S94exit start 0", "door.start", "dns.bind 10.1.2.1", "probe.start", "S94exit status 0")
+	h.mgr.mu.Lock()
+	comps = h.mgr.slots["0"].comps
+	h.mgr.mu.Unlock()
+	if comps == nil {
+		t.Fatal("watchdog did not start the components")
+	}
+	if h.door.relay == nil {
+		t.Fatal("healed wstunnel slot has no relay gate")
+	}
+	status, _ = h.mgr.Status(slot)
+	if status.Message != "" || !status.Downstream.DNS {
+		t.Fatalf("status after heal = %+v", status)
+	}
+
+	// A tick with the listeners up builds nothing new.
+	built := h.built
+	h.mgr.Tick(context.Background())
+	if h.built != built {
+		t.Fatal("a healthy tick rebuilt the components")
+	}
+}

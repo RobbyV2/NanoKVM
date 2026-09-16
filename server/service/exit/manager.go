@@ -1011,6 +1011,20 @@ func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 	m.mu.Lock()
 	c := s.comps
 	m.mu.Unlock()
+	if c == nil && gw.IsValid() {
+		// The listeners never came up (a taken SOCKS port at boot, a mode
+		// switch whose restart failed): retry them here like every other
+		// part of the slot, or hev keeps dialling a closed port for good.
+		if err := m.startComponents(s, gw); err != nil {
+			log.Warnf("exit: slot %s: %s", s.slot.ID, err)
+			m.setMessage(s, err.Error())
+		} else {
+			m.setMessage(s, "")
+		}
+		m.mu.Lock()
+		c = s.comps
+		m.mu.Unlock()
+	}
 	if c != nil && gw.IsValid() && (gw != prevGW || !c.DNS.Bound()) {
 		if err := c.DNS.Bind(gw); err != nil {
 			log.Warnf("exit: slot %s: dns forwarder on %s: %s", s.slot.ID, gw, err)
