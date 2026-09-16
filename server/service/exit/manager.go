@@ -610,10 +610,24 @@ func (m *Manager) saveState(s *slotState) {
 	}
 }
 
+// detached is the context a transaction runs on: the caller's values, none
+// of its cancellation. The handlers pass gin's request context, which dies
+// with the client connection (a closed tab, the UI's request timeout), and
+// exec.CommandContext then refuses to start anything, so a transaction that
+// had already mutated the config or the device could not finish or roll
+// back. execRunner's own per-command timeout is the bound instead.
+func detached(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return context.WithoutCancel(ctx)
+}
+
 // Enable is the D23 transaction. Every failure after the first mutation runs
 // the rollback and returns the failing step's error, which status carries as
 // message.
 func (m *Manager) Enable(ctx context.Context, slot Slot) error {
+	ctx = detached(ctx)
 	m.opMu.Lock()
 	defer m.opMu.Unlock()
 
@@ -773,6 +787,7 @@ func (m *Manager) fail(s *slotState, err error) error {
 // converges to off, then restarts udhcpd without the options, stops the
 // listeners, tears the downstream down and re-leases the consumer (D23).
 func (m *Manager) Disable(ctx context.Context, slot Slot) error {
+	ctx = detached(ctx)
 	m.opMu.Lock()
 	defer m.opMu.Unlock()
 
@@ -823,6 +838,7 @@ func (m *Manager) Disable(ctx context.Context, slot Slot) error {
 // listeners and converges the daemons; an MTU change restarts the downstream
 // (hev reads its MTU at start); a policy change reapplies the chain.
 func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitConfigReq) error {
+	ctx = detached(ctx)
 	m.opMu.Lock()
 	defer m.opMu.Unlock()
 
@@ -1014,12 +1030,35 @@ func (m *Manager) Tick(ctx context.Context) {
 	defer m.convergeMu.Unlock()
 	for _, s := range m.snapshot() {
 		if !m.config(s).Enabled {
+			m.stopOrphan(ctx, s)
 			continue
 		}
 		m.convergeSlot(ctx, s)
 		if !m.connected(s) {
 			m.markDisconnected(s)
 		}
+	}
+}
+
+// stopOrphan is the watchdog's pass over a disabled slot: a downstream that
+// is still up (the server died between Disable's config flip and its S94exit
+// stop) is stopped, since nothing else ever would; boot skips disabled slots
+// and the transactions are over.
+func (m *Manager) stopOrphan(ctx context.Context, s *slotState) {
+	if m.config(s).Pending {
+		return
+	}
+	report, err := m.down.Status(ctx, s.slot)
+	if err != nil {
+		return
+	}
+	if !report.Down.Hev && !report.Down.Routing && !report.Down.NAT {
+		return
+	}
+	log.Warnf("exit: slot %s is disabled but its downstream is up (hev=%v routing=%v nat=%v); stopping it",
+		s.slot.ID, report.Down.Hev, report.Down.Routing, report.Down.NAT)
+	if err := m.down.Stop(ctx, s.slot); err != nil {
+		log.Warnf("exit: slot %s: %s", s.slot.ID, err)
 	}
 }
 

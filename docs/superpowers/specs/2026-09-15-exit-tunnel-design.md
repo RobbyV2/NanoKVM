@@ -256,7 +256,9 @@ As D23. In order: refuse-checks (D17; `NetworkProtocol(ctx)` non-empty, else "tu
 
 Any failure runs `S94exit stop <n>`, stops the in-process listeners, removes the marker, leaves `enabled:false`, and returns the failing step's error as `message`.
 
-Disable: remove the marker and flip `enabled:false` first, then `S30rndis restart`, stop the listeners, `S94exit stop <n>`, `Rebind`. A crash midway converges to off at the next boot or watchdog tick. The consumer's NIC comes back after the cycle with a lease that carries no router and no DNS, exactly the stock state.
+Disable: remove the marker and flip `enabled:false` first, then `S30rndis restart`, stop the listeners, `S94exit stop <n>`, `Rebind`. A crash midway converges to off at the next boot or watchdog tick: boot skips disabled slots, and the watchdog runs `S94exit status <n>` for a disabled slot and `S94exit stop <n>` when that still reports hev, routing or NAT up. The consumer's NIC comes back after the cycle with a lease that carries no router and no DNS, exactly the stock state.
+
+Both transactions (and `SetConfig`) run on a context detached from the HTTP request: gin cancels the request context when the client goes away, and `exec.CommandContext` then refuses to start a command, which would leave `enabled:false` recorded with hev, the tun and the chains still up. The per-command 60 s timeout in `execRunner` is the only bound.
 
 ## Boot
 

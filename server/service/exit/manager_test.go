@@ -26,7 +26,12 @@ type fakeRunner struct {
 	status string
 }
 
-func (r *fakeRunner) Run(_ context.Context, name string, args ...string) (string, error) {
+func (r *fakeRunner) Run(ctx context.Context, name string, args ...string) (string, error) {
+	// exec.CommandContext refuses to start on a done context; so does the fake,
+	// before the call is even traced.
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	call := filepath.Base(name) + " " + strings.Join(args, " ")
@@ -731,4 +736,64 @@ func TestLogsRedactTokens(t *testing.T) {
 	if strings.Contains(last, cfg.Token) || strings.Contains(last, "abcdefgh") || !strings.Contains(last, "********") {
 		t.Fatalf("token not redacted: %q", last)
 	}
+}
+
+// TestTransactionsOutliveTheRequest: gin cancels the request context the
+// moment the client goes away, and exec.CommandContext then refuses to run
+// anything. A disable that has already flipped enabled:false must still stop
+// the daemons, and an enable that has been armed must still finish or roll
+// back, whatever the caller's context does.
+func TestTransactionsOutliveTheRequest(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := h.mgr.Enable(cancelled, slot); err != nil {
+		t.Fatalf("enable on a cancelled request context: %v", err)
+	}
+	h.mustContain("S94exit start 0", "door.start", "S30rndis restart", "rebind")
+	cfg, _, _ := LoadConfig(slot)
+	if !cfg.Enabled {
+		t.Fatalf("config after enable = %+v", cfg)
+	}
+
+	h.reset()
+	if err := h.mgr.Disable(cancelled, slot); err != nil {
+		t.Fatalf("disable on a cancelled request context: %v", err)
+	}
+	h.mustContain("S30rndis restart", "door.stop", "S94exit stop 0", "rebind")
+	cfg, _, _ = LoadConfig(slot)
+	if cfg.Enabled {
+		t.Fatalf("config after disable = %+v", cfg)
+	}
+
+	h.reset()
+	mode := proto.ExitModeWstunnel
+	if err := h.mgr.SetConfig(cancelled, slot, proto.SetExitConfigReq{Mode: &mode}); err != nil {
+		t.Fatalf("set config on a cancelled request context: %v", err)
+	}
+	if _, err := h.mgr.RegenerateToken(cancelled, slot); err != nil {
+		t.Fatalf("regenerate on a cancelled request context: %v", err)
+	}
+}
+
+// TestWatchdogStopsAnOrphanedDisabledSlot: a slot recorded disabled whose
+// downstream is still up (the server died between the config flip and the
+// S94exit stop) is stopped by the watchdog rather than left running forever.
+func TestWatchdogStopsAnOrphanedDisabledSlot(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init() // slot 0 disabled; the fake status still reports hev=1 routing=1
+	h.reset()
+	h.mgr.Tick(context.Background())
+	h.mustContain("S94exit status 0", "S94exit stop 0")
+	h.mustNotContain("S94exit start")
+
+	// Once the downstream is down, a disabled slot costs a status call only.
+	h.runner.status = "forward=0\nrouting=0\ntun=0\nhev=0\nwstunnel=1\nnat=0\nnic=\ngw=\ndns_redirected=0\n"
+	h.reset()
+	h.mgr.Tick(context.Background())
+	h.mustContain("S94exit status 0")
+	h.mustNotContain("S94exit stop")
 }
