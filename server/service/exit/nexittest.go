@@ -56,6 +56,7 @@ type FakeExit struct {
 
 	mu       sync.Mutex
 	streams  map[uint32]*fakeStream
+	released map[uint32]byte // proto of ids that left the table, for late DATA
 	connSend *credit
 
 	flowMu       sync.Mutex
@@ -94,6 +95,7 @@ func (f *FakeExit) Dial(ctx context.Context, url string, header http.Header) err
 	f.writeCh = make(chan wsMessage, 256)
 	f.done = make(chan struct{})
 	f.streams = make(map[uint32]*fakeStream)
+	f.released = make(map[uint32]byte)
 	go f.writer()
 
 	if f.NoHello {
@@ -303,9 +305,29 @@ func (f *FakeExit) drop(st *fakeStream) {
 	f.mu.Lock()
 	if f.streams[st.id] == st {
 		delete(f.streams, st.id)
+		f.released[st.id] = st.proto
 	}
 	f.mu.Unlock()
 	st.abort()
+}
+
+// creditConn accounts n bytes of TCP DATA against the connection window and
+// sends the stream-0 WINDOW at half, unless ManualWindow.
+func (f *FakeExit) creditConn(n int) {
+	if f.ManualWindow || n <= 0 {
+		return
+	}
+	f.flowMu.Lock()
+	f.connConsumed += int64(n)
+	var cinc int64
+	if f.connConsumed >= int64(f.welcome.connWindow)/2 {
+		cinc = f.connConsumed
+		f.connConsumed = 0
+	}
+	f.flowMu.Unlock()
+	if cinc > 0 {
+		_ = f.send(frameWindow, 0, be32(uint32(cinc)))
+	}
 }
 
 func (f *FakeExit) handle(fr frame) error {
@@ -315,6 +337,15 @@ func (f *FakeExit) handle(fr frame) error {
 	case frameData:
 		st := f.lookup(fr.id)
 		if st == nil {
+			// Spec, "Stream lifecycle": frames for unknown ids are ignored,
+			// but TCP DATA that raced our RST still cost the kvm connection
+			// credit, so it is credited back (never for UDP).
+			f.mu.Lock()
+			proto, released := f.released[fr.id]
+			f.mu.Unlock()
+			if released && proto == protoTCP {
+				f.creditConn(len(fr.payload))
+			}
 			return nil
 		}
 		if st.proto == protoUDP {
@@ -555,17 +586,7 @@ func (f *FakeExit) drainTCP(st *fakeStream) {
 			if inc := st.consume(len(q.data), int(f.welcome.streamWindow)); inc > 0 {
 				_ = f.send(frameWindow, st.id, be32(uint32(inc)))
 			}
-			f.flowMu.Lock()
-			f.connConsumed += int64(len(q.data))
-			var cinc int64
-			if f.connConsumed >= int64(f.welcome.connWindow)/2 {
-				cinc = f.connConsumed
-				f.connConsumed = 0
-			}
-			f.flowMu.Unlock()
-			if cinc > 0 {
-				_ = f.send(frameWindow, 0, be32(uint32(cinc)))
-			}
+			f.creditConn(len(q.data))
 		}
 	}
 }

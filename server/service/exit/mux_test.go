@@ -888,3 +888,221 @@ func (s *session) streamIDs() []uint32 {
 	}
 	return out
 }
+
+// connWindowsOf sums the stream-0 WINDOW increments the fake receives.
+func connWindowsOf(f *FakeExit) *atomic.Int64 {
+	var total atomic.Int64
+	f.OnFrame = func(typ byte, id uint32, payload []byte) {
+		if typ == frameWindow && id == 0 && len(payload) >= 4 {
+			total.Add(int64(uint32(payload[0])<<24 | uint32(payload[1])<<16 | uint32(payload[2])<<8 | uint32(payload[3])))
+		}
+	}
+	return &total
+}
+
+// TestMuxCreditsDataOnReleasedStream: DATA that raced the kvm's RST was
+// debited from the exit's connection credit when it left the exit, so the
+// kvm must still account it on stream 0 even though the stream is gone.
+// UDP DATA is never credited, released or not.
+func TestMuxCreditsDataOnReleasedStream(t *testing.T) {
+	h := newMuxHarness(t)
+	f := NewFakeExit()
+	f.Connect = pipeConnect
+	windows := connWindowsOf(f)
+	s := h.dial(t, f, "")
+	sess := s.(*session)
+
+	c, err := s.DialTCP(context.Background(), testDst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := sess.streamIDs()[0]
+	_ = c.Close()
+	waitFor(t, "stream released on both sides", func() bool { return sess.streamCount() == 0 && f.Streams() == 0 })
+
+	chunk := make([]byte, MaxFrame)
+	for i := 0; i < ConnWindow/2/MaxFrame; i++ {
+		if err := f.SendRaw(frameData, id, chunk); err != nil {
+			t.Fatal(err)
+		}
+	}
+	waitFor(t, "stream-0 WINDOW for DATA on a released id", func() bool { return windows.Load() >= ConnWindow/2 })
+	select {
+	case <-s.Done():
+		t.Fatal("DATA on a released id closed the session")
+	default:
+	}
+	sess.flowMu.Lock()
+	outstanding := sess.connOutstanding
+	sess.flowMu.Unlock()
+	if outstanding != 0 {
+		t.Fatalf("connOutstanding = %d after DATA on a released id", outstanding)
+	}
+
+	// The lookup -> release -> enqueue race inside onData ends the same way.
+	c2, err := s.DialTCP(context.Background(), testDst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := c2.(*stream)
+	_ = c2.Close()
+	if res := st.enqueue([]byte("x")); res != enqueueReleased {
+		t.Fatalf("enqueue on a released stream = %d", res)
+	}
+	before := windows.Load()
+	if err := sess.onData(st, make([]byte, ConnWindow/2)); err != nil {
+		t.Fatalf("onData on a released stream: %v", err)
+	}
+	waitFor(t, "stream-0 WINDOW for the enqueue race", func() bool { return windows.Load() >= before+ConnWindow/2 })
+	sess.flowMu.Lock()
+	outstanding = sess.connOutstanding
+	sess.flowMu.Unlock()
+	if outstanding != 0 {
+		t.Fatalf("connOutstanding = %d after the enqueue race", outstanding)
+	}
+
+	// UDP: released id, DATA with a source header, no credit.
+	us, err := s.OpenUDP(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	uid := sess.streamIDs()[0]
+	_ = us.Close()
+	waitFor(t, "udp stream released", func() bool { return sess.streamCount() == 0 && f.Streams() == 0 })
+	before = windows.Load()
+	dgram := append(encodeAddrPort(testDst), make([]byte, MaxFrame-64)...)
+	for i := 0; i < ConnWindow/2/MaxFrame+1; i++ {
+		if err := f.SendRaw(frameData, uid, dgram); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// One more TCP frame proves the reader has processed everything above.
+	fence := make(chan struct{})
+	f.OnFrame = func(typ byte, id uint32, payload []byte) {
+		if typ == frameWindow && id == 0 {
+			select {
+			case <-fence:
+			default:
+				close(fence)
+			}
+		}
+	}
+	_ = f.SendRaw(frameData, id, make([]byte, MaxFrame))
+	for i := 0; i < ConnWindow/2/MaxFrame; i++ {
+		_ = f.SendRaw(frameData, id, chunk)
+	}
+	select {
+	case <-fence:
+	case <-time.After(3 * time.Second):
+		t.Fatal("no WINDOW after the fence frames")
+	}
+	if windows.Load() != before {
+		t.Fatalf("UDP DATA on a released id was credited: %d -> %d", before, windows.Load())
+	}
+}
+
+// TestMuxCloseAfterCleanReleaseCreditsQueuedBytes: both EOFs exchanged, the
+// exit's bytes still queued for hev, then hev dies before reading them. The
+// bytes are dropped and the connection window credited, exactly as an abort
+// on a live stream would.
+func TestMuxCloseAfterCleanReleaseCreditsQueuedBytes(t *testing.T) {
+	h := newMuxHarness(t)
+	f := NewFakeExit()
+	a, b := tcpPair(t)
+	f.Connect = func(netip.AddrPort) (net.Conn, byte) { return a, 0 }
+	var rsts atomic.Int32
+	f.OnFrame = func(typ byte, _ uint32, _ []byte) {
+		if typ == frameRST {
+			rsts.Add(1)
+		}
+	}
+	s := h.dial(t, f, "")
+	sess := s.(*session)
+	c, err := s.DialTCP(context.Background(), testDst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := c.(*stream)
+	const size = 64 << 10
+	if _, err := b.Write(make([]byte, size)); err != nil {
+		t.Fatal(err)
+	}
+	_ = b.(*net.TCPConn).CloseWrite()
+	waitFor(t, "exit EOF and bytes queued", func() bool {
+		st.mu.Lock()
+		defer st.mu.Unlock()
+		return st.remoteEOF && st.recvBytes == size
+	})
+	if err := st.CloseWrite(); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "clean release", func() bool { return sess.streamCount() == 0 })
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	sess.flowMu.Lock()
+	outstanding, consumed := sess.connOutstanding, sess.connConsumed
+	sess.flowMu.Unlock()
+	if outstanding != 0 || consumed != size {
+		t.Fatalf("connOutstanding=%d connConsumed=%d after clean release then Close, want 0 and %d", outstanding, consumed, size)
+	}
+	if rsts.Load() != 0 {
+		t.Fatal("Close after a clean release sent RST")
+	}
+	if _, err := c.Read(make([]byte, 1)); err == nil {
+		t.Fatal("read after Close returned data")
+	}
+}
+
+// TestFakeExitCreditsDataOnReleasedStream holds the Go oracle to the same
+// rule as the kvm: TCP DATA arriving for an id the exit has already dropped
+// is credited on stream 0; UDP DATA is not.
+func TestFakeExitCreditsDataOnReleasedStream(t *testing.T) {
+	h := newMuxHarness(t)
+	f := NewFakeExit()
+	f.Connect = pipeConnect
+	s := h.dial(t, f, "")
+	sess := s.(*session)
+	c, err := s.DialTCP(context.Background(), testDst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := sess.streamIDs()[0]
+	us, err := s.OpenUDP(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uid uint32
+	for _, sid := range sess.streamIDs() {
+		if sid != id {
+			uid = sid
+		}
+	}
+	// The exit aborts both streams on its side (a socket error, say).
+	f.drop(f.lookup(id))
+	f.drop(f.lookup(uid))
+	before := sess.connSendAvailable()
+
+	// DATA the kvm had in flight lands on the dropped ids.
+	chunk := make([]byte, MaxFrame)
+	for i := 0; i < ConnWindow/2/MaxFrame; i++ {
+		if err := f.handle(frame{typ: frameData, id: uid, payload: append(encodeAddrPort(testDst), chunk[:MaxFrame-64]...)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := f.handle(frame{typ: frameData, id: id, payload: chunk}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(50 * time.Millisecond)
+	if got := sess.connSendAvailable(); got != before {
+		t.Fatalf("connection credit moved before half a window: %d -> %d", before, got)
+	}
+	for i := 1; i < ConnWindow/2/MaxFrame; i++ {
+		if err := f.handle(frame{typ: frameData, id: id, payload: chunk}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	waitFor(t, "stream-0 WINDOW from the fake", func() bool { return sess.connSendAvailable() == before+ConnWindow/2 })
+	_ = c.Close()
+	_ = us.Close()
+}

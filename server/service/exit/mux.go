@@ -250,6 +250,13 @@ type session struct {
 	mu      sync.Mutex
 	streams map[uint32]*stream
 	nextID  uint32
+	// released remembers the proto of ids that left the table, so DATA that
+	// raced the release is still credited (TCP) or still ignored (UDP). The
+	// kvm allocated every id, so an id absent from both maps was never a
+	// stream. Bounded FIFO: an id older than releasedCap releases is beyond
+	// any in-flight frame.
+	released      map[uint32]byte
+	releasedOrder []uint32
 
 	// Send-side credit (kvm -> exit) for the connection; per-stream credit
 	// lives on the stream.
@@ -272,6 +279,7 @@ func newSession(m *Mux, conn *websocket.Conn, remote, host string) *session {
 		done:     make(chan struct{}),
 		finished: make(chan struct{}),
 		streams:  make(map[uint32]*stream),
+		released: make(map[uint32]byte),
 		nextID:   1,
 		connSend: newCredit(ConnWindow),
 	}
@@ -448,6 +456,18 @@ func (s *session) lookup(id uint32) *stream {
 	return s.streams[id]
 }
 
+// releasedCap bounds the released-id memory per session.
+const releasedCap = 1024
+
+// releasedProto reports the proto of a released id, ok false for an id that
+// was never a stream or has aged out.
+func (s *session) releasedProto(id uint32) (proto byte, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	proto, ok = s.released[id]
+	return proto, ok
+}
+
 func (s *session) handle(f frame) error {
 	switch f.typ {
 	case frameWindow:
@@ -496,6 +516,14 @@ func (s *session) handle(f frame) error {
 	case frameData:
 		st := s.lookup(f.id)
 		if st == nil {
+			// The stream is gone but the exit debited its connection credit
+			// when this left the wire (RFC 7540 §6.9 has the same rule for
+			// closed streams); give it back, or the exit's credit drains by
+			// one in-flight window per aborted stream until it can send
+			// nothing at all. UDP is uncredited either way.
+			if proto, ok := s.releasedProto(f.id); ok && proto == protoTCP {
+				s.creditReleased(len(f.payload))
+			}
 			return nil
 		}
 		return s.onData(st, f.payload)
@@ -555,10 +583,14 @@ func (s *session) onData(st *stream, payload []byte) error {
 	switch st.enqueue(payload) {
 	case enqueueOK:
 		s.countDown(len(payload))
+	case enqueueReleased:
+		// Released between lookup and enqueue: the bytes go nowhere, the
+		// credit goes back.
+		s.consumed(len(payload))
 	case enqueueAfterEOF, enqueueOverWindow:
-		s.flowMu.Lock()
-		s.connOutstanding -= int64(len(payload))
-		s.flowMu.Unlock()
+		// A stream-level protocol error: RST the stream, but the bytes were
+		// on the wire against the connection window, so credit them.
+		s.consumed(len(payload))
 		s.releaseStream(st, errStreamReset, true)
 	}
 	return nil
@@ -576,24 +608,46 @@ func (s *session) countUp(n int) {
 	}
 }
 
-// consumed is called when n bytes of TCP DATA have been passed to hev; it
-// emits the connection WINDOW once half of ConnWindow has been consumed.
+// consumed is called when n bytes of TCP DATA that were counted outstanding
+// have been passed to hev or dropped; it emits the connection WINDOW once
+// half of ConnWindow has been consumed.
 func (s *session) consumed(n int) {
 	if n <= 0 {
 		return
 	}
 	s.flowMu.Lock()
 	s.connOutstanding -= int64(n)
-	s.connConsumed += int64(n)
-	var inc int64
-	if s.connConsumed >= ConnWindow/2 {
-		inc = s.connConsumed
-		s.connConsumed = 0
-	}
+	inc := s.creditLocked(n)
 	s.flowMu.Unlock()
 	if inc > 0 {
 		_ = s.send(frameWindow, 0, be32(uint32(inc)))
 	}
+}
+
+// creditReleased credits n bytes of TCP DATA that arrived for a released id:
+// never counted outstanding, so only the credit side moves.
+func (s *session) creditReleased(n int) {
+	if n <= 0 {
+		return
+	}
+	s.flowMu.Lock()
+	inc := s.creditLocked(n)
+	s.flowMu.Unlock()
+	if inc > 0 {
+		_ = s.send(frameWindow, 0, be32(uint32(inc)))
+	}
+}
+
+// creditLocked adds n to the consumed count and returns the WINDOW to send,
+// 0 until half of ConnWindow has accumulated. flowMu must be held.
+func (s *session) creditLocked(n int) int64 {
+	s.connConsumed += int64(n)
+	if s.connConsumed >= ConnWindow/2 {
+		inc := s.connConsumed
+		s.connConsumed = 0
+		return inc
+	}
+	return 0
 }
 
 func be32(v uint32) []byte {
@@ -602,21 +656,29 @@ func be32(v uint32) []byte {
 
 // releaseStream drops st from the table. rst says whether to send RST to
 // the exit (not after a clean two-way EOF, not after the exit's own RST or
-// OPEN_FAIL, not once the session is gone).
+// OPEN_FAIL, not once the session is gone). A stream already out of the
+// table (cleanly released, its queue kept for hev) is aborted a second time
+// when hev goes away before draining it: the queue is dropped and credited,
+// but no RST goes to an exit that has already forgotten the id.
 func (s *session) releaseStream(st *stream, err error, rst bool) {
 	s.mu.Lock()
-	if s.streams[st.id] != st {
-		s.mu.Unlock()
-		return
+	inTable := s.streams[st.id] == st
+	if inTable {
+		delete(s.streams, st.id)
+		s.released[st.id] = st.proto
+		s.releasedOrder = append(s.releasedOrder, st.id)
+		if len(s.releasedOrder) > releasedCap {
+			delete(s.released, s.releasedOrder[0])
+			s.releasedOrder = s.releasedOrder[1:]
+		}
 	}
-	delete(s.streams, st.id)
 	s.mu.Unlock()
 
 	queued := st.release(err)
 	if queued > 0 {
 		s.consumed(queued)
 	}
-	if rst {
+	if inTable && rst {
 		_ = s.send(frameRST, st.id, nil)
 	}
 }
@@ -839,12 +901,18 @@ func (st *stream) remoteEOFArrived() bool {
 // release marks the stream dead. A clean release (err nil: both EOFs
 // exchanged) keeps what the exit sent so hev still reads it; an abort drops
 // it and returns the queued TCP bytes so the connection window can be
-// credited back.
+// credited back. An abort after a clean release still drops the queue.
 func (st *stream) release(err error) int {
 	st.mu.Lock()
 	if st.released {
+		queued := 0
+		if err != nil {
+			queued = st.recvBytes
+			st.recvQ = nil
+			st.recvBytes = 0
+		}
 		st.mu.Unlock()
-		return 0
+		return queued
 	}
 	st.released = true
 	queued := 0
@@ -982,14 +1050,9 @@ func (st *stream) CloseWrite() error {
 	return nil
 }
 
-// Close aborts the stream with RST unless both EOFs were already exchanged.
+// Close aborts the stream with RST unless both EOFs were already exchanged,
+// in which case it only drops (and credits) whatever hev never read.
 func (st *stream) Close() error {
-	st.mu.Lock()
-	released := st.released
-	st.mu.Unlock()
-	if released {
-		return nil
-	}
 	st.sess.releaseStream(st, net.ErrClosed, true)
 	return nil
 }
