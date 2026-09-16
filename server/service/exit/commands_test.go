@@ -1,6 +1,7 @@
 package exit
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -8,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -219,5 +221,128 @@ func TestEmbeddedClientsAreExactlyTheFour(t *testing.T) {
 	want := []string{"client.pl", "client.ps1", "client.py", "client.sh"}
 	if strings.Join(names, ",") != strings.Join(want, ",") {
 		t.Fatalf("embedded %v, want %v (README.md and testdata must stay out of the binary)", names, want)
+	}
+	for _, name := range want {
+		if !clientNames[name] || clientEscape[name] == nil {
+			t.Fatalf("%s is embedded but not served or has no escaper", name)
+		}
+	}
+	if len(clientNames) != len(want) || len(clientEscape) != len(want) {
+		t.Fatalf("served %d, escaped %d, embedded %d", len(clientNames), len(clientEscape), len(want))
+	}
+}
+
+// The quoting is the second fence behind ValidHost: even a value that could
+// never pass it is inert in every language the templates and one-liners are
+// written in.
+func TestTemplatedValuesAreQuotedPerLanguage(t *testing.T) {
+	hostile := "a'b\"c$(id)`id`\\d@e"
+	if got, want := shQuote(hostile), `'a'\''b"c$(id)`+"`id`"+`\d@e'`; got != want {
+		t.Errorf("shQuote = %s, want %s", got, want)
+	}
+	if got, want := psQuote(hostile), "'a''b\"c$(id)`id`\\d@e'"; got != want {
+		t.Errorf("psQuote = %s, want %s", got, want)
+	}
+	want := map[string]string{
+		"client.sh":  "a'b\\\"c\\$(id)\\`id\\`\\\\d@e",
+		"client.pl":  "a'b\\\"c\\$(id)`id`\\\\d\\@e",
+		"client.py":  "a'b\\\"c$(id)`id`\\\\d@e",
+		"client.ps1": "a''b\"c$(id)`id`\\d@e",
+	}
+	for name, esc := range clientEscape {
+		if got := esc(hostile); got != want[name] {
+			t.Errorf("%s escape = %s, want %s", name, got, want[name])
+		}
+	}
+
+	// The one-liners never carry a bare url: the validator does not admit a
+	// space or a quote, so the quoting is only ever visible as the quotes
+	// themselves, and the UI's readdressing treats a quote as a url boundary.
+	rsp := renderCommands(MustSlot("0"), testConfig(MustSlot("0")), Origin{Scheme: "https", Host: "kvm.example.net:8443"}, Certificate{})
+	for _, cmd := range append(append([]proto.ExitCommand{}, rsp.Native...), rsp.Wstunnel...) {
+		if !strings.Contains(cmd.Command, "'https://kvm.example.net:8443/exit/0/client.") && !strings.Contains(cmd.Command, "'wss://kvm.example.net:8443'") {
+			t.Errorf("%s %s does not quote its url: %s", cmd.Platform, cmd.Shell, cmd.Command)
+		}
+	}
+}
+
+// SEC-3: the Host header is templated into sh, Perl, PowerShell and Python
+// literals and into unquoted one-liners. Go's net/http admits ', $(, ;, & and
+// more in Host, so the templates must refuse anything outside host[:port].
+func TestRenderClientRefusesHostMetacharacters(t *testing.T) {
+	slot := MustSlot("0")
+	cfg := testConfig(slot)
+	bad := []string{
+		"kvm'x", "kvm$(id)", "kvm;rm", "kvm&x", "kvm<x", "k(v)m", "kvm*x", "kvm`id`",
+		"kvm x", `kvm"x`, "kvm\\x", "", ":8443", "kvm:", "kvm:123456", "kvm:8a",
+		"fd00::1", "[fd00::1", "[fd00::1]x", "[fd00::1]:", "[fe80::1%25eth0]", "kvm/x", "kvm?x=1", "kvm#x",
+	}
+	for _, host := range bad {
+		if ValidHost(host) {
+			t.Errorf("ValidHost(%q) = true", host)
+		}
+		for name := range clientNames {
+			if body, ok := RenderClient(name, slot, cfg, Origin{Scheme: "http", Host: host}, ""); ok {
+				t.Errorf("%s rendered for host %q:\n%s", name, host, body)
+			}
+		}
+	}
+	good := []string{"kvm.local", "10.1.2.1", "kvm.example.net:8443", "[fd00::1]:8443", "[fd00::1]", "localhost", "my_kvm", "KVM-1.lan:80"}
+	for _, host := range good {
+		if !ValidHost(host) {
+			t.Errorf("ValidHost(%q) = false", host)
+		}
+		if _, ok := RenderClient("client.sh", slot, cfg, Origin{Scheme: "http", Host: host}, ""); !ok {
+			t.Errorf("client.sh refused host %q", host)
+		}
+	}
+}
+
+func TestGateAndCommandsRefuseAMetacharacterHost(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, _ := LoadConfig(slot)
+	r := gateEngine(NewService(h.mgr))
+
+	req := httptest.NewRequest(http.MethodGet, "/exit/0/client.sh", nil)
+	req.Header.Set("Authorization", "Bearer "+cfg.Token)
+	req.RemoteAddr = "203.0.113.7:1"
+	req.Host = "kvm.local$(id)"
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound || strings.Contains(rec.Body.String(), "$(id)") {
+		t.Fatalf("script fetch with a metacharacter host: %d\n%s", rec.Code, rec.Body.String())
+	}
+	// The refusal is not a token failure, so the source is not counted.
+	if h.mgr.limiter.Locked("203.0.113.7") {
+		t.Fatal("a bad host counted against the source")
+	}
+	req.Host = "kvm.local"
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `HOST="kvm.local"`) {
+		t.Fatalf("script fetch with a plain host: %d", rec.Code)
+	}
+
+	admin := httptest.NewRequest(http.MethodGet, "/api/extensions/exit/0/commands", nil)
+	admin.Host = "kvm.local'x"
+	if _, err := h.mgr.Commands(slot, admin); !errors.Is(err, ErrBadHost) {
+		t.Fatalf("commands for a host with a quote in it: %v", err)
+	}
+	admin.Host = "kvm.local:8443"
+	rsp, err := h.mgr.Commands(slot, admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The one-liners quote the url they carry, so the host is never bare in a
+	// shell or PowerShell command line even after validation.
+	for _, cmd := range append(append([]proto.ExitCommand{}, rsp.Native...), rsp.Wstunnel...) {
+		if strings.Contains(cmd.Command, " http://kvm.local:8443") || strings.Contains(cmd.Command, " ws://kvm.local:8443") {
+			t.Errorf("%s %s carries the url unquoted: %s", cmd.Platform, cmd.Shell, cmd.Command)
+		}
 	}
 }

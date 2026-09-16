@@ -1223,7 +1223,7 @@ func (m *Manager) Commands(slot Slot, r *http.Request) (proto.GetExitCommandsRsp
 	if err != nil {
 		return proto.GetExitCommandsRsp{}, err
 	}
-	return Commands(slot, m.config(s), OriginOf(r)), nil
+	return Commands(slot, m.config(s), OriginOf(r))
 }
 
 const logTailLines = 200

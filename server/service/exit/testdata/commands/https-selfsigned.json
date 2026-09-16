@@ -7,19 +7,19 @@
     {
       "platform": "windows",
       "shell": "powershell",
-      "command": "[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; irm -Headers @{Authorization='Bearer k7m2p9vx'} https://kvm.example.net/exit/0/client.ps1 | iex",
+      "command": "[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; irm -Headers @{Authorization='Bearer k7m2p9vx'} 'https://kvm.example.net/exit/0/client.ps1' | iex",
       "notes": "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."
     },
     {
       "platform": "macos",
       "shell": "bash",
-      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' https://kvm.example.net/exit/0/client.sh | sh",
+      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net/exit/0/client.sh' | sh",
       "notes": "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."
     },
     {
       "platform": "linux",
       "shell": "bash",
-      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' https://kvm.example.net/exit/0/client.sh | sh",
+      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net/exit/0/client.sh' | sh",
       "notes": "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."
     }
   ],
@@ -27,19 +27,19 @@
     {
       "platform": "windows",
       "shell": "powershell",
-      "command": "$v='10.7.1'; $a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $h=@{amd64='deb3c8b8d9fecf5428f7e0caabbc13aeb3b1edbfba49e1724a7a065c027bd0f2';arm64='1d642b29aba0e05c5564adf1dfe2e4494cd10b62331490471bdf6d6548085c96'}[$a]; $d=Join-Path $env:TEMP \"wstunnel-$v\"; New-Item -Force -ItemType Directory $d | Out-Null; $f=Join-Path $d 'wstunnel.tar.gz'; Invoke-WebRequest -UseBasicParsing \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_windows_$a.tar.gz\" -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; \u0026 (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 wss://kvm.example.net",
+      "command": "$v='10.7.1'; $a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $h=@{amd64='deb3c8b8d9fecf5428f7e0caabbc13aeb3b1edbfba49e1724a7a065c027bd0f2';arm64='1d642b29aba0e05c5564adf1dfe2e4494cd10b62331490471bdf6d6548085c96'}[$a]; $d=Join-Path $env:TEMP \"wstunnel-$v\"; New-Item -Force -ItemType Directory $d | Out-Null; $f=Join-Path $d 'wstunnel.tar.gz'; Invoke-WebRequest -UseBasicParsing \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_windows_$a.tar.gz\" -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; \u0026 (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 'wss://kvm.example.net'",
       "notes": "wstunnel has no fingerprint pin; with the device's self-signed certificate its transport toward the NanoKVM is unauthenticated."
     },
     {
       "platform": "macos",
       "shell": "bash",
-      "command": "set -e; d=$(mktemp -d); cd \"$d\"; case \"$(uname -m)\" in x86_64) a=amd64 s=ac234c60d461532d81fb60e610787bbc2ce48bcd095f57eb8f86d1a3914e344c;; aarch64|arm64) a=arm64 s=2c1f427fd651a74c8844a0ed352c13d667da7e08056b790549917d6952ec69ac;; *) echo \"unsupported architecture: $(uname -m)\" \u003e\u00262; exit 1;; esac; curl -fsSLo wstunnel.tgz \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_darwin_${a}.tar.gz\"; echo \"$s  wstunnel.tgz\" | shasum -a 256 -c -; tar -xzf wstunnel.tgz wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 wss://kvm.example.net",
+      "command": "set -e; d=$(mktemp -d); cd \"$d\"; case \"$(uname -m)\" in x86_64) a=amd64 s=ac234c60d461532d81fb60e610787bbc2ce48bcd095f57eb8f86d1a3914e344c;; aarch64|arm64) a=arm64 s=2c1f427fd651a74c8844a0ed352c13d667da7e08056b790549917d6952ec69ac;; *) echo \"unsupported architecture: $(uname -m)\" \u003e\u00262; exit 1;; esac; curl -fsSLo wstunnel.tgz \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_darwin_${a}.tar.gz\"; echo \"$s  wstunnel.tgz\" | shasum -a 256 -c -; tar -xzf wstunnel.tgz wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 'wss://kvm.example.net'",
       "notes": "wstunnel has no fingerprint pin; with the device's self-signed certificate its transport toward the NanoKVM is unauthenticated."
     },
     {
       "platform": "linux",
       "shell": "bash",
-      "command": "set -e; d=$(mktemp -d); cd \"$d\"; case \"$(uname -m)\" in x86_64) a=amd64 s=fa842ed53fbb14b1c69cd98829f9895d7f8a6b0d562c57c1175851a52cea9ea2;; aarch64|arm64) a=arm64 s=99f9506d01d1b4073254609600ec5056dab8dc58aec75c32f6eb0508335a8fd2;; *) echo \"unsupported architecture: $(uname -m)\" \u003e\u00262; exit 1;; esac; curl -fsSLo wstunnel.tgz \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_linux_${a}.tar.gz\"; echo \"$s  wstunnel.tgz\" | sha256sum -c -; tar -xzf wstunnel.tgz wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 wss://kvm.example.net",
+      "command": "set -e; d=$(mktemp -d); cd \"$d\"; case \"$(uname -m)\" in x86_64) a=amd64 s=fa842ed53fbb14b1c69cd98829f9895d7f8a6b0d562c57c1175851a52cea9ea2;; aarch64|arm64) a=arm64 s=99f9506d01d1b4073254609600ec5056dab8dc58aec75c32f6eb0508335a8fd2;; *) echo \"unsupported architecture: $(uname -m)\" \u003e\u00262; exit 1;; esac; curl -fsSLo wstunnel.tgz \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_linux_${a}.tar.gz\"; echo \"$s  wstunnel.tgz\" | sha256sum -c -; tar -xzf wstunnel.tgz wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 'wss://kvm.example.net'",
       "notes": "wstunnel has no fingerprint pin; with the device's self-signed certificate its transport toward the NanoKVM is unauthenticated."
     }
   ]

@@ -7,8 +7,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"NanoKVM-Server/config"
@@ -38,9 +40,113 @@ func WstunnelAssetURL(platform, arch string) string {
 
 // Origin is what the operator reached the UI through, read from the request
 // (D15): the scheme from TLS state or X-Forwarded-Proto, the host verbatim.
+// Nothing is rendered from a Host that fails ValidHost.
 type Origin struct {
 	Scheme string // http or https
 	Host   string // host[:port]
+}
+
+// ErrBadHost is the reason Commands gives when the request's Host header is
+// not something the templates may carry (D15). The value itself is not
+// echoed: it is exactly the string that was refused for containing things a
+// shell would interpret.
+var ErrBadHost = errors.New("request Host header is not a plain host[:port]")
+
+// ValidHost is the gate every templated host passes (D15). Go's net/http
+// admits almost any byte in Host, and the host lands inside sh, Perl, Python
+// and PowerShell string literals and on curl and wstunnel command lines, so
+// the rule is the RFC 3986 authority and nothing looser: a reg-name or IPv4
+// literal made of letters, digits, '-', '.' and '_', or an IPv6 literal in
+// brackets (no zone), followed by an optional ':' and a decimal port in
+// 1..65535. Letters are accepted in either case; hostnames are
+// case-insensitive and browsers lower them before sending. No character a
+// shell, a quote or a URL parser gives meaning to gets through, so the
+// per-language escaping applied on top is defence in depth, never the fence.
+func ValidHost(host string) bool {
+	if host == "" || len(host) > 255 {
+		return false
+	}
+	name, port := host, ""
+	if strings.HasPrefix(host, "[") {
+		end := strings.IndexByte(host, ']')
+		if end < 0 {
+			return false
+		}
+		literal := host[1:end]
+		if !strings.Contains(literal, ":") || net.ParseIP(literal) == nil {
+			return false
+		}
+		rest := host[end+1:]
+		if rest == "" {
+			return true
+		}
+		return rest[0] == ':' && validPort(rest[1:])
+	}
+	if i := strings.LastIndexByte(host, ':'); i >= 0 {
+		name, port = host[:i], host[i+1:]
+		if !validPort(port) {
+			return false
+		}
+	}
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		alpha := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+		digit := c >= '0' && c <= '9'
+		if !alpha && !digit && c != '-' && c != '.' && c != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func validPort(port string) bool {
+	if port == "" || len(port) > 5 {
+		return false
+	}
+	for i := 0; i < len(port); i++ {
+		if port[i] < '0' || port[i] > '9' {
+			return false
+		}
+	}
+	n, err := strconv.Atoi(port)
+	return err == nil && n >= 1 && n <= 65535
+}
+
+// shQuote is a POSIX sh single-quoted word: nothing inside is special, and an
+// embedded quote closes the word, escapes itself and reopens it.
+func shQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
+
+// psQuote is a PowerShell single-quoted string, whose only escape is a
+// doubled quote.
+func psQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+
+// escapeInDoubleQuotes backslash-escapes the characters a language gives
+// meaning to inside its double-quoted string literal.
+func escapeInDoubleQuotes(special string) func(string) string {
+	return func(s string) string {
+		var b strings.Builder
+		for _, r := range s {
+			if strings.ContainsRune(special, r) {
+				b.WriteByte('\\')
+			}
+			b.WriteRune(r)
+		}
+		return b.String()
+	}
+}
+
+// clientEscape escapes a templated value for the string literal each client
+// declares its parameters in (clients/README.md): client.sh, client.pl and
+// client.py double-quote them, client.ps1 single-quotes them. Its keys are
+// also the set of clients the token-gated surface serves.
+var clientEscape = map[string]func(string) string{
+	"client.sh":  escapeInDoubleQuotes("\\\"$`"),
+	"client.pl":  escapeInDoubleQuotes("\\\"$@"),
+	"client.py":  escapeInDoubleQuotes("\\\""),
+	"client.ps1": func(s string) string { return strings.ReplaceAll(s, "'", "''") },
 }
 
 // OriginOf applies the same scheme rule as middleware.CheckWebSocketOrigin.
@@ -107,17 +213,24 @@ func certificateFrom(path string) (Certificate, error) {
 }
 
 // Commands renders the ready-to-paste commands for both modes and the three
-// platforms from the request origin (D14, D15, D16).
-func Commands(slot Slot, cfg Config, origin Origin) proto.GetExitCommandsRsp {
+// platforms from the request origin (D14, D15, D16). A Host that fails
+// ValidHost renders nothing and is reported as ErrBadHost.
+func Commands(slot Slot, cfg Config, origin Origin) (proto.GetExitCommandsRsp, error) {
+	if !ValidHost(origin.Host) {
+		return proto.GetExitCommandsRsp{}, ErrBadHost
+	}
 	var cert Certificate
 	if origin.TLS() {
 		if c, err := readCertificate(); err == nil {
 			cert = c
 		}
 	}
-	return renderCommands(slot, cfg, origin, cert)
+	return renderCommands(slot, cfg, origin, cert), nil
 }
 
+// renderCommands assumes origin.Host passed ValidHost. Every value it puts on
+// a command line is still quoted for the shell that will read it (sh single
+// quotes, PowerShell single quotes), so the quoting is the second fence.
 func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) proto.GetExitCommandsRsp {
 	auth := "Authorization: Bearer " + cfg.Token
 	base := origin.base(slot)
@@ -126,9 +239,9 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	if origin.TLS() {
 		insecure = "k"
 	}
-	shFetch := fmt.Sprintf("curl -fsSL%s -H '%s' %s/client.sh | sh", insecure, auth, base)
+	shFetch := fmt.Sprintf("curl -fsSL%s -H %s %s | sh", insecure, shQuote(auth), shQuote(base+"/client.sh"))
 
-	psFetch := fmt.Sprintf("irm -Headers @{Authorization='Bearer %s'} %s/client.ps1 | iex", cfg.Token, base)
+	psFetch := fmt.Sprintf("irm -Headers @{Authorization=%s} %s | iex", psQuote("Bearer "+cfg.Token), psQuote(base+"/client.ps1"))
 	if origin.TLS() {
 		psFetch = "[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; " + psFetch
 	}
@@ -153,8 +266,8 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	if !origin.TLS() {
 		wstunnelNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
 	}
-	client := fmt.Sprintf("client -P %s -H '%s' -R socks5://%s%s %s://%s",
-		slot.ClientPathPrefix(), auth, slot.WstunnelReverseAddr(), verify, origin.WSScheme(), origin.Host)
+	client := fmt.Sprintf("client -P %s -H %s -R socks5://%s%s %s",
+		slot.ClientPathPrefix(), shQuote(auth), slot.WstunnelReverseAddr(), verify, shQuote(origin.WSScheme()+"://"+origin.Host))
 
 	wstunnel := []proto.ExitCommand{
 		{Platform: "windows", Shell: "powershell", Command: wstunnelWindows(slot, cfg, origin, verify), Notes: wstunnelNote},
@@ -200,8 +313,8 @@ func wstunnelWindows(slot Slot, cfg Config, origin Origin, verify string) string
 		fmt.Sprintf(`Invoke-WebRequest -UseBasicParsing "%swstunnel_%s_windows_$a.tar.gz" -OutFile $f`, wstunnelReleaseBase, WstunnelVersion),
 		`if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }`,
 		`tar -xzf $f -C $d`,
-		fmt.Sprintf(`& (Join-Path $d 'wstunnel.exe') client -P %s -H 'Authorization: Bearer %s' -R socks5://%s%s %s://%s`,
-			slot.ClientPathPrefix(), cfg.Token, slot.WstunnelReverseAddr(), verify, origin.WSScheme(), origin.Host),
+		fmt.Sprintf(`& (Join-Path $d 'wstunnel.exe') client -P %s -H %s -R socks5://%s%s %s`,
+			slot.ClientPathPrefix(), psQuote("Authorization: Bearer "+cfg.Token), slot.WstunnelReverseAddr(), verify, psQuote(origin.WSScheme()+"://"+origin.Host)),
 	}, "; ")
 }
 
@@ -217,7 +330,13 @@ const (
 
 // RenderClient fills one embedded client's placeholders. client.sh fetches, so
 // it gets the http scheme; the three clients open the socket and get ws/wss.
+// It returns false for an unknown client and for a Host that fails ValidHost,
+// and the values it templates are escaped for the client's string literal.
 func RenderClient(name string, slot Slot, cfg Config, origin Origin, fingerprint string) ([]byte, bool) {
+	escape, known := clientEscape[name]
+	if !known || !ValidHost(origin.Host) {
+		return nil, false
+	}
 	body, err := clientFiles.ReadFile("clients/" + name)
 	if err != nil {
 		return nil, false
@@ -232,10 +351,10 @@ func RenderClient(name string, slot Slot, cfg Config, origin Origin, fingerprint
 	}
 	out := strings.NewReplacer(
 		phScheme, scheme,
-		phHost, origin.Host,
+		phHost, escape(origin.Host),
 		phSlot, slot.ID,
-		phToken, cfg.Token,
-		phFingerprint, fingerprint,
+		phToken, escape(cfg.Token),
+		phFingerprint, escape(fingerprint),
 		phAllowPrivate, allow,
 	).Replace(string(body))
 	return []byte(out), true
