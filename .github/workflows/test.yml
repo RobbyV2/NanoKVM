@@ -114,6 +114,34 @@ jobs:
           # shellcheck disable=SC2086 # PACKAGES is a space-separated list of import paths.
           go test $PACKAGES
 
+  s94exit:
+    name: S94exit under BusyBox
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # The Go tests run kvmapp/system/init.d/S94exit under the host's sh with
+    # every tool stubbed. This runs the same script under BusyBox ash twice:
+    # alpine with the stubs alone (a bashism or a coreutils-only flag fails
+    # here), and busybox:1.37 with the real flock and start-stop-daemon, which
+    # is the only place an fd leaked into a daemon, a log lost to -b's
+    # /dev/null stdio or a recycled pid shows up.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Stubs only (alpine)
+        run: |
+          docker run --rm -v "$PWD:/repo" alpine:3.22 \
+            sh /repo/server/service/exit/testdata/ash_smoke.sh /repo
+
+      - name: Real flock and start-stop-daemon (busybox)
+        run: |
+          docker run --rm -v "$PWD:/repo" busybox:1.37 \
+            sh /repo/server/service/exit/testdata/ash_smoke.sh /repo
+
   kernel:
     name: Kernel tier 1
     runs-on: ubuntu-latest

@@ -162,13 +162,17 @@ ensure_binary() {
 
 # start-stop-daemon -S with a live pidfile answers "already running" and exits
 # non-zero; here that is success, so the pidfile is checked first and a stale
-# one is cleared before the start.
+# one is cleared before the start. The slot lock is fd 9 of the with_lock
+# subshell; an exec redirection is not close-on-exec and BusyBox's -b closes
+# only the low fds, so without the 9>&- the daemon would inherit the open file
+# description, hold the flock for its whole lifetime and block every later
+# converge and the stop.
 start_daemon() {
 	pidfile=$1
 	shift
 	pid_alive "$pidfile" && return 0
 	rm -f "$pidfile"
-	start-stop-daemon -S -bmq -p "$pidfile" -x "$@"
+	start-stop-daemon -S -bmq -p "$pidfile" -x "$@" 9>&-
 }
 
 stop_daemon() {
