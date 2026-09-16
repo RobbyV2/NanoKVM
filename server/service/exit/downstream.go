@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -19,19 +20,56 @@ import (
 // stuck transaction.
 const downstreamTimeout = 60 * time.Second
 
-// execRunner is the real Runner: one process per call, stdout returned trimmed,
-// stderr folded into the error.
-type execRunner struct{}
+// downstreamWaitDelay is how long Run waits for the stdout and stderr pipes
+// to close after the script has exited or been killed. cmd.Wait otherwise
+// blocks for as long as any descendant holds the write end: the with_lock
+// subshell after the deadline killed only its parent, or a daemon that did
+// not detach its stdio. S94exit's daemons are started through
+// start-stop-daemon -b (stdio to /dev/null) and a shell that redirects to
+// the log before it execs the binary, so on a healthy device the pipes close
+// with the script and this delay is never spent.
+const downstreamWaitDelay = time.Second
 
-func (execRunner) Run(ctx context.Context, name string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, downstreamTimeout)
+// execRunner is the real Runner: one process per call, stdout returned trimmed,
+// stderr folded into the error. The script runs in its own process group so
+// the deadline kills everything it started and not just the script itself,
+// and Wait is bounded by WaitDelay so an orphan holding the pipe cannot wedge
+// the manager's transaction (S94-2).
+type execRunner struct {
+	timeout   time.Duration // zero means downstreamTimeout
+	waitDelay time.Duration // zero means downstreamWaitDelay
+}
+
+func (r execRunner) Run(ctx context.Context, name string, args ...string) (string, error) {
+	timeout, waitDelay := r.timeout, r.waitDelay
+	if timeout == 0 {
+		timeout = downstreamTimeout
+	}
+	if waitDelay == 0 {
+		waitDelay = downstreamWaitDelay
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	// Setpgid makes the script the leader of a new process group; the
+	// with_lock subshell and anything it runs stay in that group, while the
+	// daemons leave it through start-stop-daemon's setsid. Cancel then signals
+	// the group, so the deadline releases the slot lock and closes the pipes
+	// instead of leaving a subshell holding both.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.WaitDelay = waitDelay
 	err := cmd.Run()
 	out := strings.TrimSpace(stdout.String())
+	if errors.Is(err, exec.ErrWaitDelay) {
+		// The script exited 0 and only a descendant kept the pipe open past
+		// WaitDelay. That is the script's success; what it printed before
+		// the pipe was abandoned is the output.
+		err = nil
+	}
 	if err != nil {
 		msg := strings.TrimSpace(stderr.String())
 		if msg == "" {
