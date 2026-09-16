@@ -1,0 +1,59 @@
+#!/bin/sh
+# Stub iptables-restore for the S94exit shell test, over the same per-chain
+# files as the iptables stub. Only `-n` (--noflush) is accepted, which is the
+# form the script uses: a `:CHAIN - [0:0]` line flushes an existing user chain
+# or creates a missing one, `-A CHAIN rule` appends, `*table` selects the
+# table and COMMIT ends it. Like the real tool the whole input is a single
+# transaction: it is parsed and checked first and nothing is applied when any
+# line is malformed. The input is kept in $STUB_STATE/iptables-restore.last.
+echo "iptables-restore $*" >> "$STUB_TRACE"
+[ "$*" = "-n" ] || { echo "stub iptables-restore: only -n is supported, got '$*'" >&2; exit 2; }
+S=$STUB_STATE/iptables
+mkdir -p "$S"
+input=$STUB_STATE/iptables-restore.last
+cat > "$input"
+
+table=
+n=0
+while read -r line; do
+	n=$((n + 1))
+	case "$line" in
+	'') ;;
+	'#'*) ;;
+	'*'*) table=${line#\*} ;;
+	COMMIT) [ -n "$table" ] || { echo "line $n: COMMIT outside a table" >&2; exit 1; }; table= ;;
+	:*)
+		[ -n "$table" ] || { echo "line $n: chain outside a table" >&2; exit 1; }
+		case "$line" in
+		:*' - [0:0]') ;;
+		*) echo "line $n: bad chain line '$line'" >&2; exit 1 ;;
+		esac
+		;;
+	-A*)
+		[ -n "$table" ] || { echo "line $n: rule outside a table" >&2; exit 1; }
+		set -- $line
+		[ $# -ge 3 ] || { echo "line $n: bad rule '$line'" >&2; exit 1; }
+		;;
+	*) echo "line $n: unsupported line '$line'" >&2; exit 1 ;;
+	esac
+done < "$input"
+[ -z "$table" ] || { echo "missing COMMIT" >&2; exit 1; }
+
+table=
+while read -r line; do
+	case "$line" in
+	'*'*) table=${line#\*} ;;
+	:*)
+		chain=${line#:}
+		chain=${chain%% *}
+		: > "$S/$table.$chain"
+		;;
+	-A*)
+		set -- $line
+		chain=$2
+		shift 2
+		echo "$*" >> "$S/$table.$chain"
+		;;
+	esac
+done < "$input"
+exit 0

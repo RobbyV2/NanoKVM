@@ -139,6 +139,7 @@ load_slot() {
 	WS_PORT=$((10810 + n))
 	LOCK="$RUN_DIR/$NAME.lock"
 	REDIR_FILE="$RUN_DIR/$NAME.dns_redirected"
+	RULES_FILE="$RUN_DIR/$NAME.rules"
 	HEV_PID="$RUN_DIR/$NAME-hev.pid"
 	WS_PID="$RUN_DIR/$NAME-wstunnel.pid"
 	HEV_LOG="$LOG_DIR/$NAME-hev.log"
@@ -306,7 +307,7 @@ dnat_hits() {
 	iptables -t nat -L "$NAT_CHAIN" -v -n -x 2>/dev/null | awk '$3 == "DNAT" { s += $1 } END { print s + 0 }'
 }
 
-# The chain is flushed on every converge, which zeroes its counters, so the
+# The chain is replaced on every converge, which zeroes its counters, so the
 # hits so far are carried over in a tmpfs file; status reports carried + live,
 # a total since enable (or boot), and stop removes the file.
 carried_hits() {
@@ -322,49 +323,86 @@ carry_hits() {
 	echo $(( $(carried_hits) + $(dnat_hits) )) > "$REDIR_FILE"
 }
 
-# EXIT<n>, flushed and repopulated (D6). The MSS clamps come before the
-# ACCEPTs because ACCEPT ends traversal in the filter table; TCPMSS is not
-# terminating, so the clamp sees the SYN and the ACCEPT that follows lets it
-# through. Both DNAT chains are separate because iptables refuses a DNAT in a
-# chain reachable from POSTROUTING and a MASQUERADE in one reachable from
+# The desired contents of EXIT<n>, EXIT<n>_NAT and EXIT<n>_MASQ (D6) in
+# iptables-restore format. The MSS clamps come before the ACCEPTs because
+# ACCEPT ends traversal in the filter table; TCPMSS is not terminating, so
+# the clamp sees the SYN and the ACCEPT that follows lets it through. Both
+# NAT chains are separate because iptables refuses a DNAT in a chain
+# reachable from POSTROUTING and a MASQUERADE in one reachable from
 # PREROUTING.
+render_chains() {
+	nic=$1
+	gw=$2
+	echo "*filter"
+	echo ":$CHAIN - [0:0]"
+	for p in $(reject4)
+	do
+		echo "-A $CHAIN -i $nic -d $p -j REJECT --reject-with icmp-admin-prohibited"
+	done
+	echo "-A $CHAIN -i $nic -o $TUN -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss $MSS"
+	echo "-A $CHAIN -i $TUN -o $nic -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss $MSS"
+	echo "-A $CHAIN -i $nic -o $TUN -j ACCEPT"
+	echo "-A $CHAIN -i $TUN -o $nic -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT"
+	echo "-A $CHAIN -i $nic -j REJECT --reject-with icmp-admin-prohibited"
+	echo "-A $CHAIN -o $nic ! -i $TUN -j REJECT"
+	echo "COMMIT"
+	echo "*nat"
+	echo ":$NAT_CHAIN - [0:0]"
+	echo ":$MASQ_CHAIN - [0:0]"
+	if [ -n "$gw" ]
+	then
+		echo "-A $NAT_CHAIN -i $nic ! -d $gw -p udp --dport 53 -j DNAT --to-destination $gw:53"
+		echo "-A $NAT_CHAIN -i $nic ! -d $gw -p tcp --dport 53 -j DNAT --to-destination $gw:53"
+		echo "-A $MASQ_CHAIN -s ${gw%.*}.0/24 -o $TUN -j MASQUERADE"
+	else
+		echo "-A $MASQ_CHAIN -o $TUN -j MASQUERADE"
+	fi
+	echo "COMMIT"
+}
+
+# The rules file applied one rule at a time, for an image without
+# iptables-restore: `:CHAIN` creates or flushes, `-A` appends. The chain is
+# empty between the flush and the last append, and FORWARD falls through to
+# its ACCEPT policy for that window, which is why this is the fallback.
+apply_rules_file_by_rule() {
+	table=
+	while read -r line
+	do
+		case "$line" in
+			'*'*) table=${line#\*} ;;
+			:*)
+				chain=${line#:}
+				chain=${chain%% *}
+				iptables -t "$table" -N "$chain" 2>/dev/null
+				ipt -t "$table" -F "$chain"
+				;;
+			-A*) ipt -t "$table" $line ;;
+		esac
+	done < "$RULES_FILE"
+}
+
+# The three chains are replaced in one iptables-restore --noflush
+# transaction: a `:CHAIN` line flushes an existing user chain or creates a
+# missing one and the `-A` lines refill it, all committed at once, so a
+# converge with the FORWARD jump already live never leaves an empty chain
+# (with FORWARD's default ACCEPT policy behind it) for the length of the
+# refill. The jumps are added afterwards the first time, populate then jump.
+# The rules file stays under $RUN_DIR for inspection.
 apply_chains() {
 	nic=$1
 	gw=$2
 	ok=1
 
-	iptables -N "$CHAIN" 2>/dev/null
-	ipt -F "$CHAIN"
-	for p in $(reject4)
-	do
-		ipt -A "$CHAIN" -i "$nic" -d "$p" -j REJECT --reject-with icmp-admin-prohibited
-	done
-	ipt -A "$CHAIN" -i "$nic" -o "$TUN" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss "$MSS"
-	ipt -A "$CHAIN" -i "$TUN" -o "$nic" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss "$MSS"
-	ipt -A "$CHAIN" -i "$nic" -o "$TUN" -j ACCEPT
-	ipt -A "$CHAIN" -i "$TUN" -o "$nic" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-	ipt -A "$CHAIN" -i "$nic" -j REJECT --reject-with icmp-admin-prohibited
-	ipt -A "$CHAIN" -o "$nic" ! -i "$TUN" -j REJECT
-	iptables -C FORWARD -j "$CHAIN" 2>/dev/null || ipt -I FORWARD -j "$CHAIN"
-
-	iptables -t nat -N "$NAT_CHAIN" 2>/dev/null
 	carry_hits
-	ipt -t nat -F "$NAT_CHAIN"
-	if [ -n "$gw" ]
+	render_chains "$nic" "$gw" > "$RULES_FILE" || { log "render $RULES_FILE failed"; return 1; }
+	if command -v iptables-restore >/dev/null 2>&1
 	then
-		ipt -t nat -A "$NAT_CHAIN" -i "$nic" ! -d "$gw" -p udp --dport 53 -j DNAT --to-destination "$gw:53"
-		ipt -t nat -A "$NAT_CHAIN" -i "$nic" ! -d "$gw" -p tcp --dport 53 -j DNAT --to-destination "$gw:53"
-	fi
-	iptables -t nat -C PREROUTING -j "$NAT_CHAIN" 2>/dev/null || ipt -t nat -I PREROUTING -j "$NAT_CHAIN"
-
-	iptables -t nat -N "$MASQ_CHAIN" 2>/dev/null
-	ipt -t nat -F "$MASQ_CHAIN"
-	if [ -n "$gw" ]
-	then
-		ipt -t nat -A "$MASQ_CHAIN" -s "${gw%.*}.0/24" -o "$TUN" -j MASQUERADE
+		iptables-restore -n < "$RULES_FILE" || { log "iptables-restore $RULES_FILE: failed"; ok=0; }
 	else
-		ipt -t nat -A "$MASQ_CHAIN" -o "$TUN" -j MASQUERADE
+		apply_rules_file_by_rule
 	fi
+	iptables -C FORWARD -j "$CHAIN" 2>/dev/null || ipt -I FORWARD -j "$CHAIN"
+	iptables -t nat -C PREROUTING -j "$NAT_CHAIN" 2>/dev/null || ipt -t nat -I PREROUTING -j "$NAT_CHAIN"
 	iptables -t nat -C POSTROUTING -j "$MASQ_CHAIN" 2>/dev/null || ipt -t nat -I POSTROUTING -j "$MASQ_CHAIN"
 
 	if command -v ip6tables >/dev/null 2>&1
@@ -405,7 +443,7 @@ do_stop() {
 	while iptables -t nat -D POSTROUTING -j "$MASQ_CHAIN" 2>/dev/null; do :; done
 	iptables -t nat -F "$MASQ_CHAIN" 2>/dev/null
 	iptables -t nat -X "$MASQ_CHAIN" 2>/dev/null
-	rm -f "$REDIR_FILE"
+	rm -f "$REDIR_FILE" "$RULES_FILE"
 
 	nic=$(gadget_nic)
 	if [ -n "$nic" ] && command -v ip6tables >/dev/null 2>&1

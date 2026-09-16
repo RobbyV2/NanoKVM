@@ -140,6 +140,8 @@ then
 	[ "$(cat "$work/var/run/exit0-wstunnel.pid")" = "$wspid" ] || fail "second start restarted wstunnel"
 fi
 grep -q "ip rule del" "$work/trace" && fail "second start deleted a live rule"
+grep -q "iptables -F EXIT0" "$work/trace" && fail "second start flushed EXIT0 outside a transaction"
+grep -q "^iptables-restore -n$" "$work/trace" || fail "second start did not replace the chains through iptables-restore"
 
 echo 1 > "$work/sys/class/net/exit0/carrier"
 out=$(s94 status 0) || fail "status exited non-zero with everything up: $out"

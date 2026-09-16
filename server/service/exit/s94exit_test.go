@@ -292,6 +292,23 @@ func TestS94exitConvergeIsIdempotent(t *testing.T) {
 	if h.count(second, "iptables -I FORWARD") != 0 || h.count(second, "iptables -t nat -I") != 0 {
 		t.Errorf("second start duplicated a chain jump:\n%s", strings.Join(second, "\n"))
 	}
+	// The chains are replaced in one iptables-restore transaction, never
+	// flushed and refilled rule by rule while the FORWARD jump is live: an
+	// empty EXIT0 falls through to the ACCEPT policy for the whole refill.
+	for _, run := range [][]string{first, second} {
+		if h.count(run, "iptables-restore -n") != 1 || h.count(run, "iptables -F ") != 0 || h.count(run, "iptables -A ") != 0 || h.count(run, "iptables -t nat -F ") != 0 || h.count(run, "iptables -t nat -A ") != 0 {
+			t.Errorf("chains were not replaced in one transaction:\n%s", strings.Join(run, "\n"))
+		}
+	}
+	restored := h.stateFile("iptables-restore.last")
+	for _, want := range []string{"*filter\n:EXIT0 - [0:0]\n-A EXIT0 ", "\nCOMMIT\n*nat\n:EXIT0_NAT - [0:0]\n:EXIT0_MASQ - [0:0]\n-A EXIT0_NAT ", "-A EXIT0_MASQ -s 10.1.2.0/24 -o exit0 -j MASQUERADE\nCOMMIT\n"} {
+		if !strings.Contains(restored, want) {
+			t.Errorf("iptables-restore input lacks %q:\n%s", want, restored)
+		}
+	}
+	if kept, _ := os.ReadFile(filepath.Join(h.runDir, "exit0.rules")); string(kept) != restored {
+		t.Errorf("the rules file under RUN_DIR is not what was fed to iptables-restore:\n%s\nvs\n%s", kept, restored)
+	}
 	for name, before := range map[string]string{
 		"rules": rules, "iptables/filter.EXIT0": chain, "iptables/nat.EXIT0_NAT": nat,
 		"iptables/nat.EXIT0_MASQ": masq, "iptables/filter.FORWARD": forward, "route.100": table,
@@ -558,5 +575,57 @@ func TestS94exitIgnoresARecycledPid(t *testing.T) {
 	}
 	if now, _ := os.ReadFile(pidfile); string(now) == impostor {
 		t.Fatal("the pidfile still names the impostor after start")
+	}
+}
+
+// Without iptables-restore on PATH the same rules file is applied rule by
+// rule through iptables, ending in the same state.
+func TestS94exitFallsBackToIptablesWithoutRestore(t *testing.T) {
+	h := newS94(t)
+	stubs, _ := filepath.Abs(filepath.Join("testdata", "stubs"))
+	entries, err := os.ReadDir(stubs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	partial := filepath.Join(h.root, "stubs-without-restore")
+	if err := os.MkdirAll(partial, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() == "iptables-restore" {
+			continue
+		}
+		if err := os.Symlink(filepath.Join(stubs, e.Name()), filepath.Join(partial, e.Name())); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, kv := range h.env {
+		if strings.HasPrefix(kv, "PATH=") {
+			h.env[i] = "PATH=" + partial + string(os.PathListSeparator) + os.Getenv("PATH")
+		}
+	}
+
+	slot := MustSlot("0")
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, testConfig(slot), "usb0")
+	out, code := h.run("start", "0")
+	if code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	trace := h.traceLines()
+	if h.count(trace, "iptables-restore") != 0 || h.count(trace, "iptables -t filter -F EXIT0") != 1 || h.count(trace, "iptables -t nat -F EXIT0_NAT") != 1 || h.count(trace, "iptables -t nat -F EXIT0_MASQ") != 1 {
+		t.Fatalf("fallback did not flush and refill through iptables:\n%s", strings.Join(trace, "\n"))
+	}
+	if got := strings.Count(h.stateFile("iptables/filter.EXIT0"), "\n"); got != 15 {
+		t.Fatalf("EXIT0 has %d rules, want 15:\n%s", got, h.stateFile("iptables/filter.EXIT0"))
+	}
+	if h.stateFile("iptables/nat.EXIT0_NAT") != "-i usb0 ! -d 10.1.2.1 -p udp --dport 53 -j DNAT --to-destination 10.1.2.1:53\n-i usb0 ! -d 10.1.2.1 -p tcp --dport 53 -j DNAT --to-destination 10.1.2.1:53\n" {
+		t.Fatalf("EXIT0_NAT chain:\n%s", h.stateFile("iptables/nat.EXIT0_NAT"))
+	}
+	if h.stateFile("iptables/nat.EXIT0_MASQ") != "-s 10.1.2.0/24 -o exit0 -j MASQUERADE\n" {
+		t.Fatalf("EXIT0_MASQ chain:\n%s", h.stateFile("iptables/nat.EXIT0_MASQ"))
+	}
+	if h.stateFile("iptables/filter.FORWARD") != "-j EXIT0\n" {
+		t.Fatalf("FORWARD jump:\n%s", h.stateFile("iptables/filter.FORWARD"))
 	}
 }

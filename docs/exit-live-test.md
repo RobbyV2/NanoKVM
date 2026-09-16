@@ -46,8 +46,8 @@ token shown in the Exit panel (`[a-z2-9]{8}`, no `0 o 1 l i`).
 For §3–§11 the consumer must have **no other uplink** (Wi-Fi off, other Ethernet unplugged) or the
 result says nothing about the tunnel. §12 puts it back.
 
-Counters: every 30 s the watchdog runs `S94exit start 0`, which flushes and repopulates `EXIT0`,
-`EXIT0_NAT` and `EXIT0_MASQ`, so their `iptables -L … -v -n -x` packet counters **reset every 30 s**.
+Counters: every 30 s the watchdog runs `S94exit start 0`, which replaces `EXIT0`, `EXIT0_NAT` and
+`EXIT0_MASQ` in one `iptables-restore -n` transaction, so their `iptables -L … -v -n -x` packet counters **reset every 30 s**.
 Read them within a few seconds of generating the traffic. Cumulative numbers are `dns_redirected`
 (carried across flushes in `/var/run/exit0.dns_redirected`, cleared on `stop`), `ip -s link show exit0`,
 conntrack, and the UI's `bytes`/`dns` fields.
