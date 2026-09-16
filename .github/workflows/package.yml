@@ -220,8 +220,11 @@ jobs:
         with:
           # CARGO_HOME is redirected into build/cargo by the "tunnels" target,
           # so both the registry and the target dir live inside the workspace.
-          # The hev revision is in the key so a bump of that submodule never
-          # restores a cache whose build/ predates it.
+          # The hev revision is in the key only so the entry is keyed on every
+          # seed submodule (D27). Nothing of hev is cached: the paths below
+          # hold the cargo registry and wstunnel's target dir, and "make exit"
+          # runs make clean and rebuilds hev from source on every run. Add
+          # build/exit here before relying on the key for it.
           path: |
             build/cargo/registry
             third_party/wstunnel/target
