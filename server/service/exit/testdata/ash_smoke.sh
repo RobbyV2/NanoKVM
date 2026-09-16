@@ -173,6 +173,8 @@ s94 stop 0 || fail "stop exited $?"
 [ ! -s "$work/state/iptables/filter.FORWARD" ] || fail "FORWARD jump survived stop"
 [ ! -e "$work/sys/class/net/exit0" ] || fail "tun survived stop"
 [ ! -e "$work/var/run/exit0-hev.pid" ] || fail "hev pidfile survived stop"
+[ "$(cat "$work/state/sysctl/net.ipv4.ip_forward")" = 0 ] || fail "stop left ip_forward on"
+[ "$(cat "$work/state/sysctl/net.ipv6.conf.usb0.disable_ipv6")" = 0 ] || fail "stop left IPv6 disabled on usb0"
 
 if [ "$real" = 1 ]
 then

@@ -629,3 +629,122 @@ func TestS94exitFallsBackToIptablesWithoutRestore(t *testing.T) {
 		t.Fatalf("FORWARD jump:\n%s", h.stateFile("iptables/filter.FORWARD"))
 	}
 }
+
+// stop restores the sysctls start changed to what they were, except that
+// ip_forward is left alone while another slot or tailscaled still needs it,
+// and whenever forwarding stays on the iif fence outlives stop: a consumer
+// whose lease still names this box as router (D5, refused rebind) must be
+// refused, not forwarded onto the LAN with a 10.x source.
+func TestS94exitStopRestoresSysctlsAndFencesWhileForwardingStaysOn(t *testing.T) {
+	start := func(t *testing.T, h *s94, slot string) {
+		t.Helper()
+		s := MustSlot(slot)
+		h.writeEnv(s, testConfig(s), "usb0")
+		if out, code := h.run("start", slot); code != 0 {
+			t.Fatalf("start %s exited %d:\n%s", slot, code, out)
+		}
+	}
+	stop := func(t *testing.T, h *s94, slot string) string {
+		t.Helper()
+		out, code := h.run("stop", slot)
+		if code != 0 {
+			t.Fatalf("stop %s exited %d:\n%s", slot, code, out)
+		}
+		return out
+	}
+	sysctl := func(h *s94, key string) string {
+		return strings.TrimSpace(h.stateFile("sysctl/" + key))
+	}
+
+	t.Run("forwarding was off", func(t *testing.T) {
+		h := newS94(t)
+		h.gadgetNIC("usb0", "10.1.2.1/24")
+		start(t, h, "0")
+		if sysctl(h, "net.ipv4.ip_forward") != "1" || sysctl(h, "net.ipv6.conf.usb0.disable_ipv6") != "1" {
+			t.Fatalf("start did not set the sysctls: forward=%q disable_ipv6=%q", sysctl(h, "net.ipv4.ip_forward"), sysctl(h, "net.ipv6.conf.usb0.disable_ipv6"))
+		}
+		out := stop(t, h, "0")
+		for key, want := range map[string]string{"net.ipv4.ip_forward": "0", "net.ipv6.conf.usb0.disable_ipv6": "0", "net.ipv4.conf.usb0.route_localnet": "0"} {
+			if got := sysctl(h, key); got != want {
+				t.Errorf("%s after stop = %q, want %q", key, got, want)
+			}
+		}
+		if h.stateFile("rules") != "" {
+			t.Errorf("rules left after stop with forwarding off:\n%s", h.stateFile("rules"))
+		}
+		if _, err := os.Stat(filepath.Join(h.runDir, "exit0.sysctl")); !os.IsNotExist(err) {
+			t.Error("the sysctl record survived stop")
+		}
+		if strings.Contains(out, "fence") {
+			t.Errorf("stop kept a fence with forwarding off:\n%s", out)
+		}
+	})
+
+	t.Run("forwarding was on before the first start", func(t *testing.T) {
+		h := newS94(t)
+		h.gadgetNIC("usb0", "10.1.2.1/24")
+		if err := os.MkdirAll(filepath.Join(h.state, "sysctl"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(h.state, "sysctl", "net.ipv4.ip_forward"), []byte("1\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		start(t, h, "0")
+		// A watchdog converge must not overwrite the record with our own value.
+		if out, code := h.run("start", "0"); code != 0 {
+			t.Fatalf("second start exited %d:\n%s", code, out)
+		}
+		out := stop(t, h, "0")
+		if sysctl(h, "net.ipv4.ip_forward") != "1" {
+			t.Errorf("stop zeroed ip_forward that was on before the first start")
+		}
+		if sysctl(h, "net.ipv6.conf.usb0.disable_ipv6") != "0" {
+			t.Errorf("disable_ipv6 after stop = %q, want 0", sysctl(h, "net.ipv6.conf.usb0.disable_ipv6"))
+		}
+		rules := h.stateFile("rules")
+		if rules != "1001:\tfrom all iif usb0 unreachable\n" {
+			t.Errorf("rules after stop with forwarding on:\n%q\nwant only the fence", rules)
+		}
+		if !strings.Contains(out, "fence") {
+			t.Errorf("stop did not say the fence stays:\n%s", out)
+		}
+	})
+
+	t.Run("tailscaled started after us", func(t *testing.T) {
+		h := newS94(t)
+		h.gadgetNIC("usb0", "10.1.2.1/24")
+		start(t, h, "0")
+		if err := os.WriteFile(filepath.Join(h.runDir, "tailscaled.pid"), []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		stop(t, h, "0")
+		if sysctl(h, "net.ipv4.ip_forward") != "1" {
+			t.Errorf("stop zeroed ip_forward under a running tailscaled")
+		}
+		if !strings.Contains(h.stateFile("rules"), "iif usb0 unreachable") || strings.Contains(h.stateFile("rules"), "lookup") {
+			t.Errorf("rules after stop under tailscaled:\n%s", h.stateFile("rules"))
+		}
+	})
+
+	t.Run("another slot is up", func(t *testing.T) {
+		h := newS94(t)
+		h.gadgetNIC("usb0", "10.1.2.1/24")
+		start(t, h, "0")
+		start(t, h, "1")
+		stop(t, h, "0")
+		if sysctl(h, "net.ipv4.ip_forward") != "1" {
+			t.Errorf("stop of slot 0 zeroed ip_forward under slot 1")
+		}
+		rules := h.stateFile("rules")
+		if !strings.Contains(rules, "1001:\tfrom all iif usb0 unreachable") || strings.Contains(rules, "1000:") || !strings.Contains(rules, "1002:") || !strings.Contains(rules, "1003:") {
+			t.Errorf("rules after stopping slot 0 with slot 1 up:\n%s", rules)
+		}
+		stop(t, h, "1")
+		if sysctl(h, "net.ipv4.ip_forward") != "0" {
+			t.Errorf("ip_forward after the last slot stopped = %q, want 0", sysctl(h, "net.ipv4.ip_forward"))
+		}
+		if h.stateFile("rules") != "" {
+			t.Errorf("rules left after the last stop:\n%s", h.stateFile("rules"))
+		}
+	})
+}

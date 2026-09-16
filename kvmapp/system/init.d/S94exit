@@ -28,6 +28,9 @@ RUN_DIR=${RUN_DIR:-/var/run}
 LOG_DIR=${LOG_DIR:-/tmp}
 SYS_NET=${SYS_NET:-/sys/class/net}
 GADGET_CONFIG=${GADGET_CONFIG:-/sys/kernel/config/usb_gadget/g0/configs/c.1}
+# The value net.ipv4.ip_forward had before the first slot turned it on; one
+# record for every slot, restored by the last stop.
+FORWARD_FILE="$RUN_DIR/exit.ip_forward"
 # Address-space cap for hev-socks5-tunnel (D24), in KiB, applied through
 # ulimit -v in the subshell that starts it.
 HEV_AS_KB=${HEV_AS_KB:-65536}
@@ -140,6 +143,7 @@ load_slot() {
 	LOCK="$RUN_DIR/$NAME.lock"
 	REDIR_FILE="$RUN_DIR/$NAME.dns_redirected"
 	RULES_FILE="$RUN_DIR/$NAME.rules"
+	SYSCTL_FILE="$RUN_DIR/$NAME.sysctl"
 	HEV_PID="$RUN_DIR/$NAME-hev.pid"
 	WS_PID="$RUN_DIR/$NAME-wstunnel.pid"
 	HEV_LOG="$LOG_DIR/$NAME-hev.log"
@@ -220,10 +224,23 @@ stop_daemon() {
 	rm -f "$1"
 }
 
+# record_sysctl FILE KEY: the value KEY had before start first changed it,
+# kept under $RUN_DIR so stop can put it back. Recorded once: a later converge
+# must not overwrite it with the value start itself set.
+record_sysctl() {
+	[ -r "$1" ] && grep -q "^$2=" "$1" && return 0
+	v=$(sysctl -n "$2" 2>/dev/null) || return 0
+	echo "$2=$v" >> "$1"
+}
+
 # The NIC-independent half. Failures here are fatal: without the tun and its
 # table nothing downstream can be right.
 apply_core() {
 	ok=1
+	# The slot's sysctl record exists from here on, so other slots' stops see
+	# this one as up even before it has a NIC.
+	: >> "$SYSCTL_FILE"
+	record_sysctl "$FORWARD_FILE" net.ipv4.ip_forward
 	sysctl -q -w net.ipv4.ip_forward=1 || { log "sysctl ip_forward failed"; ok=0; }
 	if [ ! -e "$SYS_NET/$TUN" ]
 	then
@@ -292,6 +309,8 @@ apply_rules() {
 			esac
 		done
 	done
+	record_sysctl "$SYSCTL_FILE" "net.ipv4.conf.$nic.route_localnet"
+	record_sysctl "$SYSCTL_FILE" "net.ipv6.conf.$nic.disable_ipv6"
 	sysctl -q -w "net.ipv4.conf.$nic.route_localnet=0" || ok=0
 	sysctl -q -w "net.ipv6.conf.$nic.disable_ipv6=1" || ok=0
 	[ "$ok" = 1 ]
@@ -452,13 +471,74 @@ do_stop() {
 	fi
 
 	while ip rule del pref "$PREF_LOOKUP" 2>/dev/null; do :; done
-	while ip rule del pref "$PREF_FENCE" 2>/dev/null; do :; done
+	restore_sysctls
+	if [ "$(sysctl -n net.ipv4.ip_forward 2>/dev/null)" = 1 ] && [ -n "$nic" ]
+	then
+		# Forwarding stays on for someone else, and the consumer may still
+		# hold a lease whose router is this box (D5: a refused rebind keeps it
+		# for days). With the chains gone its packets would be forwarded onto
+		# the LAN with a 10.x source, so the iif fence outlives this stop and
+		# they die with ICMP unreachable instead. start re-adds it
+		# idempotently; a later stop that finds forwarding off removes it.
+		ip rule add pref "$PREF_FENCE" iif "$nic" unreachable 2>/dev/null
+		log "slot $n: ip_forward stays 1 for another user; keeping the iif $nic fence"
+	else
+		# Forwarding is off and no slot is up, so no fence is needed any
+		# more, this slot's or one an earlier stop left behind.
+		for m in 0 1 2 3 4 5 6 7 8 9
+		do
+			while ip rule del pref $((1001 + 2 * m)) 2>/dev/null; do :; done
+		done
+	fi
 	ip route flush table "$TABLE" 2>/dev/null
 	if [ -e "$SYS_NET/$TUN" ]
 	then
 		ip link del "$TUN" 2>/dev/null
 	fi
 	return 0
+}
+
+# Another slot has recorded sysctls, so it is up and still needs forwarding.
+other_slot_up() {
+	for f in "$RUN_DIR"/exit[0-9].sysctl
+	do
+		[ "$f" != "$SYSCTL_FILE" ] && [ -e "$f" ] && return 0
+	done
+	return 1
+}
+
+# S98tailscaled sets ip_forward for its own routing and zeroes it on its own
+# stop; a live tailscaled started after this slot must not lose it here.
+tailscaled_running() {
+	[ -r "$RUN_DIR/tailscaled.pid" ] || return 1
+	read -r pid < "$RUN_DIR/tailscaled.pid" || return 1
+	case "$pid" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	kill -0 "$pid" 2>/dev/null
+}
+
+# Put back what record_sysctl saved. The NIC keys are this slot's alone and
+# go back unconditionally (stock behaviour has IPv6 link-local on the gadget
+# NIC); ip_forward is shared, so the last slot to stop restores it, and not
+# even then while tailscaled, which manages it itself, is running.
+restore_sysctls() {
+	if [ -r "$SYSCTL_FILE" ]
+	then
+		while IFS== read -r key value
+		do
+			[ -n "$key" ] || continue
+			sysctl -q -w "$key=$value" 2>/dev/null || log "restore $key=$value failed"
+		done < "$SYSCTL_FILE"
+		rm -f "$SYSCTL_FILE"
+	fi
+	other_slot_up && return 0
+	[ -r "$FORWARD_FILE" ] || return 0
+	IFS== read -r key value < "$FORWARD_FILE"
+	rm -f "$FORWARD_FILE"
+	tailscaled_running && return 0
+	[ -n "$key" ] || return 0
+	sysctl -q -w "$key=$value" 2>/dev/null || log "restore $key=$value failed"
 }
 
 # Serialised per slot: the watchdog, the enable transaction and a rebind hook
