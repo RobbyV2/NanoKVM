@@ -1187,6 +1187,7 @@ const hu = {
           dnsTip:
             'Legfeljebb négy feloldó, a kilépőn keresztül elérve. A célgép a NanoKVM-et kapja feloldónak, és minden titkosítatlan DNS-lekérdezés ide van átirányítva.',
           dnsAdd: 'Kiszolgáló hozzáadása',
+          dnsRemove: 'Szerver eltávolítása',
           dnsInvalid: 'Csak IP-címeket adjon meg',
           mtu: 'MTU',
           mtuTip: '{{min}} és {{max}} között. Az 1280 helyet hagy a tunnel fejléceinek.',

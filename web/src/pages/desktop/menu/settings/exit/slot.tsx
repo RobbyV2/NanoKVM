@@ -250,6 +250,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
           onConfirm={toggle}
         >
           <Switch
+            aria-label={showSlot ? t('settings.exit.slot', { slot }) : t('settings.exit.enable')}
             checked={status.enabled}
             loading={action === 'enable' || action === 'disable' || status.pending}
           />

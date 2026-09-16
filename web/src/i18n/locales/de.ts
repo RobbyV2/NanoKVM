@@ -1192,6 +1192,7 @@ const de = {
           dnsTip:
             'Bis zu vier Resolver, erreicht über den Exit. Das Zielgerät erhält den NanoKVM als Resolver, und jede unverschlüsselte DNS-Anfrage wird hierher umgeleitet.',
           dnsAdd: 'Server hinzufügen',
+          dnsRemove: 'Server entfernen',
           dnsInvalid: 'Nur IP-Adressen eingeben',
           mtu: 'MTU',
           mtuTip: '{{min}} bis {{max}}. 1280 lässt Platz für die Tunnel-Header.',

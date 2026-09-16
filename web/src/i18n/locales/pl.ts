@@ -1185,6 +1185,7 @@ const pl = {
           dnsTip:
             'Do czterech resolverów, osiąganych przez wyjście. Komputer docelowy otrzymuje NanoKVM jako resolver, a każde nieszyfrowane zapytanie DNS jest przekierowywane tutaj.',
           dnsAdd: 'Dodaj serwer',
+          dnsRemove: 'Usuń serwer',
           dnsInvalid: 'Wpisuj tylko adresy IP',
           mtu: 'MTU',
           mtuTip: 'Od {{min}} do {{max}}. 1280 zostawia miejsce na nagłówki tunelu.',

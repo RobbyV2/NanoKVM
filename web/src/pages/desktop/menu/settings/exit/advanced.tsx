@@ -126,6 +126,7 @@ export const ExitAdvanced = ({
               <Button
                 type="text"
                 size="small"
+                aria-label={t('settings.exit.advanced.dnsRemove')}
                 disabled={disabled || dns.length <= 1}
                 icon={<XIcon size={14} />}
                 onClick={() => {
@@ -191,6 +192,7 @@ export const ExitAdvanced = ({
 
         <Switch
           className="shrink-0"
+          aria-label={t('settings.exit.advanced.allowPrivate')}
           checked={allowPrivate}
           disabled={disabled || !config}
           onChange={(value) => {
@@ -209,6 +211,7 @@ export const ExitAdvanced = ({
 
         <Switch
           className="shrink-0"
+          aria-label={t('settings.exit.advanced.pinPeer')}
           checked={pinPeer}
           disabled={disabled || !config}
           onChange={(value) => {

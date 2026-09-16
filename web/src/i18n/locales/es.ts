@@ -1189,6 +1189,7 @@ const es = {
           dnsTip:
             'Hasta cuatro resolutores, alcanzados a través de la salida. El equipo destino recibe el NanoKVM como resolutor y toda consulta DNS en claro se redirige aquí.',
           dnsAdd: 'Añadir servidor',
+          dnsRemove: 'Eliminar servidor',
           dnsInvalid: 'Introduzca solo direcciones IP',
           mtu: 'MTU',
           mtuTip: 'De {{min}} a {{max}}. 1280 deja espacio para las cabeceras del túnel.',

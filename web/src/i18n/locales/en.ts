@@ -1173,6 +1173,7 @@ const en = {
           dnsTip:
             'Up to four resolvers, reached through the exit. The target is handed the NanoKVM as its resolver and every plaintext DNS query is redirected here.',
           dnsAdd: 'Add server',
+          dnsRemove: 'Remove server',
           dnsInvalid: 'Enter IP addresses only',
           mtu: 'MTU',
           mtuTip: '{{min}} to {{max}}. 1280 leaves room for the tunnel headers.',

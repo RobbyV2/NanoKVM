@@ -1179,6 +1179,7 @@ const tr = {
           dnsTip:
             'Çıkış üzerinden erişilen en fazla dört çözümleyici. Hedefe çözümleyici olarak NanoKVM verilir ve her düz metin DNS sorgusu buraya yönlendirilir.',
           dnsAdd: 'Sunucu ekle',
+          dnsRemove: 'Sunucuyu kaldır',
           dnsInvalid: 'Yalnızca IP adresi girin',
           mtu: 'MTU',
           mtuTip: '{{min}} ile {{max}} arası. 1280, tünel başlıklarına yer bırakır.',

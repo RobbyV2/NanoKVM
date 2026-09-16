@@ -1180,6 +1180,7 @@ const ca = {
           dnsTip:
             "Fins a quatre resolutors, assolits a través de la sortida. L'equip de destinació rep el NanoKVM com a resolutor i tota consulta DNS en clar es redirigeix aquí.",
           dnsAdd: 'Afegeix un servidor',
+          dnsRemove: 'Elimina el servidor',
           dnsInvalid: 'Introduïu només adreces IP',
           mtu: 'MTU',
           mtuTip: 'De {{min}} a {{max}}. 1280 deixa espai per a les capçaleres del túnel.',

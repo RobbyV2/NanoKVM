@@ -1184,6 +1184,7 @@ const id = {
           dnsTip:
             'Hingga empat resolver, dijangkau melalui keluar. Target diberi NanoKVM sebagai resolver dan setiap kueri DNS teks biasa dialihkan ke sini.',
           dnsAdd: 'Tambah server',
+          dnsRemove: 'Hapus server',
           dnsInvalid: 'Masukkan alamat IP saja',
           mtu: 'MTU',
           mtuTip: '{{min}} hingga {{max}}. 1280 menyisakan ruang untuk header tunnel.',

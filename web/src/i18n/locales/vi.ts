@@ -1173,6 +1173,7 @@ const vi = {
           dnsTip:
             'Tối đa bốn bộ phân giải, truy cập qua thiết bị thoát. Máy đích được cấp NanoKVM làm bộ phân giải và mọi truy vấn DNS thuần đều được chuyển hướng về đây.',
           dnsAdd: 'Thêm máy chủ',
+          dnsRemove: 'Xóa máy chủ',
           dnsInvalid: 'Chỉ nhập địa chỉ IP',
           mtu: 'MTU',
           mtuTip: 'Từ {{min}} đến {{max}}. 1280 chừa chỗ cho phần đầu của đường hầm.',

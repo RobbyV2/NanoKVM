@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Collapse, Tooltip } from 'antd';
+import { Button, Collapse, Tooltip } from 'antd';
 import { RefreshCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,12 +73,15 @@ export const ExitLogs = ({ slot, mode }: ExitLogsProps) => {
     <div className="flex flex-col space-y-3 pt-3">
       <div className="flex justify-end">
         <Tooltip title={t('settings.exit.logs.refresh')} placement="bottom">
-          <div
-            className="flex cursor-pointer rounded p-1 text-neutral-400 hover:bg-neutral-700/50 hover:text-white"
+          {/* a button, not a div: reachable by keyboard and announced by name */}
+          <Button
+            type="text"
+            size="small"
+            aria-label={t('settings.exit.logs.refresh')}
+            loading={isLoading}
+            icon={<RefreshCcwIcon size={15} />}
             onClick={getLogs}
-          >
-            <RefreshCcwIcon size={15} className={isLoading ? 'animate-spin' : ''} />
-          </div>
+          />
         </Tooltip>
       </div>
 

@@ -57,3 +57,15 @@ test('every locale carries the exit strings of en, with the same placeholders', 
     }
   }
 });
+
+// A button that shows only an icon is announced as "button" unless it carries
+// an aria-label; the antd Tooltip around it is a hover popup, not a name. The
+// panel labels each such control with the string of its tooltip.
+test('every icon-only control of the panel has a name in en', async () => {
+  const exit = await exitStrings('en.ts');
+  const keys = new Set(leaves(exit).map((leaf) => leaf.key));
+
+  for (const key of ['copy', 'token.regenerate', 'advanced.dnsRemove', 'logs.refresh']) {
+    assert.ok(keys.has(key), `en lacks settings.exit.${key}`);
+  }
+});

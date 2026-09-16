@@ -1173,6 +1173,7 @@ const cz = {
           dnsTip:
             'Až čtyři resolvery, dostupné přes výstup. Cílový počítač dostane NanoKVM jako resolver a každý nešifrovaný DNS dotaz je přesměrován sem.',
           dnsAdd: 'Přidat server',
+          dnsRemove: 'Odebrat server',
           dnsInvalid: 'Zadávejte pouze IP adresy',
           mtu: 'MTU',
           mtuTip: '{{min}} až {{max}}. 1280 nechává místo pro hlavičky tunelu.',

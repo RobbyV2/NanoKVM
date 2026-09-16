@@ -1179,6 +1179,7 @@ const da = {
           dnsTip:
             'Op til fire resolvere, nået via exit. Målmaskinen får NanoKVM som resolver, og alle ukrypterede DNS-forespørgsler omdirigeres hertil.',
           dnsAdd: 'Tilføj server',
+          dnsRemove: 'Fjern server',
           dnsInvalid: 'Indtast kun IP-adresser',
           mtu: 'MTU',
           mtuTip: '{{min}} til {{max}}. 1280 giver plads til tunnel-headerne.',

@@ -1191,6 +1191,7 @@ const it = {
           dnsTip:
             "Fino a quattro resolver, raggiunti attraverso l'uscita. La destinazione riceve il NanoKVM come resolver e ogni richiesta DNS in chiaro viene reindirizzata qui.",
           dnsAdd: 'Aggiungi server',
+          dnsRemove: 'Rimuovi server',
           dnsInvalid: 'Inserire solo indirizzi IP',
           mtu: 'MTU',
           mtuTip: 'Da {{min}} a {{max}}. 1280 lascia spazio alle intestazioni del tunnel.',

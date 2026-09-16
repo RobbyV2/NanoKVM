@@ -46,6 +46,7 @@ export const ExitToken = ({ token, regenerating, onRegenerate }: ExitTokenProps)
             <Button
               type="text"
               size="small"
+              aria-label={t('settings.exit.copy')}
               disabled={!token}
               icon={
                 isCopied ? (
@@ -78,6 +79,7 @@ export const ExitToken = ({ token, regenerating, onRegenerate }: ExitTokenProps)
                 <Button
                   type="text"
                   size="small"
+                  aria-label={t('settings.exit.token.regenerate')}
                   loading={regenerating}
                   icon={<RefreshCcwIcon size={15} />}
                 />

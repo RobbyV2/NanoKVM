@@ -1120,6 +1120,7 @@ const zh_tw = {
           dnsTip:
             '最多四個解析器，經由出口存取。目標機會把 NanoKVM 當作解析器，所有明文 DNS 查詢都會被重新導向到這裡。',
           dnsAdd: '新增伺服器',
+          dnsRemove: '移除伺服器',
           dnsInvalid: '只能輸入 IP 位址',
           mtu: 'MTU',
           mtuTip: '{{min}} 到 {{max}}。1280 可為隧道標頭留出空間。',

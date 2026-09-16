@@ -1191,6 +1191,7 @@ const nl = {
           dnsTip:
             'Tot vier resolvers, bereikt via de exit. Het doelsysteem krijgt de NanoKVM als resolver en elke onversleutelde DNS-vraag wordt hierheen omgeleid.',
           dnsAdd: 'Server toevoegen',
+          dnsRemove: 'Server verwijderen',
           dnsInvalid: 'Voer alleen IP-adressen in',
           mtu: 'MTU',
           mtuTip: '{{min}} tot {{max}}. 1280 laat ruimte voor de tunnel-headers.',

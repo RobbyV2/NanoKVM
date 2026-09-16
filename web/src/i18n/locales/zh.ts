@@ -1118,6 +1118,7 @@ const zh = {
           dnsTip:
             '最多四个解析器，经由出口访问。目标机会把 NanoKVM 当作解析器，所有明文 DNS 查询都会被重定向到这里。',
           dnsAdd: '添加服务器',
+          dnsRemove: '移除服务器',
           dnsInvalid: '只能输入 IP 地址',
           mtu: 'MTU',
           mtuTip: '{{min}} 到 {{max}}。1280 可为隧道头部留出空间。',

@@ -1160,6 +1160,7 @@ const ko = {
           dnsTip:
             '출구를 통해 접근하는 최대 4개의 리졸버입니다. 대상에는 NanoKVM이 리졸버로 전달되며, 모든 평문 DNS 질의는 여기로 리디렉션됩니다.',
           dnsAdd: '서버 추가',
+          dnsRemove: '서버 제거',
           dnsInvalid: 'IP 주소만 입력하세요',
           mtu: 'MTU',
           mtuTip: '{{min}}부터 {{max}}까지. 1280이면 터널 헤더 공간이 확보됩니다.',

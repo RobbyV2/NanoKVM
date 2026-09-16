@@ -1178,6 +1178,7 @@ const se = {
           dnsTip:
             'Upp till fyra resolvrar, nådda via exit. Måldatorn får NanoKVM som resolver och alla okrypterade DNS-frågor omdirigeras hit.',
           dnsAdd: 'Lägg till server',
+          dnsRemove: 'Ta bort server',
           dnsInvalid: 'Ange endast IP-adresser',
           mtu: 'MTU',
           mtuTip: '{{min}} till {{max}}. 1280 lämnar plats för tunnelhuvudena.',
