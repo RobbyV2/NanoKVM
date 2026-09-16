@@ -1193,6 +1193,9 @@ const it = {
           dnsAdd: 'Aggiungi server',
           dnsRemove: 'Rimuovi server',
           dnsInvalid: 'Inserire solo indirizzi IP',
+          dnsDenied:
+            "Gli indirizzi loopback, link-local, multicast e 198.18/15 non sono raggiungibili tramite l'uscita",
+          dnsPrivate: 'Un resolver privato richiede che Consenti destinazioni private sia attivo',
           mtu: 'MTU',
           mtuTip: 'Da {{min}} a {{max}}. 1280 lascia spazio alle intestazioni del tunnel.',
           allowPrivate: 'Consenti destinazioni private',

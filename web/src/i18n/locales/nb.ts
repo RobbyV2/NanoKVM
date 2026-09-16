@@ -1183,6 +1183,9 @@ const nb = {
           dnsAdd: 'Legg til server',
           dnsRemove: 'Fjern server',
           dnsInvalid: 'Skriv inn bare IP-adresser',
+          dnsDenied:
+            'Loopback-, link-local-, multicast- og 198.18/15-adresser kan ikke nås gjennom utgangen',
+          dnsPrivate: 'En privat resolver krever at Tillat private destinasjoner er slått på',
           mtu: 'MTU',
           mtuTip: '{{min}} til {{max}}. 1280 gir plass til tunnel-headerne.',
           allowPrivate: 'Tillat private destinasjoner',

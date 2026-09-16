@@ -1180,6 +1180,9 @@ const se = {
           dnsAdd: 'Lägg till server',
           dnsRemove: 'Ta bort server',
           dnsInvalid: 'Ange endast IP-adresser',
+          dnsDenied:
+            'Loopback-, link-local-, multicast- och 198.18/15-adresser kan inte nås via utgången',
+          dnsPrivate: 'En privat resolver kräver att Tillåt privata destinationer är påslaget',
           mtu: 'MTU',
           mtuTip: '{{min}} till {{max}}. 1280 lämnar plats för tunnelhuvudena.',
           allowPrivate: 'Tillåt privata destinationer',

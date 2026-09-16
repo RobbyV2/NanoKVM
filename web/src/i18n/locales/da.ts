@@ -1181,6 +1181,9 @@ const da = {
           dnsAdd: 'Tilføj server',
           dnsRemove: 'Fjern server',
           dnsInvalid: 'Indtast kun IP-adresser',
+          dnsDenied:
+            'Loopback-, link-local-, multicast- og 198.18/15-adresser kan ikke nås gennem udgangen',
+          dnsPrivate: 'En privat resolver kræver, at Tillad private destinationer er slået til',
           mtu: 'MTU',
           mtuTip: '{{min}} til {{max}}. 1280 giver plads til tunnel-headerne.',
           allowPrivate: 'Tillad private destinationer',

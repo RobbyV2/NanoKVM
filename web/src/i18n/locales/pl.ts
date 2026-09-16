@@ -1187,6 +1187,9 @@ const pl = {
           dnsAdd: 'Dodaj serwer',
           dnsRemove: 'Usuń serwer',
           dnsInvalid: 'Wpisuj tylko adresy IP',
+          dnsDenied:
+            'Adresy loopback, link-local, multicast i 198.18/15 nie są osiągalne przez wyjście',
+          dnsPrivate: 'Prywatny resolver wymaga włączenia opcji Zezwól na prywatne cele',
           mtu: 'MTU',
           mtuTip: 'Od {{min}} do {{max}}. 1280 zostawia miejsce na nagłówki tunelu.',
           allowPrivate: 'Zezwalaj na cele prywatne',

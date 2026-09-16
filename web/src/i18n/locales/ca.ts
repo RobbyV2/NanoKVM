@@ -1182,6 +1182,9 @@ const ca = {
           dnsAdd: 'Afegeix un servidor',
           dnsRemove: 'Elimina el servidor',
           dnsInvalid: 'Introduïu només adreces IP',
+          dnsDenied:
+            'Les adreces loopback, link-local, multicast i 198.18/15 no es poden assolir a través de la sortida',
+          dnsPrivate: 'Un resolutor privat requereix activar Permet destinacions privades',
           mtu: 'MTU',
           mtuTip: 'De {{min}} a {{max}}. 1280 deixa espai per a les capçaleres del túnel.',
           allowPrivate: 'Permet destinacions privades',

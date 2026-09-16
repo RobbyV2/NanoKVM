@@ -1193,6 +1193,9 @@ const nl = {
           dnsAdd: 'Server toevoegen',
           dnsRemove: 'Server verwijderen',
           dnsInvalid: 'Voer alleen IP-adressen in',
+          dnsDenied:
+            'Loopback-, link-local-, multicast- en 198.18/15-adressen zijn niet bereikbaar via de uitgang',
+          dnsPrivate: 'Een privé-resolver vereist dat Privébestemmingen toestaan is ingeschakeld',
           mtu: 'MTU',
           mtuTip: '{{min}} tot {{max}}. 1280 laat ruimte voor de tunnel-headers.',
           allowPrivate: 'Privébestemmingen toestaan',

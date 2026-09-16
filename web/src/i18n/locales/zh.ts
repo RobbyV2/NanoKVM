@@ -1120,6 +1120,8 @@ const zh = {
           dnsAdd: '添加服务器',
           dnsRemove: '移除服务器',
           dnsInvalid: '只能输入 IP 地址',
+          dnsDenied: '无法通过出口访问 loopback、link-local、多播及 198.18/15 地址',
+          dnsPrivate: '使用私有解析器需要开启“允许私有目的地”',
           mtu: 'MTU',
           mtuTip: '{{min}} 到 {{max}}。1280 可为隧道头部留出空间。',
           allowPrivate: '允许私有目标地址',

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/extensions/exit.ts';
 
-import { advancedValuesKey, isValidDNS } from './state.ts';
+import { advancedValuesKey, resolverProblem } from './state.ts';
 import type { ExitAdvancedValues } from './state.ts';
 import { dnsMax, mtuMax, mtuMin } from './types.ts';
 import type { ExitConfig } from './types.ts';
@@ -57,7 +57,11 @@ export const ExitAdvanced = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSaving]);
 
-  const isDnsValid = dns.every(isValidDNS);
+  // the first problem among the rows is the hint under them; a private
+  // resolver is judged against the toggle as it is on the form now
+  const dnsProblems = dns.map((address) => resolverProblem(address, allowPrivate));
+  const dnsProblem = dnsProblems.find((problem) => problem !== '') ?? '';
+  const isDnsValid = dnsProblem === '';
   const isMtuValid = mtu !== null && mtu >= mtuMin && mtu <= mtuMax;
   const isDirty =
     !!config &&
@@ -112,7 +116,7 @@ export const ExitAdvanced = ({
             <div key={index} className="flex items-center space-x-2">
               <Input
                 value={address}
-                status={address && !isValidDNS(address) ? 'error' : ''}
+                status={address && dnsProblems[index] !== '' ? 'error' : ''}
                 placeholder="1.1.1.1"
                 spellCheck={false}
                 className="font-mono"
@@ -154,8 +158,8 @@ export const ExitAdvanced = ({
           )}
         </div>
 
-        {!isDnsValid && (
-          <span className="text-xs text-red-500">{t('settings.exit.advanced.dnsInvalid')}</span>
+        {dnsProblem !== '' && (
+          <span className="text-xs text-red-500">{t(`settings.exit.advanced.${dnsProblem}`)}</span>
         )}
       </div>
 

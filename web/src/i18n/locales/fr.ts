@@ -1196,6 +1196,9 @@ const fr = {
           dnsAdd: 'Ajouter un serveur',
           dnsRemove: 'Supprimer le serveur',
           dnsInvalid: 'Saisissez uniquement des adresses IP',
+          dnsDenied:
+            'Les adresses loopback, link-local, multicast et 198.18/15 ne sont pas joignables via la sortie',
+          dnsPrivate: "Un résolveur privé nécessite d'activer Autoriser les destinations privées",
           mtu: 'MTU',
           mtuTip: 'De {{min}} à {{max}}. 1280 laisse de la place aux en-têtes du tunnel.',
           allowPrivate: 'Autoriser les destinations privées',

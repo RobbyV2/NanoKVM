@@ -1162,6 +1162,9 @@ const ko = {
           dnsAdd: '서버 추가',
           dnsRemove: '서버 제거',
           dnsInvalid: 'IP 주소만 입력하세요',
+          dnsDenied:
+            '루프백, 링크 로컬, 멀티캐스트, 198.18/15 주소는 출구를 통해 도달할 수 없습니다',
+          dnsPrivate: '사설 리졸버를 쓰려면 사설 대상 허용을 켜야 합니다',
           mtu: 'MTU',
           mtuTip: '{{min}}부터 {{max}}까지. 1280이면 터널 헤더 공간이 확보됩니다.',
           allowPrivate: '사설 대상 허용',

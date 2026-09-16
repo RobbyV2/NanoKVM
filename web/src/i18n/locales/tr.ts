@@ -1181,6 +1181,9 @@ const tr = {
           dnsAdd: 'Sunucu ekle',
           dnsRemove: 'Sunucuyu kaldır',
           dnsInvalid: 'Yalnızca IP adresi girin',
+          dnsDenied:
+            'Loopback, link-local, multicast ve 198.18/15 adreslerine çıkış üzerinden erişilemez',
+          dnsPrivate: 'Özel bir çözümleyici için Özel hedeflere izin ver açık olmalıdır',
           mtu: 'MTU',
           mtuTip: '{{min}} ile {{max}} arası. 1280, tünel başlıklarına yer bırakır.',
           allowPrivate: 'Özel hedeflere izin ver',

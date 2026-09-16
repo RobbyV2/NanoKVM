@@ -1175,6 +1175,9 @@ const en = {
           dnsAdd: 'Add server',
           dnsRemove: 'Remove server',
           dnsInvalid: 'Enter IP addresses only',
+          dnsDenied:
+            'Loopback, link-local, multicast and 198.18/15 addresses cannot be reached through the exit',
+          dnsPrivate: 'A private resolver needs Allow private destinations turned on',
           mtu: 'MTU',
           mtuTip: '{{min}} to {{max}}. 1280 leaves room for the tunnel headers.',
           allowPrivate: 'Allow private destinations',

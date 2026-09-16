@@ -12,6 +12,7 @@ import {
   mergeSaved,
   parseOrigin,
   presentCommand,
+  resolverProblem,
   scriptErrorKey,
   serialRefresher,
   wsScheme
@@ -217,13 +218,73 @@ test('the platform tab follows the browser', () => {
   assert.equal(detectPlatform(''), 'linux');
 });
 
-test('dns servers are literal ip addresses', () => {
+test('dns servers are literal ip addresses, parsed as the server parses them', () => {
   assert.equal(isValidDNS('1.1.1.1'), true);
+  assert.equal(isValidDNS(' 1.1.1.1 '), true);
   assert.equal(isValidDNS('2606:4700:4700::1111'), true);
+  assert.equal(isValidDNS('1:2:3:4:5:6:7:8'), true);
+  // ipv4-mapped: net.ParseIP takes it, so must the panel
+  assert.equal(isValidDNS('::ffff:1.2.3.4'), true);
   assert.equal(isValidDNS('dns.google'), false);
   assert.equal(isValidDNS('1.1.1'), false);
   assert.equal(isValidDNS('256.1.1.1'), false);
+  assert.equal(isValidDNS('01.1.1.1'), false);
   assert.equal(isValidDNS(''), false);
+  // malformed ipv6 the old charset check let through; `dive,ip` refuses them
+  assert.equal(isValidDNS(':::'), false);
+  assert.equal(isValidDNS(':1'), false);
+  assert.equal(isValidDNS('1:'), false);
+  assert.equal(isValidDNS('1:2:3:4:5:6:7:8:9'), false);
+  assert.equal(isValidDNS('12345::1'), false);
+  assert.equal(isValidDNS('fe80::1%eth0'), false);
+});
+
+test('a resolver the front door would always refuse is refused inline (D21)', () => {
+  for (const denied of [
+    '127.0.0.1',
+    '0.0.0.0',
+    '169.254.169.254',
+    '198.18.0.53',
+    '198.19.255.1',
+    '224.0.0.251',
+    '255.255.255.255',
+    '::',
+    '::1',
+    'fe80::1',
+    'febf::1',
+    'ff02::fb',
+    // mapped loopback is judged as ipv4
+    '::ffff:127.0.0.1'
+  ]) {
+    assert.equal(resolverProblem(denied, true), 'dnsDenied', denied);
+  }
+});
+
+test('a private resolver needs allowPrivate, a public one never does', () => {
+  for (const priv of [
+    '10.0.0.53',
+    '100.64.0.1',
+    '172.16.0.1',
+    '172.31.255.254',
+    '192.168.1.1',
+    'fd00::53',
+    'fc00::1'
+  ]) {
+    assert.equal(resolverProblem(priv, false), 'dnsPrivate', priv);
+    assert.equal(resolverProblem(priv, true), '', priv);
+  }
+  for (const pub of [
+    '1.1.1.1',
+    '8.8.8.8',
+    '172.32.0.1',
+    '100.128.0.1',
+    '2606:4700:4700::1111',
+    '::ffff:9.9.9.9'
+  ]) {
+    assert.equal(resolverProblem(pub, false), '', pub);
+  }
+  assert.equal(resolverProblem('dns.google', true), 'dnsInvalid');
+  assert.equal(resolverProblem('', true), 'dnsInvalid');
 });
 
 test('the script is asked for only while the gate would serve it', () => {

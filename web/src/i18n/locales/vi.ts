@@ -1175,6 +1175,9 @@ const vi = {
           dnsAdd: 'Thêm máy chủ',
           dnsRemove: 'Xóa máy chủ',
           dnsInvalid: 'Chỉ nhập địa chỉ IP',
+          dnsDenied:
+            'Không thể truy cập địa chỉ loopback, link-local, multicast và 198.18/15 qua exit',
+          dnsPrivate: 'Trình phân giải riêng cần bật Cho phép đích riêng',
           mtu: 'MTU',
           mtuTip: 'Từ {{min}} đến {{max}}. 1280 chừa chỗ cho phần đầu của đường hầm.',
           allowPrivate: 'Cho phép đích riêng tư',

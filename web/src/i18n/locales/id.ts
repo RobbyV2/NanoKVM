@@ -1186,6 +1186,9 @@ const id = {
           dnsAdd: 'Tambah server',
           dnsRemove: 'Hapus server',
           dnsInvalid: 'Masukkan alamat IP saja',
+          dnsDenied:
+            'Alamat loopback, link-local, multicast, dan 198.18/15 tidak dapat dijangkau melalui exit',
+          dnsPrivate: 'Resolver privat memerlukan Izinkan tujuan privat diaktifkan',
           mtu: 'MTU',
           mtuTip: '{{min}} hingga {{max}}. 1280 menyisakan ruang untuk header tunnel.',
           allowPrivate: 'Izinkan tujuan privat',

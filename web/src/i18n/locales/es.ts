@@ -1191,6 +1191,9 @@ const es = {
           dnsAdd: 'Añadir servidor',
           dnsRemove: 'Eliminar servidor',
           dnsInvalid: 'Introduzca solo direcciones IP',
+          dnsDenied:
+            'Las direcciones loopback, link-local, multicast y 198.18/15 no son alcanzables a través de la salida',
+          dnsPrivate: 'Un resolutor privado requiere activar Permitir destinos privados',
           mtu: 'MTU',
           mtuTip: 'De {{min}} a {{max}}. 1280 deja espacio para las cabeceras del túnel.',
           allowPrivate: 'Permitir destinos privados',

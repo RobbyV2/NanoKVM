@@ -1186,6 +1186,9 @@ const pt_br = {
           dnsAdd: 'Adicionar servidor',
           dnsRemove: 'Remover servidor',
           dnsInvalid: 'Informe apenas endereços IP',
+          dnsDenied:
+            'Endereços loopback, link-local, multicast e 198.18/15 não são alcançáveis pela saída',
+          dnsPrivate: 'Um resolvedor privado exige Permitir destinos privados ativado',
           mtu: 'MTU',
           mtuTip: 'De {{min}} a {{max}}. 1280 deixa espaço para os cabeçalhos do túnel.',
           allowPrivate: 'Permitir destinos privados',

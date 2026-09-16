@@ -1189,6 +1189,9 @@ const hu = {
           dnsAdd: 'Kiszolgáló hozzáadása',
           dnsRemove: 'Szerver eltávolítása',
           dnsInvalid: 'Csak IP-címeket adjon meg',
+          dnsDenied:
+            'Loopback, link-local, multicast és 198.18/15 címek nem érhetők el a kijáraton keresztül',
+          dnsPrivate: 'Privát feloldóhoz be kell kapcsolni a Privát célok engedélyezése opciót',
           mtu: 'MTU',
           mtuTip: '{{min}} és {{max}} között. Az 1280 helyet hagy a tunnel fejléceinek.',
           allowPrivate: 'Privát célok engedélyezése',

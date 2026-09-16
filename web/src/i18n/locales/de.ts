@@ -1194,6 +1194,10 @@ const de = {
           dnsAdd: 'Server hinzufügen',
           dnsRemove: 'Server entfernen',
           dnsInvalid: 'Nur IP-Adressen eingeben',
+          dnsDenied:
+            'Loopback-, Link-Local-, Multicast- und 198.18/15-Adressen sind über den Ausgang nicht erreichbar',
+          dnsPrivate:
+            'Ein privater Resolver erfordert, dass Private Ziele erlauben eingeschaltet ist',
           mtu: 'MTU',
           mtuTip: '{{min}} bis {{max}}. 1280 lässt Platz für die Tunnel-Header.',
           allowPrivate: 'Private Ziele erlauben',

@@ -1175,6 +1175,9 @@ const cz = {
           dnsAdd: 'Přidat server',
           dnsRemove: 'Odebrat server',
           dnsInvalid: 'Zadávejte pouze IP adresy',
+          dnsDenied:
+            'Adresy loopback, link-local, multicast a 198.18/15 nejsou přes výstup dosažitelné',
+          dnsPrivate: 'Privátní resolver vyžaduje zapnuté Povolit privátní cíle',
           mtu: 'MTU',
           mtuTip: '{{min}} až {{max}}. 1280 nechává místo pro hlavičky tunelu.',
           allowPrivate: 'Povolit privátní cíle',
