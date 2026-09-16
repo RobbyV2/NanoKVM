@@ -12,10 +12,13 @@
 # os strings carry a one-byte length prefix.
 #
 # Architecture (spec "Client architecture"): one outstanding ReceiveAsync for the
-# WebSocket plus one ReadAsync/ReceiveAsync per stream, polled with Task.WaitAny
-# every 250 ms; every SendAsync awaited synchronously; ReceiveAsync looped on
-# EndOfMessage; a compiled (Add-Type) fingerprint-pinning callback installed on
-# ServicePointManager, which is what ClientWebSocket uses on .NET Framework.
+# WebSocket plus one ReadAsync/ReceiveAsync and, for TCP, at most one WriteAsync per
+# stream, polled with Task.WaitAny every 250 ms; kvm DATA is queued per stream (the
+# kvm's window bounds the queue) and its credit is returned only when the write has
+# completed, so one destination that stops reading never blocks the loop thread;
+# every SendAsync awaited synchronously; ReceiveAsync looped on EndOfMessage; a
+# compiled (Add-Type) fingerprint-pinning callback installed on ServicePointManager,
+# which is what ClientWebSocket uses on .NET Framework.
 #
 # Deviation from the Perl/Python clients, by necessity: ClientWebSocket hides
 # ping/pong control frames, so this client cannot apply the "no frame for 75 s"
@@ -245,16 +248,23 @@ function Send-Window([long]$Sid, [long]$Increment) {
     Send-Frame $T_WINDOW $Sid $p
 }
 
-function Release-Stream($St) {
+function Release-Stream($St, [switch]$Quiet) {
     $script:Streams.Remove($St.Key)
     if ($null -ne $St.Client) { try { $St.Client.Close() } catch { } }
     if ($null -ne $St.Udp) { try { $St.Udp.Close() } catch { } }
     $St.Client = $null; $St.Udp = $null; $St.Stream = $null
-    $St.ReadTask = $null; $St.ConnectTask = $null; $St.UdpTask = $null
+    $St.ReadTask = $null; $St.ConnectTask = $null; $St.UdpTask = $null; $St.WriteTask = $null
     if ($St.Reserved -gt 0) {
         # a read that never completed had credit reserved; hand it back
         $script:ConnCredit += $St.Reserved
         $St.Reserved = 0
+    }
+    $queued = [long]$St.WriteLen + [long]$St.PendingBytes
+    if ($null -ne $St.Pending) { $St.Pending.Clear() }
+    $St.PendingBytes = 0; $St.WriteLen = 0
+    if ($queued -gt 0 -and -not $Quiet) {
+        # kvm bytes that never reached the socket: hand the connection window back anyway
+        Add-Consumed $St $queued -ConnOnly
     }
 }
 
@@ -268,12 +278,13 @@ function Reset-Stream($St, [int]$Reason) {
     Release-Stream $St
 }
 
-function Add-Consumed($St, [long]$N) {
+function Add-Consumed($St, [long]$N, [switch]$ConnOnly) {
     $script:ConnUnacked += $N
     if ($script:ConnUnacked -ge [Math]::Floor($script:ConnWindow / 2)) {
         Send-Window 0 $script:ConnUnacked
         $script:ConnUnacked = 0
     }
+    if ($ConnOnly) { return }
     $St.RxUnacked += $N
     if ($St.RxUnacked -ge [Math]::Floor($script:StreamWindow / 2)) {
         Send-Window $St.Sid $St.RxUnacked
@@ -316,6 +327,41 @@ function Complete-StreamRead($St, $Task) {
     Send-Frame $T_DATA $St.Sid (Get-Slice $St.ReadBuf 0 $n)
 }
 
+function Start-StreamWrite($St) {
+    # Issue one WriteAsync while kvm bytes are queued; the next chunk follows its completion.
+    if ($null -ne $St.WriteTask -or $St.Pending.Count -eq 0 -or $St.State -ne 'open') { return }
+    $buf = $St.Pending[0]
+    $St.Pending.RemoveAt(0)
+    $St.PendingBytes -= $buf.Length
+    $St.WriteLen = $buf.Length
+    try {
+        $St.WriteTask = $St.Stream.WriteAsync($buf, 0, $buf.Length)
+    } catch {
+        Reset-Stream $St $R_GENERAL
+    }
+}
+
+function Complete-StreamWrite($St, $Task) {
+    $St.WriteTask = $null
+    if ($Task.IsFaulted -or $Task.IsCanceled) {
+        Reset-Stream $St $R_GENERAL
+        return
+    }
+    $n = $St.WriteLen
+    $St.WriteLen = 0
+    Add-Consumed $St $n
+    if ($St.Pending.Count -gt 0) { Start-StreamWrite $St; return }
+    if ($St.PeerEof) { Shutdown-StreamSend $St }
+}
+
+function Shutdown-StreamSend($St) {
+    # kvm EOF, and every queued byte has reached the socket: half close our sending side.
+    if ($St.Shut) { return }
+    $St.Shut = $true
+    try { $St.Client.Client.Shutdown([System.Net.Sockets.SocketShutdown]::Send) } catch { }
+    if ($St.ReadEof) { Release-Stream $St }
+}
+
 function Complete-Connect($St, $Task) {
     $St.ConnectTask = $null
     if ($Task.IsFaulted -or $Task.IsCanceled) {
@@ -326,7 +372,6 @@ function Complete-Connect($St, $Task) {
     }
     try {
         $St.Stream = $St.Client.GetStream()
-        $St.Stream.WriteTimeout = 30000
         $ep = [System.Net.IPEndPoint]$St.Client.Client.LocalEndPoint
     } catch {
         Fail-Open $St $R_GENERAL
@@ -362,6 +407,7 @@ function Invoke-Open([long]$Sid, [byte[]]$Payload) {
     $st = @{
         Sid = $Sid; Key = "$Sid"; Proto = $proto; State = 'connecting'; Deadline = [DateTime]::UtcNow.AddSeconds($ConnectBudgetSeconds)
         Client = $null; Stream = $null; Udp = $null; ReadTask = $null; ConnectTask = $null; UdpTask = $null
+        WriteTask = $null; Pending = (New-Object 'System.Collections.Generic.List[byte[]]'); PendingBytes = [long]0; WriteLen = [long]0
         ReadBuf = $null; TxCredit = [long]$script:StreamWindow; RxUnacked = [long]0; Reserved = [long]0
         PeerEof = $false; Shut = $false; ReadEof = $false; UdpErrors = 0
     }
@@ -435,19 +481,17 @@ function Invoke-Message([byte[]]$Msg) {
         if ($st.State -ne 'open') { throw "SESSION_END DATA on stream $sid before OPENED" }
         if ($st.Proto -eq 2) { Invoke-UdpOut $st $payload; return }
         if ($st.PeerEof) { Reset-Stream $st $R_GENERAL; return }
-        try {
-            $st.Stream.Write($payload, 0, $payload.Length)
-        } catch {
-            Reset-Stream $st $R_GENERAL
-            return
-        }
-        Add-Consumed $st $payload.Length
+        if ($payload.Length -eq 0) { return }
+        # Never write synchronously here: a destination that has stopped reading would
+        # block the only thread and stall every other stream. Queue and let the loop
+        # drive one WriteAsync; credit goes back to the kvm when the write completes.
+        $st.Pending.Add($payload)
+        $st.PendingBytes += $payload.Length
+        Start-StreamWrite $st
     } elseif ($type -eq $T_EOF) {
         if ($st.Proto -eq 2 -or $st.State -ne 'open' -or $st.PeerEof) { Reset-Stream $st $R_GENERAL; return }
         $st.PeerEof = $true
-        $st.Shut = $true
-        try { $st.Client.Client.Shutdown([System.Net.Sockets.SocketShutdown]::Send) } catch { }
-        if ($st.ReadEof) { Release-Stream $st }
+        if ($st.Pending.Count -eq 0 -and $null -eq $st.WriteTask) { Shutdown-StreamSend $st }
     } elseif ($type -eq $T_RST) {
         Release-Stream $st
     } else {
@@ -555,7 +599,7 @@ function Reset-Session {
 }
 
 function Close-Session([string]$Reason) {
-    foreach ($st in @($script:Streams.Values)) { Release-Stream $st }
+    foreach ($st in @($script:Streams.Values)) { Release-Stream $st -Quiet }
     if ($null -ne $script:Ws) {
         try {
             if ($script:Ws.State -eq [System.Net.WebSockets.WebSocketState]::Open) {
@@ -589,6 +633,7 @@ function Run-Session {
         foreach ($st in $script:Streams.Values) {
             if ($null -ne $st.ConnectTask) { $tasks.Add($st.ConnectTask); $owners.Add($st) }
             if ($null -ne $st.ReadTask) { $tasks.Add($st.ReadTask); $owners.Add($st) }
+            if ($null -ne $st.WriteTask) { $tasks.Add($st.WriteTask); $owners.Add($st) }
             if ($null -ne $st.UdpTask) { $tasks.Add($st.UdpTask); $owners.Add($st) }
         }
         $idx = [System.Threading.Tasks.Task]::WaitAny($tasks.ToArray(), 250)
@@ -604,6 +649,7 @@ function Run-Session {
             if (-not $script:Streams.ContainsKey($st.Key)) { continue }
             if ([object]::ReferenceEquals($t, $st.ConnectTask)) { Complete-Connect $st $t }
             elseif ([object]::ReferenceEquals($t, $st.ReadTask)) { Complete-StreamRead $st $t }
+            elseif ([object]::ReferenceEquals($t, $st.WriteTask)) { Complete-StreamWrite $st $t }
             elseif ([object]::ReferenceEquals($t, $st.UdpTask)) { Complete-UdpReceive $st $t }
         }
     }

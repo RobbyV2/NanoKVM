@@ -13,6 +13,8 @@ and exercises, through --socks:
   open-timeout    connect to a black-holed address -> rep 0x06/0x03/0x04 within 9 s
   policy          with --expect-policy-deny: connect to --bind -> rep 0x02
   concurrent      20 parallel 256 KiB echoes
+  stalled-sink    upload into a destination that never reads while an echo on another
+                  stream must still complete within 5 s (no head-of-line blocking)
   udp-echo        5 datagrams through UDP ASSOCIATE, echoed back with the source recorded
   dns             a real A query for example.com to 1.1.1.1:53 via UDP ASSOCIATE
 
@@ -91,9 +93,11 @@ def recv_all(s):
 
 # --- local servers -----------------------------------------------------------
 
-def tcp_server(bind, handler):
+def tcp_server(bind, handler, rcvbuf=0):
     ls = socket.socket()
     ls.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    if rcvbuf:
+        ls.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)   # inherited by accepted sockets
     ls.bind((bind, 0))
     ls.listen(64)
 
@@ -369,9 +373,78 @@ def t_slow_server(a):
     return "8 MiB into a slow sink in %.1fs, digest ok" % (time.monotonic() - t0)
 
 
+def stalled_sink_handler(c, release):
+    """Accept, never read, close only when the test says so."""
+    release.wait(120)
+    try:
+        c.close()
+    except OSError:
+        pass
+
+
+def t_stalled_sink(a):
+    """Upload into a sink that never reads while another stream must keep flowing.
+
+    The exit's socket send buffer toward the sink fills after roughly one stream window
+    (the first window is absorbed by the kernel buffers, the client hands credit back,
+    the next chunk cannot be written). A client that writes to destinations synchronously
+    blocks its only thread there and every other stream, OPEN included, stalls until its
+    write timeout fires. The echo below must complete within 5 s while the sink stream
+    is wedged; the sink is released only afterwards.
+    """
+    release = threading.Event()
+    sink_port = tcp_server(a.bind, lambda c: stalled_sink_handler(c, release), rcvbuf=4096)
+    echo_port = tcp_server(a.bind, echo_handler)
+    sink, rep = socks_connect(a.socks, a.bind, sink_port)
+    assert rep == 0, "sink rep %d" % rep
+    upload = os.urandom(1 << 20)
+
+    def push():
+        try:
+            sink.sendall(upload)
+        except OSError:
+            pass
+
+    threading.Thread(target=push, daemon=True).start()
+    time.sleep(1.5)                     # let the sink stream wedge
+    try:
+        t0 = time.monotonic()
+        s, rep = socks_connect(a.socks, a.bind, echo_port, timeout=5.0)
+        assert rep == 0, "echo rep %d" % rep
+        payload = os.urandom(256 * 1024)
+        got = bytearray()
+
+        def reader():
+            try:
+                while len(got) < len(payload):
+                    c = s.recv(65536)
+                    if not c:
+                        break
+                    got.extend(c)
+            except OSError:
+                pass
+
+        t = threading.Thread(target=reader)
+        t.start()
+        s.sendall(payload)
+        t.join(5.0)
+        dt = time.monotonic() - t0
+        s.close()
+        assert bytes(got) == payload, "echo stalled behind the sink: %d of %d bytes after %.1fs" % (len(got), len(payload), dt)
+        assert dt < 5.0, "echo took %.1fs" % dt
+    finally:
+        release.set()
+        try:
+            sink.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        sink.close()
+    return "256 KiB echoed in %.2fs while 1 MiB sat in a sink that never reads" % dt
+
+
 TESTS = [("tcp-echo", t_tcp_echo), ("tcp-bulk", t_tcp_bulk), ("half-close", t_half_close),
          ("open-fail", t_open_fail), ("open-timeout", t_open_timeout), ("concurrent", t_concurrent),
-         ("slow-reader", t_slow_reader), ("slow-server", t_slow_server),
+         ("slow-reader", t_slow_reader), ("slow-server", t_slow_server), ("stalled-sink", t_stalled_sink),
          ("udp-echo", t_udp_echo), ("dns", t_dns)]
 
 

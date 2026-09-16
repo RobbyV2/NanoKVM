@@ -14,7 +14,7 @@ no arguments.
 | `client.sh` | POSIX sh + curl (+ openssl on https) | D14 bootstrap: picks python3 or perl, fetches that client, runs it |
 | `testdata/mock_kvm.py` | Python 3 | the kvm side of nexit/1 plus a SOCKS5 front door, for host testing without Go |
 | `testdata/host_tests.py` | Python 3 | drives TCP/UDP/half-close/flow-control/policy tests through the mock's front door |
-| `testdata/windows-checklist.md` | | how to exercise `client.ps1`, which cannot run on the machine this was written on |
+| `testdata/windows-checklist.md` | | how to exercise `client.ps1` on Windows PowerShell 5.1 itself, which the `pwsh` run below does not cover |
 
 ## Templating
 
@@ -137,6 +137,8 @@ open-timeout    10.255.255.1:9 -> rep 0x06 after 6.0 s     same
 concurrent      20 x 256 KiB echoes in parallel            same
 slow-reader     10 MiB, reader stalled 2 s then trickling  same (2.3 s)
 slow-server     8 MiB into a slow sink in 0.9 s            same
+stalled-sink    256 KiB echoed in 0.01 s beside a wedged   same (0.03 s)
+                1 MiB upload into a sink that never reads
 udp-echo        5 datagrams, reply source recorded         same
 dns             A example.com via 1.1.1.1:53 -> 2 answers  same
 ```
@@ -219,11 +221,41 @@ cd server && gofmt -l . && go vet ./service/exit/... && go test -race ./service/
 
 ### PowerShell
 
-Not runnable here (no Windows, no `pwsh`). `client.ps1` was written against .NET Framework
-4.5+ APIs available in Windows PowerShell 5.1 and reviewed for the usual traps (array
-unrolling on return, `-shl` on `[int]`, hashtable key types, `ArraySegment[byte]` construction,
-`Add-Type` re-definition, the `$Host` automatic variable). `testdata/windows-checklist.md` is the
-manual acceptance run.
+No Windows here. `client.ps1` was written against .NET Framework 4.5+ APIs available in
+Windows PowerShell 5.1 and reviewed for the usual traps (array unrolling on return, `-shl` on
+`[int]`, hashtable key types, `ArraySegment[byte]` construction, `Add-Type` re-definition, the
+`$Host` automatic variable). It was then run under PowerShell 7 (`pwsh` 7.6.6, a `dotnet tool`)
+on the same macOS host, templated with `sed` and started as `pwsh -NoProfile -File c.ps1`:
+
+```
+python3 testdata/mock_kvm.py --listen 127.0.0.1:18080 --socks 127.0.0.1:18081 --token tok --allow-private
+  client: exit client for ws://127.0.0.1:18080/exit/0 (allowPrivate=True, pin=none)
+          connected: streamWindow=131072 connWindow=4194304 maxStreams=256
+  mock:   HELLO version=1 flags=0x1 hostname='dhanya-10.local' os='windows'
+python3 testdata/host_tests.py --socks 127.0.0.1:18081 --bind 192.168.139.3   (all PASS)
+  tcp-echo      1 MiB echoed
+  tcp-bulk      10 MiB in 0.17 s (60.5 MB/s), sha256 ok
+  half-close    300 KiB sent, EOF forwarded, reversed back, server EOF forwarded
+  open-fail     closed port -> rep 0x05
+  open-timeout  10.255.255.1:9 -> rep 0x06 after 6.1 s
+  concurrent    20 x 256 KiB echoes in parallel
+  slow-reader   10 MiB with a stalled then trickling reader, sha256 ok (2.3 s)
+  slow-server   8 MiB into a slow sink in 0.9 s, digest ok
+  stalled-sink  256 KiB echoed in 0.03 s while 1 MiB sat in a sink that never reads
+  udp-echo      5 datagrams echoed, reply source recorded
+  dns           A example.com via 1.1.1.1:53 -> 2 answers
+```
+
+`stalled-sink` was added for the head-of-line fix: the first `client.ps1` wrote kvm DATA to
+the destination with a synchronous `NetworkStream.Write` (30 s `WriteTimeout`), so one
+destination that stopped reading blocked the only thread and every other stream with it.
+Against that version the test fails as predicted, `FAIL stalled-sink TimeoutError: timed out
+(6.54s)` on the echo's SOCKS CONNECT with no `OPENED` from the client; with the per-stream
+write queue and one polled `WriteAsync` it passes, and the sink stream holds one stream window.
+
+The `pwsh` run covers the protocol and the task loop on .NET 10, not Windows PowerShell 5.1,
+.NET Framework's `ClientWebSocket`, the `ServicePointManager` pin callback or Windows socket
+buffer sizes. `testdata/windows-checklist.md` is the acceptance run for those.
 
 ## Re-running
 

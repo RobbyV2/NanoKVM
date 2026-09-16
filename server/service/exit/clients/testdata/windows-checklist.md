@@ -1,10 +1,14 @@
 # client.ps1: manual checklist for Windows PowerShell 5.1
 
-`client.ps1` could not be executed where it was written (no Windows, no PowerShell).
-It was written against .NET Framework 4.5+ APIs available in Windows PowerShell 5.1
-and reviewed line by line; this checklist is how it gets exercised for real. Work
-through it once on Windows 10 or 11 before the first live test, and again whenever
-`client.ps1` changes. Tick every box or file the failure with the exact output.
+`client.ps1` targets Windows PowerShell 5.1 on .NET Framework, which is not available
+where it was written. It has been executed under PowerShell 7 (`pwsh` 7.6.6, installed
+as a `dotnet tool`) on macOS against `mock_kvm.py`, where every `host_tests.py` test
+passes; see the README's test log. That run covers the protocol and the task loop but
+not Windows PowerShell 5.1 itself, .NET Framework's `ClientWebSocket`, the
+`ServicePointManager` pin callback or Windows socket buffer sizes. This checklist is how
+those get exercised for real. Work through it once on Windows 10 or 11 before the first
+live test, and again whenever `client.ps1` changes. Tick every box or file the failure
+with the exact output.
 
 ## 0. Prerequisites on the Windows machine
 
@@ -58,6 +62,13 @@ python3 server/service/exit/clients/testdata/host_tests.py --socks 127.0.0.1:180
       reports TimedOut earlier that also maps to 0x06).
 - [ ] `concurrent` PASS (20 parallel streams; task list handling).
 - [ ] `slow-reader` and `slow-server` PASS (credit exhaustion and WINDOW resumption both ways).
+- [ ] `stalled-sink` PASS: 1 MiB is pushed into a destination that accepts and never reads
+      while a 256 KiB echo on another stream must complete within 5 s. This is the
+      head-of-line check: kvm DATA is queued per stream and written with one `WriteAsync`
+      polled in the loop, so a wedged destination must not stop OPEN, other streams' DATA
+      or WINDOW. The Windows send buffer default (64 KiB) makes the sink stream wedge
+      sooner than on macOS; the echo timing must not change. A failure here shows as
+      `TimeoutError` on the echo's CONNECT and `OPEN timed out` on the kvm.
 - [ ] `udp-echo` PASS (UdpClient ReceiveAsync/Send; source recorded in the DATA header).
 - [ ] `dns` PASS (a real A query to 1.1.1.1:53 through UDP ASSOCIATE).
 
@@ -123,7 +134,12 @@ Restart the mock with `--tls` (it prints `FINGERPRINT=<sha256>`), then on Window
 
 ## Known limitations to observe, not fix here
 
-- Each `SendAsync` is awaited synchronously and each TCP `Write` is synchronous (30 s
-  WriteTimeout): one slow destination can stall the loop briefly. Accepted by the spec.
-- Only one WebSocket send is ever in flight; the kvm's per-stream window bounds memory.
+- Each `SendAsync` toward the kvm is awaited synchronously: a kvm that stops reading the
+  WebSocket stalls the loop. Accepted by the spec (one send in flight). Writes toward
+  destinations are asynchronous and queued per stream, so a destination that stops
+  reading holds at most one stream window of bytes and stalls nothing else; there is no
+  write timeout, the bytes sit until the socket errors or the kvm sends RST, exactly as
+  in the Python and Perl clients.
+- Only one WebSocket send is ever in flight; the kvm's per-stream window bounds memory,
+  on both the read and the write side.
 - `Write-Host` output only; nothing is written to files. Run it in its own window.
