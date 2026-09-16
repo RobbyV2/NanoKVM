@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Divider, Popconfirm, Segmented, Switch } from 'antd';
 import { TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import * as api from '@/api/extensions/exit.ts';
 import { ExitAdvanced } from './advanced.tsx';
 import { ExitCommands } from './commands.tsx';
 import { ExitLogs } from './logs.tsx';
-import { isScriptServed } from './state.ts';
+import { isScriptServed, serialRefresher } from './state.ts';
 import { ExitStatusCard } from './status.tsx';
 import { ExitToken } from './token.tsx';
 import { exitModes } from './types.ts';
@@ -35,47 +35,46 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
   const [isStale, setIsStale] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  // one status request in flight at a time: a slow device must not pile up
-  // polls, and a poll that lands after unmount must not touch state
-  const isPolling = useRef(false);
+  // a poll that lands after unmount must not touch state
   const isMounted = useRef(true);
+
+  // the interval polls, the actions refresh: a poll that was in flight when an
+  // action completed answers with the state before it, so the refresh waits
+  // its turn instead of being dropped
+  const statusRefresher = useMemo(
+    () =>
+      serialRefresher(() =>
+        api
+          .getStatus(slot)
+          .then((rsp) => {
+            if (!isMounted.current) return;
+            if (rsp.code !== 0) {
+              setIsStale(true);
+              return;
+            }
+
+            setStatus(rsp.data);
+            setIsStale(false);
+          })
+          .catch(() => {
+            if (isMounted.current) setIsStale(true);
+          })
+      ),
+    [slot]
+  );
 
   useEffect(() => {
     isMounted.current = true;
     getConfig();
     getCommands();
 
-    const timer = setInterval(getStatus, pollInterval);
+    const timer = setInterval(statusRefresher.poll, pollInterval);
     return () => {
       isMounted.current = false;
       clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slot]);
-
-  function getStatus() {
-    if (isPolling.current) return;
-    isPolling.current = true;
-
-    api
-      .getStatus(slot)
-      .then((rsp) => {
-        if (!isMounted.current) return;
-        if (rsp.code !== 0) {
-          setIsStale(true);
-          return;
-        }
-
-        setStatus(rsp.data);
-        setIsStale(false);
-      })
-      .catch(() => {
-        if (isMounted.current) setIsStale(true);
-      })
-      .finally(() => {
-        isPolling.current = false;
-      });
-  }
 
   function getConfig() {
     api
@@ -122,9 +121,14 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
 
     (next === 'enable' ? api.enable(slot) : api.disable(slot))
       .then((rsp) => {
+        if (!isMounted.current) return;
         if (rsp.code !== 0) {
           setErrMsg(rsp.msg);
+          return;
         }
+
+        // the transaction answers with the status after it
+        if (rsp.data) setStatus(rsp.data);
       })
       .catch((err) => {
         setErrMsg(err?.message || 'Failed to update exit tunnel');
@@ -132,7 +136,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       .finally(() => {
         setIsLocked(false);
         setAction('');
-        getStatus();
+        statusRefresher.refresh();
       });
   }
 
@@ -144,8 +148,16 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
     api
       .regenerateToken(slot)
       .then((rsp) => {
+        if (!isMounted.current) return;
         if (rsp.code !== 0) {
           setErrMsg(rsp.msg);
+          return;
+        }
+
+        // the token card must never lag the commands, which are refetched
+        const token = rsp.data?.token;
+        if (typeof token === 'string' && token) {
+          setStatus((current) => ({ ...current, token }));
         }
       })
       .catch((err) => {
@@ -153,7 +165,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       })
       .finally(() => {
         setAction('');
-        getStatus();
+        statusRefresher.refresh();
         // the commands carry the token
         getCommands();
       });
@@ -176,7 +188,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       })
       .finally(() => {
         setAction('');
-        getStatus();
+        statusRefresher.refresh();
       });
   }
 
@@ -200,7 +212,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       })
       .finally(() => {
         setAction('');
-        getStatus();
+        statusRefresher.refresh();
       });
   }
 

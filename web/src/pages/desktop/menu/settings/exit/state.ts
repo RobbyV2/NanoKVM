@@ -122,6 +122,41 @@ export function scriptErrorKey(httpStatus: number): 'scriptGated' | 'scriptFaile
   return httpStatus === 404 ? 'scriptGated' : 'scriptFailed';
 }
 
+// One status request in flight at a time: a slow device must not pile up
+// polls. An interval tick during a request is dropped; a refresh after an
+// action is queued behind the request in flight, because that one was sent
+// before the action and answers with the state before it.
+export function serialRefresher(run: () => Promise<unknown>): {
+  poll: () => void;
+  refresh: () => void;
+} {
+  let inFlight = false;
+  let queued = false;
+
+  function start() {
+    inFlight = true;
+    run()
+      .catch(() => undefined)
+      .then(() => {
+        inFlight = false;
+        if (queued) {
+          queued = false;
+          start();
+        }
+      });
+  }
+
+  return {
+    poll() {
+      if (!inFlight) start();
+    },
+    refresh() {
+      if (inFlight) queued = true;
+      else start();
+    }
+  };
+}
+
 export function formatUptime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   const days = Math.floor(total / 86400);

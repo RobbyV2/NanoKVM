@@ -11,6 +11,7 @@ import {
   parseOrigin,
   presentCommand,
   scriptErrorKey,
+  serialRefresher,
   wsScheme
 } from './state.ts';
 
@@ -236,4 +237,54 @@ test('a 404 from the script route is named as the gate, anything else as a failu
   assert.equal(scriptErrorKey(404), 'scriptGated');
   assert.equal(scriptErrorKey(500), 'scriptFailed');
   assert.equal(scriptErrorKey(0), 'scriptFailed');
+});
+
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('a refresh asked for while a poll is in flight runs once the poll answers', async () => {
+  const pending: (() => void)[] = [];
+  let runs = 0;
+  const status = serialRefresher(() => {
+    runs++;
+    return new Promise<void>((resolve) => pending.push(resolve));
+  });
+
+  // the interval tick: one request, a second tick while it is out is dropped
+  status.poll();
+  status.poll();
+  assert.equal(runs, 1);
+
+  // an action completed while that poll was out: its answer predates the
+  // action, so a follow-up is owed, but only one however many actions asked
+  status.refresh();
+  status.refresh();
+  assert.equal(runs, 1);
+
+  pending[0]();
+  await settle();
+  assert.equal(runs, 2);
+
+  pending[1]();
+  await settle();
+  assert.equal(runs, 2);
+
+  // idle: a refresh goes out at once
+  status.refresh();
+  assert.equal(runs, 3);
+});
+
+test('a failed request does not wedge the refresher', async () => {
+  let runs = 0;
+  const status = serialRefresher(() => {
+    runs++;
+    return Promise.reject(new Error('down'));
+  });
+
+  status.poll();
+  status.refresh();
+  await settle();
+  assert.equal(runs, 2);
+
+  status.poll();
+  assert.equal(runs, 3);
 });
