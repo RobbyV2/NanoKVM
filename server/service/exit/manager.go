@@ -289,7 +289,11 @@ func (m *Manager) Init() {
 				log.Warnf("exit: slot %s state: %s", slot.ID, err)
 			}
 			s := &slotState{slot: slot, cfg: cfg, st: st, bytes: NewCounter()}
-			s.lastPeer = st.PreviousPeer
+			// lastPeer is not seeded from state: st.PreviousPeer is the peer
+			// that was superseded, so seeding it would make the still-
+			// legitimate peer reconnecting after a reboot look like a fresh
+			// supersede (MGR-6). A supersede is recorded only for a peer change
+			// seen in this process lifetime.
 			if cfg.Pending {
 				// A transaction that never finished: converge to off (D18).
 				log.Warnf("exit: slot %s was left pending; disabling", slot.ID)
@@ -568,8 +572,23 @@ func (m *Manager) onClose(s *slotState, b Backend, reason string) {
 }
 
 func (m *Manager) onPeerChange(s *slotState, prev, next proto.ExitPeer) {
+	now := m.deps.Now()
 	m.mu.Lock()
-	m.notePeerLocked(s, next)
+	// The Mode B proxy fires this on the first upgrade (prev is the zero
+	// peer) and on every supersede (prev is the peer that was dropped). Its
+	// lastPeer is never set by a mux hook, so a supersede is recorded from
+	// the hook's prev, not from a lastPeer comparison (MGR-5).
+	if prev.Addr != "" && prev.Addr != next.Addr {
+		log.Warnf("exit: slot %s exit superseded: %s -> %s", s.slot.ID, prev.Addr, next.Addr)
+		pp := prev
+		s.st.PreviousPeer = &pp
+		s.st.PeerChangedAt = &now
+	}
+	p := next
+	s.lastPeer = &p
+	s.peerSource = SourceKey(next.Addr)
+	s.st.LastConnectedAt = &now
+	s.wasConnected = true
 	m.mu.Unlock()
 	m.saveState(s)
 }

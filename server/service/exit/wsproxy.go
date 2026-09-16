@@ -214,7 +214,9 @@ func (p *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var prev *proto.ExitPeer
 	next := proto.ExitPeer{Addr: host, Transport: proto.ExitModeWstunnel}
+	newPeer := false
 	if p.peer == nil || p.peer.Addr != host {
+		newPeer = true
 		if p.peer != nil {
 			cp := *p.peer
 			prev = &cp
@@ -247,8 +249,17 @@ func (p *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Warnf("%s: wstunnel peer %s (pending upgrade) superseded by %s", p.slot.Name(), q.host, r.RemoteAddr)
 		q.cancel()
 	}
-	if prev != nil && p.onPeerChange != nil {
-		p.onPeerChange(*prev, next)
+	// Fire on the first peer too (prev is the zero peer) so the manager can
+	// record its source for the token-regenerate limiter reset (D11); a real
+	// supersede carries the dropped peer as prev (D12). This used to fire only
+	// when a previous peer existed, so peer A's first connection never reached
+	// the manager (MGR-5).
+	if newPeer && p.onPeerChange != nil {
+		var pv proto.ExitPeer
+		if prev != nil {
+			pv = *prev
+		}
+		p.onPeerChange(pv, next)
 	}
 
 	r2 := r.Clone(ctx)

@@ -955,3 +955,68 @@ func TestOnAttachOutlivesTheAttachBudget(t *testing.T) {
 		t.Fatalf("downstream after an over-budget attach = %+v", status.Downstream)
 	}
 }
+
+// TestModeBFirstPeerAndSupersedeAreRecorded: the proxy fires onPeerChange on
+// the first Mode B upgrade (a zero prev) so the connected peer's source is
+// known to the token-regenerate limiter reset (D11), and on a supersede with
+// the dropped peer as prev so previousPeer/peerChangedAt are recorded (D12),
+// which the old lastPeer-comparison path missed for Mode B (MGR-5).
+func TestModeBFirstPeerAndSupersedeAreRecorded(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+
+	// First peer A: no supersede, but the source is recorded.
+	a := proto.ExitPeer{Addr: "203.0.113.7", Transport: proto.ExitModeWstunnel}
+	h.deps.OnPeerChange(proto.ExitPeer{}, a)
+	status, _ := h.mgr.Status(slot)
+	if status.PreviousPeer != nil || status.PeerChangedAt != nil {
+		t.Fatalf("first peer recorded a supersede: %+v", status)
+	}
+	h.mgr.limiter.Fail(SourceKey("203.0.113.7"))
+	if _, err := h.mgr.RegenerateToken(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	if h.mgr.limiter.Len() != 0 {
+		t.Fatal("the connected Mode B peer's limiter entry survived RegenerateToken")
+	}
+
+	// Supersede A -> B: previousPeer is A.
+	h.now = h.now.Add(time.Minute)
+	b := proto.ExitPeer{Addr: "198.51.100.9", Transport: proto.ExitModeWstunnel}
+	h.deps.OnPeerChange(a, b)
+	status, _ = h.mgr.Status(slot)
+	if status.PreviousPeer == nil || status.PreviousPeer.Addr != "203.0.113.7" || status.PeerChangedAt == nil {
+		t.Fatalf("supersede not recorded: %+v", status)
+	}
+}
+
+// TestReconnectAfterRebootIsNotASupersede: the last peer coming back after a
+// reboot, when only the superseded previousPeer was persisted, must not be
+// logged and stamped as a fresh supersede (MGR-6).
+func TestReconnectAfterRebootIsNotASupersede(t *testing.T) {
+	h := newHarness(t)
+	slot := MustSlot("0")
+	a := proto.ExitPeer{Addr: "203.0.113.7:5000", Transport: proto.ExitModeNative}
+	if err := SaveState(slot, State{PreviousPeer: &a}); err != nil {
+		t.Fatal(err)
+	}
+	// A config so Init loads the slot.
+	cfg, _ := DefaultConfig(slot)
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	h.mgr.Init()
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	b := &fakeBackend{peer: proto.ExitPeer{Addr: "198.51.100.9:6000", Hostname: "b", Transport: proto.ExitModeNative}}
+	h.deps.OnSession(b)
+	status, _ := h.mgr.Status(slot)
+	if status.PeerChangedAt != nil {
+		t.Fatalf("a reconnect after reboot was recorded as a supersede: %+v", status)
+	}
+}

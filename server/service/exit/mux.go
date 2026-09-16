@@ -60,14 +60,20 @@ type Mux struct {
 	connecting int
 	pinPeer    bool
 	pinnedHost string
+	// pending holds sessions whose upgrade was admitted but whose HELLO has
+	// not been processed yet (awaitHello, up to HelloTimeout). CloseAll must
+	// close these too, or a session admitted with a token that is being
+	// revoked completes HELLO and attaches after the revoke (MGR-7).
+	pending map[*session]struct{}
 }
 
 // NewMux builds the mux with its dedicated upgrader: 32 KiB buffers and a
 // permissive origin check, since the exit is a script, not a browser.
 func NewMux(slot Slot, hooks MuxHooks) *Mux {
 	return &Mux{
-		slot:  slot,
-		hooks: hooks,
+		slot:    slot,
+		hooks:   hooks,
+		pending: make(map[*session]struct{}),
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  32 << 10,
 			WriteBufferSize: 32 << 10,
@@ -109,11 +115,21 @@ func (m *Mux) Connecting() bool {
 	return m.connecting > 0
 }
 
-// CloseAll ends the current session with reason.
+// CloseAll ends the current session and every admitted-but-unattached one
+// (D11 closes every active exit session on the slot). ServeNative re-checks
+// membership after HELLO and refuses to attach a session CloseAll removed.
 func (m *Mux) CloseAll(reason string) {
 	m.mu.Lock()
 	s := m.current
+	pending := make([]*session, 0, len(m.pending))
+	for ps := range m.pending {
+		pending = append(pending, ps)
+	}
+	m.pending = make(map[*session]struct{})
 	m.mu.Unlock()
+	for _, ps := range pending {
+		ps.Close(reason)
+	}
 	if s != nil {
 		s.Close(reason)
 		<-s.done
@@ -145,13 +161,25 @@ func (m *Mux) ServeNative(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := newSession(m, conn, r.RemoteAddr, host)
+	m.mu.Lock()
+	m.pending[s] = struct{}{}
+	m.mu.Unlock()
 	h, err := s.awaitHello()
 	m.mu.Lock()
 	m.connecting--
+	_, live := m.pending[s]
+	delete(m.pending, s)
 	m.mu.Unlock()
 	if err != nil {
 		log.Warnf("%s: exit %s: %s", m.slot.Name(), r.RemoteAddr, err)
 		s.Close(err.Error())
+		s.finish()
+		return
+	}
+	if !live {
+		// CloseAll closed this session while its HELLO was outstanding: a
+		// revoked or disabled slot must not gain a session now (MGR-7).
+		s.Close("slot stopped")
 		s.finish()
 		return
 	}

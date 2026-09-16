@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"NanoKVM-Server/proto"
+
+	"github.com/gorilla/websocket"
 )
 
 // tcpPair returns two ends of one loopback TCP connection, so tests can
@@ -1112,4 +1114,53 @@ func TestFakeExitCreditsDataOnReleasedStream(t *testing.T) {
 	waitFor(t, "stream-0 WINDOW from the fake", func() bool { return sess.connSendAvailable() == before+ConnWindow/2 })
 	_ = c.Close()
 	_ = us.Close()
+}
+
+// TestMuxCloseAllClosesPreHelloSession: a session admitted by the gate whose
+// HELLO has not arrived yet is not m.current, but CloseAll (Disable,
+// RegenerateToken) must still close it, or it completes HELLO and attaches
+// with the revoked token on a stopped slot (MGR-7).
+func TestMuxCloseAllClosesPreHelloSession(t *testing.T) {
+	old := helloTimeout
+	helloTimeout = 5 * time.Second
+	defer func() { helloTimeout = old }()
+
+	h := newMuxHarness(t)
+	d := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
+	conn, _, err := d.Dial(h.url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	waitFor(t, "upgrade admitted", func() bool { return h.mux.Connecting() })
+
+	h.mux.CloseAll("token regenerated")
+
+	// HELLO arrives late; it must win nothing.
+	_ = conn.WriteMessage(websocket.BinaryMessage, encodeFrame(frameHello, 0, encodeHello(hello{
+		version: nexitVersion, hostname: "late", os: "go",
+	})))
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	for {
+		mt, data, err := conn.ReadMessage()
+		if err != nil {
+			break // the mux closed the connection, as it should
+		}
+		if mt == websocket.BinaryMessage {
+			if fr, e := decodeFrame(data); e == nil && fr.typ == frameWelcome {
+				t.Fatal("a WELCOME reached a session CloseAll should have closed")
+			}
+		}
+	}
+	if h.mux.Current() != nil {
+		t.Fatal("a pre-HELLO session attached after CloseAll")
+	}
+	if h.mux.Connecting() {
+		t.Fatal("mux still reports connecting after CloseAll")
+	}
+	select {
+	case <-h.sessions:
+		t.Fatal("OnSession fired for a session CloseAll closed")
+	default:
+	}
 }

@@ -275,6 +275,16 @@ func TestWSProxySupersede(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c1.Close()
+	// The first peer is reported with a zero prev, so the manager can record
+	// its source (D11); it is not a supersede.
+	select {
+	case ch := <-h.changes:
+		if ch[0].Addr != "" || ch[1].Addr != "198.51.100.1" {
+			t.Fatalf("first-peer change = %+v", ch)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("first-peer change did not fire")
+	}
 	c1b, _, err := h.dialWS(t, "events", "198.51.100.1:1001", nil) // same source, second connection
 	if err != nil {
 		t.Fatal(err)
