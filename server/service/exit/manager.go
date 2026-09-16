@@ -1018,7 +1018,23 @@ func (m *Manager) onRebind(ctx context.Context) {
 func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 	m.mu.Lock()
 	prevGW := s.gw
+	cfg := s.cfg
 	m.mu.Unlock()
+
+	// Re-assert the gadget.route marker (D4). A crash between Disable's marker
+	// removal and its config flip leaves enabled:true with no marker, so
+	// S30rndis would hand out a lease with no router and no DNS; recreate it
+	// idempotently and restart udhcpd so the lease options follow (MGR-9).
+	markerRestored := false
+	if cfg.Enabled && !cfg.Pending {
+		if owner, ok := GadgetRouteOwner(); !ok || owner != s.slot.ID {
+			if err := WriteGadgetRoute(s.slot); err != nil {
+				log.Warnf("exit: slot %s: write gadget.route: %s", s.slot.ID, err)
+			} else {
+				markerRestored = true
+			}
+		}
+	}
 
 	nic, gw := m.resolveNIC(ctx, s)
 	if err := m.down.Start(ctx, s.slot); err != nil {
@@ -1033,6 +1049,12 @@ func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 			if err := m.down.Start(ctx, s.slot); err != nil {
 				log.Warnf("exit: slot %s converge: %s", s.slot.ID, err)
 			}
+		}
+	}
+
+	if markerRestored {
+		if err := m.down.RestartRNDIS(ctx); err != nil {
+			log.Warnf("exit: slot %s: %s", s.slot.ID, err)
 		}
 	}
 

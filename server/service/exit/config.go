@@ -320,6 +320,17 @@ func WriteGadgetRoute(slot Slot) error {
 	return utils.WriteFileAtomic(GadgetRoutePath(), []byte(slot.ID+"\n"), 0o644)
 }
 
+// GadgetRouteOwner returns the slot id named by the marker, ok false when the
+// marker is absent or empty.
+func GadgetRouteOwner() (string, bool) {
+	data, err := os.ReadFile(GadgetRoutePath())
+	if err != nil {
+		return "", false
+	}
+	owner := strings.TrimSpace(string(data))
+	return owner, owner != ""
+}
+
 func RemoveGadgetRoute(slot Slot) error {
 	data, err := os.ReadFile(GadgetRoutePath())
 	if err != nil {

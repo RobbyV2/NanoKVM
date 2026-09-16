@@ -1055,3 +1055,34 @@ func TestSetConfigRejectsUnreachableResolvers(t *testing.T) {
 		t.Fatalf("dns after allowing private = %v", cfg.DNS)
 	}
 }
+
+// TestConvergeRestoresAMissingMarker: a crash mid-Disable can leave
+// enabled:true with the gadget.route marker gone; the watchdog recreates it
+// and restarts udhcpd so the consumer's lease regains the gateway (MGR-9). A
+// tick with the marker present touches nothing.
+func TestConvergeRestoresAMissingMarker(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(GadgetRoutePath()); err != nil {
+		t.Fatalf("marker not written by enable: %v", err)
+	}
+	if err := os.Remove(GadgetRoutePath()); err != nil {
+		t.Fatal(err)
+	}
+	h.reset()
+	h.mgr.Tick(context.Background())
+	data, err := os.ReadFile(GadgetRoutePath())
+	if err != nil || strings.TrimSpace(string(data)) != "0" {
+		t.Fatalf("marker not restored: %q %v", data, err)
+	}
+	h.mustContain("S30rndis restart")
+
+	// The marker is present now; the next tick does not restart udhcpd for it.
+	h.reset()
+	h.mgr.Tick(context.Background())
+	h.mustNotContain("S30rndis restart")
+}
