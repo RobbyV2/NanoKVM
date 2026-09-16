@@ -83,10 +83,17 @@ type muxHarness struct {
 
 func newMuxHarness(t *testing.T) *muxHarness {
 	t.Helper()
+	return newMuxHarnessWith(t, &testCounter{})
+}
+
+// newMuxHarnessWith shares bytes with the caller, as wire.go shares one
+// counter between the mux and the front door.
+func newMuxHarnessWith(t *testing.T, bytes *testCounter) *muxHarness {
+	t.Helper()
 	h := &muxHarness{
 		sessions: make(chan Backend, 16),
 		closes:   make(chan string, 16),
-		bytes:    &testCounter{},
+		bytes:    bytes,
 	}
 	h.policy.Store(&Policy{AllowPrivate: true})
 	h.mux = NewMux(MustSlot("0"), MuxHooks{

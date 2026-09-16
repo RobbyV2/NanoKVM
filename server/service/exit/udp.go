@@ -34,12 +34,16 @@ func (f *FrontDoor) serveUDPAssociate(control net.Conn, stream UDPStream) {
 	lastActivity.Store(time.Now().UnixNano())
 	touch := func() { lastActivity.Store(time.Now().UnixNano()) }
 
+	// hev's control connection goes before the stream: the stream's Close
+	// queues an RST behind the session's writer, which can be stalled for as
+	// long as the WS write timeout by an exit that stopped reading, and hev
+	// must not keep its association (and its 60 s timer) for that long.
 	var wg sync.WaitGroup
 	teardown := sync.OnceFunc(func() {
 		cancel()
 		_ = pc.Close()
-		_ = stream.Close()
 		_ = control.Close()
+		_ = stream.Close()
 	})
 
 	// hev -> exit.
@@ -69,9 +73,8 @@ func (f *FrontDoor) serveUDPAssociate(control net.Conn, stream UDPStream) {
 				continue
 			}
 			touch()
-			if f.bytes != nil {
-				f.bytes.AddUp(int64(len(payload)))
-			}
+			// Bytes are the mux's to count in Mode A (Mode B UDP goes
+			// through serveRelay's counter), so nothing is counted here.
 			if err := stream.Send(dst, payload); err != nil {
 				return
 			}
@@ -93,9 +96,6 @@ func (f *FrontDoor) serveUDPAssociate(control net.Conn, stream UDPStream) {
 				continue // nothing to deliver to yet
 			}
 			touch()
-			if f.bytes != nil {
-				f.bytes.AddDown(int64(len(payload)))
-			}
 			if _, err := pc.WriteTo(encodeSocksUDP(src, payload), p); err != nil {
 				return
 			}

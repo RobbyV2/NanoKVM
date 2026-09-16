@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/netip"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -51,10 +52,11 @@ func (h *fdHarness) dialer(t *testing.T) proxy.ContextDialer {
 }
 
 // attachNative wires a mux session into the front door and returns the
-// fake exit that serves it.
+// fake exit that serves it. The mux shares the front door's counter, as
+// wire.go has it, so a byte counted twice shows up as twice.
 func (h *fdHarness) attachNative(t *testing.T, f *FakeExit) (*muxHarness, Backend) {
 	t.Helper()
-	mh := newMuxHarness(t)
+	mh := newMuxHarnessWith(t, h.bytes)
 	mh.policy.Store(h.policy.Load())
 	s := mh.dial(t, f, "")
 	h.fd.SetNative(s)
@@ -190,9 +192,10 @@ func TestFrontDoorConnectThroughNative(t *testing.T) {
 	}
 	_ = c.Close()
 	waitFor(t, "stream release", func() bool { return s.(*session).streamCount() == 0 })
-	// Mode A bytes are counted by the mux, not the front door.
-	if tot := h.bytes.Totals(); tot.Up != 0 || tot.Down != 0 {
-		t.Fatalf("front door counted %+v in Mode A", tot)
+	// Mode A bytes are counted once, by the mux; the front door shares the
+	// counter and adds nothing.
+	if tot := h.bytes.Totals(); tot.Up != uint64(len(payload)) || tot.Down != uint64(len(payload)) {
+		t.Fatalf("Mode A bytes = %+v, want %d each way counted once", tot, len(payload))
 	}
 }
 
@@ -409,6 +412,64 @@ func TestFrontDoorUDPAssociate(t *testing.T) {
 	_, _ = client.WriteTo(dgram, relay)
 	if _, _, err := client.ReadFrom(buf); err == nil {
 		t.Fatal("relay still answering after control close")
+	}
+}
+
+// blockingUDPStream is a UDPStream whose Close does not return until the
+// test lets it, standing in for a stream whose RST is stuck behind a stalled
+// WebSocket writer.
+type blockingUDPStream struct {
+	closing chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (b *blockingUDPStream) Send(netip.AddrPort, []byte) error { return nil }
+func (b *blockingUDPStream) Recv(ctx context.Context) (netip.AddrPort, []byte, error) {
+	<-ctx.Done()
+	return netip.AddrPort{}, nil, ctx.Err()
+}
+func (b *blockingUDPStream) Close() error {
+	b.once.Do(func() { close(b.closing) })
+	<-b.release
+	return nil
+}
+
+// TestFrontDoorUDPTeardownClosesControlBeforeStream: the idle teardown must
+// free hev's control connection even while the stream's Close is stuck on a
+// backed-up WebSocket writer; the association's end must not wait for the
+// exit to make progress.
+func TestFrontDoorUDPTeardownClosesControlBeforeStream(t *testing.T) {
+	fd := NewFrontDoor(MustSlot("0"), nil, nil)
+	stream := &blockingUDPStream{closing: make(chan struct{}), release: make(chan struct{})}
+	release := sync.OnceFunc(func() { close(stream.release) })
+	defer release()
+	hevSide, control := tcpPair(t)
+	served := make(chan struct{})
+	go func() {
+		defer close(served)
+		fd.serveUDPAssociate(control, stream)
+	}()
+	reply, err := readSocksReply(hevSide)
+	if err != nil || reply[1] != RepSucceeded {
+		t.Fatalf("UDP ASSOCIATE reply %v, %v", reply, err)
+	}
+	select {
+	case <-stream.closing:
+	case <-time.After(udpIdleTimeout * 4):
+		t.Fatal("idle teardown did not start")
+	}
+	// The stream's Close is now blocked. hev's control connection must
+	// already be closed.
+	_ = hevSide.SetReadDeadline(time.Now().Add(time.Second))
+	if _, err := hevSide.Read(make([]byte, 1)); err == nil || isTimeout(err) {
+		t.Fatalf("control read = %v, want closed while stream.Close blocks", err)
+	}
+	release()
+	select {
+	case <-served:
+	case <-time.After(3 * time.Second):
+		t.Fatal("serveUDPAssociate did not return once Close was released")
 	}
 }
 
