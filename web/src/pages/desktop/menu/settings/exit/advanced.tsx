@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/extensions/exit.ts';
 
-import { isValidDNS } from './state.ts';
+import { advancedValuesKey, isValidDNS } from './state.ts';
+import type { ExitAdvancedValues } from './state.ts';
 import { dnsMax, mtuMax, mtuMin } from './types.ts';
 import type { ExitConfig } from './types.ts';
 
@@ -13,10 +14,20 @@ type ExitAdvancedProps = {
   slot: string;
   config?: ExitConfig;
   disabled: boolean;
-  onSaved: (config: ExitConfig) => void;
+  // only the fields the form saved; the parent merges them into its config
+  onSaved: (saved: ExitAdvancedValues) => void;
+  // the parent holds the mode selector still while a save is out, so the two
+  // config writes cannot race
+  onSavingChange: (isSaving: boolean) => void;
 };
 
-export const ExitAdvanced = ({ slot, config, disabled, onSaved }: ExitAdvancedProps) => {
+export const ExitAdvanced = ({
+  slot,
+  config,
+  disabled,
+  onSaved,
+  onSavingChange
+}: ExitAdvancedProps) => {
   const { t } = useTranslation();
 
   const [dns, setDns] = useState<string[]>([]);
@@ -28,14 +39,23 @@ export const ExitAdvanced = ({ slot, config, disabled, onSaved }: ExitAdvancedPr
   const [errMsg, setErrMsg] = useState('');
 
   // the form follows the server until the operator edits it; a save writes
-  // back and the parent's config moves on to the saved values
+  // back and the parent's config moves on to the saved values. It is keyed on
+  // those values, not on the config object: a mode switch swaps the object
+  // and must not throw away an unsaved edit
+  const valuesKey = advancedValuesKey(config);
   useEffect(() => {
     if (!config) return;
     setDns(config.dns ?? []);
     setMtu(config.mtu);
     setAllowPrivate(config.allowPrivate);
     setPinPeer(config.pinPeer);
-  }, [config]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valuesKey]);
+
+  useEffect(() => {
+    onSavingChange(isSaving);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSaving]);
 
   const isDnsValid = dns.every(isValidDNS);
   const isMtuValid = mtu !== null && mtu >= mtuMin && mtu <= mtuMax;
@@ -52,7 +72,7 @@ export const ExitAdvanced = ({ slot, config, disabled, onSaved }: ExitAdvancedPr
     setIsSaved(false);
     setErrMsg('');
 
-    const next = {
+    const next: ExitAdvancedValues = {
       dns: dns.map((address) => address.trim()),
       mtu,
       allowPrivate,
@@ -68,7 +88,7 @@ export const ExitAdvanced = ({ slot, config, disabled, onSaved }: ExitAdvancedPr
         }
 
         setIsSaved(true);
-        onSaved({ ...config, ...next });
+        onSaved(next);
       })
       .catch((err) => {
         setErrMsg(err?.message || 'Failed to save exit config');

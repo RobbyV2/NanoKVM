@@ -8,7 +8,7 @@ import * as api from '@/api/extensions/exit.ts';
 import { ExitAdvanced } from './advanced.tsx';
 import { ExitCommands } from './commands.tsx';
 import { ExitLogs } from './logs.tsx';
-import { isScriptServed, serialRefresher } from './state.ts';
+import { isScriptServed, mergeSaved, serialRefresher } from './state.ts';
 import { ExitStatusCard } from './status.tsx';
 import { ExitToken } from './token.tsx';
 import { exitModes } from './types.ts';
@@ -32,6 +32,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
   const [config, setConfig] = useState<ExitConfig>();
   const [commands, setCommands] = useState<Commands>();
   const [action, setAction] = useState<ExitAction>('');
+  const [isAdvancedSaving, setIsAdvancedSaving] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
@@ -193,7 +194,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
   }
 
   function selectMode(mode: ExitMode) {
-    if (action !== '' || !config || config.mode === mode) return;
+    if (action !== '' || isAdvancedSaving || !config || config.mode === mode) return;
     setAction('mode');
     setErrMsg('');
 
@@ -297,7 +298,7 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
           </div>
 
           <Segmented
-            disabled={isBusy || !config}
+            disabled={isBusy || isAdvancedSaving || !config}
             value={mode}
             onChange={(value) => selectMode(value as ExitMode)}
             options={exitModes.map((value) => ({
@@ -325,7 +326,13 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
 
       <Divider className="opacity-50" />
 
-      <ExitAdvanced slot={slot} config={config} disabled={isBusy} onSaved={setConfig} />
+      <ExitAdvanced
+        slot={slot}
+        config={config}
+        disabled={isBusy}
+        onSaved={(saved) => setConfig((current) => mergeSaved(current, saved))}
+        onSavingChange={setIsAdvancedSaving}
+      />
 
       <Divider className="opacity-50" />
 

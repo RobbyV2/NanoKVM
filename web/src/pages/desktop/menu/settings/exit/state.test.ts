@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  advancedValuesKey,
   detectPlatform,
   formatBytes,
   formatTime,
   formatUptime,
   isScriptServed,
   isValidDNS,
+  mergeSaved,
   parseOrigin,
   presentCommand,
   scriptErrorKey,
@@ -287,4 +289,31 @@ test('a failed request does not wedge the refresher', async () => {
 
   status.poll();
   assert.equal(runs, 3);
+});
+
+const config = {
+  slot: '0',
+  mode: 'native' as const,
+  dns: ['1.1.1.1'],
+  mtu: 1280,
+  allowPrivate: false,
+  pinPeer: false
+};
+
+test('a save lands on the config as it is by then, not as it was when the save started', () => {
+  // the operator switched mode while the save was out and the switch answered first
+  const switched = { ...config, mode: 'wstunnel' as const };
+  const saved = { dns: ['9.9.9.9'], mtu: 1280, allowPrivate: false, pinPeer: false };
+
+  assert.deepEqual(mergeSaved(switched, saved), { ...switched, dns: ['9.9.9.9'] });
+  assert.equal(mergeSaved(undefined, saved), undefined);
+});
+
+test('the advanced form is re-seeded only when the values it edits change', () => {
+  assert.equal(advancedValuesKey({ ...config, mode: 'wstunnel' }), advancedValuesKey(config));
+  assert.notEqual(advancedValuesKey({ ...config, dns: ['9.9.9.9'] }), advancedValuesKey(config));
+  assert.notEqual(advancedValuesKey({ ...config, mtu: 1400 }), advancedValuesKey(config));
+  assert.notEqual(advancedValuesKey({ ...config, allowPrivate: true }), advancedValuesKey(config));
+  assert.notEqual(advancedValuesKey({ ...config, pinPeer: true }), advancedValuesKey(config));
+  assert.equal(advancedValuesKey(undefined), '');
 });

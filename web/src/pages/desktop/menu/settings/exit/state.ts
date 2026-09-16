@@ -1,4 +1,4 @@
-import type { ExitMode, ExitPlatform } from './types.ts';
+import type { ExitConfig, ExitMode, ExitPlatform } from './types.ts';
 
 // scheme is http or https, host is host[:port], both exactly as the server
 // templated them (D15) or as the browser reached this page
@@ -155,6 +155,27 @@ export function serialRefresher(run: () => Promise<unknown>): {
       else start();
     }
   };
+}
+
+// the fields the advanced form edits; the mode has its own selector
+export type ExitAdvancedValues = Pick<ExitConfig, 'dns' | 'mtu' | 'allowPrivate' | 'pinPeer'>;
+
+// A save lands on the config as it is when the save answers, not as it was
+// when it started: a mode switch that resolved in between must not be undone
+// by the save writing back the mode it captured.
+export function mergeSaved(
+  current: ExitConfig | undefined,
+  saved: ExitAdvancedValues
+): ExitConfig | undefined {
+  return current ? { ...current, ...saved } : current;
+}
+
+// The form is re-seeded from the server only when the values it edits change.
+// A mode switch replaces the config object; keying on identity would discard
+// an unsaved DNS or MTU edit without a word.
+export function advancedValuesKey(config?: ExitConfig): string {
+  if (!config) return '';
+  return JSON.stringify([config.dns ?? [], config.mtu, config.allowPrivate, config.pinPeer]);
 }
 
 export function formatUptime(seconds: number): string {
