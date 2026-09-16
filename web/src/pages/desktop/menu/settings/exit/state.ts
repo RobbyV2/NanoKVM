@@ -1,4 +1,4 @@
-import type { ExitPlatform } from './types.ts';
+import type { ExitMode, ExitPlatform } from './types.ts';
 
 // scheme is http or https, host is host[:port], both exactly as the server
 // templated them (D15) or as the browser reached this page
@@ -44,22 +44,68 @@ function replaceUrl(command: string, from: string, to: string): string {
 
 // The server templates the commands from the request it saw (D15). Behind a
 // proxy that is not the address the operator's browser has, so the panel
-// readdresses every http(s):// and ws(s):// url to window.location.
-export function rewriteCommand(command: string, server: Origin, local: Origin): string {
-  if (!server.scheme || !server.host) return command;
-  if (server.scheme === local.scheme && server.host === local.host) return command;
+// readdresses every http(s):// and ws(s):// url to window.location, but only
+// the host: -k, the PowerShell certificate callback, --tls-verify-certificate,
+// the notes and the fingerprint all follow the scheme, and re-templating them
+// here would have to duplicate the server. A scheme the server did not see is
+// therefore shown as the server templated it, with a warning.
+export type CommandView = {
+  text: string;
+  // the scheme the shown command dials with
+  scheme: string;
+  // the host was swapped for the one the browser reached
+  rewritten: boolean;
+  // the server and the browser disagree on the scheme: nothing was rewritten
+  schemeMismatch: boolean;
+  // the command carries the token over plain http
+  cleartext: boolean;
+  // the script pins the fingerprint of the certificate the exit will see
+  pinsFingerprint: boolean;
+  // the script pins the device leaf, but the exit dials a readdressed host that
+  // may terminate tls with another certificate
+  pinUncertain: boolean;
+  // wstunnel dials https without --tls-verify-certificate (D16)
+  wstunnelUnverified: boolean;
+};
 
-  const http = replaceUrl(
-    command,
-    `${server.scheme}://${server.host}`,
-    `${local.scheme}://${local.host}`
-  );
+export function presentCommand(
+  mode: ExitMode,
+  command: { command: string } | undefined,
+  server: Origin,
+  local: Origin,
+  fingerprint: string
+): CommandView {
+  const known = !!server.scheme && !!server.host;
+  const schemeMismatch = known && !!local.scheme && server.scheme !== local.scheme;
+  const rewritten = known && !schemeMismatch && server.host !== local.host;
+  const scheme = known ? server.scheme : local.scheme;
 
-  return replaceUrl(
-    http,
-    `${wsScheme(server.scheme)}://${server.host}`,
-    `${wsScheme(local.scheme)}://${local.host}`
-  );
+  let text = command?.command ?? '';
+  if (rewritten) {
+    text = replaceUrl(text, `${scheme}://${server.host}`, `${scheme}://${local.host}`);
+    text = replaceUrl(
+      text,
+      `${wsScheme(scheme)}://${server.host}`,
+      `${wsScheme(scheme)}://${local.host}`
+    );
+  }
+
+  const cleartext = scheme !== 'https';
+  const pins = !!command && mode === 'native' && !cleartext && !!fingerprint;
+
+  return {
+    text,
+    scheme,
+    rewritten,
+    schemeMismatch,
+    cleartext,
+    pinsFingerprint: pins && !rewritten,
+    pinUncertain: pins && rewritten,
+    // the server adds the flag only behind a CA-signed certificate, so its
+    // absence is the tell
+    wstunnelUnverified:
+      !!command && mode === 'wstunnel' && !cleartext && !command.command.includes('--tls-verify')
+  };
 }
 
 export function formatUptime(seconds: number): string {

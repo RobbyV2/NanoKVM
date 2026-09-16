@@ -1154,6 +1154,10 @@ const cz = {
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Skript se nepodařilo načíst',
           rewritten: 'Adresováno na {{host}}, adresu, kterou tento prohlížeč použil.',
+          warnSchemeMismatch:
+            'NanoKVM viděl požadavek na tuto stránku přes {{server}}, ale prohlížeč ji otevřel na {{local}}. Příkazy jsou adresovány na {{server}}; nastavte proxy, aby posílala X-Forwarded-Proto, a příkazy budou používat vaši adresu.',
+          warnFingerprintReaddressed:
+            'Skript připíná otisk certifikátu {{fingerprint}} tohoto NanoKVM. Pokud {{host}} předloží jiný certifikát, například proxy ukončující TLS, výstup odmítne připojení; propusťte TLS až k NanoKVM nebo se připojte přímo.',
           unavailable: 'Pro tuto platformu není žádný příkaz.',
           regenerateHint:
             'Výstup se připojil. Až vložený příkaz nebudete potřebovat, vygenerujte token znovu; výstup pak bude nutné spustit s novým příkazem.',

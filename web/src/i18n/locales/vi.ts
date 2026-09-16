@@ -1154,6 +1154,10 @@ const vi = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Không lấy được script',
           rewritten: 'Đã trỏ tới {{host}}, địa chỉ mà trình duyệt này đã truy cập.',
+          warnSchemeMismatch:
+            'NanoKVM thấy trang này được yêu cầu qua {{server}}, nhưng trình duyệt truy cập tại {{local}}. Các lệnh được gửi tới {{server}}; hãy cấu hình proxy gửi X-Forwarded-Proto để các lệnh dùng địa chỉ bạn đang dùng.',
+          warnFingerprintReaddressed:
+            'Tập lệnh ghim dấu vân tay chứng chỉ {{fingerprint}} của NanoKVM này. Nếu {{host}} đưa ra chứng chỉ khác, ví dụ proxy kết thúc TLS, exit sẽ từ chối kết nối; hãy cho TLS đi thẳng tới NanoKVM hoặc truy cập trực tiếp.',
           unavailable: 'Không có lệnh cho nền tảng này.',
           regenerateHint:
             'Một thiết bị thoát đã kết nối. Khi không còn cần lệnh đã dán, hãy tạo lại mã thông báo; sau đó phải khởi động lại thiết bị thoát bằng lệnh mới.',

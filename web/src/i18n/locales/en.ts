@@ -1154,6 +1154,10 @@ const en = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Failed to fetch the script',
           rewritten: 'Addressed to {{host}}, the address this browser reached.',
+          warnSchemeMismatch:
+            'The NanoKVM saw this page requested over {{server}}, but the browser reached it at {{local}}. The commands are addressed to {{server}}; have the proxy send X-Forwarded-Proto so they follow the address you use.',
+          warnFingerprintReaddressed:
+            'The script pins the certificate fingerprint {{fingerprint}} of this NanoKVM. If {{host}} presents a different certificate, such as a proxy terminating TLS, the exit refuses to connect; pass TLS through to the NanoKVM or reach it directly.',
           unavailable: 'No command for this platform.',
           regenerateHint:
             'An exit has connected. Once the pasted command is no longer needed, regenerate the token; the exit then has to be restarted with the new one.',

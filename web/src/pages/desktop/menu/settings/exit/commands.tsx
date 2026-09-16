@@ -7,7 +7,7 @@ import { copyText } from '@/lib/clipboard.ts';
 import { getBaseUrl } from '@/lib/service.ts';
 import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
-import { detectPlatform, parseOrigin, rewriteCommand } from './state.ts';
+import { detectPlatform, parseOrigin, presentCommand } from './state.ts';
 import { exitPlatforms } from './types.ts';
 import type { ExitCommands as Commands, ExitMode, ExitPlatform } from './types.ts';
 
@@ -36,21 +36,17 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
   const [errMsg, setErrMsg] = useState('');
 
   // the server templated from the request it saw; the browser knows better
-  // what address it actually reached (D15)
+  // what host it actually reached (D15), but the scheme decides flags the
+  // panel cannot re-template, so a scheme mismatch is shown, not fixed
   const local = useMemo(() => parseOrigin(getBaseUrl('http')), []);
   const server = commands ? { scheme: commands.scheme, host: commands.host } : local;
-  const isRewritten = !!commands && (server.scheme !== local.scheme || server.host !== local.host);
 
   const list = commands ? commands[mode] : [];
   const current = list.find((command) => command.platform === platform);
-  const commandText = current ? rewriteCommand(current.command, server, local) : '';
+  const view = presentCommand(mode, current, server, local, commands?.fingerprint ?? '');
 
-  const isCleartext = local.scheme !== 'https';
-  const hasFingerprint = !!commands?.fingerprint && !isCleartext;
-  // wstunnel cannot pin a fingerprint (D16); the server adds the flag only
-  // behind a CA-signed certificate, so its absence is the tell
-  const isWstunnelUnverified =
-    mode === 'wstunnel' && !isCleartext && !!current && !current.command.includes('--tls-verify');
+  const serverAddress = `${server.scheme}://${server.host}`;
+  const localAddress = `${local.scheme}://${local.host}`;
 
   function copy(key: string, text: string) {
     copyText(text)
@@ -106,13 +102,29 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
           <li>{t('settings.exit.commands.warnDownload')}</li>
           <li>{t('settings.exit.commands.warnSecret')}</li>
           <li>{t('settings.exit.commands.warnReach')}</li>
-          {hasFingerprint && mode === 'native' && (
+          {view.pinsFingerprint && (
             <li className="break-all">
               {t('settings.exit.commands.warnFingerprint', { fingerprint: commands?.fingerprint })}
             </li>
           )}
-          {isCleartext && <li>{t('settings.exit.commands.warnCleartext')}</li>}
-          {isWstunnelUnverified && <li>{t('settings.exit.commands.warnWstunnelUnverified')}</li>}
+          {view.pinUncertain && (
+            <li className="break-all">
+              {t('settings.exit.commands.warnFingerprintReaddressed', {
+                fingerprint: commands?.fingerprint,
+                host: localAddress
+              })}
+            </li>
+          )}
+          {view.cleartext && <li>{t('settings.exit.commands.warnCleartext')}</li>}
+          {view.wstunnelUnverified && <li>{t('settings.exit.commands.warnWstunnelUnverified')}</li>}
+          {view.schemeMismatch && (
+            <li className="break-all">
+              {t('settings.exit.commands.warnSchemeMismatch', {
+                server: serverAddress,
+                local: localAddress
+              })}
+            </li>
+          )}
         </ul>
       </div>
 
@@ -132,7 +144,7 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
             children: current ? (
               <div className="flex flex-col space-y-2">
                 <Input.TextArea
-                  value={commandText}
+                  value={view.text}
                   readOnly
                   autoSize={{ minRows: 2, maxRows: 8 }}
                   spellCheck={false}
@@ -145,7 +157,7 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
                     size="small"
                     type="primary"
                     icon={copiedKey === value ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-                    onClick={() => copy(value, commandText)}
+                    onClick={() => copy(value, view.text)}
                   >
                     {t(copiedKey === value ? 'settings.exit.copied' : 'settings.exit.copy')}
                   </Button>
@@ -165,11 +177,9 @@ export const ExitCommands = ({ slot, mode, token, commands, hasConnected }: Exit
 
                 {current.notes && <span className="text-xs text-neutral-500">{current.notes}</span>}
 
-                {isRewritten && (
+                {view.rewritten && (
                   <span className="text-xs text-neutral-500">
-                    {t('settings.exit.commands.rewritten', {
-                      host: `${local.scheme}://${local.host}`
-                    })}
+                    {t('settings.exit.commands.rewritten', { host: localAddress })}
                   </span>
                 )}
               </div>

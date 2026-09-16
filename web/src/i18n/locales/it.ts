@@ -1172,6 +1172,10 @@ const it = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Impossibile recuperare lo script',
           rewritten: "Indirizzato a {{host}}, l'indirizzo raggiunto da questo browser.",
+          warnSchemeMismatch:
+            "Il NanoKVM ha visto questa pagina richiesta tramite {{server}}, ma il browser l'ha raggiunta su {{local}}. I comandi sono indirizzati a {{server}}; fai inviare X-Forwarded-Proto dal proxy così seguono l'indirizzo che usi.",
+          warnFingerprintReaddressed:
+            "Lo script fissa l'impronta del certificato {{fingerprint}} di questo NanoKVM. Se {{host}} presenta un certificato diverso, ad esempio un proxy che termina TLS, l'exit rifiuta di connettersi; fai passare TLS fino al NanoKVM o raggiungilo direttamente.",
           unavailable: 'Nessun comando per questa piattaforma.',
           regenerateHint:
             "Un'uscita si è connessa. Quando il comando incollato non serve più, rigenerare il token; l'uscita andrà poi riavviata con il nuovo comando.",

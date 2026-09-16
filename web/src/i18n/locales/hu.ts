@@ -1168,6 +1168,10 @@ const hu = {
           scriptTitle: '{{name}} szkript',
           scriptFailed: 'A szkript letöltése nem sikerült',
           rewritten: 'Címzett: {{host}}, a cím, amelyet ez a böngésző elért.',
+          warnSchemeMismatch:
+            'A NanoKVM ezt az oldalt {{server}} címen kérve látta, a böngésző viszont a {{local}} címen érte el. A parancsok a {{server}} címre szólnak; állítsa be a proxyt, hogy X-Forwarded-Proto fejlécet küldjön, így az Ön által használt címet követik.',
+          warnFingerprintReaddressed:
+            'A szkript ennek a NanoKVM-nek a {{fingerprint}} tanúsítvány-ujjlenyomatát rögzíti. Ha {{host}} más tanúsítványt mutat, például egy TLS-t lezáró proxy, a kijárat megtagadja a kapcsolódást; engedje át a TLS-t a NanoKVM-ig, vagy érje el közvetlenül.',
           unavailable: 'Ehhez a platformhoz nincs parancs.',
           regenerateHint:
             'Egy kilépő csatlakozott. Ha a beillesztett parancsra már nincs szükség, generálja újra a tokent; a kilépőt ezután az új paranccsal kell újraindítani.',

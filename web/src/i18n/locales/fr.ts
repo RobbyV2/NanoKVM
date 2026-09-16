@@ -1175,6 +1175,10 @@ const fr = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Impossible de récupérer le script',
           rewritten: "Adressée à {{host}}, l'adresse atteinte par ce navigateur.",
+          warnSchemeMismatch:
+            "Le NanoKVM a vu cette page demandée via {{server}}, mais le navigateur l'a atteinte à {{local}}. Les commandes sont adressées à {{server}} ; faites envoyer X-Forwarded-Proto par le proxy pour qu'elles suivent l'adresse que vous utilisez.",
+          warnFingerprintReaddressed:
+            "Le script épingle l'empreinte du certificat {{fingerprint}} de ce NanoKVM. Si {{host}} présente un autre certificat, par exemple un proxy terminant TLS, la sortie refuse de se connecter ; laissez passer TLS jusqu'au NanoKVM ou joignez-le directement.",
           unavailable: 'Aucune commande pour cette plateforme.',
           regenerateHint:
             "Une sortie s'est connectée. Quand la commande collée n'est plus nécessaire, régénérez le jeton ; la sortie devra alors être relancée avec la nouvelle commande.",

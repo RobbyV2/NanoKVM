@@ -1166,6 +1166,10 @@ const pl = {
           scriptTitle: 'Skrypt {{name}}',
           scriptFailed: 'Nie udało się pobrać skryptu',
           rewritten: 'Zaadresowane do {{host}}, adresu, pod który dotarła ta przeglądarka.',
+          warnSchemeMismatch:
+            'NanoKVM widział żądanie tej strony przez {{server}}, ale przeglądarka dotarła do niej pod {{local}}. Polecenia są adresowane do {{server}}; skonfiguruj proxy, by wysyłało X-Forwarded-Proto, a polecenia użyją Twojego adresu.',
+          warnFingerprintReaddressed:
+            'Skrypt przypina odcisk certyfikatu {{fingerprint}} tego NanoKVM. Jeśli {{host}} przedstawi inny certyfikat, np. proxy kończące TLS, exit odmówi połączenia; przepuść TLS do NanoKVM lub połącz się bezpośrednio.',
           unavailable: 'Brak polecenia dla tej platformy.',
           regenerateHint:
             'Wyjście się połączyło. Gdy wklejone polecenie nie będzie już potrzebne, wygeneruj token ponownie; wyjście trzeba będzie wtedy uruchomić z nowym poleceniem.',

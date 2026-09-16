@@ -1159,6 +1159,10 @@ const ja = {
           scriptTitle: 'スクリプト {{name}}',
           scriptFailed: 'スクリプトを取得できませんでした',
           rewritten: 'このブラウザーがアクセスしたアドレス {{host}} 宛てに書き換えています。',
+          warnSchemeMismatch:
+            'NanoKVM はこのページが {{server}} で要求されたと認識していますが、ブラウザーは {{local}} でアクセスしています。コマンドは {{server}} 宛てです。プロキシに X-Forwarded-Proto を送らせると、使用中のアドレスに合わせられます。',
+          warnFingerprintReaddressed:
+            'スクリプトはこの NanoKVM の証明書フィンガープリント {{fingerprint}} を固定します。{{host}} が別の証明書（TLS を終端するプロキシなど）を提示すると、exit は接続を拒否します。TLS を NanoKVM までパススルーするか、直接アクセスしてください。',
           unavailable: 'このプラットフォーム向けのコマンドはありません。',
           regenerateHint:
             '出口が接続しました。貼り付けたコマンドが不要になったらトークンを再生成してください。その後、出口は新しいコマンドで再起動する必要があります。',

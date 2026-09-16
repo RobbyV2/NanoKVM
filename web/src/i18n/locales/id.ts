@@ -1165,6 +1165,10 @@ const id = {
           scriptTitle: 'Skrip {{name}}',
           scriptFailed: 'Gagal mengambil skrip',
           rewritten: 'Dialamatkan ke {{host}}, alamat yang dijangkau peramban ini.',
+          warnSchemeMismatch:
+            'NanoKVM melihat halaman ini diminta melalui {{server}}, tetapi peramban mencapainya di {{local}}. Perintah ditujukan ke {{server}}; atur proxy agar mengirim X-Forwarded-Proto supaya perintah mengikuti alamat yang Anda gunakan.',
+          warnFingerprintReaddressed:
+            'Skrip menyematkan sidik jari sertifikat {{fingerprint}} NanoKVM ini. Jika {{host}} menyajikan sertifikat lain, misalnya proxy yang mengakhiri TLS, exit menolak terhubung; teruskan TLS langsung ke NanoKVM atau akses langsung.',
           unavailable: 'Tidak ada perintah untuk platform ini.',
           regenerateHint:
             'Sebuah keluar telah terhubung. Setelah perintah yang ditempel tidak lagi diperlukan, buat ulang token; keluar kemudian harus dimulai ulang dengan perintah baru.',

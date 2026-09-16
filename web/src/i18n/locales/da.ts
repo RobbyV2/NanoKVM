@@ -1160,6 +1160,10 @@ const da = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Kunne ikke hente scriptet',
           rewritten: 'Adresseret til {{host}}, den adresse denne browser nåede.',
+          warnSchemeMismatch:
+            'NanoKVM så denne side anmodet over {{server}}, men browseren nåede den på {{local}}. Kommandoerne er adresseret til {{server}}; lad proxyen sende X-Forwarded-Proto, så de følger den adresse du bruger.',
+          warnFingerprintReaddressed:
+            'Scriptet fastgør certifikatfingeraftrykket {{fingerprint}} for denne NanoKVM. Hvis {{host}} viser et andet certifikat, f.eks. en proxy der terminerer TLS, nægter exit at forbinde; send TLS igennem til NanoKVM eller nå den direkte.',
           unavailable: 'Ingen kommando til denne platform.',
           regenerateHint:
             'En exit har forbundet. Generér tokenet igen, når den indsatte kommando ikke længere er nødvendig; exit skal derefter genstartes med den nye.',

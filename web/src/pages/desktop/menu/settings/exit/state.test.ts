@@ -8,41 +8,109 @@ import {
   formatUptime,
   isValidDNS,
   parseOrigin,
-  rewriteCommand,
+  presentCommand,
   wsScheme
 } from './state.ts';
 
 const shCommand =
   "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' https://nanokvm.local/exit/0/client.sh | sh";
 const wstunnelCommand =
-  'wstunnel client -R socks5://127.0.0.1:10820 -P exit/0 -H "Authorization: Bearer k7m2p9vx" wss://nanokvm.local';
+  'wstunnel client -R socks5://127.0.0.1:10820 -P exit/0 -H "Authorization: Bearer k7m2p9vx" --tls-verify-certificate wss://nanokvm.local';
+const fingerprint = 'ab'.repeat(32);
 
-test('a command templated for the address in the browser is left alone', () => {
+test('a command templated for the address in the browser is shown as is', () => {
   const origin = { scheme: 'https', host: 'nanokvm.local' };
 
-  assert.equal(rewriteCommand(shCommand, origin, origin), shCommand);
+  const view = presentCommand('native', { command: shCommand }, origin, origin, fingerprint);
+  assert.equal(view.text, shCommand);
+  assert.equal(view.rewritten, false);
+  assert.equal(view.schemeMismatch, false);
+  assert.equal(view.cleartext, false);
+  assert.equal(view.pinsFingerprint, true);
+  assert.equal(view.pinUncertain, false);
 });
 
-test('a command templated behind a proxy is readdressed to the host the browser reached', () => {
-  const server = { scheme: 'http', host: '10.12.34.1' };
+test('behind a proxy on the same scheme only the host is readdressed', () => {
+  const server = { scheme: 'https', host: '10.12.34.1' };
   const local = { scheme: 'https', host: 'kvm.example.org:8443' };
+
+  const view = presentCommand(
+    'native',
+    { command: shCommand.replace('nanokvm.local', '10.12.34.1') },
+    server,
+    local,
+    fingerprint
+  );
+  assert.equal(
+    view.text,
+    "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' https://kvm.example.org:8443/exit/0/client.sh | sh"
+  );
+  assert.equal(view.rewritten, true);
+  assert.equal(view.schemeMismatch, false);
+  // the script pins the device leaf; a proxy that terminates tls presents another
+  assert.equal(view.pinsFingerprint, false);
+  assert.equal(view.pinUncertain, true);
+});
+
+test('a scheme the server did not see is not templated in the browser', () => {
+  const server = { scheme: 'http', host: '10.12.34.1' };
+  const local = { scheme: 'https', host: 'kvm.example.org' };
 
   const command =
     "curl -fsSL -H 'Authorization: Bearer k7m2p9vx' http://10.12.34.1/exit/0/client.sh | sh";
 
-  assert.equal(
-    rewriteCommand(command, server, local),
-    "curl -fsSL -H 'Authorization: Bearer k7m2p9vx' https://kvm.example.org:8443/exit/0/client.sh | sh"
-  );
+  const view = presentCommand('native', { command }, server, local, '');
+  // rewriting would drop -k and the powershell prefix: curl exit 60 on the device cert
+  assert.equal(view.text, command);
+  assert.equal(view.rewritten, false);
+  assert.equal(view.schemeMismatch, true);
+  assert.equal(view.scheme, 'http');
+  // the command dials http whatever the page was served over
+  assert.equal(view.cleartext, true);
+  assert.equal(view.pinsFingerprint, false);
 });
 
-test('the websocket url of a wstunnel command follows the http scheme', () => {
+test('--tls-verify-certificate never lands on a ws:// url', () => {
   const server = { scheme: 'https', host: 'nanokvm.local' };
   const local = { scheme: 'http', host: '192.168.1.20' };
 
+  const view = presentCommand('wstunnel', { command: wstunnelCommand }, server, local, fingerprint);
+  assert.equal(view.text, wstunnelCommand);
+  assert.equal(view.schemeMismatch, true);
+  assert.equal(view.scheme, 'https');
+  assert.equal(view.cleartext, false);
+  assert.equal(view.wstunnelUnverified, false);
+});
+
+test('the websocket url of a wstunnel command follows the host on the same scheme', () => {
+  const server = { scheme: 'https', host: 'nanokvm.local' };
+  const local = { scheme: 'https', host: 'kvm.example.org' };
+
+  const view = presentCommand('wstunnel', { command: wstunnelCommand }, server, local, fingerprint);
   assert.equal(
-    rewriteCommand(wstunnelCommand, server, local),
-    'wstunnel client -R socks5://127.0.0.1:10820 -P exit/0 -H "Authorization: Bearer k7m2p9vx" ws://192.168.1.20'
+    view.text,
+    'wstunnel client -R socks5://127.0.0.1:10820 -P exit/0 -H "Authorization: Bearer k7m2p9vx" --tls-verify-certificate wss://kvm.example.org'
+  );
+  assert.equal(view.rewritten, true);
+});
+
+test('a wstunnel command without the verify flag is called unauthenticated only over https', () => {
+  const origin = { scheme: 'https', host: 'nanokvm.local' };
+  const plain = { scheme: 'http', host: 'nanokvm.local' };
+  const unverified = wstunnelCommand.replace(' --tls-verify-certificate', '');
+
+  assert.equal(
+    presentCommand('wstunnel', { command: unverified }, origin, origin, '').wstunnelUnverified,
+    true
+  );
+  assert.equal(
+    presentCommand('wstunnel', { command: unverified.replace('wss://', 'ws://') }, plain, plain, '')
+      .wstunnelUnverified,
+    false
+  );
+  assert.equal(
+    presentCommand('native', { command: shCommand }, origin, origin, '').wstunnelUnverified,
+    false
   );
 });
 
@@ -51,7 +119,13 @@ test('a bracketed ipv6 host is replaced literally, not as a pattern', () => {
   const local = { scheme: 'https', host: 'kvm.example.org' };
 
   assert.equal(
-    rewriteCommand('irm https://[fd00::1]:8443/exit/0/client.ps1 | iex', server, local),
+    presentCommand(
+      'native',
+      { command: 'irm https://[fd00::1]:8443/exit/0/client.ps1 | iex' },
+      server,
+      local,
+      ''
+    ).text,
     'irm https://kvm.example.org/exit/0/client.ps1 | iex'
   );
 });
@@ -61,7 +135,13 @@ test('a host that is a prefix of another is not rewritten inside it', () => {
   const local = { scheme: 'https', host: 'kvm2' };
 
   assert.equal(
-    rewriteCommand('curl https://kvm/exit/0/client.sh https://kvm.example.org/x', server, local),
+    presentCommand(
+      'native',
+      { command: 'curl https://kvm/exit/0/client.sh https://kvm.example.org/x' },
+      server,
+      local,
+      ''
+    ).text,
     'curl https://kvm2/exit/0/client.sh https://kvm.example.org/x'
   );
 });
@@ -69,7 +149,24 @@ test('a host that is a prefix of another is not rewritten inside it', () => {
 test('an empty server origin means nothing to rewrite', () => {
   const local = { scheme: 'https', host: 'kvm.example.org' };
 
-  assert.equal(rewriteCommand(shCommand, { scheme: '', host: '' }, local), shCommand);
+  const view = presentCommand(
+    'native',
+    { command: shCommand },
+    { scheme: '', host: '' },
+    local,
+    ''
+  );
+  assert.equal(view.text, shCommand);
+  assert.equal(view.rewritten, false);
+  assert.equal(view.schemeMismatch, false);
+});
+
+test('no command for the platform presents as nothing', () => {
+  const origin = { scheme: 'https', host: 'nanokvm.local' };
+
+  const view = presentCommand('native', undefined, origin, origin, fingerprint);
+  assert.equal(view.text, '');
+  assert.equal(view.pinsFingerprint, false);
 });
 
 test('the websocket scheme pairs with the http one', () => {

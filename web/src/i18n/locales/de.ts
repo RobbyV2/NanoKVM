@@ -1173,6 +1173,10 @@ const de = {
           scriptTitle: 'Skript {{name}}',
           scriptFailed: 'Skript konnte nicht abgerufen werden',
           rewritten: 'Adressiert an {{host}}, die Adresse, die dieser Browser erreicht hat.',
+          warnSchemeMismatch:
+            'Der NanoKVM hat diese Seite über {{server}} angefordert gesehen, der Browser hat sie aber unter {{local}} erreicht. Die Befehle sind an {{server}} adressiert; lassen Sie den Proxy X-Forwarded-Proto senden, damit sie der von Ihnen genutzten Adresse folgen.',
+          warnFingerprintReaddressed:
+            'Das Skript pinnt den Zertifikat-Fingerabdruck {{fingerprint}} dieses NanoKVM. Zeigt {{host}} ein anderes Zertifikat, etwa ein TLS-terminierender Proxy, verweigert der Exit die Verbindung; reichen Sie TLS zum NanoKVM durch oder erreichen Sie ihn direkt.',
           unavailable: 'Kein Befehl für diese Plattform.',
           regenerateHint:
             'Ein Exit hat sich verbunden. Sobald der eingefügte Befehl nicht mehr gebraucht wird, erzeugen Sie das Token neu; der Exit muss dann mit dem neuen Befehl neu gestartet werden.',

@@ -1100,6 +1100,10 @@ const zh = {
           scriptTitle: '脚本 {{name}}',
           scriptFailed: '获取脚本失败',
           rewritten: '已改为指向 {{host}}，即本浏览器访问的地址。',
+          warnSchemeMismatch:
+            'NanoKVM 看到此页面是通过 {{server}} 请求的，但浏览器是经由 {{local}} 访问的。命令指向 {{server}}；请让代理发送 X-Forwarded-Proto，命令便会采用您使用的地址。',
+          warnFingerprintReaddressed:
+            '脚本固定此 NanoKVM 的证书指纹 {{fingerprint}}。若 {{host}} 出示不同的证书（例如终止 TLS 的代理），出口端会拒绝连接；请让 TLS 直通至 NanoKVM，或直接访问它。',
           unavailable: '该平台没有可用命令。',
           regenerateHint:
             '已有出口连接。不再需要粘贴的命令后，请重新生成令牌；之后需用新命令重新启动出口。',

@@ -1172,6 +1172,10 @@ const nl = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Script ophalen mislukt',
           rewritten: 'Geadresseerd aan {{host}}, het adres dat deze browser heeft bereikt.',
+          warnSchemeMismatch:
+            'De NanoKVM zag deze pagina opgevraagd via {{server}}, maar de browser bereikte hem op {{local}}. De opdrachten zijn geadresseerd aan {{server}}; laat de proxy X-Forwarded-Proto sturen zodat ze het adres volgen dat u gebruikt.',
+          warnFingerprintReaddressed:
+            'Het script pint de certificaatvingerafdruk {{fingerprint}} van deze NanoKVM. Als {{host}} een ander certificaat toont, zoals een proxy die TLS afhandelt, weigert de exit te verbinden; laat TLS door tot de NanoKVM of bereik hem rechtstreeks.',
           unavailable: 'Geen commando voor dit platform.',
           regenerateHint:
             'Er is een exit verbonden. Genereer het token opnieuw zodra het geplakte commando niet meer nodig is; de exit moet dan met het nieuwe commando worden herstart.',

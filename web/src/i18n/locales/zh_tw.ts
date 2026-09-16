@@ -1101,6 +1101,10 @@ const zh_tw = {
           scriptTitle: '指令碼 {{name}}',
           scriptFailed: '取得指令碼失敗',
           rewritten: '已改為指向 {{host}}，即本瀏覽器存取的位址。',
+          warnSchemeMismatch:
+            'NanoKVM 看到此頁面是透過 {{server}} 請求的，但瀏覽器是經由 {{local}} 存取。命令指向 {{server}}；請讓代理伺服器傳送 X-Forwarded-Proto，命令便會採用您使用的位址。',
+          warnFingerprintReaddressed:
+            '腳本固定此 NanoKVM 的憑證指紋 {{fingerprint}}。若 {{host}} 出示不同的憑證（例如終止 TLS 的代理伺服器），出口端會拒絕連線；請讓 TLS 直通至 NanoKVM，或直接存取它。',
           unavailable: '該平台沒有可用命令。',
           regenerateHint:
             '已有出口連線。不再需要貼上的命令後，請重新產生權杖；之後需用新命令重新啟動出口。',

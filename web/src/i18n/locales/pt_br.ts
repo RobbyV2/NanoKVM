@@ -1165,6 +1165,10 @@ const pt_br = {
           scriptTitle: 'Script {{name}}',
           scriptFailed: 'Falha ao obter o script',
           rewritten: 'Endereçado a {{host}}, o endereço que este navegador alcançou.',
+          warnSchemeMismatch:
+            'O NanoKVM viu esta página solicitada por {{server}}, mas o navegador a alcançou em {{local}}. Os comandos são endereçados a {{server}}; faça o proxy enviar X-Forwarded-Proto para que sigam o endereço que você usa.',
+          warnFingerprintReaddressed:
+            'O script fixa a impressão digital do certificado {{fingerprint}} deste NanoKVM. Se {{host}} apresentar outro certificado, como um proxy que termina TLS, o exit recusa a conexão; repasse o TLS até o NanoKVM ou acesse-o diretamente.',
           unavailable: 'Nenhum comando para esta plataforma.',
           regenerateHint:
             'Uma saída se conectou. Quando o comando colado não for mais necessário, regenere o token; a saída terá então de ser reiniciada com o novo comando.',

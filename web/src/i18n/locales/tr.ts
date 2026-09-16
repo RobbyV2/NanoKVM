@@ -1160,6 +1160,10 @@ const tr = {
           scriptTitle: '{{name}} betiği',
           scriptFailed: 'Betik alınamadı',
           rewritten: 'Bu tarayıcının ulaştığı adres olan {{host}} için düzenlendi.',
+          warnSchemeMismatch:
+            "NanoKVM bu sayfanın {{server}} üzerinden istendiğini gördü, ancak tarayıcı ona {{local}} adresinden ulaştı. Komutlar {{server}} adresine yönelik; kullandığınız adresi izlemeleri için proxy'nin X-Forwarded-Proto göndermesini sağlayın.",
+          warnFingerprintReaddressed:
+            "Betik bu NanoKVM'nin sertifika parmak izini ({{fingerprint}}) sabitler. {{host}} farklı bir sertifika sunarsa, örneğin TLS'yi sonlandıran bir proxy, exit bağlanmayı reddeder; TLS'yi NanoKVM'ye kadar geçirin veya doğrudan erişin.",
           unavailable: 'Bu platform için komut yok.',
           regenerateHint:
             'Bir çıkış bağlandı. Yapıştırılan komuta artık gerek kalmadığında belirteci yeniden oluşturun; çıkış daha sonra yeni komutla yeniden başlatılmalıdır.',

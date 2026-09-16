@@ -1141,6 +1141,10 @@ const ko = {
           scriptTitle: '스크립트 {{name}}',
           scriptFailed: '스크립트를 가져오지 못했습니다',
           rewritten: '이 브라우저가 접속한 주소인 {{host}} 기준으로 다시 작성되었습니다.',
+          warnSchemeMismatch:
+            'NanoKVM은 이 페이지가 {{server}}로 요청된 것으로 보았지만 브라우저는 {{local}}로 접속했습니다. 명령은 {{server}}로 향합니다. 프록시가 X-Forwarded-Proto를 보내도록 설정하면 사용 중인 주소를 따릅니다.',
+          warnFingerprintReaddressed:
+            '스크립트는 이 NanoKVM의 인증서 지문 {{fingerprint}}을 고정합니다. {{host}}가 다른 인증서(예: TLS를 종단하는 프록시)를 제시하면 exit는 연결을 거부합니다. TLS를 NanoKVM까지 통과시키거나 직접 접속하세요.',
           unavailable: '이 플랫폼용 명령이 없습니다.',
           regenerateHint:
             '출구가 연결되었습니다. 붙여 넣은 명령이 더 필요하지 않으면 토큰을 재생성하세요. 그 뒤에는 출구를 새 명령으로 다시 시작해야 합니다.',
