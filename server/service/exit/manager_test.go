@@ -1086,3 +1086,38 @@ func TestConvergeRestoresAMissingMarker(t *testing.T) {
 	h.mgr.Tick(context.Background())
 	h.mustNotContain("S30rndis restart")
 }
+
+// TestLogsKeepDaemonVocabulary: the generic token-shaped redaction runs only
+// on lines that could carry a token (Bearer / Authorization) and matches only
+// the token alphabet, so ordinary eight-letter daemon words survive and a
+// token-shaped value on a header line is still masked (MGR-11).
+func TestLogsKeepDaemonVocabulary(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := os.MkdirAll(LogDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lines := "listener received incoming request; connection resolved\n" +
+		"Authorization: Bearer abcdefgh accepted\n"
+	if err := os.WriteFile(slot.LogPath("hev"), []byte(lines), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	logs, err := h.mgr.Logs(slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs.Hev) != 2 {
+		t.Fatalf("tail = %v", logs.Hev)
+	}
+	// The daemon line keeps its eight-letter words.
+	for _, word := range []string{"listener", "received", "incoming", "resolved"} {
+		if !strings.Contains(logs.Hev[0], word) {
+			t.Fatalf("redaction blanked %q: %q", word, logs.Hev[0])
+		}
+	}
+	// The header line still has its token-shaped value masked.
+	if strings.Contains(logs.Hev[1], "abcdefgh") || !strings.Contains(logs.Hev[1], "********") {
+		t.Fatalf("token-shaped value on a header line not masked: %q", logs.Hev[1])
+	}
+}

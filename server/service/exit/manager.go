@@ -1228,7 +1228,11 @@ func (m *Manager) Commands(slot Slot, r *http.Request) (proto.GetExitCommandsRsp
 
 const logTailLines = 200
 
-var tokenShaped = regexp.MustCompile(`\b[a-z2-9]{8}\b`)
+// tokenShaped matches only the token alphabet (D10: no i l o 0 1), and the
+// generic pass runs only on a line that could carry a token, so a token left
+// in an Authorization header after a regenerate is still masked without
+// blanking eight-letter daemon words like "shutdown" or "listener" (MGR-11).
+var tokenShaped = regexp.MustCompile(`\b[abcdefghjkmnp-z2-9]{8}\b`)
 
 // Logs tails both daemon logs with token-shaped values redacted.
 func (m *Manager) Logs(slot Slot) (proto.GetExitLogsRsp, error) {
@@ -1243,7 +1247,10 @@ func (m *Manager) Logs(slot Slot) (proto.GetExitLogsRsp, error) {
 			if token != "" {
 				line = strings.ReplaceAll(line, token, "********")
 			}
-			out = append(out, tokenShaped.ReplaceAllString(line, "********"))
+			if carriesToken(line) {
+				line = tokenShaped.ReplaceAllString(line, "********")
+			}
+			out = append(out, line)
 		}
 		return out
 	}
@@ -1251,6 +1258,14 @@ func (m *Manager) Logs(slot Slot) (proto.GetExitLogsRsp, error) {
 		Hev:      redact(tailFile(slot.LogPath("hev"), logTailLines)),
 		Wstunnel: redact(tailFile(slot.LogPath("wstunnel"), logTailLines)),
 	}, nil
+}
+
+// carriesToken reports whether a log line is one where a token could appear,
+// which is only in an Authorization / Bearer header (D10: the token is never
+// in the path). The generic redaction runs only on those lines.
+func carriesToken(line string) bool {
+	lower := strings.ToLower(line)
+	return strings.Contains(lower, "bearer") || strings.Contains(lower, "authorization")
 }
 
 func tailFile(path string, n int) []string {
