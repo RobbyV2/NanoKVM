@@ -1188,7 +1188,11 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 		s, _ = m.get(slot)
 	}
 	// Compare against something whatever happened, so an unknown slot costs
-	// the same time as a wrong token.
+	// the same time as a wrong token. The compare only ever counts when the
+	// slot's token is one this package issued: a config whose token is empty
+	// or otherwise invalid (loadConfig repairs those, but the gate does not
+	// rely on it) would otherwise match an absent or malformed header, since
+	// two empty strings compare equal.
 	expected := strings.Repeat("x", TokenLength)
 	var cfg Config
 	var c *components
@@ -1197,9 +1201,13 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 		cfg = s.cfg
 		c = s.comps
 		m.mu.Unlock()
+	}
+	valid := s != nil && ValidToken(cfg.Token)
+	if valid {
 		expected = cfg.Token
 	}
-	ok := subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) == 1
+	match := subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) == 1
+	ok := valid && match
 	if s == nil || !ok || !cfg.Enabled || c == nil {
 		m.limiter.Fail(source)
 		return false

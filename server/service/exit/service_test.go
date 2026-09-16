@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -396,4 +398,51 @@ func TestRejectionPathsAreOneGin404(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Run("disabled slot", func(t *testing.T) { same(t, "/exit/0/events", cfg.Token, "203.0.113.10:1", true) })
+}
+
+// SEC-1: an on-disk token that this package never issued (hand-edited,
+// restored, or simply missing from the JSON) must never turn the gate into an
+// open door for a request that carries no token at all.
+func TestGateNeverAdmitsAnEmptyHeaderAgainstAnEmptyToken(t *testing.T) {
+	h := newHarness(t)
+	if err := os.MkdirAll(ConfigDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	corrupt := `{"slot":"0","enabled":true,"pending":false,"mode":"native","token":"","nic":"gadget","mtu":1280}` + "\n"
+	if err := os.WriteFile(filepath.Join(ConfigDir, "0.json"), []byte(corrupt), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.mgr.Init()
+	svc := NewService(h.mgr)
+	r := gateEngine(svc)
+
+	// The load repaired the file: a fresh token, and the slot forced off so the
+	// operator re-enables it with the new token in hand.
+	cfg, ok, err := LoadConfig(MustSlot("0"))
+	if err != nil || !ok {
+		t.Fatalf("slot 0 config: ok=%v err=%v", ok, err)
+	}
+	if !ValidToken(cfg.Token) || cfg.Enabled {
+		t.Fatalf("corrupt token not repaired: %+v", cfg)
+	}
+	if rec := perform(r, "/exit/0/native", "", "203.0.113.7:2"); rec.Code != http.StatusNotFound || h.mux.served != 0 {
+		t.Fatalf("empty header admitted after load: %d served=%d", rec.Code, h.mux.served)
+	}
+
+	// Belt and braces: even with an empty token sitting in memory on an enabled
+	// slot with live components, the gate itself refuses an empty header.
+	if err := h.mgr.Enable(context.Background(), MustSlot("0")); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := h.mgr.get(MustSlot("0"))
+	h.mgr.mu.Lock()
+	s.cfg.Token = ""
+	h.mgr.mu.Unlock()
+	if rec := perform(r, "/exit/0/native", "", "203.0.113.7:3"); rec.Code != http.StatusNotFound || h.mux.served != 0 {
+		t.Fatalf("empty header admitted against an empty token: %d served=%d", rec.Code, h.mux.served)
+	}
+	// And the dummy the gate compares against is not itself a valid token.
+	if rec := perform(r, "/exit/0/native", strings.Repeat("x", TokenLength), "203.0.113.7:4"); rec.Code != http.StatusNotFound || h.mux.served != 0 {
+		t.Fatalf("placeholder token admitted: %d served=%d", rec.Code, h.mux.served)
+	}
 }

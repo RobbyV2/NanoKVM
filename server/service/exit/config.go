@@ -157,6 +157,24 @@ func loadConfig(slot Slot) (Config, bool, error) {
 	}
 	cfg.Slot = slot.ID
 	cfg.Normalize()
+	if !ValidToken(cfg.Token) {
+		// A token this package never issued (hand-edited, restored from
+		// elsewhere, or missing from the JSON) is the one field the gate
+		// cannot be defensive about on its own: an empty token would compare
+		// equal to an absent header. Repair it here, force the slot off so the
+		// operator re-enables with the new token in hand, and write the repair
+		// back so every boot sees the same token.
+		token, err := NewToken()
+		if err != nil {
+			return Config{}, false, fmt.Errorf("repair %s: %w", slot.ConfigPath(), err)
+		}
+		cfg.Token = token
+		cfg.TokenCreatedAt = time.Now().UTC().Truncate(time.Second)
+		cfg.Enabled, cfg.Pending = false, false
+		if err := saveConfig(cfg); err != nil {
+			return Config{}, false, fmt.Errorf("repair %s: %w", slot.ConfigPath(), err)
+		}
+	}
 	return cfg, true, nil
 }
 
