@@ -87,6 +87,14 @@ func TestCertificateFingerprint(t *testing.T) {
 	}
 }
 
+// allCommands is every one-liner a response carries, both modes and the
+// latest-fetch pair.
+func allCommands(rsp proto.GetExitCommandsRsp) []proto.ExitCommand {
+	all := append([]proto.ExitCommand{}, rsp.Native...)
+	all = append(all, rsp.Wstunnel...)
+	return append(all, rsp.WstunnelLatest...)
+}
+
 // Snapshot of every platform for both schemes and both certificate shapes.
 // Regenerate with UPDATE_GOLDEN=1 after a deliberate change to the commands.
 func TestCommandsSnapshot(t *testing.T) {
@@ -109,10 +117,10 @@ func TestCommandsSnapshot(t *testing.T) {
 			if len(rsp.Native) != 3 || len(rsp.Wstunnel) != 3 {
 				t.Fatalf("expected three platforms per mode, got %d/%d", len(rsp.Native), len(rsp.Wstunnel))
 			}
-			if rsp.WstunnelVersion != WstunnelVersion || rsp.Scheme != tc.origin.Scheme || rsp.Host != tc.origin.Host {
+			if rsp.WstunnelVersion != WstunnelVersion || rsp.Scheme != tc.origin.Scheme || rsp.Host != tc.origin.Host || rsp.WstunnelRepo != wstunnelRepoURL {
 				t.Fatalf("header = %+v", rsp)
 			}
-			for _, cmd := range append(append([]proto.ExitCommand{}, rsp.Native...), rsp.Wstunnel...) {
+			for _, cmd := range allCommands(rsp) {
 				if !strings.Contains(cmd.Command, cfg.Token) {
 					t.Fatalf("%s %s command lacks the token: %s", cmd.Platform, cmd.Shell, cmd.Command)
 				}
@@ -142,6 +150,42 @@ func TestCommandsSnapshot(t *testing.T) {
 			for key, sum := range wstunnelSHA256 {
 				if len(sum) != 64 {
 					t.Fatalf("sha256 for %s has length %d", key, len(sum))
+				}
+			}
+
+			// The latest-fetch pair: windows then linux, no macOS, nothing
+			// pinned in them, the same kvm url and verify flag as the pinned
+			// command of the same platform, and the releases page as fallback.
+			latest := rsp.WstunnelLatest
+			if len(latest) != 2 || latest[0].Platform != "windows" || latest[0].Shell != "powershell" || latest[1].Platform != "linux" || latest[1].Shell != "bash" {
+				t.Fatalf("latest = %+v", latest)
+			}
+			if !strings.Contains(latest[0].Command, wstunnelLatestAPI) || !strings.Contains(latest[1].Command, "releases/latest") {
+				t.Fatalf("latest commands do not resolve the release: %+v", latest)
+			}
+			for _, cmd := range latest {
+				if strings.Contains(cmd.Command, "v10.7.1/") {
+					t.Fatalf("latest %s command carries the pin: %s", cmd.Platform, cmd.Command)
+				}
+				for key, sum := range wstunnelSHA256 {
+					if strings.Contains(cmd.Command, sum) {
+						t.Fatalf("latest %s command carries the %s hash: %s", cmd.Platform, key, cmd.Command)
+					}
+				}
+				if !strings.Contains(cmd.Command, "github.com/erebe/wstunnel/releases") {
+					t.Fatalf("latest %s command lacks the fallback link: %s", cmd.Platform, cmd.Command)
+				}
+				if !strings.Contains(cmd.Command, "'"+tc.origin.WSScheme()+"://"+tc.origin.Host+"'") {
+					t.Fatalf("latest %s command does not single-quote the kvm url: %s", cmd.Platform, cmd.Command)
+				}
+				var pinned proto.ExitCommand
+				for _, p := range rsp.Wstunnel {
+					if p.Platform == cmd.Platform {
+						pinned = p
+					}
+				}
+				if strings.Contains(cmd.Command, "--tls-verify-certificate") != strings.Contains(pinned.Command, "--tls-verify-certificate") {
+					t.Fatalf("latest %s verify flag differs from the pinned one:\n%s\n%s", cmd.Platform, cmd.Command, pinned.Command)
 				}
 			}
 
@@ -259,7 +303,7 @@ func TestTemplatedValuesAreQuotedPerLanguage(t *testing.T) {
 	// space or a quote, so the quoting is only ever visible as the quotes
 	// themselves, and the UI's readdressing treats a quote as a url boundary.
 	rsp := renderCommands(MustSlot("0"), testConfig(MustSlot("0")), Origin{Scheme: "https", Host: "kvm.example.net:8443"}, Certificate{})
-	for _, cmd := range append(append([]proto.ExitCommand{}, rsp.Native...), rsp.Wstunnel...) {
+	for _, cmd := range allCommands(rsp) {
 		if !strings.Contains(cmd.Command, "'https://kvm.example.net:8443/exit/0/client.") && !strings.Contains(cmd.Command, "'wss://kvm.example.net:8443'") {
 			t.Errorf("%s %s does not quote its url: %s", cmd.Platform, cmd.Shell, cmd.Command)
 		}
@@ -340,7 +384,7 @@ func TestGateAndCommandsRefuseAMetacharacterHost(t *testing.T) {
 	}
 	// The one-liners quote the url they carry, so the host is never bare in a
 	// shell or PowerShell command line even after validation.
-	for _, cmd := range append(append([]proto.ExitCommand{}, rsp.Native...), rsp.Wstunnel...) {
+	for _, cmd := range allCommands(rsp) {
 		if strings.Contains(cmd.Command, " http://kvm.local:8443") || strings.Contains(cmd.Command, " ws://kvm.local:8443") {
 			t.Errorf("%s %s carries the url unquoted: %s", cmd.Platform, cmd.Shell, cmd.Command)
 		}

@@ -24,6 +24,15 @@ const WstunnelVersion = "10.7.1"
 
 const wstunnelReleaseBase = "https://github.com/erebe/wstunnel/releases/download/v" + WstunnelVersion + "/"
 
+// The upstream repository, which the latest-fetch commands resolve at run
+// time and which the UI links as the manual fallback.
+const (
+	wstunnelRepoURL     = "https://github.com/erebe/wstunnel"
+	wstunnelReleasesURL = wstunnelRepoURL + "/releases"
+	wstunnelLatestURL   = wstunnelReleasesURL + "/latest"
+	wstunnelLatestAPI   = "https://api.github.com/repos/erebe/wstunnel/releases/latest"
+)
+
 var wstunnelSHA256 = map[string]string{
 	"linux_amd64":   "fa842ed53fbb14b1c69cd98829f9895d7f8a6b0d562c57c1175851a52cea9ea2",
 	"linux_arm64":   "99f9506d01d1b4073254609600ec5056dab8dc58aec75c32f6eb0508335a8fd2",
@@ -266,13 +275,26 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	if !origin.TLS() {
 		wstunnelNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
 	}
-	client := fmt.Sprintf("client -P %s -H %s -R socks5://%s%s %s",
-		slot.ClientPathPrefix(), shQuote(auth), slot.WstunnelReverseAddr(), verify, shQuote(origin.WSScheme()+"://"+origin.Host))
+	// The client arguments are the same for every wstunnel command; only the
+	// string quoting follows the shell.
+	clientArgs := func(quote func(string) string) string {
+		return fmt.Sprintf("client -P %s -H %s -R socks5://%s%s %s",
+			slot.ClientPathPrefix(), quote(auth), slot.WstunnelReverseAddr(), verify, quote(origin.WSScheme()+"://"+origin.Host))
+	}
+	client := clientArgs(shQuote)
+	psClient := clientArgs(psQuote)
 
 	wstunnel := []proto.ExitCommand{
-		{Platform: "windows", Shell: "powershell", Command: wstunnelWindows(slot, cfg, origin, verify), Notes: wstunnelNote},
+		{Platform: "windows", Shell: "powershell", Command: wstunnelWindows(psClient), Notes: wstunnelNote},
 		{Platform: "macos", Shell: "bash", Command: wstunnelUnix("darwin", "shasum -a 256 -c -", client), Notes: wstunnelNote},
 		{Platform: "linux", Shell: "bash", Command: wstunnelUnix("linux", "sha256sum -c -", client), Notes: wstunnelNote},
+	}
+
+	latestNote := "Resolves the newest wstunnel release at run time and verifies the download against that release's own checksums.txt, which proves same-source integrity rather than the pinned hash. " +
+		"If the fetch fails, download it by hand from " + wstunnelReleasesURL + "."
+	latest := []proto.ExitCommand{
+		{Platform: "windows", Shell: "powershell", Command: wstunnelLatestWindows(psClient), Notes: latestNote},
+		{Platform: "linux", Shell: "bash", Command: wstunnelLatestLinux(client), Notes: latestNote},
 	}
 
 	return proto.GetExitCommandsRsp{
@@ -280,8 +302,10 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 		Host:            origin.Host,
 		Fingerprint:     cert.Fingerprint,
 		WstunnelVersion: WstunnelVersion,
+		WstunnelRepo:    wstunnelRepoURL,
 		Native:          native,
 		Wstunnel:        wstunnel,
+		WstunnelLatest:  latest,
 	}
 }
 
@@ -302,7 +326,7 @@ func wstunnelUnix(platform, checker, client string) string {
 	}, "; ")
 }
 
-func wstunnelWindows(slot Slot, cfg Config, origin Origin, verify string) string {
+func wstunnelWindows(client string) string {
 	return strings.Join([]string{
 		fmt.Sprintf(`$v='%s'`, WstunnelVersion),
 		`$a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}`,
@@ -313,9 +337,54 @@ func wstunnelWindows(slot Slot, cfg Config, origin Origin, verify string) string
 		fmt.Sprintf(`Invoke-WebRequest -UseBasicParsing "%swstunnel_%s_windows_$a.tar.gz" -OutFile $f`, wstunnelReleaseBase, WstunnelVersion),
 		`if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }`,
 		`tar -xzf $f -C $d`,
-		fmt.Sprintf(`& (Join-Path $d 'wstunnel.exe') client -P %s -H %s -R socks5://%s%s %s`,
-			slot.ClientPathPrefix(), psQuote("Authorization: Bearer "+cfg.Token), slot.WstunnelReverseAddr(), verify, psQuote(origin.WSScheme()+"://"+origin.Host)),
+		`& (Join-Path $d 'wstunnel.exe') ` + client,
 	}, "; ")
+}
+
+// wstunnelLatestLinux resolves the newest release from the releases/latest
+// redirect, downloads that tag's asset and checks it against the same tag's
+// checksums.txt: same-source integrity, weaker than the pin. POSIX sh, so no
+// ERR trap; every network step falls through to fail with the releases page.
+func wstunnelLatestLinux(client string) string {
+	download := wstunnelReleasesURL + "/download/v$v/"
+	return strings.Join([]string{
+		"set -e",
+		fmt.Sprintf(`fail() { echo "could not fetch the latest wstunnel ($1); download it from %s" >&2; exit 1; }`, wstunnelReleasesURL),
+		`d=$(mktemp -d)`,
+		`cd "$d"`,
+		`case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) echo "unsupported architecture: $(uname -m)" >&2; exit 1;; esac`,
+		fmt.Sprintf(`v=$(curl -fsSLo /dev/null -w '%%{url_effective}' %s) || fail resolve`, wstunnelLatestURL),
+		`v=${v##*/v}`,
+		`f="wstunnel_${v}_linux_${a}.tar.gz"`,
+		fmt.Sprintf(`curl -fsSLo wstunnel.tgz "%s$f" || fail download`, download),
+		fmt.Sprintf(`curl -fsSL "%schecksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum`, download),
+		"tar -xzf wstunnel.tgz wstunnel || fail extract",
+		"exec ./wstunnel " + client,
+	}, "; ")
+}
+
+// wstunnelLatestWindows is the same for PowerShell 5.1 and 7: the tag comes
+// from the releases API (Invoke-RestMethod parses the JSON on both), the hash
+// from that tag's checksums.txt, and any failure rethrows with the releases
+// page. -ne compares case-insensitively, so Get-FileHash's upper case matches.
+func wstunnelLatestWindows(client string) string {
+	download := wstunnelReleasesURL + "/download/v$v/"
+	steps := strings.Join([]string{
+		fmt.Sprintf(`$v=(Invoke-RestMethod -UseBasicParsing '%s').tag_name.TrimStart('v')`, wstunnelLatestAPI),
+		`$a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}`,
+		`$n="wstunnel_${v}_windows_$a.tar.gz"`,
+		`$d=Join-Path $env:TEMP 'wstunnel-latest'`,
+		`New-Item -Force -ItemType Directory $d | Out-Null`,
+		`$f=Join-Path $d 'wstunnel.tar.gz'`,
+		fmt.Sprintf(`Invoke-WebRequest -UseBasicParsing "%s$n" -OutFile $f`, download),
+		`$s=Join-Path $d 'checksums.txt'`,
+		fmt.Sprintf(`Invoke-WebRequest -UseBasicParsing "%schecksums.txt" -OutFile $s`, download),
+		`$h=(Select-String -SimpleMatch -Pattern "  $n" -Path $s | Select-Object -First 1).Line`,
+		`if (-not $h -or $h.Split(' ')[0] -ne (Get-FileHash $f -Algorithm SHA256).Hash) { throw 'wstunnel checksum mismatch' }`,
+		`tar -xzf $f -C $d`,
+		`& (Join-Path $d 'wstunnel.exe') ` + client,
+	}, "; ")
+	return fmt.Sprintf(`try { %s } catch { throw "could not fetch the latest wstunnel: $_ Download it from %s" }`, steps, wstunnelReleasesURL)
 }
 
 // Client template placeholders (plan: W3 <-> W1 contract).
