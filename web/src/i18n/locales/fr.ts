@@ -1189,11 +1189,9 @@ const fr = {
             "La cible atteint déjà l'interface web, SSH et VNC de ce NanoKVM par l'adresse du réseau USB. Cette fonction n'y change rien.",
           latestTitle: 'Dernier wstunnel',
           latestDesc:
-            "Résout la dernière version de wstunnel sur GitHub à l'exécution de la commande et vérifie le téléchargement avec le checksums.txt de cette version ; ce n'est donc pas la version épinglée {{version}} et aucun hachage épinglé n'est inclus. Windows et Linux uniquement.",
+            "Résout la dernière version de wstunnel sur GitHub à l'exécution de la commande et vérifie le téléchargement avec le checksums.txt de cette version ; ce n'est donc pas la version épinglée {{version}} et aucun hachage épinglé n'est inclus.",
           latestFallback:
-            'Si la récupération échoue, téléchargez-le depuis github.com/erebe/wstunnel',
-          latestUnavailable:
-            "Il n'existe pas de commande de récupération de la dernière version pour macOS. Utilisez la commande épinglée ci-dessus ou le lien vers le dépôt."
+            'Si la récupération échoue, téléchargez-le depuis github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Avancé',

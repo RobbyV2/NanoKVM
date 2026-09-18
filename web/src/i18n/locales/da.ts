@@ -1174,11 +1174,9 @@ const da = {
             'Målmaskinen når allerede denne NanoKVMs webgrænseflade, SSH og VNC på USB-netværksadressen. Denne funktion ændrer ikke på det.',
           latestTitle: 'Nyeste wstunnel',
           latestDesc:
-            'Finder den nyeste wstunnel-udgivelse på GitHub, når kommandoen kører, og kontrollerer downloaden mod udgivelsens checksums.txt, så det er ikke den fastlåste {{version}} og bærer ingen fastlåst hash. Kun Windows og Linux.',
+            'Finder den nyeste wstunnel-udgivelse på GitHub, når kommandoen kører, og kontrollerer downloaden mod udgivelsens checksums.txt, så det er ikke den fastlåste {{version}} og bærer ingen fastlåst hash.',
           latestFallback:
-            'Hvis hentningen mislykkes, kan du downloade den fra github.com/erebe/wstunnel',
-          latestUnavailable:
-            'Der findes ingen kommando til at hente den nyeste version til macOS. Brug den fastlåste kommando ovenfor eller linket til repositoriet.'
+            'Hvis hentningen mislykkes, kan du downloade den fra github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Avanceret',

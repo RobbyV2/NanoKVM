@@ -1174,10 +1174,8 @@ const tr = {
             'Hedef, bu NanoKVM’in web arayüzüne, SSH ve VNC’sine USB ağ adresi üzerinden zaten erişiyor. Bu özellik bunu değiştirmez.',
           latestTitle: 'En yeni wstunnel',
           latestDesc:
-            'Komut çalıştığında GitHub üzerindeki en yeni wstunnel sürümünü bulur ve indirmeyi o sürümün checksums.txt dosyasıyla doğrular; dolayısıyla sabitlenmiş {{version}} değildir ve sabit bir karma taşımaz. Yalnızca Windows ve Linux.',
-          latestFallback: 'İndirme başarısız olursa github.com/erebe/wstunnel adresinden indirin',
-          latestUnavailable:
-            'macOS için en yeni sürümü indiren bir komut yok. Yukarıdaki sabitlenmiş komutu veya depo bağlantısını kullanın.'
+            'Komut çalıştığında GitHub üzerindeki en yeni wstunnel sürümünü bulur ve indirmeyi o sürümün checksums.txt dosyasıyla doğrular; dolayısıyla sabitlenmiş {{version}} değildir ve sabit bir karma taşımaz.',
+          latestFallback: 'İndirme başarısız olursa github.com/erebe/wstunnel adresinden indirin'
         },
         advanced: {
           title: 'Gelişmiş',

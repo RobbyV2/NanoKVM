@@ -54,8 +54,8 @@ export const ExitCommands = ({
   const current = list.find((command) => command.platform === platform);
   const view = presentCommand(mode, current, server, local, commands?.fingerprint ?? '');
 
-  // the latest-release variant exists for windows and linux only; an older
-  // server does not send the list at all, and then the block is not shown
+  // the latest-release variant of the wstunnel command, one per platform; an
+  // older server does not send the list at all, and then the block is not shown
   const latestList = commands?.wstunnelLatest;
   const latest = latestList?.find((command) => command.platform === platform);
   const latestView = presentCommand(mode, latest, server, local, commands?.fingerprint ?? '');
@@ -212,7 +212,7 @@ export const ExitCommands = ({
                   <div className="flex flex-col space-y-2 border-t border-neutral-700/60 pt-2">
                     <span className="text-xs">{t('settings.exit.commands.latestTitle')}</span>
 
-                    {latest ? (
+                    {latest && (
                       <>
                         <span className="text-xs text-neutral-500">
                           {t('settings.exit.commands.latestDesc', {
@@ -260,10 +260,6 @@ export const ExitCommands = ({
                           </span>
                         )}
                       </>
-                    ) : (
-                      <span className="text-xs text-neutral-500">
-                        {t('settings.exit.commands.latestUnavailable')}
-                      </span>
                     )}
 
                     <a

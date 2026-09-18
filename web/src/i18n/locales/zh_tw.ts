@@ -1115,9 +1115,8 @@ const zh_tw = {
             '目標機本來就能透過 USB 網路位址存取此 NanoKVM 的網頁介面、SSH 和 VNC。此功能不改變這一點。',
           latestTitle: '最新 wstunnel',
           latestDesc:
-            '命令執行時解析 GitHub 上最新的 wstunnel 發行版本，並以該版本的 checksums.txt 驗證下載檔案，因此它不是固定版本 {{version}}，也不帶固定雜湊。僅支援 Windows 與 Linux。',
-          latestFallback: '如果取得失敗，請從 github.com/erebe/wstunnel 下載',
-          latestUnavailable: 'macOS 沒有取得最新版的命令。請使用上方的固定版本命令或儲存庫連結。'
+            '命令執行時解析 GitHub 上最新的 wstunnel 發行版本，並以該版本的 checksums.txt 驗證下載檔案，因此它不是固定版本 {{version}}，也不帶固定雜湊。',
+          latestFallback: '如果取得失敗，請從 github.com/erebe/wstunnel 下載'
         },
         advanced: {
           title: '進階',

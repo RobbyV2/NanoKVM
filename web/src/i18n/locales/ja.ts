@@ -1173,11 +1173,9 @@ const ja = {
             'ターゲット機は USB ネットワークアドレス経由で、すでにこの NanoKVM の Web UI、SSH、VNC に到達できます。この機能はそれを変えません。',
           latestTitle: '最新の wstunnel',
           latestDesc:
-            'コマンド実行時に GitHub 上の最新の wstunnel リリースを解決し、そのリリースの checksums.txt でダウンロードを検証します。固定バージョン {{version}} ではなく、固定ハッシュも含みません。Windows と Linux のみ。',
+            'コマンド実行時に GitHub 上の最新の wstunnel リリースを解決し、そのリリースの checksums.txt でダウンロードを検証します。固定バージョン {{version}} ではなく、固定ハッシュも含みません。',
           latestFallback:
-            '取得に失敗した場合は github.com/erebe/wstunnel からダウンロードしてください',
-          latestUnavailable:
-            'macOS 向けの最新版取得コマンドはありません。上の固定バージョンのコマンドかリポジトリのリンクを使用してください。'
+            '取得に失敗した場合は github.com/erebe/wstunnel からダウンロードしてください'
         },
         advanced: {
           title: '詳細設定',

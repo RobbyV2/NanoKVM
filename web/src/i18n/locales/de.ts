@@ -1187,11 +1187,9 @@ const de = {
             'Das Zielgerät erreicht die Weboberfläche, SSH und VNC dieses NanoKVM bereits über die USB-Netzwerkadresse. Diese Funktion ändert daran nichts.',
           latestTitle: 'Neuestes wstunnel',
           latestDesc:
-            'Ermittelt beim Ausführen des Befehls die neueste wstunnel-Version auf GitHub und prüft den Download gegen die checksums.txt dieser Version; es ist also nicht die festgelegte {{version}} und trägt keinen festgelegten Hash. Nur Windows und Linux.',
+            'Ermittelt beim Ausführen des Befehls die neueste wstunnel-Version auf GitHub und prüft den Download gegen die checksums.txt dieser Version; es ist also nicht die festgelegte {{version}} und trägt keinen festgelegten Hash.',
           latestFallback:
-            'Schlägt der Abruf fehl, laden Sie es von github.com/erebe/wstunnel herunter',
-          latestUnavailable:
-            'Für macOS gibt es keinen Befehl zum Abruf der neuesten Version. Verwenden Sie den festgelegten Befehl oben oder den Repository-Link.'
+            'Schlägt der Abruf fehl, laden Sie es von github.com/erebe/wstunnel herunter'
         },
         advanced: {
           title: 'Erweitert',

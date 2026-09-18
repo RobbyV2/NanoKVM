@@ -1179,10 +1179,8 @@ const id = {
             'Target sudah dapat menjangkau antarmuka web, SSH, dan VNC NanoKVM ini di alamat jaringan USB. Fitur ini tidak mengubah hal itu.',
           latestTitle: 'wstunnel terbaru',
           latestDesc:
-            'Saat perintah dijalankan, rilis wstunnel terbaru di GitHub ditentukan dan unduhannya diperiksa terhadap checksums.txt rilis tersebut, jadi ini bukan {{version}} yang disematkan dan tidak membawa hash yang disematkan. Hanya Windows dan Linux.',
-          latestFallback: 'Jika pengambilan gagal, unduh dari github.com/erebe/wstunnel',
-          latestUnavailable:
-            'Tidak ada perintah pengambilan versi terbaru untuk macOS. Gunakan perintah yang disematkan di atas atau tautan repositori.'
+            'Saat perintah dijalankan, rilis wstunnel terbaru di GitHub ditentukan dan unduhannya diperiksa terhadap checksums.txt rilis tersebut, jadi ini bukan {{version}} yang disematkan dan tidak membawa hash yang disematkan.',
+          latestFallback: 'Jika pengambilan gagal, unduh dari github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Lanjutan',

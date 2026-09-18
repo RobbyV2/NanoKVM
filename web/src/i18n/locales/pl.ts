@@ -1180,11 +1180,9 @@ const pl = {
             'Komputer docelowy już dociera do interfejsu WWW, SSH i VNC tego NanoKVM przez adres sieci USB. Ta funkcja tego nie zmienia.',
           latestTitle: 'Najnowszy wstunnel',
           latestDesc:
-            'Podczas uruchamiania polecenia ustala najnowsze wydanie wstunnel na GitHubie i sprawdza pobrany plik względem checksums.txt tego wydania, więc nie jest to przypięta wersja {{version}} i nie zawiera przypiętego skrótu. Tylko Windows i Linux.',
+            'Podczas uruchamiania polecenia ustala najnowsze wydanie wstunnel na GitHubie i sprawdza pobrany plik względem checksums.txt tego wydania, więc nie jest to przypięta wersja {{version}} i nie zawiera przypiętego skrótu.',
           latestFallback:
-            'Jeśli pobieranie się nie powiedzie, pobierz go z github.com/erebe/wstunnel',
-          latestUnavailable:
-            'Dla macOS nie ma polecenia pobierającego najnowszą wersję. Użyj przypiętego polecenia powyżej lub linku do repozytorium.'
+            'Jeśli pobieranie się nie powiedzie, pobierz go z github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Zaawansowane',

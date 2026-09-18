@@ -1113,9 +1113,8 @@ const zh = {
             '目标机本来就能通过 USB 网络地址访问此 NanoKVM 的网页界面、SSH 和 VNC。此功能不改变这一点。',
           latestTitle: '最新 wstunnel',
           latestDesc:
-            '命令运行时解析 GitHub 上最新的 wstunnel 发布版本，并用该版本的 checksums.txt 校验下载文件，因此它不是固定版本 {{version}}，也不带固定哈希。仅支持 Windows 和 Linux。',
-          latestFallback: '如果获取失败，请从 github.com/erebe/wstunnel 下载',
-          latestUnavailable: 'macOS 没有获取最新版的命令。请使用上面的固定版本命令或仓库链接。'
+            '命令运行时解析 GitHub 上最新的 wstunnel 发布版本，并用该版本的 checksums.txt 校验下载文件，因此它不是固定版本 {{version}}，也不带固定哈希。',
+          latestFallback: '如果获取失败，请从 github.com/erebe/wstunnel 下载'
         },
         advanced: {
           title: '高级',

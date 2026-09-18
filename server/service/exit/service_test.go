@@ -225,7 +225,7 @@ func TestAdminHandlersEnvelope(t *testing.T) {
 	if commands.Scheme != "http" || commands.Host != "kvm.local" || len(commands.Native) != 3 {
 		t.Fatalf("commands = %+v", commands)
 	}
-	if len(commands.WstunnelLatest) != 2 || commands.WstunnelRepo != "https://github.com/erebe/wstunnel" {
+	if len(commands.WstunnelLatest) != 3 || commands.WstunnelRepo != "https://github.com/erebe/wstunnel" {
 		t.Fatalf("latest commands = %+v repo %q", commands.WstunnelLatest, commands.WstunnelRepo)
 	}
 	_, rsp = call(http.MethodGet, "/api/extensions/exit/0/config", "")

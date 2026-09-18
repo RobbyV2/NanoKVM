@@ -88,7 +88,7 @@ func TestCertificateFingerprint(t *testing.T) {
 }
 
 // allCommands is every one-liner a response carries, both modes and the
-// latest-fetch pair.
+// latest-fetch set.
 func allCommands(rsp proto.GetExitCommandsRsp) []proto.ExitCommand {
 	all := append([]proto.ExitCommand{}, rsp.Native...)
 	all = append(all, rsp.Wstunnel...)
@@ -162,15 +162,26 @@ func TestCommandsSnapshot(t *testing.T) {
 				}
 			}
 
-			// The latest-fetch pair: windows then linux, no macOS, nothing
-			// pinned in them, the same kvm url and verify flag as the pinned
-			// command of the same platform, and the releases page as fallback.
+			// The latest-fetch set: windows, macos, linux in the pinned
+			// order, nothing pinned in them, the same kvm url and verify flag
+			// as the pinned command of the same platform, and the releases
+			// page as fallback. The two Unix commands differ only in the
+			// asset platform and the checksum tool.
 			latest := rsp.WstunnelLatest
-			if len(latest) != 2 || latest[0].Platform != "windows" || latest[0].Shell != "powershell" || latest[1].Platform != "linux" || latest[1].Shell != "bash" {
+			if len(latest) != 3 ||
+				latest[0].Platform != "windows" || latest[0].Shell != "powershell" ||
+				latest[1].Platform != "macos" || latest[1].Shell != "bash" ||
+				latest[2].Platform != "linux" || latest[2].Shell != "bash" {
 				t.Fatalf("latest = %+v", latest)
 			}
-			if !strings.Contains(latest[0].Command, wstunnelLatestAPI) || !strings.Contains(latest[1].Command, "releases/latest") {
+			if !strings.Contains(latest[0].Command, wstunnelLatestAPI) || !strings.Contains(latest[1].Command, "releases/latest") || !strings.Contains(latest[2].Command, "releases/latest") {
 				t.Fatalf("latest commands do not resolve the release: %+v", latest)
+			}
+			if !strings.Contains(latest[1].Command, "_darwin_${a}.tar.gz") || !strings.Contains(latest[1].Command, "| shasum -a 256 -c - ||") {
+				t.Fatalf("latest macos command does not fetch the darwin asset and check it with shasum: %s", latest[1].Command)
+			}
+			if !strings.Contains(latest[2].Command, "_linux_${a}.tar.gz") || !strings.Contains(latest[2].Command, "| sha256sum -c - ||") {
+				t.Fatalf("latest linux command does not fetch the linux asset and check it with sha256sum: %s", latest[2].Command)
 			}
 			for _, cmd := range latest {
 				if strings.Contains(cmd.Command, "v10.7.1/") {

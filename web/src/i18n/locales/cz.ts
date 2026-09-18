@@ -1168,10 +1168,8 @@ const cz = {
             'Cílový počítač už dosáhne na webové rozhraní, SSH a VNC tohoto NanoKVM přes adresu USB sítě. Tato funkce na tom nic nemění.',
           latestTitle: 'Nejnovější wstunnel',
           latestDesc:
-            'Při spuštění příkazu zjistí nejnovější vydání wstunnel na GitHubu a ověří stažený soubor proti checksums.txt tohoto vydání, takže nejde o připnutou verzi {{version}} a nenese žádný připnutý hash. Pouze Windows a Linux.',
-          latestFallback: 'Pokud stažení selže, stáhněte jej z github.com/erebe/wstunnel',
-          latestUnavailable:
-            'Pro macOS neexistuje příkaz pro stažení nejnovější verze. Použijte připnutý příkaz výše nebo odkaz na repozitář.'
+            'Při spuštění příkazu zjistí nejnovější vydání wstunnel na GitHubu a ověří stažený soubor proti checksums.txt tohoto vydání, takže nejde o připnutou verzi {{version}} a nenese žádný připnutý hash.',
+          latestFallback: 'Pokud stažení selže, stáhněte jej z github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Pokročilé',

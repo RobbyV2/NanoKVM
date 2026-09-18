@@ -134,7 +134,7 @@ type GetExitCommandsRsp struct {
 	WstunnelRepo    string        `json:"wstunnelRepo"` // upstream repository, the manual fallback for the latest commands
 	Native          []ExitCommand `json:"native"`
 	Wstunnel        []ExitCommand `json:"wstunnel"`
-	WstunnelLatest  []ExitCommand `json:"wstunnelLatest"` // windows and linux only, release resolved at run time
+	WstunnelLatest  []ExitCommand `json:"wstunnelLatest"` // windows, macos, linux; release resolved at run time
 }
 
 // GetExitLogsRsp is the tail of the slot's daemon logs, token-shaped values redacted.

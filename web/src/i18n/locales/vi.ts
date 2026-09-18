@@ -1168,10 +1168,8 @@ const vi = {
             'Máy đích vốn đã truy cập được giao diện web, SSH và VNC của NanoKVM này qua địa chỉ mạng USB. Tính năng này không thay đổi điều đó.',
           latestTitle: 'wstunnel mới nhất',
           latestDesc:
-            'Khi lệnh chạy, nó xác định bản phát hành wstunnel mới nhất trên GitHub và kiểm tra tệp tải về bằng checksums.txt của bản đó, nên đây không phải phiên bản đã ghim {{version}} và không kèm hash đã ghim. Chỉ dành cho Windows và Linux.',
-          latestFallback: 'Nếu tải thất bại, hãy tải từ github.com/erebe/wstunnel',
-          latestUnavailable:
-            'Không có lệnh tải bản mới nhất cho macOS. Hãy dùng lệnh đã ghim ở trên hoặc liên kết kho mã.'
+            'Khi lệnh chạy, nó xác định bản phát hành wstunnel mới nhất trên GitHub và kiểm tra tệp tải về bằng checksums.txt của bản đó, nên đây không phải phiên bản đã ghim {{version}} và không kèm hash đã ghim.',
+          latestFallback: 'Nếu tải thất bại, hãy tải từ github.com/erebe/wstunnel'
         },
         advanced: {
           title: 'Nâng cao',

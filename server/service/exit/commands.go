@@ -294,7 +294,8 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 		"If the fetch fails, download it by hand from " + wstunnelReleasesURL + "."
 	latest := []proto.ExitCommand{
 		{Platform: "windows", Shell: "powershell", Command: wstunnelLatestWindows(psClient), Notes: latestNote},
-		{Platform: "linux", Shell: "bash", Command: wstunnelLatestLinux(client), Notes: latestNote},
+		{Platform: "macos", Shell: "bash", Command: wstunnelLatestUnix("darwin", "shasum -a 256 -c -", client), Notes: latestNote},
+		{Platform: "linux", Shell: "bash", Command: wstunnelLatestUnix("linux", "sha256sum -c -", client), Notes: latestNote},
 	}
 
 	return proto.GetExitCommandsRsp{
@@ -345,13 +346,16 @@ func wstunnelWindows(client string) string {
 	}, "; ")
 }
 
-// wstunnelLatestLinux resolves the newest release from the releases/latest
-// redirect, downloads that tag's asset and checks it against the same tag's
-// checksums.txt: same-source integrity, weaker than the pin. POSIX sh, so no
-// ERR trap; every network step falls through to fail with the releases page.
-// The tarball ships the binary without the execute bit, so the extract step
-// also sets it, and either failing reports as extract.
-func wstunnelLatestLinux(client string) string {
+// wstunnelLatestUnix resolves the newest release from the releases/latest
+// redirect, downloads that tag's asset for the platform (linux or darwin) and
+// checks it against the same tag's checksums.txt with the given checker
+// (sha256sum on Linux, shasum -a 256 on macOS, which has no sha256sum):
+// same-source integrity, weaker than the pin. POSIX sh, so no ERR trap; every
+// network step falls through to fail with the releases page. The grep, sed
+// and mktemp calls are written to the BSD subset so the one command runs on
+// both. The tarball ships the binary without the execute bit, so the extract
+// step also sets it, and either failing reports as extract.
+func wstunnelLatestUnix(platform, checker, client string) string {
 	download := wstunnelReleasesURL + "/download/v$v/"
 	return strings.Join([]string{
 		"set -e",
@@ -361,9 +365,9 @@ func wstunnelLatestLinux(client string) string {
 		`case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) echo "unsupported architecture: $(uname -m)" >&2; exit 1;; esac`,
 		fmt.Sprintf(`v=$(curl -fsSLo /dev/null -w '%%{url_effective}' %s) || fail resolve`, wstunnelLatestURL),
 		`v=${v##*/v}`,
-		`f="wstunnel_${v}_linux_${a}.tar.gz"`,
+		fmt.Sprintf(`f="wstunnel_${v}_%s_${a}.tar.gz"`, platform),
 		fmt.Sprintf(`curl -fsSLo wstunnel.tgz "%s$f" || fail download`, download),
-		fmt.Sprintf(`curl -fsSL "%schecksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum`, download),
+		fmt.Sprintf(`curl -fsSL "%schecksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | %s || fail checksum`, download, checker),
 		"tar -xzf wstunnel.tgz wstunnel && chmod +x wstunnel || fail extract",
 		"exec ./wstunnel " + client,
 	}, "; ")

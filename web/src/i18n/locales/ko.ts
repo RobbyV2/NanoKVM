@@ -1155,10 +1155,8 @@ const ko = {
             '대상 컴퓨터는 이미 USB 네트워크 주소로 이 NanoKVM의 웹 UI, SSH, VNC에 접근할 수 있습니다. 이 기능은 그 점을 바꾸지 않습니다.',
           latestTitle: '최신 wstunnel',
           latestDesc:
-            '명령을 실행할 때 GitHub에서 최신 wstunnel 릴리스를 확인하고 그 릴리스의 checksums.txt로 다운로드를 검증합니다. 따라서 고정된 {{version}}이 아니며 고정 해시도 없습니다. Windows와 Linux 전용입니다.',
-          latestFallback: '가져오기에 실패하면 github.com/erebe/wstunnel에서 다운로드하세요',
-          latestUnavailable:
-            'macOS용 최신 버전 가져오기 명령은 없습니다. 위의 고정된 명령이나 저장소 링크를 사용하세요.'
+            '명령을 실행할 때 GitHub에서 최신 wstunnel 릴리스를 확인하고 그 릴리스의 checksums.txt로 다운로드를 검증합니다. 따라서 고정된 {{version}}이 아니며 고정 해시도 없습니다.',
+          latestFallback: '가져오기에 실패하면 github.com/erebe/wstunnel에서 다운로드하세요'
         },
         advanced: {
           title: '고급',
