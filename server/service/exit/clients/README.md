@@ -221,11 +221,12 @@ cd server && gofmt -l . && go vet ./service/exit/... && go test -race ./service/
 
 ### PowerShell
 
-No Windows here. `client.ps1` was written against .NET Framework 4.5+ APIs available in
-Windows PowerShell 5.1 and reviewed for the usual traps (array unrolling on return, `-shl` on
-`[int]`, hashtable key types, `ArraySegment[byte]` construction, `Add-Type` re-definition, the
-`$Host` automatic variable). It was then run under PowerShell 7 (`pwsh` 7.6.6, a `dotnet tool`)
-on the same macOS host, templated with `sed` and started as `pwsh -NoProfile -File c.ps1`:
+`client.ps1` runs under Windows PowerShell 5.1 on .NET Framework 4.8 as a normal user (no
+elevation, FullLanguage, `Add-Type` compiling a helper under `%TEMP%`) and under PowerShell 7.
+It uses .NET Framework 4.5+ APIs and avoids the usual traps (array unrolling on return, `-shl`
+on `[int]`, hashtable key types, `ArraySegment[byte]` construction, `Add-Type` re-definition,
+the `$Host` automatic variable). The host run below is under PowerShell 7 (`pwsh` 7.6.6, a
+`dotnet tool`) on macOS, templated with `sed` and started as `pwsh -NoProfile -File c.ps1`:
 
 ```
 python3 testdata/mock_kvm.py --listen 127.0.0.1:18080 --socks 127.0.0.1:18081 --token tok --allow-private
@@ -253,9 +254,9 @@ Against that version the test fails as predicted, `FAIL stalled-sink TimeoutErro
 (6.54s)` on the echo's SOCKS CONNECT with no `OPENED` from the client; with the per-stream
 write queue and one polled `WriteAsync` it passes, and the sink stream holds one stream window.
 
-The `pwsh` run covers the protocol and the task loop on .NET 10, not Windows PowerShell 5.1,
-.NET Framework's `ClientWebSocket`, the `ServicePointManager` pin callback or Windows socket
-buffer sizes. `testdata/windows-checklist.md` is the acceptance run for those.
+The `pwsh` run covers the protocol and the task loop on .NET 10; `testdata/windows-checklist.md`
+is the manual run on a Windows box for Windows PowerShell 5.1, .NET Framework's
+`ClientWebSocket`, the `ServicePointManager` pin callback and Windows socket buffer sizes.
 
 ## Re-running
 
