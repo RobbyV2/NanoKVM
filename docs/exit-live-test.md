@@ -291,9 +291,10 @@ touching anything.
 Exit browser: the Exit panel's Native tab shows three commands. Also fetch them raw via devtools:
 Network → `/api/extensions/exit/0/commands` → response. Expected: `scheme` and `host` equal the
 address bar; `fingerprint` is 64 lowercase hex on https and empty on http; `wstunnelVersion`
-`10.7.1`; `wstunnelRepo` is `https://github.com/erebe/wstunnel`; `wstunnelLatest` has exactly two
-entries, `windows` (powershell) and `linux` (bash), beside the three pinned ones in `wstunnel`. The
-Windows command is `irm -Headers @{Authorization='Bearer $TOKEN'} <scheme>://$KVM/exit/0/client.ps1 | iex`
+`10.7.1`; `wstunnelRepo` is `https://github.com/erebe/wstunnel`; `wstunnelLatest` has exactly three
+entries, `windows` (powershell), `macos` (bash) and `linux` (bash), beside the three pinned ones in
+`wstunnel`. The Windows command is
+`irm -Headers @{Authorization='Bearer $TOKEN'} <scheme>://$KVM/exit/0/client.ps1 | iex`
 (prefixed by `[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; ` on https);
 macOS and Linux are `curl -fsSL[k] -H 'Authorization: Bearer $TOKEN' <scheme>://$KVM/exit/0/client.sh | sh`
 (`-k` only on https). The D28 warning text is visible above them; on http the panel says the token
@@ -414,13 +415,14 @@ Panel → Wstunnel tab. Expected shape (from `commands.go`):
 - `--tls-verify-certificate` appears **only** if the unit has a CA-signed certificate installed;
   with the stock self-signed one the note reads "wstunnel has no fingerprint pin; … unauthenticated".
 
-Under the pinned command, the Windows and Linux tabs carry a latest command with its own description
-and the link `https://github.com/erebe/wstunnel`; the macOS tab has no latest command, says so, and
-shows the same link. Expected shape:
+Under the pinned command, every tab carries a latest command with its own description and the link
+`https://github.com/erebe/wstunnel`. Expected shape:
 
 - Linux, latest: `set -e; fail() { echo "could not fetch the latest wstunnel ($1); download it from https://github.com/erebe/wstunnel/releases" >&2; exit 1; }; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) …exit 1;; esac; v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/erebe/wstunnel/releases/latest) || fail resolve; v=${v##*/v}; f="wstunnel_${v}_linux_${a}.tar.gz"; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v$v/$f" || fail download; curl -fsSL "https://github.com/erebe/wstunnel/releases/download/v$v/checksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum; tar -xzf wstunnel.tgz wstunnel && chmod +x wstunnel || fail extract; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
+- macOS, latest: the Linux one with `_darwin_` in place of `_linux_` in the asset name and
+  `shasum -a 256 -c -` in place of `sha256sum -c -` (macOS ships no `sha256sum`).
 - Windows, latest: `try { $v=(Invoke-RestMethod -UseBasicParsing 'https://api.github.com/repos/erebe/wstunnel/releases/latest').tag_name.TrimStart('v'); $a=…; $n="wstunnel_${v}_windows_$a.tar.gz"; … Invoke-WebRequest … /releases/download/v$v/$n …; Invoke-WebRequest … /releases/download/v$v/checksums.txt …; $h=(Select-String -SimpleMatch -Pattern "  $n" -Path $s | Select-Object -First 1).Line; if (-not $h -or $h.Split(' ')[0] -ne (Get-FileHash $f -Algorithm SHA256).Hash) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; & (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM } catch { throw "could not fetch the latest wstunnel: $_ Download it from https://github.com/erebe/wstunnel/releases" }`
-- Both run whatever `https://github.com/erebe/wstunnel/releases/latest` resolves to (10.7.1 at the
+- All three run whatever `https://github.com/erebe/wstunnel/releases/latest` resolves to (10.7.1 at the
   time of writing, the same as the pin) and verify the download against that tag's own
   `checksums.txt`, so a mismatch means the download was corrupted in transit; a tampered release
   would pass this check, and the pinned commands are the verified path. `--tls-verify-certificate`
@@ -458,22 +460,21 @@ exit> <paste>
 Expected: no `wstunnel checksum mismatch` throw; `tar` is the Windows 10 1803+ built-in; the
 client's log as above. If the run is on an ARM64 PC the `$a` branch must pick `arm64`.
 
-The latest commands, Linux and Windows (there is no latest command for macOS; the panel's macOS tab
-says so):
+The latest commands, each platform:
 
 ```sh
 exit$ <paste the latest command>
 ```
 
-Expected on Linux: `wstunnel.tgz: OK`, then `Starting wstunnel client v<ver>` where `<ver>` is the
+Expected on Linux and macOS: `wstunnel.tgz: OK`, then `Starting wstunnel client v<ver>` where `<ver>` is the
 tag `https://github.com/erebe/wstunnel/releases/latest` shows in a browser. Windows prints the same
 without the `OK` line (`Get-FileHash` does the comparison and a mismatch throws `wstunnel checksum
 mismatch`). Break one run on purpose (cut the exit's network before pasting, or change `_linux_` /
-`_windows_` in a saved copy to `_nope_`): Linux prints `could not fetch the latest wstunnel (download);
-download it from https://github.com/erebe/wstunnel/releases` and exits 1 (the step in parentheses is
-one of `resolve`, `download`, `checksum`, `extract`), Windows throws `could not fetch the latest
-wstunnel: … Download it from https://github.com/erebe/wstunnel/releases`; no wstunnel process starts
-in either case.
+`_darwin_` / `_windows_` in a saved copy to `_nope_`): Linux and macOS print `could not fetch the
+latest wstunnel (download); download it from https://github.com/erebe/wstunnel/releases` and exit 1
+(the step in parentheses is one of `resolve`, `download`, `checksum`, `extract`), Windows throws
+`could not fetch the latest wstunnel: … Download it from https://github.com/erebe/wstunnel/releases`;
+no wstunnel process starts in any case.
 
 On the NanoKVM, within 3 s of the client connecting:
 
