@@ -295,7 +295,9 @@ address bar; `fingerprint` is 64 lowercase hex on https and empty on http; `wstu
 entries, `windows` (powershell), `macos` (bash) and `linux` (bash), beside the three pinned ones in
 `wstunnel`. The Windows command is
 `irm -Headers @{Authorization='Bearer $TOKEN'} <scheme>://$KVM/exit/0/client.ps1 | iex`
-(prefixed by `[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; ` on https);
+(on https prefixed by `if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -TypeDefinition '<C#>' }; [NanoKVMExitTrust]::Install(); `,
+a compiled trust-all callback for the fetch; a `{$true}` scriptblock there aborts the handshake under
+Windows PowerShell 5.1 with `There is no Runspace available to run scripts in this thread`);
 macOS and Linux are `curl -fsSL[k] -H 'Authorization: Bearer $TOKEN' <scheme>://$KVM/exit/0/client.sh | sh`
 (`-k` only on https). The D28 warning text is visible above them; on http the panel says the token
 travels in cleartext.
@@ -336,9 +338,9 @@ Expected: a session-established line, no error; one ESTABLISHED connection from 
 Ctrl+C the client: `nexit: stopping`; UI tunnel → disconnected within 3 s.
 
 Pass: `connected:` line, UI shows the peer with `os: windows`, Ctrl+C is clean. On https also confirm
-the pin: after Ctrl+C, `[Net.ServicePointManager]::ServerCertificateValidationCallback` prints
-nothing (the client restored it), and the message `certificate was never presented for pinning` did
-**not** appear.
+the pin: after Ctrl+C, `([Net.ServicePointManager]::ServerCertificateValidationCallback).Method.DeclaringType`
+prints `NanoKVMExitTrust`, not `NexitPin` (the client restored the one-liner's fetch callback), and the
+message `certificate was never presented for pinning` did **not** appear.
 
 ### 1.4 macOS
 
@@ -799,7 +801,7 @@ exit$ <paste the command again>
 ```
 
 Expected: `connected:` within ~3 s; UI **connected**, `connectedAt` new, `lastConnectedAt` from §4;
-`previousPeer` **null** (same source). Then, with no action on the consumer:
+`previousPeer` unchanged (it records the last change of peer, not a live replacement). Then, with no action on the consumer:
 
 ```powershell
 win> curl.exe -4 -sS -o NUL -w "%{http_code}`n" https://example.com/; nslookup example.com
@@ -1035,7 +1037,8 @@ Ctrl+C the old client (it has been failing: its source accumulated failures). Co
 from the panel and paste it. Expected: `connected:` **immediately** (RegenerateToken called
 `limiter.Reset(peerSource)` for the connected peer, so the failed retries after the regen did not
 lock it out — if this shows `404` for a while, note how long: that is the limiter, and it means the
-reset happened before the retries; file it). UI connected, `previousPeer` null (same source).
+reset happened before the retries; file it). UI connected, `previousPeer` unchanged (it records the
+last change of peer, not a live replacement).
 Consumer internet back (§5.1 check). Pass: new command connects, consumer resumes.
 
 Check shell history hygiene note: the old one-liner is still in `history` on the exit; the panel says

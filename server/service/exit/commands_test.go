@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -151,9 +152,34 @@ func TestCommandsSnapshot(t *testing.T) {
 				}
 			}
 			for _, cmd := range rsp.Native {
-				hasK := strings.Contains(cmd.Command, "-fsSLk") || strings.Contains(cmd.Command, "ServerCertificateValidationCallback")
+				hasK := strings.Contains(cmd.Command, "-fsSLk") || strings.Contains(cmd.Command, "RemoteCertificateValidationCallback")
 				if hasK != tc.origin.TLS() {
 					t.Fatalf("%s %s insecure-fetch=%v want %v: %s", tc.name, cmd.Platform, hasK, tc.origin.TLS(), cmd.Command)
+				}
+				if cmd.Platform != "windows" {
+					continue
+				}
+				// A scriptblock callback throws "no Runspace available" off
+				// the pipeline thread under Windows PowerShell 5.1, so the
+				// https fetch is trusted through a compiled delegate, and
+				// the http command carries no prefix at all.
+				if strings.Contains(cmd.Command, "{$true}") {
+					t.Fatalf("%s windows command trusts through a scriptblock: %s", tc.name, cmd.Command)
+				}
+				fetch := fmt.Sprintf("irm -Headers @{Authorization='Bearer %s'} '%s://%s/exit/0/client.ps1' | iex", cfg.Token, tc.origin.Scheme, tc.origin.Host)
+				if !strings.HasSuffix(cmd.Command, fetch) {
+					t.Fatalf("%s windows command does not end with the fetch %q: %s", tc.name, fetch, cmd.Command)
+				}
+				if !tc.origin.TLS() {
+					if cmd.Command != fetch {
+						t.Fatalf("%s windows command carries a prefix: %s", tc.name, cmd.Command)
+					}
+					continue
+				}
+				for _, want := range []string{"Add-Type", "RemoteCertificateValidationCallback", "-as [type]", "[NanoKVMExitTrust]::Install()"} {
+					if !strings.Contains(cmd.Command, want) {
+						t.Fatalf("%s windows command lacks %q: %s", tc.name, want, cmd.Command)
+					}
 				}
 			}
 			for key, sum := range wstunnelSHA256 {
@@ -231,6 +257,20 @@ func TestCommandsSnapshot(t *testing.T) {
 				t.Fatalf("commands differ from %s:\n%s", golden, got)
 			}
 		})
+	}
+}
+
+// The C# source rides inside a PowerShell single-quoted string and is never
+// passed through fmt, so it must hold neither a single quote nor a verb.
+func TestPSTrustSource(t *testing.T) {
+	if strings.ContainsAny(psTrustSource, "'%") {
+		t.Fatalf("psTrustSource holds a quote or a verb: %s", psTrustSource)
+	}
+	if strings.ContainsAny(psTrustPrefix, "%\n") {
+		t.Fatalf("psTrustPrefix holds a verb or a newline: %s", psTrustPrefix)
+	}
+	if strings.Count(psTrustPrefix, "'") != 4 {
+		t.Fatalf("psTrustPrefix quoting is unbalanced: %s", psTrustPrefix)
 	}
 }
 

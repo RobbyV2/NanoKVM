@@ -8,7 +8,7 @@
     {
       "platform": "windows",
       "shell": "powershell",
-      "command": "[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; irm -Headers @{Authorization='Bearer k7m2p9vx'} 'https://kvm.example.net:8443/exit/0/client.ps1' | iex",
+      "command": "if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -TypeDefinition 'using System.Net;using System.Net.Security;using System.Security.Cryptography.X509Certificates;public static class NanoKVMExitTrust{public static bool Ok(object s,X509Certificate c,X509Chain h,SslPolicyErrors e){return true;}public static void Install(){ServicePointManager.ServerCertificateValidationCallback=new RemoteCertificateValidationCallback(Ok);}}' }; [NanoKVMExitTrust]::Install(); irm -Headers @{Authorization='Bearer k7m2p9vx'} 'https://kvm.example.net:8443/exit/0/client.ps1' | iex",
       "notes": "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."
     },
     {

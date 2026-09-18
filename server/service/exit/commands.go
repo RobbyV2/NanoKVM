@@ -237,6 +237,27 @@ func Commands(slot Slot, cfg Config, origin Origin) (proto.GetExitCommandsRsp, e
 	return renderCommands(slot, cfg, origin, cert), nil
 }
 
+// psTrustSource is the C# behind psTrustPrefix: a compiled trust-all
+// certificate callback for the script fetch on https. It holds no single quote
+// (it travels inside a PowerShell single-quoted string) and no templated value.
+const psTrustSource = "using System.Net;using System.Net.Security;using System.Security.Cryptography.X509Certificates;" +
+	"public static class NanoKVMExitTrust{" +
+	"public static bool Ok(object s,X509Certificate c,X509Chain h,SslPolicyErrors e){return true;}" +
+	"public static void Install(){ServicePointManager.ServerCertificateValidationCallback=new RemoteCertificateValidationCallback(Ok);}}"
+
+// psTrustPrefix goes in front of the Windows `irm ... | iex` on https. A
+// scriptblock callback (`ServerCertificateValidationCallback={$true}`) is
+// invoked by .NET on a thread with no PowerShell runspace under Windows
+// PowerShell 5.1; it throws "There is no Runspace available to run scripts in
+// this thread" and the TLS handshake is aborted before a byte of client.ps1
+// arrives. A delegate compiled with Add-Type runs on any thread. The `-as
+// [type]` guard keeps a second paste in the same window from failing on a type
+// that already exists. Add-Type writes a temp assembly under %TEMP% and needs
+// Full Language Mode on Windows 8+, the same requirement client.ps1 already
+// has (D14). The trust covers the fetch only: client.ps1 replaces the callback
+// with its own compiled pin and restores this one when it exits.
+const psTrustPrefix = "if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -TypeDefinition '" + psTrustSource + "' }; [NanoKVMExitTrust]::Install(); "
+
 // renderCommands assumes origin.Host passed ValidHost. Every value it puts on
 // a command line is still quoted for the shell that will read it (sh single
 // quotes, PowerShell single quotes), so the quoting is the second fence.
@@ -252,7 +273,7 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 
 	psFetch := fmt.Sprintf("irm -Headers @{Authorization=%s} %s | iex", psQuote("Bearer "+cfg.Token), psQuote(base+"/client.ps1"))
 	if origin.TLS() {
-		psFetch = "[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; " + psFetch
+		psFetch = psTrustPrefix + psFetch
 	}
 
 	nativeNote := "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."

@@ -85,13 +85,13 @@ curl --socks5-hostname 127.0.0.1:18081 -o /dev/null -w '%{http_code} %{size_down
 Restart the mock with `--tls` (it prints `FINGERPRINT=<sha256>`), then on Windows:
 
 ```powershell
-[Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; irm -Headers @{Authorization='Bearer tok'} https://LAN:18443/exit/0/client.ps1 | iex
+if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -TypeDefinition 'using System.Net;using System.Net.Security;using System.Security.Cryptography.X509Certificates;public static class NanoKVMExitTrust{public static bool Ok(object s,X509Certificate c,X509Chain h,SslPolicyErrors e){return true;}public static void Install(){ServicePointManager.ServerCertificateValidationCallback=new RemoteCertificateValidationCallback(Ok);}}' }; [NanoKVMExitTrust]::Install(); irm -Headers @{Authorization='Bearer tok'} https://LAN:18443/exit/0/client.ps1 | iex
 ```
 
 - [ ] `connected:` line appears; the mock logs the session; `host_tests.py --only tcp-echo,udp-echo` PASS.
-- [ ] Ctrl+C, then `[Net.ServicePointManager]::ServerCertificateValidationCallback` prints
-      nothing (the client restored the previous callback on exit — here `$null`, the
-      one-liner's `{$true}` having been replaced by the pin during the run).
+- [ ] Ctrl+C, then `([Net.ServicePointManager]::ServerCertificateValidationCallback).Method.DeclaringType`
+      prints `NanoKVMExitTrust`, not `NexitPin` (the client restores the previous callback on exit;
+      the one-liner's compiled trust-all delegate, which the pin replaced during the run).
 - [ ] Wrong pin: fetch the script to a file (`irm ... -OutFile c.ps1`), edit `$NexitFingerprint`
       to another 64-hex value, run `.\c.ps1`. Expect
       `connect failed: certificate fingerprint mismatch: expected ... got <served>; refusing`
