@@ -1132,9 +1132,9 @@ const ca = {
           native: 'Natiu',
           wstunnel: 'wstunnel',
           nativeDesc:
-            "Un petit script baixat d'aquest NanoKVM s'executa al dispositiu de sortida. No cal instal·lar res.",
+            "Recomanat. Un petit script baixat d'aquest NanoKVM s'executa al dispositiu de sortida només amb el que porta el sistema operatiu (PowerShell, Python o Perl), com a usuari normal, sense instal·lar res i sense drets d'administrador.",
           wstunnelDesc:
-            'El dispositiu de sortida baixa el binari {{version}} fixat i en verifica el SHA-256 abans d’executar-lo.',
+            'Alternativa. El dispositiu de sortida baixa el binari {{version}} fixat i en verifica el SHA-256 abans d’executar-lo.',
           whileEnabled:
             "Canviar de mode amb el túnel activat desconnecta el dispositiu de sortida connectat; torneu-lo a iniciar amb l'ordre del nou mode."
         },

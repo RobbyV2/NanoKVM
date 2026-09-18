@@ -1141,9 +1141,9 @@ const es = {
           native: 'Nativo',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Un pequeño script descargado de este NanoKVM se ejecuta en el dispositivo de salida. No hay nada que instalar.',
+            'Recomendado. Un pequeño script descargado de este NanoKVM se ejecuta en el dispositivo de salida solo con lo que trae el sistema operativo (PowerShell, Python o Perl), como usuario normal, sin instalar nada y sin permisos de administrador.',
           wstunnelDesc:
-            'El dispositivo de salida descarga el binario {{version}} fijado y verifica su SHA-256 antes de ejecutarlo.',
+            'Alternativa. El dispositivo de salida descarga el binario {{version}} fijado y verifica su SHA-256 antes de ejecutarlo.',
           whileEnabled:
             'Cambiar de modo con el túnel activado desconecta el dispositivo de salida conectado; reinícielo con el comando del nuevo modo.'
         },

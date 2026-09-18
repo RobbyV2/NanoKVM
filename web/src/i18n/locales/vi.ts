@@ -1127,9 +1127,9 @@ const vi = {
           native: 'Gốc',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Một script nhỏ tải từ NanoKVM này chạy trên thiết bị thoát. Không cần cài gì.',
+            'Khuyến nghị. Một script nhỏ tải từ NanoKVM này chạy trên thiết bị thoát chỉ với những gì hệ điều hành có sẵn (PowerShell, Python hoặc Perl), với tư cách người dùng thường, không cần cài gì và không cần quyền quản trị.',
           wstunnelDesc:
-            'Thiết bị thoát tải tệp nhị phân {{version}} đã ghim và kiểm tra SHA-256 trước khi chạy.',
+            'Thay thế. Thiết bị thoát tải tệp nhị phân {{version}} đã ghim và kiểm tra SHA-256 trước khi chạy.',
           whileEnabled:
             'Đổi chế độ khi đường hầm đang bật sẽ ngắt thiết bị thoát đang kết nối; hãy khởi động lại nó bằng lệnh của chế độ mới.'
         },

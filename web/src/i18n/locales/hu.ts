@@ -1140,9 +1140,9 @@ const hu = {
           native: 'Natív',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Egy erről a NanoKVM-ről letöltött kis szkript fut a kilépő eszközön. Nincs mit telepíteni.',
+            'Ajánlott. Egy erről a NanoKVM-ről letöltött kis szkript fut a kilépő eszközön csak azzal, amit az operációs rendszer ad (PowerShell, Python vagy Perl), normál felhasználóként, telepítés és rendszergazdai jogok nélkül.',
           wstunnelDesc:
-            'A kilépő eszköz letölti a rögzített {{version}} binárist, és futtatás előtt ellenőrzi az SHA-256 értékét.',
+            'Alternatíva. A kilépő eszköz letölti a rögzített {{version}} binárist, és futtatás előtt ellenőrzi az SHA-256 értékét.',
           whileEnabled:
             'A mód váltása bekapcsolt tunnel mellett bontja a csatlakozott kilépő eszköz kapcsolatát; indítsa újra az új mód parancsával.'
         },

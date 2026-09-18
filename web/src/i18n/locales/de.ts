@@ -1145,9 +1145,9 @@ const de = {
           native: 'Nativ',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Ein kleines Skript von diesem NanoKVM läuft auf dem Exit-Gerät. Nichts zu installieren.',
+            'Empfohlen. Ein kleines Skript von diesem NanoKVM läuft auf dem Exit-Gerät nur mit dem, was das Betriebssystem mitbringt (PowerShell, Python oder Perl), als normaler Benutzer, ohne Installation und ohne Administratorrechte.',
           wstunnelDesc:
-            'Das Exit-Gerät lädt die festgelegte Binärdatei {{version}} herunter und prüft ihre SHA-256-Summe vor dem Start.',
+            'Alternative. Das Exit-Gerät lädt die festgelegte Binärdatei {{version}} herunter und prüft ihre SHA-256-Summe vor dem Start.',
           whileEnabled:
             'Ein Moduswechsel bei aktivem Tunnel trennt das verbundene Exit-Gerät; starten Sie es mit dem Befehl des neuen Modus neu.'
         },

@@ -1143,9 +1143,9 @@ const nl = {
           native: 'Native',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Een klein script, opgehaald van deze NanoKVM, draait op het exit-apparaat. Niets te installeren.',
+            'Aanbevolen. Een klein script, opgehaald van deze NanoKVM, draait op het exit-apparaat met alleen wat het besturingssysteem meelevert (PowerShell, Python of Perl), als gewone gebruiker, zonder iets te installeren en zonder beheerdersrechten.',
           wstunnelDesc:
-            'Het exit-apparaat downloadt de vastgezette {{version}}-binary en controleert de SHA-256 voordat het die uitvoert.',
+            'Alternatief. Het exit-apparaat downloadt de vastgezette {{version}}-binary en controleert de SHA-256 voordat het die uitvoert.',
           whileEnabled:
             'Van modus wisselen terwijl de tunnel actief is verbreekt het verbonden exit-apparaat; start het opnieuw met het commando van de nieuwe modus.'
         },

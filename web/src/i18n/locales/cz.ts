@@ -1128,9 +1128,9 @@ const cz = {
           native: 'Nativní',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Na výstupním zařízení běží malý skript stažený z tohoto NanoKVM. Nic se neinstaluje.',
+            'Doporučeno. Na výstupním zařízení běží malý skript stažený z tohoto NanoKVM pouze s tím, co dodává operační systém (PowerShell, Python nebo Perl), jako běžný uživatel, bez instalace a bez práv správce.',
           wstunnelDesc:
-            'Výstupní zařízení stáhne připnutý binární soubor {{version}} a před spuštěním ověří jeho SHA-256.',
+            'Alternativa. Výstupní zařízení stáhne připnutý binární soubor {{version}} a před spuštěním ověří jeho SHA-256.',
           whileEnabled:
             'Změna režimu při zapnutém tunelu odpojí připojené výstupní zařízení; spusťte ho znovu příkazem nového režimu.'
         },

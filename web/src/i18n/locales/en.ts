@@ -1126,9 +1126,9 @@ const en = {
           native: 'Native',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'A small script fetched from this NanoKVM runs on the exit device. Nothing to install.',
+            'Recommended. A small script fetched from this NanoKVM runs on the exit device with only what the OS ships (PowerShell, Python or Perl), as a normal user, with nothing to install and no administrator rights.',
           wstunnelDesc:
-            'The exit device downloads the pinned {{version}} binary and verifies its SHA-256 before running it.',
+            'Alternative. The exit device downloads the pinned {{version}} binary and verifies its SHA-256 before running it.',
           whileEnabled:
             "Switching mode while the tunnel is enabled drops the connected exit device; restart it with the new mode's command."
         },

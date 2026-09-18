@@ -1137,9 +1137,9 @@ const pl = {
           native: 'Natywny',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Na urządzeniu wyjściowym działa mały skrypt pobrany z tego NanoKVM. Nic nie trzeba instalować.',
+            'Zalecane. Na urządzeniu wyjściowym działa mały skrypt pobrany z tego NanoKVM, korzystając tylko z tego, co dostarcza system operacyjny (PowerShell, Python lub Perl), jako zwykły użytkownik, bez instalowania czegokolwiek i bez uprawnień administratora.',
           wstunnelDesc:
-            'Urządzenie wyjściowe pobiera przypięty plik binarny {{version}} i przed uruchomieniem sprawdza jego SHA-256.',
+            'Alternatywa. Urządzenie wyjściowe pobiera przypięty plik binarny {{version}} i przed uruchomieniem sprawdza jego SHA-256.',
           whileEnabled:
             'Zmiana trybu przy włączonym tunelu rozłącza podłączone urządzenie wyjściowe; uruchom je ponownie poleceniem nowego trybu.'
         },

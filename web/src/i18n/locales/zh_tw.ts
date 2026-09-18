@@ -1079,8 +1079,10 @@ const zh_tw = {
           title: '模式',
           native: '原生',
           wstunnel: 'wstunnel',
-          nativeDesc: '從此 NanoKVM 取得的小型指令碼在出口裝置上執行，無需安裝。',
-          wstunnelDesc: '出口裝置下載固定版本 {{version}} 的二進位檔，並在執行前驗證其 SHA-256。',
+          nativeDesc:
+            '建議。從此 NanoKVM 取得的小型指令碼在出口裝置上執行，只用作業系統內建的工具（PowerShell、Python 或 Perl），以一般使用者身分執行，無需安裝，也不需要系統管理員權限。',
+          wstunnelDesc:
+            '替代方案。出口裝置下載固定版本 {{version}} 的二進位檔，並在執行前驗證其 SHA-256。',
           whileEnabled: '隧道啟用時切換模式會中斷已連線的出口裝置，請以新模式的命令重新啟動。'
         },
         commands: {

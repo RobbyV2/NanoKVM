@@ -1136,9 +1136,9 @@ const id = {
           native: 'Native',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Skrip kecil yang diambil dari NanoKVM ini berjalan di perangkat keluar. Tidak ada yang perlu diinstal.',
+            'Disarankan. Skrip kecil yang diambil dari NanoKVM ini berjalan di perangkat keluar hanya dengan yang sudah ada di sistem operasi (PowerShell, Python, atau Perl), sebagai pengguna biasa, tanpa perlu menginstal apa pun dan tanpa hak administrator.',
           wstunnelDesc:
-            'Perangkat keluar mengunduh biner {{version}} yang disematkan dan memverifikasi SHA-256-nya sebelum dijalankan.',
+            'Alternatif. Perangkat keluar mengunduh biner {{version}} yang disematkan dan memverifikasi SHA-256-nya sebelum dijalankan.',
           whileEnabled:
             'Berganti mode saat tunnel aktif memutus perangkat exit yang terhubung; jalankan lagi dengan perintah mode baru.'
         },

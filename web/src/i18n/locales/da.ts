@@ -1132,9 +1132,9 @@ const da = {
           native: 'Native',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Et lille script hentet fra denne NanoKVM kører på exit-enheden. Intet at installere.',
+            'Anbefalet. Et lille script hentet fra denne NanoKVM kører på exit-enheden med kun det, styresystemet leverer (PowerShell, Python eller Perl), som almindelig bruger, uden noget at installere og uden administratorrettigheder.',
           wstunnelDesc:
-            'Exit-enheden downloader den fastlåste {{version}}-binær og kontrollerer dens SHA-256, før den køres.',
+            'Alternativ. Exit-enheden downloader den fastlåste {{version}}-binær og kontrollerer dens SHA-256, før den køres.',
           whileEnabled:
             'Skift af tilstand, mens tunnelen er aktiv, afbryder den tilsluttede exit-enhed; start den igen med den nye tilstands kommando.'
         },

@@ -1132,9 +1132,9 @@ const tr = {
           native: 'Yerel',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Bu NanoKVM’den alınan küçük bir betik çıkış cihazında çalışır. Kurulacak bir şey yok.',
+            'Önerilen. Bu NanoKVM’den alınan küçük bir betik çıkış cihazında yalnızca işletim sisteminin sunduklarıyla (PowerShell, Python veya Perl), normal kullanıcı olarak çalışır; kurulacak bir şey ve yönetici hakkı gerekmez.',
           wstunnelDesc:
-            'Çıkış cihazı sabitlenmiş {{version}} ikili dosyasını indirir ve çalıştırmadan önce SHA-256 değerini doğrular.',
+            'Alternatif. Çıkış cihazı sabitlenmiş {{version}} ikili dosyasını indirir ve çalıştırmadan önce SHA-256 değerini doğrular.',
           whileEnabled:
             'Tünel etkinken mod değiştirmek bağlı çıkış cihazının bağlantısını keser; yeni modun komutuyla yeniden başlatın.'
         },

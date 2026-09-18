@@ -1078,8 +1078,10 @@ const zh = {
           title: '模式',
           native: '原生',
           wstunnel: 'wstunnel',
-          nativeDesc: '从此 NanoKVM 获取的小脚本在出口设备上运行，无需安装。',
-          wstunnelDesc: '出口设备下载固定版本 {{version}} 的二进制文件，并在运行前校验其 SHA-256。',
+          nativeDesc:
+            '推荐。从此 NanoKVM 获取的小脚本在出口设备上运行，只用操作系统自带的工具（PowerShell、Python 或 Perl），以普通用户身份运行，无需安装，也不需要管理员权限。',
+          wstunnelDesc:
+            '备选。出口设备下载固定版本 {{version}} 的二进制文件，并在运行前校验其 SHA-256。',
           whileEnabled: '隧道启用时切换模式会断开已连接的出口设备，请用新模式的命令重新启动它。'
         },
         commands: {

@@ -1134,9 +1134,9 @@ const nb = {
           native: 'Native',
           wstunnel: 'wstunnel',
           nativeDesc:
-            'Et lite skript hentet fra denne NanoKVM kjører på exit-enheten. Ingenting å installere.',
+            'Anbefalt. Et lite skript hentet fra denne NanoKVM kjører på exit-enheten med bare det operativsystemet leverer (PowerShell, Python eller Perl), som vanlig bruker, uten noe å installere og uten administratorrettigheter.',
           wstunnelDesc:
-            'Exit-enheten laster ned den fastlåste {{version}}-binæren og kontrollerer SHA-256 før den kjøres.',
+            'Alternativ. Exit-enheten laster ned den fastlåste {{version}}-binæren og kontrollerer SHA-256 før den kjøres.',
           whileEnabled:
             'Bytte av modus mens tunnelen er aktiv kobler fra den tilkoblede exit-enheten; start den igjen med den nye modusens kommando.'
         },
