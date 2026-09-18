@@ -1056,6 +1056,75 @@ func TestSetConfigRejectsUnreachableResolvers(t *testing.T) {
 	}
 }
 
+// TestSetConfigRefusalLeavesTheMessageAlone: a config post refused before
+// anything is written (a resolver the policy denies) changes nothing, so it
+// records nothing in message; a SetConfig step that fails after the write
+// stays in message until a later SetConfig completes, and a message from
+// another transaction (a refused rebind on enable) survives config changes.
+func TestSetConfigRefusalLeavesTheMessageAlone(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	dns := []string{"10.0.0.1"}
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{DNS: &dns}); err == nil {
+		t.Fatal("private resolver accepted")
+	}
+	status, _ := h.mgr.Status(slot)
+	if status.Message != "" {
+		t.Fatalf("refused config left message %q", status.Message)
+	}
+
+	// A mode switch whose listeners fail to start is recorded ...
+	h.door.startEr = errors.New("address in use")
+	mode := proto.ExitModeWstunnel
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{Mode: &mode}); err == nil {
+		t.Fatal("mode switch with a dead front door succeeded")
+	}
+	status, _ = h.mgr.Status(slot)
+	if !strings.Contains(status.Message, "address in use") {
+		t.Fatalf("status message = %q", status.Message)
+	}
+	// ... and a later refusal does not touch it ...
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{DNS: &dns}); err == nil {
+		t.Fatal("private resolver accepted")
+	}
+	status, _ = h.mgr.Status(slot)
+	if !strings.Contains(status.Message, "address in use") {
+		t.Fatalf("refusal changed message to %q", status.Message)
+	}
+	// ... until a config change completes.
+	h.door.startEr = nil
+	mode = proto.ExitModeNative
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{Mode: &mode}); err != nil {
+		t.Fatal(err)
+	}
+	status, _ = h.mgr.Status(slot)
+	if status.Message != "" {
+		t.Fatalf("successful config kept message %q", status.Message)
+	}
+
+	// A refused rebind's hint belongs to the enable, not to the config, and
+	// outlives a config change.
+	if err := h.mgr.Disable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.rebind.err = errors.New("udc loaned")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	pin := true
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{PinPeer: &pin}); err != nil {
+		t.Fatal(err)
+	}
+	status, _ = h.mgr.Status(slot)
+	if !strings.Contains(status.Message, "re-plug the USB cable") {
+		t.Fatalf("config change cleared the rebind hint: %q", status.Message)
+	}
+}
+
 // TestConvergeRestoresAMissingMarker: a crash mid-Disable can leave
 // enabled:true with the gadget.route marker gone; the watchdog recreates it
 // and restarts udhcpd so the consumer's lease regains the gateway (MGR-9). A

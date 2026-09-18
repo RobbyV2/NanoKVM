@@ -618,6 +618,10 @@ Expected: ACCEPT and TCPMSS packet counters non-zero and rising, MASQUERADE coun
 the hev log grows by nothing (warn level) or by benign lines. UI `bytes.up/down` rising,
 `upstream.reachable: true`.
 
+On the nf_tables-backed image the per-rule counters in `iptables -L EXIT0 -v -n -x` read 0 (the chain
+is replaced every 30 s and this build does not maintain them), so use conntrack, `ip -s link show exit0`
+and the status byte counters as the pass criterion instead.
+
 Pass: 200 with the exit's public IP; counters on `EXIT0`/`EXIT0_MASQ`/`exit0` move.
 
 ### 3.4 Browser on the consumer
@@ -643,6 +647,13 @@ allowPrivate on: `REJECT4` in `/etc/kvm/exit/0/env` shrinks to the five always-d
 chain loses the four private REJECTs, and the same curl now reaches (or times out at) the exit's
 router; the front door and the client would each refuse if only the chain were relaxed, so a reach
 here proves all three layers moved together. Turn allowPrivate back off.
+
+A Windows consumer keeps retransmitting the SYN through the ICMP admin-prohibited replies and reports
+curl exit 28 at its deadline, while a usb0 capture (`tcpdump -ni usb0 -l -c 6 'icmp or tcp port 80'`)
+shows the kvm's ICMP within a millisecond of each SYN; on Windows the pass criterion is the capture,
+not the exit code. On the nf_tables-backed image the REJECT counter reads 0 like every other per-rule
+counter in `iptables -L EXIT0 -v -n -x` (the chain is replaced every 30 s and this build does not
+maintain them), so the evidence is conntrack, `ip -s link show exit0` or the capture, never the counter.
 
 Pass: fast refusal by default; `198.18.0.0/15`, `127/8`, `169.254/16` refused in both settings.
 
@@ -773,8 +784,10 @@ kvm# iptables -L EXIT0 -v -n -x | grep -E 'REJECT.*-i '"$NIC"'\s*\*' ; ip -s lin
 Expected: **zero** packets from the consumer's `10.a.b.1xx` on eth0 (the gadget subnet must never
 appear on the LAN, masqueraded or not). Without tcpdump: the consumer's connections show in
 conntrack only with `src=10.a.b.1xx dst=<dest>` and **no** `src=<eth0 address>` translation, and eth0's
-TX packet counter does not move in step with the consumer's attempts. Pass: SERVFAIL + fast refusal
-+ zero leak.
+TX packet counter does not move in step with the consumer's attempts. On the nf_tables-backed image
+the REJECT counter in `iptables -L EXIT0 -v -n -x` reads 0 (per-rule counters are not maintained on
+this build), so conntrack, `ip -s link show exit0` and the status byte counters carry the check.
+Pass: SERVFAIL + fast refusal + zero leak.
 
 ### 4.4 NanoKVM reachability persists
 
@@ -1039,6 +1052,9 @@ from the panel and paste it. Expected: `connected:` **immediately** (RegenerateT
 lock it out — if this shows `404` for a while, note how long: that is the limiter, and it means the
 reset happened before the retries; file it). UI connected, `previousPeer` unchanged (it records the
 last change of peer, not a live replacement).
+An old client left retrying with the dead token counts each attempt against its source, so the
+operator's own machine can be locked out of the new token for minutes (the lockout doubles per
+failure); stop the old client before or right after regenerating.
 Consumer internet back (§5.1 check). Pass: new command connects, consumer resumes.
 
 Check shell history hygiene note: the old one-liner is still in `history` on the exit; the panel says

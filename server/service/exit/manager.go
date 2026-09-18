@@ -108,6 +108,11 @@ type slotState struct {
 	down          DownstreamStatus
 	dnsRedirected uint64
 	message       string
+	// configMessage is set while message was written by SetConfig, so the
+	// next SetConfig that completes clears it and leaves an Enable's or the
+	// watchdog's message (a refused rebind, listeners that never came up)
+	// alone.
+	configMessage bool
 
 	lastPeer     *proto.ExitPeer
 	peerSource   string
@@ -374,6 +379,7 @@ func (m *Manager) get(slot Slot) (*slotState, error) {
 func (m *Manager) setMessage(s *slotState, msg string) {
 	m.mu.Lock()
 	s.message = msg
+	s.configMessage = false
 	m.mu.Unlock()
 }
 
@@ -753,6 +759,7 @@ func (m *Manager) Enable(ctx context.Context, slot Slot) error {
 	m.mu.Lock()
 	s.cfg = cfg
 	s.message = ""
+	s.configMessage = false
 	m.mu.Unlock()
 
 	if err := m.down.RestartRNDIS(ctx); err != nil {
@@ -807,6 +814,25 @@ func (m *Manager) fail(s *slotState, err error) error {
 	return err
 }
 
+// failConfig records a SetConfig step that failed after the config was
+// mutated; the next SetConfig that completes clears it (clearConfigMessage).
+func (m *Manager) failConfig(s *slotState, err error) error {
+	m.mu.Lock()
+	s.message = err.Error()
+	s.configMessage = true
+	m.mu.Unlock()
+	return err
+}
+
+func (m *Manager) clearConfigMessage(s *slotState) {
+	m.mu.Lock()
+	if s.configMessage {
+		s.message = ""
+		s.configMessage = false
+	}
+	m.mu.Unlock()
+}
+
 // Disable removes the marker and flips enabled first, so a crash midway
 // converges to off, then restarts udhcpd without the options, stops the
 // listeners, tears the downstream down and re-leases the consumer (D23).
@@ -832,6 +858,7 @@ func (m *Manager) Disable(ctx context.Context, slot Slot) error {
 	m.mu.Lock()
 	s.cfg = cfg
 	s.message = ""
+	s.configMessage = false
 	m.mu.Unlock()
 
 	var firstErr error
@@ -887,19 +914,21 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 	if req.PinPeer != nil {
 		cfg.PinPeer = *req.PinPeer
 	}
+	// Refuse-checks: nothing has been written, so nothing is recorded in
+	// message; the caller gets the error and the slot's state is unchanged.
 	if req.DNS != nil {
 		if err := ValidateResolvers(cfg); err != nil {
-			return m.fail(s, err)
+			return err
 		}
 	}
 	cfg.Normalize()
 	if cfg.Mode == proto.ExitModeWstunnel && cfg.Enabled {
 		if err := m.ensureBinaries(cfg); err != nil {
-			return m.fail(s, err)
+			return err
 		}
 	}
 	if err := m.persist(cfg, nic); err != nil {
-		return m.fail(s, fmt.Errorf("write config: %w", err))
+		return m.failConfig(s, fmt.Errorf("write config: %w", err))
 	}
 	m.mu.Lock()
 	s.cfg = cfg
@@ -907,6 +936,7 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 	m.mu.Unlock()
 
 	if !cfg.Enabled {
+		m.clearConfigMessage(s)
 		return nil
 	}
 	if c != nil && cfg.PinPeer != old.PinPeer {
@@ -922,16 +952,17 @@ func (m *Manager) SetConfig(ctx context.Context, slot Slot, req proto.SetExitCon
 	case cfg.Mode != old.Mode:
 		m.stopComponents(s)
 		if err := m.down.Start(ctx, slot); err != nil {
-			return m.fail(s, err)
+			return m.failConfig(s, err)
 		}
 		if err := m.startComponents(s, gw); err != nil {
-			return m.fail(s, err)
+			return m.failConfig(s, err)
 		}
 	case cfg.AllowPrivate != old.AllowPrivate:
 		if err := m.down.Start(ctx, slot); err != nil {
-			return m.fail(s, err)
+			return m.failConfig(s, err)
 		}
 	}
+	m.clearConfigMessage(s)
 	m.refreshDownstream(ctx, s)
 	return nil
 }
