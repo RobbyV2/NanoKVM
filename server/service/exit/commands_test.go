@@ -130,6 +130,15 @@ func TestCommandsSnapshot(t *testing.T) {
 				if strings.Contains(cmd.Command, "\n") {
 					t.Fatalf("command is not one line: %q", cmd.Command)
 				}
+				// The release tarballs store the binary as 0644, so every
+				// Unix command that extracts it must chmod it before exec.
+				if cmd.Shell == "bash" && strings.Contains(cmd.Command, "tar -xzf wstunnel.tgz wstunnel") {
+					chmod := strings.Index(cmd.Command, "chmod +x wstunnel")
+					exec := strings.Index(cmd.Command, "exec ./wstunnel")
+					if chmod < 0 || exec < 0 || chmod > exec {
+						t.Fatalf("%s %s command does not chmod wstunnel before exec: %s", cmd.Platform, cmd.Shell, cmd.Command)
+					}
+				}
 			}
 			for _, cmd := range rsp.Wstunnel {
 				if !strings.Contains(cmd.Command, "v10.7.1/wstunnel_10.7.1_") {

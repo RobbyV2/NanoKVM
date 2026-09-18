@@ -310,7 +310,10 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 }
 
 // wstunnelUnix downloads the pinned release for the machine's own architecture,
-// verifies it and runs the client in the foreground. One line so it pastes.
+// verifies it, extracts the binary, sets its execute bit and runs the client in
+// the foreground. One line so it pastes. The chmod is load-bearing: the release
+// tarballs store wstunnel as 0644, so without it exec fails with Permission
+// denied after a clean download and checksum.
 func wstunnelUnix(platform, checker, client string) string {
 	arm := "aarch64|arm64"
 	return strings.Join([]string{
@@ -322,6 +325,7 @@ func wstunnelUnix(platform, checker, client string) string {
 		fmt.Sprintf(`curl -fsSLo wstunnel.tgz "%swstunnel_%s_%s_${a}.tar.gz"`, wstunnelReleaseBase, WstunnelVersion, platform),
 		fmt.Sprintf(`echo "$s  wstunnel.tgz" | %s`, checker),
 		"tar -xzf wstunnel.tgz wstunnel",
+		"chmod +x wstunnel",
 		"exec ./wstunnel " + client,
 	}, "; ")
 }
@@ -345,6 +349,8 @@ func wstunnelWindows(client string) string {
 // redirect, downloads that tag's asset and checks it against the same tag's
 // checksums.txt: same-source integrity, weaker than the pin. POSIX sh, so no
 // ERR trap; every network step falls through to fail with the releases page.
+// The tarball ships the binary without the execute bit, so the extract step
+// also sets it, and either failing reports as extract.
 func wstunnelLatestLinux(client string) string {
 	download := wstunnelReleasesURL + "/download/v$v/"
 	return strings.Join([]string{
@@ -358,7 +364,7 @@ func wstunnelLatestLinux(client string) string {
 		`f="wstunnel_${v}_linux_${a}.tar.gz"`,
 		fmt.Sprintf(`curl -fsSLo wstunnel.tgz "%s$f" || fail download`, download),
 		fmt.Sprintf(`curl -fsSL "%schecksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum`, download),
-		"tar -xzf wstunnel.tgz wstunnel || fail extract",
+		"tar -xzf wstunnel.tgz wstunnel && chmod +x wstunnel || fail extract",
 		"exec ./wstunnel " + client,
 	}, "; ")
 }

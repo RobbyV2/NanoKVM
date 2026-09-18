@@ -409,7 +409,7 @@ yaml has one restriction `name: exit0`, `!PathPrefix "^exit0$"`, `!Authorization
 
 Panel → Wstunnel tab. Expected shape (from `commands.go`):
 
-- Linux/macOS: `set -e; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64 s=<sha>;; aarch64|arm64) a=arm64 s=<sha>;; *) …exit 1;; esac; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_<linux|darwin>_${a}.tar.gz"; echo "$s  wstunnel.tgz" | <sha256sum -c -|shasum -a 256 -c ->; tar -xzf wstunnel.tgz wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
+- Linux/macOS: `set -e; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64 s=<sha>;; aarch64|arm64) a=arm64 s=<sha>;; *) …exit 1;; esac; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_<linux|darwin>_${a}.tar.gz"; echo "$s  wstunnel.tgz" | <sha256sum -c -|shasum -a 256 -c ->; tar -xzf wstunnel.tgz wstunnel; chmod +x wstunnel; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
 - Windows: `$v='10.7.1'; $a=…; $h=@{amd64='…';arm64='…'}[$a]; … Invoke-WebRequest … wstunnel_10.7.1_windows_$a.tar.gz …; if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; & (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
 - `--tls-verify-certificate` appears **only** if the unit has a CA-signed certificate installed;
   with the stock self-signed one the note reads "wstunnel has no fingerprint pin; … unauthenticated".
@@ -418,7 +418,7 @@ Under the pinned command, the Windows and Linux tabs carry a latest command with
 and the link `https://github.com/erebe/wstunnel`; the macOS tab has no latest command, says so, and
 shows the same link. Expected shape:
 
-- Linux, latest: `set -e; fail() { echo "could not fetch the latest wstunnel ($1); download it from https://github.com/erebe/wstunnel/releases" >&2; exit 1; }; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) …exit 1;; esac; v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/erebe/wstunnel/releases/latest) || fail resolve; v=${v##*/v}; f="wstunnel_${v}_linux_${a}.tar.gz"; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v$v/$f" || fail download; curl -fsSL "https://github.com/erebe/wstunnel/releases/download/v$v/checksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum; tar -xzf wstunnel.tgz wstunnel || fail extract; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
+- Linux, latest: `set -e; fail() { echo "could not fetch the latest wstunnel ($1); download it from https://github.com/erebe/wstunnel/releases" >&2; exit 1; }; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) …exit 1;; esac; v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/erebe/wstunnel/releases/latest) || fail resolve; v=${v##*/v}; f="wstunnel_${v}_linux_${a}.tar.gz"; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v$v/$f" || fail download; curl -fsSL "https://github.com/erebe/wstunnel/releases/download/v$v/checksums.txt" | grep " $f$" | sed 's/  .*/  wstunnel.tgz/' | sha256sum -c - || fail checksum; tar -xzf wstunnel.tgz wstunnel && chmod +x wstunnel || fail extract; exec ./wstunnel client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM`
 - Windows, latest: `try { $v=(Invoke-RestMethod -UseBasicParsing 'https://api.github.com/repos/erebe/wstunnel/releases/latest').tag_name.TrimStart('v'); $a=…; $n="wstunnel_${v}_windows_$a.tar.gz"; … Invoke-WebRequest … /releases/download/v$v/$n …; Invoke-WebRequest … /releases/download/v$v/checksums.txt …; $h=(Select-String -SimpleMatch -Pattern "  $n" -Path $s | Select-Object -First 1).Line; if (-not $h -or $h.Split(' ')[0] -ne (Get-FileHash $f -Algorithm SHA256).Hash) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; & (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer $TOKEN' -R socks5://127.0.0.1:10820 wss://$KVM } catch { throw "could not fetch the latest wstunnel: $_ Download it from https://github.com/erebe/wstunnel/releases" }`
 - Both run whatever `https://github.com/erebe/wstunnel/releases/latest` resolves to (10.7.1 at the
   time of writing, the same as the pin) and verify the download against that tag's own
@@ -445,7 +445,9 @@ exit$ <paste>
 
 Expected stdout: `wstunnel.tgz: OK` from the checksum step, then wstunnel's own log:
 `Starting wstunnel client v10.7.1`, `Connected to wss://$KVM` (or `Server listening on socks5://127.0.0.1:10820` echoed from the server side) and no `error`. `ps -o args= -p $(pgrep -n wstunnel)`
-shows `./wstunnel client -P exit/0 …`; `./wstunnel --version` in `$d` prints `10.7.1`.
+shows `./wstunnel client -P exit/0 …`; `./wstunnel --version` in `$d` prints `10.7.1`. The release
+tarball stores the binary as `0644`, so the command sets the execute bit itself: `ls -l "$d"/wstunnel`
+shows `-rwxr-xr-x`.
 
 Windows:
 
