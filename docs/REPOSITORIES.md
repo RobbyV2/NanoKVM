@@ -259,10 +259,11 @@ Recurring conflict hot spots, all deliberate divergences: `Makefile`,
 `web/src/pages/desktop/menu/settings/index.tsx`, and all 24 files under
 `web/src/i18n/locales/`.
 
-`S30rndis` is intentionally stock-upstream with exactly three changes (the gate
+`S30rndis` is intentionally stock-upstream with exactly four changes (the gate
 admits NCM, the interface is resolved from configfs instead of spelled `usb0`,
-and the stop path matches `udhcpd` by config path because BusyBox writes no
-pidfile). Take upstream's file and re-apply those three rather than keeping ours
+`udhcpd` is matched by config path because BusyBox writes no pidfile, and `start`
+raises the link and replaces the running `udhcpd` so it can be re-run after every
+gadget rebind). Take upstream's file and re-apply those four rather than keeping ours
 wholesale — it is copied over `/etc/init.d` on every update, so a rewrite here
 rewrites the gadget NIC's addressing on every device in the field. After merging,
 re-read the "Temporary local patches" section of the root `CLAUDE.md` and delete

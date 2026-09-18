@@ -1,8 +1,10 @@
 #!/bin/sh
 #
-# The stock script with three things changed: the interface is resolved rather
-# than spelled, the gate admits an NCM profile as well as an RNDIS one, and the
-# stop path matches udhcpd by its config path because BusyBox writes no pidfile.
+# The stock script with four things changed: the interface is resolved rather
+# than spelled, the gate admits an NCM profile as well as an RNDIS one, udhcpd
+# is matched by its config path because BusyBox writes no pidfile, and start
+# is a converge: it replaces any udhcpd already serving the interface and
+# raises the link, so the server can run it after every gadget rebind.
 # Everything else — the prefix derivation from the chip UID, the udhcpd config
 # it generates — is the stock logic verbatim, because this file is copied over
 # /etc/init.d at every update and a rewrite here is a rewrite of the gadget
@@ -51,6 +53,41 @@ gadget_nic() {
 # the tunnel. Without it the lease is the stock one: no router, no DNS, and the
 # host keeps whatever other uplink it has.
 EXIT_GADGET_ROUTE=/etc/kvm/exit/gadget.route
+
+# Kill every udhcpd serving the interfaces named by the glob in $1 ("usb*" for
+# all of them, one name for one). BusyBox udhcpd honours the pidfile directive
+# by ignoring it: it writes no pidfile at all, so the process is matched by the
+# config path this script generates, which is in its command line. Then wait,
+# up to a second, for the killed servers to go, so a start that follows can
+# bind :67 instead of racing the old server for it.
+kill_udhcpd_for() {
+	killed=""
+	for proc in /proc/[0-9]*
+	do
+		[ -r "$proc/cmdline" ] || continue
+		case "$(tr '\0' ' ' < "$proc/cmdline")" in
+			*udhcpd*/etc/udhcpd.$1.conf*)
+				pid=${proc#/proc/}
+				kill "$pid" 2>/dev/null && killed="$killed $pid"
+				;;
+		esac
+	done
+	[ -n "$killed" ] || return 0
+	tries=0
+	while [ "$tries" -lt 10 ]
+	do
+		alive=""
+		for pid in $killed
+		do
+			kill -0 "$pid" 2>/dev/null && alive="$alive $pid"
+		done
+		[ -n "$alive" ] || return 0
+		killed=$alive
+		tries=$((tries + 1))
+		sleep 0.1 2>/dev/null || sleep 1
+	done
+	return 0
+}
 
 gen_udhcpd_conf() {
 	interface=${1}
@@ -111,6 +148,16 @@ start() {
 			fi
 			gen_udhcpd_conf "$interface" "${ipv4_prefix}" > "/etc/udhcpd.$interface.conf"
 			ip addr add $ipv4_prefix.1/24 dev "$interface"
+			# A netdev the kernel has just created is administratively
+			# down, and nothing else raises the gadget NIC: without this
+			# the address sits on a DOWN interface and the host never
+			# gets a lease.
+			ip link set dev "$interface" up
+			# Every gadget rebind recreates the netdev, and the server
+			# runs start again to address it; the udhcpd from the
+			# previous start is still bound to 0.0.0.0:67, so replace it
+			# rather than stack another one beside it.
+			kill_udhcpd_for "$interface"
 			udhcpd -S "/etc/udhcpd.$interface.conf"
 		fi
 		echo "ok"
@@ -129,17 +176,9 @@ stop() {
 		rm -f "$pidfile"
 	done
 
-	# BusyBox udhcpd honours the pidfile directive by ignoring it: it writes no
-	# pidfile at all, so the loop above finds nothing and a second start leaves
-	# two servers answering the same segment with different leases. Match the
-	# process by the config path this script generates instead.
-	for proc in /proc/[0-9]*
-	do
-		[ -r "$proc/cmdline" ] || continue
-		case "$(tr '\0' ' ' < "$proc/cmdline")" in
-			*udhcpd*/etc/udhcpd.usb*.conf*) kill "${proc#/proc/}" 2>/dev/null ;;
-		esac
-	done
+	# The pidfiles are never there (see kill_udhcpd_for), so this is what
+	# stops the servers.
+	kill_udhcpd_for "usb*"
 }
 
 restart() {

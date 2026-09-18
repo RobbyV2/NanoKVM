@@ -154,7 +154,7 @@ This needs ssh over eth0 (sshd is S50, before S95). Have the consumer plugged in
 reconnect the moment ssh answers, then:
 
 ```sh
-kvm# C=/sys/kernel/config/usb_gadget/g0/configs/c.1; for i in $(seq 120); do echo "$(cut -d' ' -f1 /proc/uptime) udc=[$(cat /sys/kernel/config/usb_gadget/g0/UDC 2>/dev/null)] ifname=[$(cat $C/ncm.*/ifname $C/rndis.*/ifname 2>/dev/null | tr '\n' ,)] addr=[$(ip -4 -o addr 2>/dev/null | grep -o '10\.[0-9.]*/24' | tr '\n' ,)] udhcpd=[$(pgrep udhcpd | tr '\n' ,)] server=[$(pidof NanoKVM-Server)] exit0=[$(cat /sys/class/net/exit0/carrier 2>/dev/null)] hev=[$(cat /var/run/exit0-hev.pid 2>/dev/null)]"; sleep 1; done | tee /tmp/boot-timeline.log
+kvm# C=/sys/kernel/config/usb_gadget/g0/configs/c.1; for i in $(seq 120); do echo "$(cut -d' ' -f1 /proc/uptime) udc=[$(cat /sys/kernel/config/usb_gadget/g0/UDC 2>/dev/null)] ifname=[$(cat $C/ncm.*/ifname $C/rndis.*/ifname 2>/dev/null | tr '\n' ,)] addr=[$(ip -4 -o addr 2>/dev/null | grep -o '10\.[0-9.]*/24' | tr '\n' ,)] udhcpd=[$(ps w | grep '[u]dhcpd' | awk '{print $1}' | tr '\n' ,)] server=[$(pidof NanoKVM-Server)] exit0=[$(cat /sys/class/net/exit0/carrier 2>/dev/null)] hev=[$(cat /var/run/exit0-hev.pid 2>/dev/null)]"; sleep 1; done | tee /tmp/boot-timeline.log
 ```
 
 Expected sequence (slot disabled at this point): `ifname=[(unnamed net_device)]` and `udc=[]` until
@@ -164,7 +164,7 @@ each transition. Fail: two udhcpd pids; an address with no udhcpd; ifname still 
 after the server pid; or (with the slot enabled, repeat in §6) `exit0=[…]`/`hev=[…]` absent before the
 server starts, which would mean `S94exit start` at boot did not bring up the NIC-independent half.
 
-Also: `ip addr show usb0` and `pgrep -a udhcpd` once, at rest, so the plan's literal question has a
+Also: `ip addr show usb0` and `ps w | grep '[u]dhcpd'` once, at rest, so the plan's literal question has a
 literal answer in the report.
 
 ### 0.8 Endpoint budget
@@ -253,7 +253,7 @@ kvm# ip rule; ip route show table 100
 kvm# iptables -S EXIT0; iptables -t nat -S EXIT0_NAT; iptables -t nat -S EXIT0_MASQ; ip6tables -S FORWARD | grep "$NIC"
 kvm# sysctl net.ipv4.ip_forward net.ipv4.conf.$NIC.route_localnet net.ipv4.conf.exit0.rp_filter net.ipv6.conf.$NIC.disable_ipv6
 kvm# netstat -lntp | grep -E ':10800|:53 '; netstat -lnup | grep ':53 '
-kvm# pgrep -a udhcpd; cat /etc/udhcpd.$NIC.conf
+kvm# ps w | grep '[u]dhcpd'; cat /etc/udhcpd.$NIC.conf
 kvm# cat /var/run/exit0-hev.pid; tail -5 /tmp/exit0-hev.log
 ```
 
@@ -826,7 +826,7 @@ kvm# /etc/init.d/S95nanokvm restart    # or kill and re-run the foreground comma
 
 Expected on the exit: `session ended … / reconnecting in 1s / 2s / 4s …` until the server is back
 (≈10–20 s), then `connected:`. Expected on the NanoKVM after the server is up: `$S status 0` all `1`
-(Init re-ran `S94exit start 0` and rebound `:10800` and `$GW:53`), `pgrep -a udhcpd` still exactly one.
+(Init re-ran `S94exit start 0` and rebound `:10800` and `$GW:53`), `ps w | grep '[u]dhcpd'` still exactly one.
 Consumer: internet resumes untouched. Pass: resumes within 60 s without consumer action; the client
 never exceeds 30 s between attempts.
 
@@ -870,7 +870,7 @@ Expected order on the NanoKVM timeline (uptime seconds in brackets are what you 
 Then:
 
 ```sh
-kvm# $S status 0; echo rc=$?; ip rule | grep -E '^100[01]:'; cat /etc/udhcpd.$NIC.conf | tail -2; pgrep -a udhcpd | wc -l; cat /etc/kvm/exit/gadget.route
+kvm# $S status 0; echo rc=$?; ip rule | grep -E '^100[01]:'; cat /etc/udhcpd.$NIC.conf | tail -2; ps w | grep '[u]dhcpd' | wc -l; cat /etc/kvm/exit/gadget.route
 kvm# netstat -lntp | grep -E ':10800|:53 '; iptables -t nat -S EXIT0_NAT | grep DNAT | head -1
 kvm# sysctl -n net.ipv4.ip_forward      # S98tailscaled ran after S94exit and zeroed it; the server's Init/watchdog must have re-set it
 ```
@@ -1360,7 +1360,7 @@ kvm# grep -E '"(enabled|pending)"' /etc/kvm/exit/0.json; ls /etc/kvm/exit/gadget
 kvm# $S status 0; echo rc=$?
 kvm# ip rule | grep -E '^100[01]:'; ip route show table 100; ip link show exit0 2>&1
 kvm# iptables -S | grep -c EXIT0; iptables -t nat -S | grep -c EXIT0; ip6tables -S FORWARD | grep -c "$NIC"
-kvm# netstat -lntp | grep -E ':10800|:10810|:10820|:53 '; pgrep -a hev; pgrep -a wstunnel; pgrep -a udhcpd | wc -l
+kvm# netstat -lntp | grep -E ':10800|:10810|:10820|:53 '; ps w | grep '[h]ev'; ps w | grep '[w]stunnel'; ps w | grep -c '[u]dhcpd'
 kvm# tail -2 /etc/udhcpd.$NIC.conf
 kvm# iptables -S FORWARD; iptables -t nat -S PREROUTING; iptables -t nat -S POSTROUTING     # compare with 0.4's baseline
 ```
@@ -1386,7 +1386,7 @@ Expected: `configured`; no gadget errors in dmesg.
 ### 12.3 Three cycles
 
 Repeat off/on three times, 30 s apart, running only the quick checks after each:
-`$S status 0 | tr '\n' ' '; pgrep udhcpd | wc -l; cat /sys/class/udc/*/state; ipconfig-equivalent gateway present?; keyboard types; curl 200`.
+`$S status 0 | tr '\n' ' '; ps w | grep -c '[u]dhcpd'; cat /sys/class/udc/*/state; ipconfig-equivalent gateway present?; keyboard types; curl 200`.
 
 Expected: identical each time, one udhcpd, UDC `configured`, no leaked `EXIT0` rules or stale `exit0`
 in the off state, no orphaned `hev` (`pgrep hev` empty when off). If the panel ever shows
@@ -1418,7 +1418,7 @@ kvm# cp /tmp/exit0-hev.log /tmp/exit0-wstunnel.log . 2>/dev/null; tail -500 /tmp
 kvm# (conntrack -L 2>/dev/null || cat /proc/net/nf_conntrack) > conntrack.txt 2>&1
 kvm# netstat -lntup > netstat-listen.txt 2>&1; netstat -ntu > netstat-conns.txt 2>&1
 kvm# ls -l /var/run/exit0* /etc/kvm/bin/ > runfiles.txt 2>&1; cat /var/run/exit0.dns_redirected > dns_redirected.txt 2>&1; for p in $(cat /var/run/exit0-hev.pid /var/run/exit0-wstunnel.pid 2>/dev/null) $(pidof NanoKVM-Server); do echo "== $p $(tr '\0' ' ' < /proc/$p/cmdline)"; grep -E 'VmRSS|VmSize|VmPeak|Threads' /proc/$p/status; done > procs.txt 2>&1
-kvm# pgrep -a udhcpd > udhcpd.txt; cp /etc/udhcpd.$NIC.conf . 2>/dev/null; xxd /var/lib/misc/udhcpd.$NIC.leases > leases.hex 2>/dev/null
+kvm# ps w | grep '[u]dhcpd' > udhcpd.txt; cp /etc/udhcpd.$NIC.conf . 2>/dev/null; xxd /var/lib/misc/udhcpd.$NIC.leases > leases.hex 2>/dev/null
 kvm# cat /sys/kernel/config/usb_gadget/g0/UDC > udc.txt; cat /sys/class/udc/*/state >> udc.txt; ls /sys/kernel/config/usb_gadget/g0/configs/c.1/ >> udc.txt; cat /sys/kernel/config/usb_gadget/g0/configs/c.1/*/ifname >> udc.txt 2>&1
 kvm# dmesg | tail -200 > dmesg-tail.txt; free -m > free.txt; uptime > uptime.txt; zcat /proc/config.gz | grep -E 'CONFIG_(TUN|IP_MULTIPLE_TABLES|NFT_COMPAT|NETFILTER_XT_TARGET_TCPMSS|IP_NF_TARGET_REJECT)=' > kconfig.txt
 kvm# tcpdump -ni $NIC -c 200 -w gadget.pcap 2>/dev/null & tcpdump -ni eth0 -c 200 -w eth0.pcap 'not port 22' 2>/dev/null &      # then reproduce the failing consumer command, wait 10 s, `kill %1 %2`
