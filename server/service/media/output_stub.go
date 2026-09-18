@@ -13,3 +13,6 @@ func (platformFactory) Open(SlotSpec, string) (Output, error) {
 func (platformFactory) OpenInput(SlotSpec, string) (Input, error) {
 	return nil, errors.New("media gadget capture requires linux and cgo")
 }
+
+// No gadget, nothing to subscribe: a hold on this platform is only a descriptor.
+func subscribeUVCEvents(int) error { return nil }

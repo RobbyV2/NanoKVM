@@ -138,6 +138,21 @@ static int nk_uvc_format(struct nk_uvc *u, unsigned int frame) {
 static void nk_uvc_close(struct nk_uvc *u);
 static int nk_uvc_queue(struct nk_uvc *u, const void *data, size_t length, int all);
 
+// Subscribes one descriptor to every UVC event, CONNECT through DATA. The hold
+// runs it at open (hold.go, holdNode) so that a class request from the host is
+// queued from the first moment the node exists; adopt runs it again on the dup,
+// which shares the v4l2_fh and is told "already listening" (v4l2-event.c,
+// v4l2_event_subscribe returns 0 on a type the handle has). 0 or -errno.
+static int nk_uvc_subscribe(int fd) {
+	for (unsigned int type = UVC_EVENT_CONNECT; type <= UVC_EVENT_DATA; type++) {
+		struct v4l2_event_subscription subscription;
+		memset(&subscription, 0, sizeof(subscription));
+		subscription.type = type;
+		if (nk_ioctl(fd, VIDIOC_SUBSCRIBE_EVENT, &subscription) < 0) return -errno;
+	}
+	return 0;
+}
+
 // The streaming layer never opens the node: it dups the descriptor the manager
 // holds for the lifetime of the function (see hold.go). dup shares the struct
 // file, so uvc_v4l2_open() and uvc_v4l2_release() - the two halves of
@@ -161,16 +176,12 @@ static struct nk_uvc *nk_uvc_adopt(int held, const uint16_t *widths,
 	nk_control(u, &u->probe, 0);
 	nk_control(u, &u->commit, 0);
 
-	for (unsigned int type = UVC_EVENT_CONNECT; type <= UVC_EVENT_DATA; type++) {
-		struct v4l2_event_subscription subscription;
-		memset(&subscription, 0, sizeof(subscription));
-		subscription.type = type;
-		if (nk_ioctl(u->fd, VIDIOC_SUBSCRIBE_EVENT, &subscription) < 0) goto fail;
-	}
+	// Events the hold queued before this worker existed - the host's first
+	// probe, typically - are still on the shared handle and the first
+	// nk_uvc_step answers them: vb2_poll raises POLLPRI for pending events.
+	int rc = nk_uvc_subscribe(u->fd);
+	if (rc < 0) { nk_uvc_close(u); errno = -rc; return NULL; }
 	return u;
-fail:
-	nk_uvc_close(u);
-	return NULL;
 }
 
 static void nk_uvc_release_buffers(struct nk_uvc *u) {
@@ -1067,6 +1078,16 @@ func (o *pcmOutput) Close() error {
 	if o.handle != nil {
 		C.nk_pcm_close(o.handle)
 		o.handle = nil
+	}
+	return nil
+}
+
+// subscribeUVCEvents is armHold (hold.go): the subscription a held descriptor
+// carries from its open, so a class request the host sends before a worker
+// adopts the node is queued rather than lost.
+func subscribeUVCEvents(fd int) error {
+	if rc := C.nk_uvc_subscribe(C.int(fd)); rc < 0 {
+		return syscallError(rc)
 	}
 	return nil
 }

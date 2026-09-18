@@ -215,6 +215,16 @@ every path that rebinds stands the media observer down before (`suspend`) and re
 it after, `SetLUN` included; a rebind that skips either leaves the gadget dark until the
 next apply.
 
+The new hold cannot wait for that refresh. Every bind goes through `bindUDC`, which calls
+the observer's `Bound` (the optional `bindObserver`) the instant `BindUDC` returns, before
+the OTG role write, the HID verify, the store writes and `notifyRebound`. The video node
+exists only from the bind and this fork's `f_uvc` puts the gadget on the bus at the same
+bind; the host's first UVC class request follows about 0.7 s later and is dropped unless a
+V4L2 handle has subscribed, which wedges ep0 for every function (the `Applied` hold was
+measured at 1.1 s with a gadget NIC in the profile). A rollback rung releases those holds
+again (`releaseBindHolds`) before it unlinks, since configfs blocks the unlink of a held
+UVC function. `TestTheObserverHoldsTheInstantTheControllerBinds` pins the order.
+
 The hook is deliberately over-eager: it also fires on paths where nothing was rebound,
 because re-enslaving a port that is already a port is a no-op and missing a real rebind
 is not. Nothing in this package knows a bridge can exist — the dependency points bridge

@@ -73,6 +73,24 @@ type GadgetObserver interface {
 	Applied(context.Context, Profile, Plan) error
 }
 
+// Also the media manager, and optional so no fake observer has to grow it. The
+// camera's video node exists only while the function is bound - f_uvc registers
+// it at the end of uvc_function_bind and unregisters it in uvc_unbind - and this
+// fork's f_uvc puts the gadget on the bus at that same bind, so the earliest the
+// node can be held is the moment BindUDC returns, and the host's first UVC class
+// request follows about 0.7 s later. Applied runs after the OTG role write, the
+// HID verify, the HID reopen, the store writes and every rebind hook, which was
+// measured at 1.1 s after the bind with a gadget NIC in the profile; the vendor
+// f_uvc answers no class request itself and V4L2 drops one no handle has
+// subscribed to, so a request in that gap is never answered and wedges ep0 for
+// every function on the gadget. Bound is therefore called from bindUDC, the one
+// funnel every bind in this package goes through, before anything else touches
+// the transaction; the observer holds and subscribes there and Applied builds
+// the workers that answer what the hold has queued.
+type bindObserver interface {
+	Bound(context.Context)
+}
+
 type Manager struct {
 	store *Store
 	ops   Ops
@@ -1186,6 +1204,22 @@ func (m *Manager) observer() GadgetObserver {
 	m.wireMu.Lock()
 	defer m.wireMu.Unlock()
 	return m.media
+}
+
+// Every bind of the controller goes through here and nowhere else, so the
+// observer's hold follows the bind by the time of one sysfs walk and one open
+// rather than by the rest of the transaction. See bindObserver for why the
+// order is load-bearing. The context is fresh on purpose: the hold's own
+// settle bound is what limits it, and an apply whose context expired still has
+// a gadget on the bus that needs its node held.
+func (m *Manager) bindUDC(udc string) error {
+	if err := m.ops.BindUDC(udc); err != nil {
+		return err
+	}
+	if observer, ok := m.observer().(bindObserver); ok {
+		observer.Bound(context.Background())
+	}
+	return nil
 }
 
 func (m *Manager) notifyRebound(ctx context.Context) {

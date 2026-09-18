@@ -592,3 +592,166 @@ func TestDefaultCameraStreamsAtTheWidthEveryApplicationOpens(t *testing.T) {
 		t.Fatalf("default streaming_maxpacket = %d, want 768", got)
 	}
 }
+
+// An observer that holds at bind, recording what the transaction looked like
+// at each hold and at each suspend: the ops recorded so far, how many rebind
+// hooks had fired, how many Applied had run, and what the HID writers had been
+// through. Bound and Suspend run on the manager's goroutine, so the slices need
+// no lock of their own.
+type holdingObserver struct {
+	fakeGadgetObserver
+	ops        *RecordOps
+	hid        *fakeHID
+	rebinds    *int
+	bounds     []boundAt
+	suspendsAt []int
+}
+
+type boundAt struct {
+	ops     []Op
+	rebinds int
+	applied int
+	hid     []string
+}
+
+func (o *holdingObserver) Bound(context.Context) {
+	o.mu.Lock()
+	applied := o.applied
+	o.mu.Unlock()
+	at := boundAt{ops: o.ops.Trace(), applied: applied}
+	if o.rebinds != nil {
+		at.rebinds = *o.rebinds
+	}
+	if o.hid != nil {
+		at.hid = o.hid.Events()
+	}
+	o.bounds = append(o.bounds, at)
+}
+
+func (o *holdingObserver) Suspend() error {
+	o.suspendsAt = append(o.suspendsAt, len(o.ops.Trace()))
+	return o.fakeGadgetObserver.Suspend()
+}
+
+// The nth hold ran with the bind as the last op recorded, with no rebind hook
+// and no Applied for this bind yet, and with the HID bracket still closed: the
+// verify's open of /dev/hidgN, the reopen and the key release all come after.
+func assertHeldAtBind(t *testing.T, observer *holdingObserver, n int) {
+	t.Helper()
+	if len(observer.bounds) != n {
+		t.Fatalf("the observer was told of %d binds, want %d", len(observer.bounds), n)
+	}
+	at := observer.bounds[n-1]
+	if len(at.ops) == 0 || at.ops[len(at.ops)-1].Kind != OpBind {
+		t.Fatalf("hold %d ran after %+v, want the bind itself as the last op", n, at.ops)
+	}
+	if at.rebinds != n-1 {
+		t.Fatalf("hold %d ran after %d rebind hooks, want %d: the bridge reattach must not sit between the bind and the hold", n, at.rebinds, n-1)
+	}
+	if at.applied != n-1 {
+		t.Fatalf("hold %d ran after %d Applied, want %d", n, at.applied, n-1)
+	}
+	if at.hid != nil && at.hid[len(at.hid)-1] != "close" {
+		t.Fatalf("hold %d ran after the HID bracket had moved on: %v", n, at.hid)
+	}
+}
+
+// The camera's video node exists only from the bind, and this fork's f_uvc
+// puts the gadget on the bus at that bind and forwards the host's first class
+// request, about 0.7 s later, to whichever V4L2 handle has subscribed. A hold
+// taken from Applied came after the HID verify, the reopen and the rebind
+// hooks - 1.1 s with a gadget NIC in the profile - and the unanswered request
+// wedged ep0 for every function. So the hold is taken the instant the
+// controller binds, on every path that binds.
+func TestTheObserverHoldsTheInstantTheControllerBinds(t *testing.T) {
+	manager, ops := newTestManager(t)
+	manager.caps = staticV1
+	hid := &fakeHID{}
+	manager.SetHID(hid)
+	rebinds := 0
+	manager.OnRebind(func(context.Context) { rebinds++ })
+	observer := &holdingObserver{ops: ops, hid: hid, rebinds: &rebinds}
+	manager.SetObserver(observer)
+
+	if err := manager.ApplyProfile(context.Background(), mediaProfile(testCamera("cam0", 768))); err != nil {
+		t.Fatal(err)
+	}
+	assertHeldAtBind(t, observer, 1)
+
+	if err := manager.Rebind(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	assertHeldAtBind(t, observer, 2)
+
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	if observer.applied != 2 {
+		t.Fatalf("Applied ran %d times after two binds, want 2: the workers still have to be built behind each hold", observer.applied)
+	}
+}
+
+// The start's one bind is Attach's, through ensureBound, and the boot
+// enumeration has the same race as a rebind.
+func TestTheStartHoldsAtItsOneBind(t *testing.T) {
+	manager, ops := newTestManager(t)
+	if err := ops.UnbindUDC(); err != nil {
+		t.Fatal(err)
+	}
+	observer := &holdingObserver{ops: ops}
+	manager.SetObserver(observer)
+
+	if err := manager.Attach(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	assertHeldAtBind(t, observer, 1)
+	if got := ops.Role(); got != OTGRoleDevice {
+		t.Fatalf("otg role = %q after the start, want %q", got, OTGRoleDevice)
+	}
+}
+
+// A transaction that binds and then fails rolls back, and the rollback unlinks
+// the functions the failed profile brought. configfs blocks that unlink in the
+// kernel while the function's video node is held, and the failed bind is where
+// the observer took its hold, so the rollback stands the observer down again
+// before it unlinks anything.
+func TestARollbackAfterTheBindGivesTheHoldsBackBeforeItUnlinks(t *testing.T) {
+	manager, ops := newTestManager(t)
+	manager.caps = staticV1
+	hid := &fakeHID{}
+	hid.failOpens(1, errors.New("hidg did not come back"))
+	manager.SetHID(hid)
+	observer := &holdingObserver{ops: ops, hid: hid}
+	manager.SetObserver(observer)
+
+	if err := manager.ApplyProfile(context.Background(), mediaProfile(testCamera("cam0", 768))); err == nil {
+		t.Fatal("the apply succeeded with HID nodes that never came back")
+	}
+	if len(observer.bounds) != 2 {
+		t.Fatalf("the observer was told of %d binds, want 2: the failed transaction's and the rollback's", len(observer.bounds))
+	}
+
+	trace := ops.Trace()
+	firstBind := slices.IndexFunc(trace, func(op Op) bool { return op.Kind == OpBind })
+	if firstBind < 0 {
+		t.Fatalf("no bind in %+v", trace)
+	}
+	unlink := -1
+	for i := firstBind; i < len(trace); i++ {
+		if trace[i].Kind == OpUnlink && trace[i].Path == "configs/c.1/uvc.cam0" {
+			unlink = i
+			break
+		}
+	}
+	if unlink < 0 {
+		t.Fatalf("the rollback never unlinked the camera: %+v", trace[firstBind:])
+	}
+	released := false
+	for _, at := range observer.suspendsAt {
+		if at > firstBind && at <= unlink {
+			released = true
+		}
+	}
+	if !released {
+		t.Fatalf("the observer was suspended at op counts %v; the bind is op %d and the camera unlink op %d, and nothing stood the observer down between them", observer.suspendsAt, firstBind, unlink)
+	}
+}

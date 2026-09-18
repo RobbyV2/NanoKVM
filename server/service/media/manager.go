@@ -227,6 +227,21 @@ func (m *Manager) Applied(ctx context.Context, profile presentation.Profile, pla
 	return m.Reconcile(ctx, profile, plan)
 }
 
+// Bound runs the instant the presentation manager has bound the controller,
+// before the OTG role write, the HID verify and the rebind hooks, and holds
+// every gadget video node then. The hold is what subscribes the node to the
+// UVC events (hold.go, holdNode), and it has to exist before the host's first
+// class request or that request is never answered and ep0 wedges for every
+// function. Applied follows later and finds the nodes already held: the hold
+// table converges on the same set, so this costs no second open. Nothing is
+// returned because nothing here can be refused - the controller is on the bus
+// already - and Applied reports the same failure when it runs.
+func (m *Manager) Bound(ctx context.Context) {
+	if _, err := m.holdVideoNodes(ctx); err != nil {
+		log.Errorf("hold gadget video nodes at bind: %s", err)
+	}
+}
+
 // Suspend runs before the gadget is torn down, so it has to give the nodes back
 // as well as stop the workers. Measured on hardware: unlinking a UVC function
 // whose video node is open had not returned after two minutes, and the same

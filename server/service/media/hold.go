@@ -56,13 +56,52 @@ func (h *fdHolder) Close() error {
 	return syscall.Close(fd)
 }
 
+// armHold subscribes a held descriptor to every UVC event. It is a variable so
+// a test can watch it run against the open; the real one is subscribeUVCEvents
+// in output_linux.go.
+var armHold = subscribeUVCEvents
+
 // The flags match what the streaming layer needs from the descriptor it dups:
 // V4L2 event dequeues and buffer dequeues in the UVC loop rely on O_NONBLOCK
 // returning EAGAIN rather than sleeping.
+//
+// The descriptor is subscribed to the UVC events here, at the open, and not
+// only when a worker adopts it. This fork's f_uvc keeps bind_deactivated clear
+// (f_uvc.c, uvc_function_connect), so the gadget is on the bus the moment the
+// controller binds, and uvc_function_setup answers no class request itself: it
+// queues each one to userspace as UVC_EVENT_SETUP and returns 0, and composite
+// leaves ep0 in the data stage until UVCIOC_SEND_RESPONSE fills it. V4L2 hands
+// an event only to a handle that has subscribed (v4l2_event_queue_fh returns
+// before touching the queue when v4l2_event_subscribed finds nothing), so a
+// request that lands before the subscription is dropped on the floor, nothing
+// ever answers it, and dwc2 never re-arms ep0: from then on every control
+// transfer from the host times out and the gadget NIC and the audio functions
+// fail to start. Measured on the device, the host's first UVC class request
+// comes about 0.7 s after the bind; the worker used to subscribe at about 1.1 s
+// with a gadget NIC in the profile, and lost the race on every enumeration.
+//
+// A request that lands after the subscription and before the worker adopts the
+// descriptor is a different thing: it sits queued on this handle, the host
+// keeps polling the data stage, and the worker's first poll sees POLLPRI
+// (vb2_poll reports pending events) and answers it. The host waits seconds for
+// a control transfer and the worker adopts within one, so no responder runs on
+// the hold itself. A dup shares the struct file and with it the v4l2_fh, so the
+// subscription made here is the worker's too; its own VIDIOC_SUBSCRIBE_EVENT
+// of the same types is answered "already listening" with 0.
+//
+// The hold is only as early as its caller: the presentation manager calls
+// Bound the instant the controller binds, which is what moves this open from
+// after the rebind hooks to within milliseconds of the bind. A subscription
+// that fails is logged and the hold kept, since the worker subscribes again
+// when it adopts and the descriptor still keeps the function activated on a
+// kernel that arms bind_deactivated.
 func holdNode(node string) (Holder, error) {
 	fd, err := syscall.Open(node, syscall.O_RDWR|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
+	}
+	if err := armHold(fd); err != nil {
+		log.Errorf("subscribe uvc events on %s: %s: a class request the host sends before the camera worker adopts the node goes unanswered", node, err)
 	}
 	return &fdHolder{node: node, fd: fd}, nil
 }

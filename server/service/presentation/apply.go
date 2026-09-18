@@ -189,6 +189,7 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 	probes := append(append([]Function(nil), failed.Functions...), recovery.profile.Functions...)
 	before := readSnapshot(m.ops, probes)
 	recovery.plan = Reconcile(before, m.dropRedundantWrites(before, recovery.plan))
+	m.releaseBindHolds()
 	if err := m.unbindIfBound(); err != nil {
 		return fmt.Errorf("unbind: %w", err)
 	}
@@ -221,6 +222,19 @@ func (m *Manager) restore(failed Profile, recovery recoveryPlan, udc string) (er
 		return err
 	}
 	return m.store.SetLastKnownGood(recovery.profile.Name)
+}
+
+// The transaction a rollback undoes may have bound, and a bind is where a
+// bindObserver takes its holds (bindUDC). The unlink a rollback rung runs
+// blocks in the kernel on a held video node, so those holds go back first.
+// This cannot refuse: the alternative to rolling back is a half-built gadget,
+// so a release that fails is logged by suspend and the rung proceeds. An
+// observer that does not hold at bind has nothing to give back here; the
+// suspend every mutator runs before its transaction already stood it down.
+func (m *Manager) releaseBindHolds() {
+	if _, ok := m.observer().(bindObserver); ok {
+		_ = m.suspend(false)
+	}
 }
 
 // An empty UDC write is unregister_gadget, which is ENODEV unless the gadget is
@@ -312,7 +326,7 @@ func (m *Manager) ensureBound(udc string) error {
 			return err
 		}
 	}
-	if err := m.ops.BindUDC(udc); err != nil {
+	if err := m.bindUDC(udc); err != nil {
 		if readErr != nil {
 			return errors.Join(readErr, err)
 		}
@@ -342,7 +356,7 @@ func (m *Manager) execute(op Op, udc string) error {
 		if m.deferBind {
 			return nil
 		}
-		return m.ops.BindUDC(udc)
+		return m.bindUDC(udc)
 	case OpOTGRole:
 		if m.deferBind {
 			return nil
@@ -479,7 +493,7 @@ func (m *Manager) bind() error {
 	}
 
 	udc := udcs[0]
-	if err := m.ops.BindUDC(udc); err != nil {
+	if err := m.bindUDC(udc); err != nil {
 		return fmt.Errorf("bind %s: %w", udc, err)
 	}
 	if err := m.ops.SetOTGRole(OTGRoleDevice); err != nil {
