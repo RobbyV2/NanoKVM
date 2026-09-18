@@ -1393,6 +1393,16 @@ in the off state, no orphaned `hev` (`pgrep hev` empty when off). If the panel e
 `re-plug the USB cable to pick up the new gateway: …`, record the reason text (functionfs session,
 UDC loaned to passthrough, media busy), replug once, and confirm the lease refreshes.
 
+Windows consumer, after each cycle:
+
+```powershell
+win> Get-PnpDevice -PresentOnly | ? InstanceId -like 'USB\VID_1D6B*' | ft Status,Class,FriendlyName
+```
+
+Expected: every interface `OK`, the two audio nodes included. An audio node at `Error` with problem
+code 10 means the host's first UVC class request beat the video node's event subscription and ep0 is
+wedged; nothing on the host recovers it, only another gadget rebind does.
+
 ### 12.4 Bridge exclusion
 
 With the slot enabled, try to enable the L2 bridge in its own panel. Expected: refused with a message

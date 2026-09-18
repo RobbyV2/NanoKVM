@@ -519,3 +519,11 @@ Only entries verified against the trees on disk.
 - **Recovery needs physical access to the microSD.** There is no remote recovery
   path if the kernel does not boot, and `/boot` (FAT, ~1.8 MiB free) is the hard
   ceiling on kernel growth.
+- **The fork kernel's `f_uvc` answers no UVC class request itself.**
+  `LicheeRV-Nano-Build/linux_5.10/drivers/usb/gadget/function/f_uvc.c:241-265`
+  forwards every one to userspace as a V4L2 event and `:395-417` keeps
+  `bind_deactivated` clear, so the gadget is on the bus from the bind and a request
+  that finds no subscribed handle is dropped and wedges ep0 for every function. The
+  server subscribes at the bind to win that race; the kernel-side follow-up, a STALL
+  (`-EOPNOTSUPP`) from `uvc_function_setup` when no handle is subscribed, is not in
+  the fork yet and belongs in the next kernel merge.
