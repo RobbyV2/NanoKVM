@@ -1176,7 +1176,13 @@ const id = {
           regenerateHint:
             'Sebuah keluar telah terhubung. Setelah perintah yang ditempel tidak lagi diperlukan, buat ulang token; keluar kemudian harus dimulai ulang dengan perintah baru.',
           security:
-            'Target sudah dapat menjangkau antarmuka web, SSH, dan VNC NanoKVM ini di alamat jaringan USB. Fitur ini tidak mengubah hal itu.'
+            'Target sudah dapat menjangkau antarmuka web, SSH, dan VNC NanoKVM ini di alamat jaringan USB. Fitur ini tidak mengubah hal itu.',
+          latestTitle: 'wstunnel terbaru',
+          latestDesc:
+            'Saat perintah dijalankan, rilis wstunnel terbaru di GitHub ditentukan dan unduhannya diperiksa terhadap checksums.txt rilis tersebut, jadi ini bukan {{version}} yang disematkan dan tidak membawa hash yang disematkan. Hanya Windows dan Linux.',
+          latestFallback: 'Jika pengambilan gagal, unduh dari github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Tidak ada perintah pengambilan versi terbaru untuk macOS. Gunakan perintah yang disematkan di atas atau tautan repositori.'
         },
         advanced: {
           title: 'Lanjutan',

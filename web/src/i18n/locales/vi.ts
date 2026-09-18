@@ -1165,7 +1165,13 @@ const vi = {
           regenerateHint:
             'Một thiết bị thoát đã kết nối. Khi không còn cần lệnh đã dán, hãy tạo lại mã thông báo; sau đó phải khởi động lại thiết bị thoát bằng lệnh mới.',
           security:
-            'Máy đích vốn đã truy cập được giao diện web, SSH và VNC của NanoKVM này qua địa chỉ mạng USB. Tính năng này không thay đổi điều đó.'
+            'Máy đích vốn đã truy cập được giao diện web, SSH và VNC của NanoKVM này qua địa chỉ mạng USB. Tính năng này không thay đổi điều đó.',
+          latestTitle: 'wstunnel mới nhất',
+          latestDesc:
+            'Khi lệnh chạy, nó xác định bản phát hành wstunnel mới nhất trên GitHub và kiểm tra tệp tải về bằng checksums.txt của bản đó, nên đây không phải phiên bản đã ghim {{version}} và không kèm hash đã ghim. Chỉ dành cho Windows và Linux.',
+          latestFallback: 'Nếu tải thất bại, hãy tải từ github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Không có lệnh tải bản mới nhất cho macOS. Hãy dùng lệnh đã ghim ở trên hoặc liên kết kho mã.'
         },
         advanced: {
           title: 'Nâng cao',

@@ -1183,7 +1183,13 @@ const nl = {
           regenerateHint:
             'Er is een exit verbonden. Genereer het token opnieuw zodra het geplakte commando niet meer nodig is; de exit moet dan met het nieuwe commando worden herstart.',
           security:
-            'Het doelsysteem bereikt de webinterface, SSH en VNC van deze NanoKVM al via het USB-netwerkadres. Deze functie verandert daar niets aan.'
+            'Het doelsysteem bereikt de webinterface, SSH en VNC van deze NanoKVM al via het USB-netwerkadres. Deze functie verandert daar niets aan.',
+          latestTitle: 'Nieuwste wstunnel',
+          latestDesc:
+            'Zoekt bij het uitvoeren van de opdracht de nieuwste wstunnel-release op GitHub op en controleert de download tegen de checksums.txt van die release; het is dus niet de vastgezette {{version}} en bevat geen vastgezette hash. Alleen Windows en Linux.',
+          latestFallback: 'Als het ophalen mislukt, download het dan van github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Er is geen opdracht om de nieuwste versie op te halen voor macOS. Gebruik de vastgezette opdracht hierboven of de link naar de repository.'
         },
         advanced: {
           title: 'Geavanceerd',

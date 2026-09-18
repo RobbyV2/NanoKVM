@@ -1173,7 +1173,13 @@ const nb = {
           regenerateHint:
             'En exit har koblet til. Generer tokenet på nytt når den innlimte kommandoen ikke lenger trengs; exit må da startes på nytt med den nye.',
           security:
-            'Målmaskinen når allerede webgrensesnittet, SSH og VNC på denne NanoKVM via USB-nettverksadressen. Denne funksjonen endrer ikke det.'
+            'Målmaskinen når allerede webgrensesnittet, SSH og VNC på denne NanoKVM via USB-nettverksadressen. Denne funksjonen endrer ikke det.',
+          latestTitle: 'Nyeste wstunnel',
+          latestDesc:
+            'Finner den nyeste wstunnel-utgivelsen på GitHub når kommandoen kjører og kontrollerer nedlastingen mot utgivelsens checksums.txt, så det er ikke den fastlåste {{version}} og bærer ingen fastlåst hash. Kun Windows og Linux.',
+          latestFallback: 'Hvis hentingen mislykkes, last den ned fra github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Det finnes ingen kommando for å hente den nyeste versjonen til macOS. Bruk den fastlåste kommandoen ovenfor eller lenken til repositoriet.'
         },
         advanced: {
           title: 'Avansert',

@@ -1177,7 +1177,14 @@ const pl = {
           regenerateHint:
             'Wyjście się połączyło. Gdy wklejone polecenie nie będzie już potrzebne, wygeneruj token ponownie; wyjście trzeba będzie wtedy uruchomić z nowym poleceniem.',
           security:
-            'Komputer docelowy już dociera do interfejsu WWW, SSH i VNC tego NanoKVM przez adres sieci USB. Ta funkcja tego nie zmienia.'
+            'Komputer docelowy już dociera do interfejsu WWW, SSH i VNC tego NanoKVM przez adres sieci USB. Ta funkcja tego nie zmienia.',
+          latestTitle: 'Najnowszy wstunnel',
+          latestDesc:
+            'Podczas uruchamiania polecenia ustala najnowsze wydanie wstunnel na GitHubie i sprawdza pobrany plik względem checksums.txt tego wydania, więc nie jest to przypięta wersja {{version}} i nie zawiera przypiętego skrótu. Tylko Windows i Linux.',
+          latestFallback:
+            'Jeśli pobieranie się nie powiedzie, pobierz go z github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Dla macOS nie ma polecenia pobierającego najnowszą wersję. Użyj przypiętego polecenia powyżej lub linku do repozytorium.'
         },
         advanced: {
           title: 'Zaawansowane',

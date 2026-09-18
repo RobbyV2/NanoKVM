@@ -1165,7 +1165,13 @@ const en = {
           regenerateHint:
             'An exit has connected. Once the pasted command is no longer needed, regenerate the token; the exit then has to be restarted with the new one.',
           security:
-            "The target already reaches this NanoKVM's web UI, SSH and VNC on the USB network address. This feature does not change that."
+            "The target already reaches this NanoKVM's web UI, SSH and VNC on the USB network address. This feature does not change that.",
+          latestTitle: 'Latest wstunnel',
+          latestDesc:
+            "Resolves the newest wstunnel release on GitHub when the command runs and checks the download against that release's checksums.txt, so it is not the pinned {{version}} and carries no pinned hash. Windows and Linux only.",
+          latestFallback: 'If the fetch fails, download it from github.com/erebe/wstunnel',
+          latestUnavailable:
+            'There is no latest-fetch command for macOS. Use the pinned command above or the repository link.'
         },
         advanced: {
           title: 'Advanced',

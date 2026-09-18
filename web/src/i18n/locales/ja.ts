@@ -1170,7 +1170,14 @@ const ja = {
           regenerateHint:
             '出口が接続しました。貼り付けたコマンドが不要になったらトークンを再生成してください。その後、出口は新しいコマンドで再起動する必要があります。',
           security:
-            'ターゲット機は USB ネットワークアドレス経由で、すでにこの NanoKVM の Web UI、SSH、VNC に到達できます。この機能はそれを変えません。'
+            'ターゲット機は USB ネットワークアドレス経由で、すでにこの NanoKVM の Web UI、SSH、VNC に到達できます。この機能はそれを変えません。',
+          latestTitle: '最新の wstunnel',
+          latestDesc:
+            'コマンド実行時に GitHub 上の最新の wstunnel リリースを解決し、そのリリースの checksums.txt でダウンロードを検証します。固定バージョン {{version}} ではなく、固定ハッシュも含みません。Windows と Linux のみ。',
+          latestFallback:
+            '取得に失敗した場合は github.com/erebe/wstunnel からダウンロードしてください',
+          latestUnavailable:
+            'macOS 向けの最新版取得コマンドはありません。上の固定バージョンのコマンドかリポジトリのリンクを使用してください。'
         },
         advanced: {
           title: '詳細設定',

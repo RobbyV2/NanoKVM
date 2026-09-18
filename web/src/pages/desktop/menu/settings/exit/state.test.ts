@@ -100,6 +100,28 @@ test('the websocket url of a wstunnel command follows the host on the same schem
   assert.equal(view.rewritten, true);
 });
 
+const latestLinuxCommand =
+  'set -e; fail() { echo "could not fetch the latest wstunnel ($1); download it from https://github.com/erebe/wstunnel/releases" >&2; exit 1; }; d=$(mktemp -d); cd "$d"; case "$(uname -m)" in x86_64) a=amd64;; aarch64|arm64) a=arm64;; *) echo "unsupported architecture: $(uname -m)" >&2; exit 1;; esac; v=$(curl -fsSLo /dev/null -w \'%{url_effective}\' https://github.com/erebe/wstunnel/releases/latest) || fail resolve; v=${v##*/v}; f="wstunnel_${v}_linux_${a}.tar.gz"; curl -fsSLo wstunnel.tgz "https://github.com/erebe/wstunnel/releases/download/v$v/$f" || fail download; curl -fsSL "https://github.com/erebe/wstunnel/releases/download/v$v/checksums.txt" | grep " $f$" | sed \'s/  .*/  wstunnel.tgz/\' | sha256sum -c - || fail checksum; tar -xzf wstunnel.tgz wstunnel || fail extract; exec ./wstunnel client -P exit/0 -H \'Authorization: Bearer k7m2p9vx\' -R socks5://127.0.0.1:10820 \'wss://kvm.example.net\'';
+const latestWindowsCommand =
+  "try { $v=(Invoke-RestMethod -UseBasicParsing 'https://api.github.com/repos/erebe/wstunnel/releases/latest').tag_name.TrimStart('v'); $a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $n=\"wstunnel_${v}_windows_$a.tar.gz\"; $d=Join-Path $env:TEMP 'wstunnel-latest'; New-Item -Force -ItemType Directory $d | Out-Null; $f=Join-Path $d 'wstunnel.tar.gz'; Invoke-WebRequest -UseBasicParsing \"https://github.com/erebe/wstunnel/releases/download/v$v/$n\" -OutFile $f; $s=Join-Path $d 'checksums.txt'; Invoke-WebRequest -UseBasicParsing \"https://github.com/erebe/wstunnel/releases/download/v$v/checksums.txt\" -OutFile $s; $h=(Select-String -SimpleMatch -Pattern \"  $n\" -Path $s | Select-Object -First 1).Line; if (-not $h -or $h.Split(' ')[0] -ne (Get-FileHash $f -Algorithm SHA256).Hash) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; & (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 'wss://kvm.example.net' } catch { throw \"could not fetch the latest wstunnel: $_ Download it from https://github.com/erebe/wstunnel/releases\" }";
+
+test('a latest-release wstunnel command readdresses the kvm url and no github url', () => {
+  const server = { scheme: 'https', host: 'kvm.example.net' };
+  const local = { scheme: 'https', host: 'kvm.example.org:8443' };
+
+  for (const command of [latestLinuxCommand, latestWindowsCommand]) {
+    const view = presentCommand('wstunnel', { command }, server, local, fingerprint);
+    assert.equal(
+      view.text,
+      command.replace("'wss://kvm.example.net'", "'wss://kvm.example.org:8443'")
+    );
+    assert.equal(view.rewritten, true);
+    // the github urls are hosts of their own and stay as the server wrote them
+    assert.ok(view.text.includes('https://github.com/erebe/wstunnel/releases'));
+    assert.equal(view.text.includes('kvm.example.net'), false);
+  }
+});
+
 test('a wstunnel command without the verify flag is called unauthenticated only over https', () => {
   const origin = { scheme: 'https', host: 'nanokvm.local' };
   const plain = { scheme: 'http', host: 'nanokvm.local' };

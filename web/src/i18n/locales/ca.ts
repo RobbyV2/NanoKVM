@@ -1172,7 +1172,13 @@ const ca = {
           regenerateHint:
             "Una sortida s'ha connectat. Quan ja no necessiteu l'ordre enganxada, regenereu el testimoni; la sortida s'haurà de reiniciar amb la nova ordre.",
           security:
-            "L'equip de destinació ja arriba a la interfície web, SSH i VNC d'aquest NanoKVM per l'adreça de la xarxa USB. Aquesta funció no ho canvia."
+            "L'equip de destinació ja arriba a la interfície web, SSH i VNC d'aquest NanoKVM per l'adreça de la xarxa USB. Aquesta funció no ho canvia.",
+          latestTitle: 'wstunnel més recent',
+          latestDesc:
+            "Resol la versió més recent de wstunnel a GitHub quan s'executa l'ordre i comprova la baixada amb el checksums.txt d'aquesta versió, de manera que no és la {{version}} fixada i no porta cap hash fixat. Només Windows i Linux.",
+          latestFallback: "Si la baixada falla, baixa'l de github.com/erebe/wstunnel",
+          latestUnavailable:
+            "No hi ha cap ordre de baixada de la versió més recent per a macOS. Fes servir l'ordre fixada de dalt o l'enllaç al repositori."
         },
         advanced: {
           title: 'Avançat',

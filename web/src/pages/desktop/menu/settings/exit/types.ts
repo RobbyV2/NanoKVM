@@ -127,8 +127,11 @@ export type ExitCommands = {
   // sha256 hex of the serving certificate, "" on http
   fingerprint: string;
   wstunnelVersion: string;
+  wstunnelRepo: string;
   native: ExitCommand[];
   wstunnel: ExitCommand[];
+  // windows then linux; there is no macOS entry
+  wstunnelLatest: ExitCommand[];
 };
 
 // GetExitLogsRsp

@@ -1183,7 +1183,13 @@ const it = {
           regenerateHint:
             "Un'uscita si è connessa. Quando il comando incollato non serve più, rigenerare il token; l'uscita andrà poi riavviata con il nuovo comando.",
           security:
-            "La destinazione raggiunge già l'interfaccia web, SSH e VNC di questo NanoKVM tramite l'indirizzo della rete USB. Questa funzione non cambia nulla in merito."
+            "La destinazione raggiunge già l'interfaccia web, SSH e VNC di questo NanoKVM tramite l'indirizzo della rete USB. Questa funzione non cambia nulla in merito.",
+          latestTitle: 'wstunnel più recente',
+          latestDesc:
+            'Risolve la versione più recente di wstunnel su GitHub quando il comando viene eseguito e verifica il download con il checksums.txt di quella versione, quindi non è la {{version}} bloccata e non include alcun hash bloccato. Solo Windows e Linux.',
+          latestFallback: 'Se il download fallisce, scaricalo da github.com/erebe/wstunnel',
+          latestUnavailable:
+            'Non esiste un comando per scaricare la versione più recente su macOS. Usa il comando bloccato qui sopra o il link al repository.'
         },
         advanced: {
           title: 'Avanzate',

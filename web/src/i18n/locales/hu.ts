@@ -1179,7 +1179,13 @@ const hu = {
           regenerateHint:
             'Egy kilépő csatlakozott. Ha a beillesztett parancsra már nincs szükség, generálja újra a tokent; a kilépőt ezután az új paranccsal kell újraindítani.',
           security:
-            'A célgép már most eléri ennek a NanoKVM-nek a webes felületét, SSH-ját és VNC-jét az USB hálózati címen. Ez a funkció ezen nem változtat.'
+            'A célgép már most eléri ennek a NanoKVM-nek a webes felületét, SSH-ját és VNC-jét az USB hálózati címen. Ez a funkció ezen nem változtat.',
+          latestTitle: 'Legújabb wstunnel',
+          latestDesc:
+            'A parancs futtatásakor meghatározza a legújabb wstunnel-kiadást a GitHubon, és a letöltést a kiadás checksums.txt fájlával ellenőrzi, így ez nem a rögzített {{version}}, és nem tartalmaz rögzített hasht. Csak Windows és Linux.',
+          latestFallback: 'Ha a letöltés nem sikerül, töltse le innen: github.com/erebe/wstunnel',
+          latestUnavailable:
+            'macOS-hez nincs a legújabb verziót letöltő parancs. Használja a fenti rögzített parancsot vagy a tárolóra mutató hivatkozást.'
         },
         advanced: {
           title: 'Haladó',

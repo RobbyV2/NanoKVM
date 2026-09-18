@@ -54,6 +54,13 @@ export const ExitCommands = ({
   const current = list.find((command) => command.platform === platform);
   const view = presentCommand(mode, current, server, local, commands?.fingerprint ?? '');
 
+  // the latest-release variant exists for windows and linux only; an older
+  // server does not send the list at all, and then the block is not shown
+  const latestList = commands?.wstunnelLatest;
+  const latest = latestList?.find((command) => command.platform === platform);
+  const latestView = presentCommand(mode, latest, server, local, commands?.fingerprint ?? '');
+  const repo = commands?.wstunnelRepo ?? '';
+
   const serverAddress = `${server.scheme}://${server.host}`;
   const localAddress = `${local.scheme}://${local.host}`;
 
@@ -199,6 +206,75 @@ export const ExitCommands = ({
                   <span className="text-xs text-neutral-500">
                     {t('settings.exit.commands.rewritten', { host: localAddress })}
                   </span>
+                )}
+
+                {mode === 'wstunnel' && latestList && (
+                  <div className="flex flex-col space-y-2 border-t border-neutral-700/60 pt-2">
+                    <span className="text-xs">{t('settings.exit.commands.latestTitle')}</span>
+
+                    {latest ? (
+                      <>
+                        <span className="text-xs text-neutral-500">
+                          {t('settings.exit.commands.latestDesc', {
+                            version: commands?.wstunnelVersion
+                          })}
+                        </span>
+
+                        <Input.TextArea
+                          value={latestView.text}
+                          readOnly
+                          autoSize={{ minRows: 2, maxRows: 8 }}
+                          spellCheck={false}
+                          className="font-mono text-xs"
+                          onFocus={(e) => e.target.select()}
+                        />
+
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={
+                              copiedKey === `${value}-latest` ? (
+                                <CheckIcon size={14} />
+                              ) : (
+                                <CopyIcon size={14} />
+                              )
+                            }
+                            onClick={() => copy(`${value}-latest`, latestView.text)}
+                          >
+                            {t(
+                              copiedKey === `${value}-latest`
+                                ? 'settings.exit.copied'
+                                : 'settings.exit.copy'
+                            )}
+                          </Button>
+                        </div>
+
+                        {latest.notes && (
+                          <span className="text-xs text-neutral-500">{latest.notes}</span>
+                        )}
+
+                        {latestView.rewritten && (
+                          <span className="text-xs text-neutral-500">
+                            {t('settings.exit.commands.rewritten', { host: localAddress })}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-neutral-500">
+                        {t('settings.exit.commands.latestUnavailable')}
+                      </span>
+                    )}
+
+                    <a
+                      className="text-xs text-neutral-500 hover:text-blue-500"
+                      href={repo}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t('settings.exit.commands.latestFallback')}
+                    </a>
+                  </div>
                 )}
               </div>
             ) : (
