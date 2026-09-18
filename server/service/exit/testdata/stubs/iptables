@@ -3,7 +3,10 @@
 # chain under $STUB_STATE/<tool>/, one rule per line, with the real tool's
 # semantics for the operations the script uses: -N fails on an existing chain,
 # -X refuses a non-empty one, -C and -D match a rule by its exact text, -I
-# prepends, -A appends, -L -v -n -x prints a counter line per rule.
+# prepends, -A appends, -L -v -n -x prints a counter line per rule, -S prints
+# the chain in iptables-save form. With STUB_IP6TABLES_C_CRASHES=1 the
+# ip6tables -C of a rule that exists exits 139 with no output, the way the
+# device's ip6tables 1.8.9 (libip6tc.so.2.0.0) dies with SIGSEGV.
 tool=${0##*/}
 echo "$tool $*" >> "$STUB_TRACE"
 S=$STUB_STATE/$tool
@@ -45,12 +48,20 @@ case "$op" in
 -C)
 	[ -e "$f" ] || exit 1
 	grep -qxF -- "$*" "$f" || { echo "iptables: Bad rule (does a matching rule exist in that chain?)." >&2; exit 1; }
+	[ "$STUB_IP6TABLES_C_CRASHES" = 1 ] && [ "$tool" = ip6tables ] && exit 139
 	;;
 -D)
 	[ -e "$f" ] || exit 1
 	grep -qxF -- "$*" "$f" || { echo "iptables: Bad rule (does a matching rule exist in that chain?)." >&2; exit 1; }
 	awk -v m="$*" 'BEGIN { done = 0 } { if (!done && $0 == m) { done = 1; next } print }' "$f" > "$f.tmp"
 	mv "$f.tmp" "$f"
+	;;
+-S)
+	[ -e "$f" ] || exit 1
+	echo "-P $chain ACCEPT"
+	while read -r rule; do
+		echo "-A $chain $rule"
+	done < "$f"
 	;;
 -L)
 	[ -e "$f" ] || exit 1

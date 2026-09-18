@@ -426,9 +426,15 @@ apply_chains() {
 
 	if command -v ip6tables >/dev/null 2>&1
 	then
-		ip6tables -C FORWARD -i "$nic" -j REJECT --reject-with icmp6-adm-prohibited 2>/dev/null \
-			|| ip6tables -A FORWARD -i "$nic" -j REJECT --reject-with icmp6-adm-prohibited \
-			|| { log "ip6tables reject failed"; ok=0; }
+		# The rule is probed by listing, not with -C: this image's ip6tables
+		# (1.8.9 legacy, libip6tc.so.2.0.0) segfaults on -C whenever the rule
+		# exists, so `-C || -A` appended one duplicate per 30 s converge. The
+		# whole -S line is matched so usb0 cannot stand in for usb01.
+		if ! ip6tables -S FORWARD 2>/dev/null | grep -qxF -- "-A FORWARD -i $nic -j REJECT --reject-with icmp6-adm-prohibited"
+		then
+			ip6tables -A FORWARD -i "$nic" -j REJECT --reject-with icmp6-adm-prohibited \
+				|| { log "ip6tables reject failed"; ok=0; }
+		fi
 	fi
 	[ "$ok" = 1 ]
 }

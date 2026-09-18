@@ -322,6 +322,48 @@ func TestS94exitConvergeIsIdempotent(t *testing.T) {
 	}
 }
 
+// The device's ip6tables segfaults on -C whenever the queried rule exists, so
+// a `-C || -A` probe appended a duplicate REJECT on every watchdog converge.
+// The script lists the chain with -S instead; with the stub crashing like the
+// real tool, three converges must leave one rule and never call -C.
+func TestS94exitV6RejectSurvivesCrashingCheck(t *testing.T) {
+	h := newS94(t)
+	h.env = append(h.env, "STUB_IP6TABLES_C_CRASHES=1")
+	slot := MustSlot("0")
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, testConfig(slot), "usb0")
+
+	for i := 0; i < 3; i++ {
+		out, code := h.run("start", "0")
+		if code != 0 {
+			t.Fatalf("start %d exited %d:\n%s", i+1, code, out)
+		}
+		trace := h.traceLines()
+		if h.count(trace, "ip6tables -C ") != 0 {
+			t.Errorf("start %d probed the v6 reject with -C:\n%s", i+1, strings.Join(trace, "\n"))
+		}
+		if h.count(trace, "ip6tables -S FORWARD") != 1 {
+			t.Errorf("start %d did not list FORWARD once with -S:\n%s", i+1, strings.Join(trace, "\n"))
+		}
+		want := 0
+		if i == 0 {
+			want = 1
+		}
+		if got := h.count(trace, "ip6tables -A FORWARD"); got != want {
+			t.Errorf("start %d appended the v6 reject %d times, want %d:\n%s", i+1, got, want, strings.Join(trace, "\n"))
+		}
+	}
+	if got := h.stateFile("ip6tables/filter.FORWARD"); got != "-i usb0 -j REJECT --reject-with icmp6-adm-prohibited\n" {
+		t.Fatalf("ip6tables FORWARD after three converges:\n%s", got)
+	}
+	if out, code := h.run("stop", "0"); code != 0 {
+		t.Fatalf("stop exited %d:\n%s", code, out)
+	}
+	if got := h.stateFile("ip6tables/filter.FORWARD"); got != "" {
+		t.Fatalf("stop left the v6 reject behind:\n%s", got)
+	}
+}
+
 func TestS94exitPrunesRulesForARenamedNIC(t *testing.T) {
 	h := newS94(t)
 	slot := MustSlot("0")
