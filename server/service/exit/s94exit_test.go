@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 // s94 runs kvmapp/system/init.d/S94exit under sh with PATH pointing at the
@@ -868,5 +870,80 @@ func TestS94exitStartsDaemonsOnDevNullWhenTheLogFilesystemIsFull(t *testing.T) {
 	}
 	if trace := strings.Join(h.traceLines(), "\n"); !strings.Contains(trace, "-x /bin/sh -- -c "+daemonWrapper+" sh "+hevLog+" "+h.root+"/bin/hev-socks5-tunnel") {
 		t.Fatalf("hev was not started on its log with free space:\n%s", trace)
+	}
+}
+
+// Every spawn start_daemon performs is counted under RUN_DIR, a daemon found
+// alive is not a spawn, status prints the counters, and stop removes them:
+// a daemon that dies between two converges leaves a growing count for the
+// server to report where the pid alone reads alive.
+func TestS94exitCountsRealSpawns(t *testing.T) {
+	h := newS94(t)
+	slot := MustSlot("0")
+	cfg := testConfig(slot)
+	cfg.Mode = "wstunnel"
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, cfg, "usb0")
+	spawnsOf := func() (uint64, uint64) {
+		t.Helper()
+		out, _ := h.run("status", "0")
+		report, ok := parseStatus(out)
+		if !ok {
+			t.Fatalf("status output:\n%s", out)
+		}
+		return report.Spawns.Hev, report.Spawns.Wstunnel
+	}
+
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	if hev, ws := spawnsOf(); hev != 1 || ws != 1 {
+		t.Fatalf("spawns after the first start = %d, %d, want 1, 1", hev, ws)
+	}
+	// A converge that finds both daemons alive counts nothing.
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("second start exited %d:\n%s", code, out)
+	}
+	if hev, ws := spawnsOf(); hev != 1 || ws != 1 {
+		t.Fatalf("spawns after a converge with live daemons = %d, %d, want 1, 1", hev, ws)
+	}
+
+	// wstunnel dies; the next converge spawns it again and only it.
+	pidfile := filepath.Join(h.runDir, "exit0-wstunnel.pid")
+	data, err := os.ReadFile(pidfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, err := os.FindProcess(pid); err == nil {
+		_ = p.Kill()
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for syscall.Kill(pid, 0) == nil && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start after the wstunnel death exited %d:\n%s", code, out)
+	}
+	if hev, ws := spawnsOf(); hev != 1 || ws != 2 {
+		t.Fatalf("spawns after a respawn = %d, %d, want 1, 2", hev, ws)
+	}
+	if got, _ := os.ReadFile(filepath.Join(h.runDir, "exit0-wstunnel.spawns")); strings.TrimSpace(string(got)) != "2" {
+		t.Fatalf("counter file = %q, want 2", got)
+	}
+
+	if out, code := h.run("stop", "0"); code != 0 {
+		t.Fatalf("stop exited %d:\n%s", code, out)
+	}
+	for _, name := range []string{"exit0-hev.spawns", "exit0-wstunnel.spawns"} {
+		if _, err := os.Stat(filepath.Join(h.runDir, name)); !os.IsNotExist(err) {
+			t.Errorf("%s survived stop", name)
+		}
+	}
+	if hev, ws := spawnsOf(); hev != 0 || ws != 0 {
+		t.Fatalf("spawns after stop = %d, %d, want 0, 0", hev, ws)
 	}
 }

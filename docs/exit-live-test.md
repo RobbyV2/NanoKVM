@@ -23,7 +23,7 @@ Slot 0 only. Derived names, verbatim from `server/service/exit/slot.go` and `S94
 | iptables chains | `EXIT0` (filter FORWARD), `EXIT0_NAT` (nat PREROUTING), `EXIT0_MASQ` (nat POSTROUTING) |
 | loopback ports | `127.0.0.1:10800` SOCKS front door, `:10810` wstunnel server (Mode B), `:10820` wstunnel reverse listener (Mode B) |
 | files | `/etc/kvm/exit/0.json`, `/etc/kvm/exit/0/env`, `/etc/kvm/exit/0/hev.yml`, `/etc/kvm/exit/0/wstunnel-restrict.yml`, `/etc/kvm/exit/0/nic`, `/etc/kvm/exit/0.state.json`, `/etc/kvm/exit/gadget.route` |
-| runtime | `/var/run/exit0-hev.pid`, `/var/run/exit0-wstunnel.pid`, `/var/run/exit0.lock`, `/tmp/exit0-hev.log`, `/tmp/exit0-wstunnel.log` (each truncated in place by the converge above 1 MiB; a daemon started with under 512 KiB free on `/tmp` logs to `/dev/null` and `S94exit start` says so) |
+| runtime | `/var/run/exit0-hev.pid`, `/var/run/exit0-wstunnel.pid`, `/var/run/exit0-hev.spawns`, `/var/run/exit0-wstunnel.spawns` (spawns since the last stop; `status` prints them as `hev_spawns`, `wstunnel_spawns`), `/var/run/exit0.lock`, `/tmp/exit0-hev.log`, `/tmp/exit0-wstunnel.log` (each truncated in place by the converge above 1 MiB; a daemon started with under 512 KiB free on `/tmp` logs to `/dev/null` and `S94exit start` says so) |
 | binaries | `/etc/kvm/bin/hev-socks5-tunnel` (seed `/kvmapp/exit/hev-socks5-tunnel.gz`), `/etc/kvm/bin/wstunnel` |
 | scripts | `/etc/init.d/S94exit`, `/etc/init.d/S30rndis` (seeds in `/kvmapp/system/init.d/`) |
 | HTTP | token-gated `GET /exit/0/{native,client.sh,client.ps1,client.pl,client.py}` and `/exit/0/*` (Mode B); admin `/api/extensions/exit/0/{status,config,enable,disable,token/regenerate,disconnect,commands,logs}` |

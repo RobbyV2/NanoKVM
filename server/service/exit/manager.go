@@ -113,6 +113,12 @@ type slotState struct {
 	// watchdog's message (a refused rebind, listeners that never came up)
 	// alone.
 	configMessage bool
+	// spawns is what the last status reported for the daemons' spawn
+	// counters and spawnsSeen what the previous watchdog tick compared
+	// against; respawnMessage is set while message is the watchdog's
+	// crash-loop notice, so only that notice is cleared once the counts hold.
+	spawns, spawnsSeen daemonSpawns
+	respawnMessage     bool
 
 	lastPeer     *proto.ExitPeer
 	peerSource   string
@@ -380,6 +386,7 @@ func (m *Manager) setMessage(s *slotState, msg string) {
 	m.mu.Lock()
 	s.message = msg
 	s.configMessage = false
+	s.respawnMessage = false
 	m.mu.Unlock()
 }
 
@@ -453,6 +460,7 @@ func (m *Manager) refreshDownstream(ctx context.Context, s *slotState) {
 	}
 	s.down = report.Down
 	s.dnsRedirected = report.DNSRedirected
+	s.spawns = report.Spawns
 	if s.comps != nil {
 		s.down.DNS = s.comps.DNS.Bound()
 	}
@@ -820,6 +828,7 @@ func (m *Manager) failConfig(s *slotState, err error) error {
 	m.mu.Lock()
 	s.message = err.Error()
 	s.configMessage = true
+	s.respawnMessage = false
 	m.mu.Unlock()
 	return err
 }
@@ -1144,9 +1153,48 @@ func (m *Manager) Tick(ctx context.Context) {
 			continue
 		}
 		m.convergeSlot(ctx, s)
+		m.noteRespawns(s)
 		if !m.connected(s) {
 			m.markDisconnected(s)
 		}
+	}
+}
+
+// noteRespawns is the watchdog's crash-loop notice. A daemon whose spawn
+// counter is above 1 and grew since the previous tick dies between converges
+// (wstunnel aborting on a failed write to a full /tmp), and the vector alone
+// never shows it: the status snapshot follows the respawn, so the pid reads
+// alive. The notice is the slot's message while a count keeps growing and is
+// cleared on the first tick the counts hold; any other message is left alone.
+func (m *Manager) noteRespawns(s *slotState) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cur, prev := s.spawns, s.spawnsSeen
+	s.spawnsSeen = cur
+	var parts []string
+	for _, d := range []struct {
+		name      string
+		cur, prev uint64
+	}{{"hev-socks5-tunnel", cur.Hev, prev.Hev}, {"wstunnel", cur.Wstunnel, prev.Wstunnel}} {
+		if d.cur <= 1 || d.cur <= d.prev {
+			continue
+		}
+		unit := "times"
+		if d.cur-1 == 1 {
+			unit = "time"
+		}
+		parts = append(parts, fmt.Sprintf("%s restarted %d %s since enable", d.name, d.cur-1, unit))
+	}
+	if len(parts) > 0 {
+		s.message = strings.Join(parts, ", ") + "; see the logs"
+		s.configMessage = false
+		s.respawnMessage = true
+		log.Warnf("exit: slot %s: %s", s.slot.ID, s.message)
+		return
+	}
+	if s.respawnMessage {
+		s.message = ""
+		s.respawnMessage = false
 	}
 }
 

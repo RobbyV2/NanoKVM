@@ -1190,3 +1190,75 @@ func TestLogsKeepDaemonVocabulary(t *testing.T) {
 		t.Fatalf("token-shaped value on a header line not masked: %q", logs.Hev[1])
 	}
 }
+
+// TestWatchdogReportsARespawningDaemon: wstunnel dying right after every
+// converge (a full /tmp aborting it on its first stderr write) was invisible:
+// the status snapshot follows the respawn, so downstream.wstunnel read true
+// and message stayed empty while every exit got a 502. The spawn counters
+// turn the loop into a message while the count grows, cleared once it holds,
+// and a message that is not the watchdog's is never cleared by it.
+func TestWatchdogReportsARespawningDaemon(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	spawned := func(hev, ws string) string { return healthy + "hev_spawns=" + hev + "\nwstunnel_spawns=" + ws + "\n" }
+	message := func() string {
+		t.Helper()
+		status, err := h.mgr.Status(slot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return status.Message
+	}
+
+	h.runner.status = spawned("1", "1")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "" {
+		t.Fatalf("first spawns are not restarts, got %q", msg)
+	}
+
+	h.runner.status = spawned("1", "2")
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "wstunnel restarted 1 time since enable; see the logs" {
+		t.Fatalf("message after one respawn = %q", msg)
+	}
+	h.runner.status = spawned("1", "5")
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "wstunnel restarted 4 times since enable; see the logs" {
+		t.Fatalf("message after more respawns = %q", msg)
+	}
+	// A refused config change leaves the notice where it is.
+	dns := []string{"10.0.0.1"}
+	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{DNS: &dns}); err == nil {
+		t.Fatal("private resolver accepted")
+	}
+	if msg := message(); !strings.Contains(msg, "wstunnel restarted 4 times") {
+		t.Fatalf("refused config changed the notice to %q", msg)
+	}
+
+	// The count holds: the notice goes on the first quiet tick.
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "" {
+		t.Fatalf("notice survived a tick with a stable count: %q", msg)
+	}
+
+	// Both daemons looping are named together.
+	h.runner.status = spawned("3", "6")
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "hev-socks5-tunnel restarted 2 times since enable, wstunnel restarted 5 times since enable; see the logs" {
+		t.Fatalf("message with both looping = %q", msg)
+	}
+
+	// A message that belongs to someone else is not the watchdog's to clear.
+	h.mgr.mu.Lock()
+	s := h.mgr.slots["0"]
+	h.mgr.mu.Unlock()
+	h.mgr.setMessage(s, "re-plug the USB cable to pick up the new gateway: udc loaned")
+	h.mgr.Tick(context.Background())
+	if msg := message(); msg != "re-plug the USB cable to pick up the new gateway: udc loaned" {
+		t.Fatalf("a stable count cleared another message: %q", msg)
+	}
+}

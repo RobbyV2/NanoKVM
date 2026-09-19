@@ -26,6 +26,19 @@ func TestParseStatus(t *testing.T) {
 	if report.NIC != "usb0" || report.Gateway != "10.1.2.1" || report.DNSRedirected != 17 {
 		t.Fatalf("extras = %+v", report)
 	}
+	// An older script prints no spawn counters: both read 0.
+	if report.Spawns != (daemonSpawns{}) {
+		t.Fatalf("spawns without the keys = %+v", report.Spawns)
+	}
+
+	// The counters parse, and a key this build does not know is skipped.
+	report, ok = parseStatus("forward=1\nhev=1\nhev_spawns=1\nwstunnel_spawns=12\nsomething_new=abc\n")
+	if !ok || report.Spawns != (daemonSpawns{Hev: 1, Wstunnel: 12}) || !report.Down.Hev {
+		t.Fatalf("spawns = %+v (ok=%v)", report.Spawns, ok)
+	}
+	if report, ok := parseStatus("forward=1\nhev_spawns=lots\n"); !ok || report.Spawns.Hev != 0 {
+		t.Fatalf("a non-numeric counter = %+v (ok=%v)", report.Spawns, ok)
+	}
 
 	if _, ok := parseStatus("S94exit: invalid slot 'x'\n"); ok {
 		t.Fatal("garbage recognised as a status vector")

@@ -140,7 +140,18 @@ type statusReport struct {
 	NIC           string
 	Gateway       string
 	DNSRedirected uint64
+	Spawns        daemonSpawns
 	Raw           string
+}
+
+// daemonSpawns are the counters `S94exit status` prints beside the vector:
+// how many times start_daemon has spawned each daemon since its counter was
+// last removed by stop. A daemon found alive is not a spawn, so a count that
+// grows between two watchdog ticks is a daemon that died in between. An
+// older script prints neither key and both stay 0.
+type daemonSpawns struct {
+	Hev      uint64
+	Wstunnel uint64
 }
 
 // ErrStatusUnparsed is returned when the script printed nothing that looks
@@ -164,7 +175,8 @@ func (d downstream) Status(ctx context.Context, slot Slot) (statusReport, error)
 }
 
 // parseStatus reads `key=value` lines: forward routing tun hev wstunnel nat as
-// 0|1, nic and gw as strings, dns_redirected as a counter.
+// 0|1, nic and gw as strings, dns_redirected, hev_spawns and wstunnel_spawns
+// as counters. Unknown keys are skipped so a newer script still parses.
 func parseStatus(out string) (statusReport, bool) {
 	report := statusReport{Raw: out}
 	seen := 0
@@ -195,6 +207,14 @@ func parseStatus(out string) (statusReport, bool) {
 		case "dns_redirected":
 			if n, err := strconv.ParseUint(value, 10, 64); err == nil {
 				report.DNSRedirected = n
+			}
+		case "hev_spawns":
+			if n, err := strconv.ParseUint(value, 10, 64); err == nil {
+				report.Spawns.Hev = n
+			}
+		case "wstunnel_spawns":
+			if n, err := strconv.ParseUint(value, 10, 64); err == nil {
+				report.Spawns.Wstunnel = n
 			}
 		default:
 			continue

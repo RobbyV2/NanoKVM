@@ -253,7 +253,22 @@ start_daemon() {
 	rm -f "$pidfile"
 	logfile=$(log_target "$logfile")
 	start-stop-daemon -S -bmq -p "$pidfile" -x /bin/sh -- \
-		-c 'exec >>"$1" 2>&1; shift; exec "$@"' sh "$logfile" "$@" 9>&-
+		-c 'exec >>"$1" 2>&1; shift; exec "$@"' sh "$logfile" "$@" 9>&- || return 1
+	echo $(( $(spawns "$pidfile") + 1 )) > "${pidfile%.pid}.spawns"
+}
+
+# spawns PIDFILE: how many times start_daemon has spawned this daemon since
+# its counter was last removed by stop (0 with no counter). A daemon that is
+# found alive is not a spawn, so a count that keeps growing between the
+# watchdog's converges is a daemon that keeps dying; the server reads it
+# from status and says so.
+spawns() {
+	n=0
+	[ -r "${1%.pid}.spawns" ] && read -r n < "${1%.pid}.spawns"
+	case "$n" in
+		''|*[!0-9]*) n=0 ;;
+	esac
+	echo "$n"
 }
 
 # stop_daemon PIDFILE BINARY: signals the pid only while it is still our
@@ -263,7 +278,7 @@ stop_daemon() {
 	then
 		start-stop-daemon -K -q -p "$1"
 	fi
-	rm -f "$1"
+	rm -f "$1" "${1%.pid}.spawns"
 }
 
 # record_sysctl FILE KEY: the value KEY had before start first changed it,
@@ -655,8 +670,9 @@ status_slot() {
 	[ -n "$nic" ] && gw=$(nic_gateway "$nic")
 	redirected=$(( $(carried_hits) + $(dnat_hits) ))
 
-	printf 'forward=%s\nrouting=%s\ntun=%s\nhev=%s\nwstunnel=%s\nnat=%s\nnic=%s\ngw=%s\ndns_redirected=%s\n' \
-		"$forward" "$routing" "$tun" "$hev" "$wstunnel" "$nat" "$nic" "$gw" "${redirected:-0}"
+	printf 'forward=%s\nrouting=%s\ntun=%s\nhev=%s\nwstunnel=%s\nnat=%s\nnic=%s\ngw=%s\ndns_redirected=%s\nhev_spawns=%s\nwstunnel_spawns=%s\n' \
+		"$forward" "$routing" "$tun" "$hev" "$wstunnel" "$nat" "$nic" "$gw" "${redirected:-0}" \
+		"$(spawns "$HEV_PID")" "$(spawns "$WS_PID")"
 	return $rc
 }
 
