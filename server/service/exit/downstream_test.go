@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestParseStatus(t *testing.T) {
@@ -160,5 +163,63 @@ func TestExecRunnerReturnsWhenAnOrphanHoldsTheStdoutPipe(t *testing.T) {
 	if alive(pid) {
 		_ = syscall.Kill(pid, syscall.SIGKILL)
 		t.Fatal("the deadline killed the script but not its process group")
+	}
+}
+
+// A converge that exits 0 can still have warned on stderr (S94exit's
+// "daemon output goes to /dev/null"); the runner logs every such line at
+// warn under the script and its arguments, and returns stdout unchanged. A
+// failing script keeps folding its stderr into the error instead.
+func TestExecRunnerLogsASuccessfulScriptsStderr(t *testing.T) {
+	// The hook is the test's alone and comes off the standard logger with it.
+	old := log.StandardLogger().ReplaceHooks(make(log.LevelHooks))
+	t.Cleanup(func() { log.StandardLogger().ReplaceHooks(old) })
+	hook := logtest.NewLocal(log.StandardLogger())
+	warnings := func() []string {
+		var got []string
+		for _, e := range hook.AllEntries() {
+			if e.Level == log.WarnLevel && strings.HasPrefix(e.Message, "exit: S94exit start 0: ") {
+				got = append(got, e.Message)
+			}
+		}
+		return got
+	}
+	dir := t.TempDir()
+	script := filepath.Join(dir, "S94exit")
+	writeExec(t, script, "#!/bin/sh\necho forward=1\necho 'S94exit: /tmp/exit0-hev.log: only 0 KiB free on its filesystem; daemon output goes to /dev/null' >&2\necho '  second line  ' >&2\nexit 0\n")
+
+	r := execRunner{timeout: time.Second, waitDelay: 300 * time.Millisecond}
+	out, err := r.Run(context.Background(), script, "start", "0")
+	if err != nil || out != "forward=1" {
+		t.Fatalf("Run = %q, %v", out, err)
+	}
+	got := warnings()
+	want := []string{
+		"exit: S94exit start 0: S94exit: /tmp/exit0-hev.log: only 0 KiB free on its filesystem; daemon output goes to /dev/null",
+		"exit: S94exit start 0: second line",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("warnings = %q, want %q", got, want)
+	}
+
+	// Nothing on stderr logs nothing.
+	hook.Reset()
+	writeExec(t, script, "#!/bin/sh\necho forward=1\nexit 0\n")
+	if out, err := r.Run(context.Background(), script, "start", "0"); err != nil || out != "forward=1" {
+		t.Fatalf("Run = %q, %v", out, err)
+	}
+	if got := warnings(); len(got) != 0 {
+		t.Fatalf("warnings from a quiet script: %q", got)
+	}
+
+	// A failing script's stderr is the error, not a warning.
+	hook.Reset()
+	writeExec(t, script, "#!/bin/sh\necho 'S94exit: start hev-socks5-tunnel failed' >&2\nexit 1\n")
+	_, err = r.Run(context.Background(), script, "start", "0")
+	if err == nil || !strings.Contains(err.Error(), "start hev-socks5-tunnel failed") {
+		t.Fatalf("failing script: %v", err)
+	}
+	if got := warnings(); len(got) != 0 {
+		t.Fatalf("warnings from a failing script: %q", got)
 	}
 }

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // downstreamTimeout bounds one S94exit or S30rndis invocation. The scripts
@@ -70,12 +72,22 @@ func (r execRunner) Run(ctx context.Context, name string, args ...string) (strin
 		// the pipe was abandoned is the output.
 		err = nil
 	}
+	msg := strings.TrimSpace(stderr.String())
 	if err != nil {
-		msg := strings.TrimSpace(stderr.String())
 		if msg == "" {
 			return out, fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
 		}
 		return out, fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, msg)
+	}
+	// A script that exits 0 still warns on stderr about what it had to do
+	// differently (a daemon started on /dev/null because its log's
+	// filesystem is full), and the server log is the only place an operator
+	// sees that; each line is logged on its own under the script and its
+	// arguments.
+	for _, line := range strings.Split(msg, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			log.Warnf("exit: %s %s: %s", filepath.Base(name), strings.Join(args, " "), line)
+		}
 	}
 	return out, nil
 }
