@@ -60,7 +60,11 @@ whole run, do once:
 kvm# /etc/init.d/S95nanokvm stop; sleep 2; cd /tmp/server && (./NanoKVM-Server 2>&1 | tee /tmp/server.log) &
 ```
 
-(or set `logger: {file: /tmp/server.log}` in `/etc/kvm/server.yaml` and `S95nanokvm restart`). The
+(or set `logger: {file: /tmp/server.log}` in `/etc/kvm/server.yaml` and
+`/etc/init.d/S95nanokvm restart > /root/server.out 2>&1 < /dev/null`). The server handles only INT,
+TERM and QUIT and exits on SIGPIPE at its next log line once the pipe it writes to closes, so the
+ssh session that runs either command stays open for the whole run, and a restart without the
+redirect leaves the new server's stdout and stderr on the ssh channel. The
 manager logs as `exit: slot 0 …` and the mux/proxy as `exit0: …`.
 
 ---
@@ -219,12 +223,15 @@ kvm# ls -l /etc/kvm/bin/; cat /etc/kvm/bin/.hev-socks5-tunnel.seed 2>/dev/null
 kvm# /etc/kvm/bin/hev-socks5-tunnel 2>&1 | head -3 || (gzip -dc /kvmapp/exit/hev-socks5-tunnel.gz > /tmp/hev && chmod +x /tmp/hev && /tmp/hev 2>&1 | head -3)
 kvm# /etc/kvm/bin/wstunnel --version 2>&1 | head -1
 kvm# cat /etc/kvm/exit/0.json | sed 's/"token": *"[^"]*"/"token":"<redacted>"/'; ls -la /etc/kvm/exit/ /etc/kvm/exit/0/ 2>&1
+kvm# du -sk /kvmapp/server; ls /kvmapp/server; df -Pk /tmp
 ```
 
 Expected: `scripts-installed` (the server refreshes both at start); hev prints its usage line, which
 proves the static riscv64 binary executes on this CPU (Risk 1); `0.json` exists with `"enabled":
 false`, `"pending": false`, `"mode": "native"`, `"nic": "gadget"`, mode `0600`. `hev-socks5-tunnel` may
-not be extracted yet: that is fine, the enable does it.
+not be extracted yet: that is fine, the enable does it. `/kvmapp/server` is under 45 MB and holds
+only `NanoKVM-Server`, `dl_lib` and `web`: `S95nanokvm` copies all of it into the 80 MB `/tmp` tmpfs
+at every boot and restart, and a staged binary or backup left there fills `/tmp`.
 
 ### 0.13 Bridge gate is clear
 
@@ -836,7 +843,7 @@ after a session that reached WELCOME). UI connected again within ~5 s. Consumer 
 Then restart the server while the client stays up:
 
 ```sh
-kvm# /etc/init.d/S95nanokvm restart    # or kill and re-run the foreground command from Conventions
+kvm# /etc/init.d/S95nanokvm restart > /root/server.out 2>&1 < /dev/null    # or kill and re-run the foreground command from Conventions
 ```
 
 Expected on the exit: `session ended … / reconnecting in 1s / 2s / 4s …` until the server is back

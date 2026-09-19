@@ -419,10 +419,22 @@ insmods a fixed list by absolute path and `/mnt/system/ko` is flat with no
 resolve it from `configs/c.1/<net-fn>/ifname`. `S03usbdev` deliberately does not
 bind the UDC; the Go presentation manager binds once, last. Firewalling is
 `iptables`, not `nft`. IPv4 forwarding is actively zeroed by `S98tailscaled` at
-every start. `/tmp` is tmpfs on a small-memory device and already holds the
-server, its shared objects and the whole web bundle. Per-package design notes
-live in `server/service/*/CLAUDE.md` and are load-bearing — read the package's
-own notes before changing it.
+every start. `/tmp` is an 80 MB tmpfs shared with the exit logs, `udhcpd`
+leases and everything else, and `S95nanokvm` removes `/tmp/server` and copies
+the whole of `/kvmapp/server` into it at every boot and restart, so anything
+left beside `NanoKVM-Server`, `dl_lib` and `web` there (a staged
+`NanoKVM-Server.new`, a `web.prev` backup) is copied too; at 82 MB the copy
+fills `/tmp`, `udhcpd` cannot write leases and daemons whose stderr goes to
+`/tmp` abort. Stage deploy files under `/root` and keep backups there. A
+`/etc/init.d/S95nanokvm restart` issued over ssh leaves the new
+`NanoKVM-Server` with stdout and stderr on the ssh channel pipe; the server
+handles only INT, TERM and QUIT (`server/service/startup/interrupt.go`) and the
+Go runtime exits on SIGPIPE when a write to fd 1 or 2 hits a closed pipe, so the
+ssh session cannot return until the server ends and closing it kills the server
+at its next log line. Restart with `/etc/init.d/S95nanokvm restart >
+/root/<name>.out 2>&1 < /dev/null` (a file on eMMC, not `/tmp`). Per-package
+design notes live in `server/service/*/CLAUDE.md` and are load-bearing — read
+the package's own notes before changing it.
 
 ---
 
