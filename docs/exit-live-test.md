@@ -51,6 +51,9 @@ result, so every listener question in this doc is answered with `ss -lnupt` (or 
 in place of `netstat -lntp`. `conntrack` is absent as well, so each step that offers a
 `/proc/net/nf_conntrack` fallback takes it.
 
+The Windows consumer here resolves `example.com` to `127.0.0.1`, so every `win>` step that needs
+a name it can reach uses `api.ipify.org`, `www.iana.org` or `www.ietf.org` in its place.
+
 Counters: every 30 s the watchdog runs `S94exit start 0`, which replaces `EXIT0`, `EXIT0_NAT` and
 `EXIT0_MASQ` in one `iptables-restore -n` transaction, so their `iptables -L … -v -n -x` packet counters **reset every 30 s**.
 Read them within a few seconds of generating the traffic. Cumulative numbers are `dns_redirected`
@@ -496,6 +499,15 @@ exit> <paste>
 Expected: no `wstunnel checksum mismatch` throw; `tar` is the Windows 10 1803+ built-in; the
 client's log as above. If the run is on an ARM64 PC the `$a` branch must pick `arm64`.
 
+Microsoft Defender quarantines the wstunnel binary on a stock Windows 11 exit, the pinned release
+and the latest alike, as `Trojan:Win32/Bearfoos.B!ml`, which `Get-MpThreatDetection` names. A fresh
+start is refused with `Operation did not complete successfully because the file contains a virus or
+potentially unwanted software`, and a client already running dies about 90 s in, once the cloud
+lookup lands, with nothing in its own log; at the consumer the bound requests come back as
+`curl: (35) Recv failure: Connection was reset` in about 200 ms. Under a Defender path exclusion on
+the extraction directory the same command connects and carries traffic. The panel's Windows
+wstunnel tab carries this warning.
+
 The latest commands, each platform:
 
 ```sh
@@ -594,9 +606,9 @@ Pass: gateway and DNS present and equal to `$GW`; exactly one lease.
 ### 3.2 DNS
 
 ```powershell
-win> nslookup example.com
-win> nslookup -type=AAAA example.com
-win> Resolve-DnsName example.com -Server 10.a.b.1 | ft Name,Type,IPAddress
+win> nslookup www.iana.org
+win> nslookup -type=AAAA www.iana.org
+win> Resolve-DnsName www.iana.org -Server 10.a.b.1 | ft Name,Type,IPAddress
 ```
 
 ```sh
@@ -619,7 +631,7 @@ Pass: A resolves via `$GW`, AAAA empty NOERROR, no timeouts.
 ### 3.3 Internet
 
 ```powershell
-win> curl.exe -4 -sS -o NUL -w "%{http_code} %{remote_ip} %{time_total}s`n" https://example.com/
+win> curl.exe -4 -sS -o NUL -w "%{http_code} %{remote_ip} %{time_total}s`n" https://www.iana.org/
 win> curl.exe -4 -sS https://api.ipify.org; echo
 win> Test-NetConnection -ComputerName 1.1.1.1 -Port 443 | ft TcpTestSucceeded,RemoteAddress
 win> tracert -d -4 -h 4 1.1.1.1
@@ -660,7 +672,7 @@ Pass: 200 with the exit's public IP; counters on `EXIT0`/`EXIT0_MASQ`/`exit0` mo
 
 ### 3.4 Browser on the consumer
 
-Open `https://example.com`, `https://www.wikipedia.org`, a YouTube video for 60 s, and the NanoKVM UI
+Open `https://www.iana.org`, `https://www.wikipedia.org`, a YouTube video for 60 s, and the NanoKVM UI
 at `https://10.a.b.1`. Expected: all load; the UI loads without touching the tunnel (`local` route:
 `ip route get 10.a.b.1 from 10.a.b.1xx iif $NIC` on the NanoKVM prints `local`). Pass: no page stalls.
 
@@ -768,6 +780,10 @@ or from the UI: Exit panel → **Disconnect** (`POST /0/disconnect`, close reaso
 Expected within one UI poll (3 s): tunnel **disconnected**, `lastConnectedAt` set to now, `peer` cleared,
 `upstream` stops updating. `grep -E 'exit0.*(closed|session ended)' /tmp/server.log | tail -1`.
 
+On a Windows exit in Mode B, `wstunnel.exe` outlives the PowerShell host that launched it, so the
+teardown is `Stop-Process -Name wstunnel`: closing the window or stopping the wrapper leaves the
+tunnel up.
+
 ### 4.2 Consumer NIC stays up and the lease holds
 
 ```powershell
@@ -793,8 +809,8 @@ downstream (D8).
 ### 4.3 Internet stops, fast and closed
 
 ```powershell
-win> curl.exe -4 -sS -m 10 -o NUL -w "%{http_code} %{exitcode} %{time_total}s`n" https://example.com/
-win> nslookup example.com
+win> curl.exe -4 -sS -m 10 -o NUL -w "%{http_code} %{exitcode} %{time_total}s`n" https://www.iana.org/
+win> nslookup www.iana.org
 win> Test-NetConnection 1.1.1.1 -Port 443 | ft TcpTestSucceeded
 ```
 
@@ -851,7 +867,7 @@ Expected: `connected:` within ~3 s; UI **connected**, `connectedAt` new, `lastCo
 `previousPeer` unchanged (it records the last change of peer, not a live replacement). Then, with no action on the consumer:
 
 ```powershell
-win> curl.exe -4 -sS -o NUL -w "%{http_code}`n" https://example.com/; nslookup example.com
+win> curl.exe -4 -sS -o NUL -w "%{http_code}`n" https://www.iana.org/; nslookup www.iana.org
 ```
 
 ```sh
@@ -1181,7 +1197,7 @@ Start a capture on the consumer, then open one HTTPS connection.
 
 ```powershell
 win> # Wireshark on the NanoKVM adapter, display filter:  tcp.flags.syn==1   → look at tcp.options.mss_val in both the SYN and the SYN/ACK
-win> # or, without Wireshark:  pktmon filter add -t tcp; pktmon start -c --pkt-size 0 -f C:\pm.etl; curl.exe -s -o NUL https://example.com/; pktmon stop; pktmon etl2txt C:\pm.etl -o C:\pm.txt; findstr /i "mss" C:\pm.txt
+win> # or, without Wireshark:  pktmon filter add -t tcp; pktmon start -c --pkt-size 0 -f C:\pm.etl; curl.exe -s -o NUL https://www.iana.org/; pktmon stop; pktmon etl2txt C:\pm.etl -o C:\pm.txt; findstr /i "mss" C:\pm.txt
 ```
 
 ```sh
@@ -1320,8 +1336,8 @@ kvm# iptables -t nat -L EXIT0_NAT -v -n -x | awk '$3=="DNAT"{print $1, $NF}'; $S
 ```
 
 ```powershell
-win> nslookup example.com 8.8.8.8
-win> Resolve-DnsName -Server 9.9.9.9 -Type A example.com | ft Name,IPAddress
+win> nslookup www.iana.org 8.8.8.8
+win> Resolve-DnsName -Server 9.9.9.9 -Type A www.iana.org | ft Name,IPAddress
 ```
 
 ```sh
