@@ -409,6 +409,19 @@ set anywhere — no tc qdiscs at all. `CONFIG_IKCONFIG_PROC=y`, so on a real dev
 `nanokvm-firmware/kernel-config-from-boot.sd.txt` settles it for the shipped
 binary.
 
+**The exit feature requires the custom kernel.** It needs `CONFIG_TUN`, policy
+routing (`IP_ADVANCED_ROUTER`, `IP_MULTIPLE_TABLES`), conntrack and NAT
+(`NF_CONNTRACK`, `NF_NAT`), the nft path (`NF_TABLES_IPV4`, `NFT_NAT`,
+`NFT_MASQ`, `NFT_REJECT`, and `NFT_COMPAT` for `-j TCPMSS` and `-j REJECT` under
+iptables-nft), the legacy iptables path (`IP_NF_FILTER`, `IP_NF_NAT`,
+`IP_NF_TARGET_MASQUERADE`, `IP_NF_TARGET_REJECT`, `NETFILTER_XT_TARGET_TCPMSS`,
+`NETFILTER_XT_MATCH_CONNTRACK`) and the v6 reject path (`IP6_NF_FILTER`,
+`IP6_NF_TARGET_REJECT`), all `=y` in `nanokvm-custom` for
+`sg2002_licheervnano_sd` and `_sd_minimal`. A stock kernel's policy-routing and
+`nft_compat` options are unverified, so the feature is supported only on our
+image; `docs/exit-live-test.md` 0.2 lists the symbols and the command that reads
+them back from `/proc/config.gz`.
+
 **No kernel module can ship in an OTA.** `scripts/package.sh` copies `kvmapp/.`
 and the only `.ko` in this repo is `kvmapp/system/ko/soph_mipi_rx.ko`; `S00kmod`
 insmods a fixed list by absolute path and `/mnt/system/ko` is flat with no
