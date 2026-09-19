@@ -947,3 +947,75 @@ func TestS94exitCountsRealSpawns(t *testing.T) {
 		t.Fatalf("spawns after stop = %d, %d, want 0, 0", hev, ws)
 	}
 }
+
+// A daemon that predates the counter (the script was upgraded in place under
+// a running daemon) has no counter file; the converge that finds it alive
+// adopts it as spawn 1 without spawning anything, so the first real respawn
+// afterwards reads 2 and the watchdog reports it.
+func TestS94exitAdoptsARunningDaemonAsItsFirstSpawn(t *testing.T) {
+	h := newS94(t)
+	slot := MustSlot("0")
+	cfg := testConfig(slot)
+	cfg.Mode = "wstunnel"
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, cfg, "usb0")
+	counter := filepath.Join(h.runDir, "exit0-wstunnel.spawns")
+	readCounter := func() string {
+		t.Helper()
+		data, err := os.ReadFile(counter)
+		if err != nil {
+			t.Fatalf("counter: %v", err)
+		}
+		return strings.TrimSpace(string(data))
+	}
+
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	if err := os.Remove(counter); err != nil {
+		t.Fatal(err)
+	}
+	// The daemon is alive and has no counter: the converge writes 1 and
+	// spawns nothing.
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("converge exited %d:\n%s", code, out)
+	}
+	if got := readCounter(); got != "1" {
+		t.Fatalf("counter after adopting a live daemon = %q, want 1", got)
+	}
+	if h.count(h.traceLines(), "start-stop-daemon -S") != 0 {
+		t.Fatalf("adopting a live daemon spawned one:\n%s", strings.Join(h.traceLines(), "\n"))
+	}
+
+	// The first respawn after the adoption is the second spawn.
+	pidfile := filepath.Join(h.runDir, "exit0-wstunnel.pid")
+	data, err := os.ReadFile(pidfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, err := os.FindProcess(pid); err == nil {
+		_ = p.Kill()
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for syscall.Kill(pid, 0) == nil && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start after the wstunnel death exited %d:\n%s", code, out)
+	}
+	if got := readCounter(); got != "2" {
+		t.Fatalf("counter after the first respawn = %q, want 2", got)
+	}
+	if h.count(h.traceLines(), "start-stop-daemon -S") != 1 {
+		t.Fatalf("respawn trace:\n%s", strings.Join(h.traceLines(), "\n"))
+	}
+	out, _ := h.run("status", "0")
+	report, ok := parseStatus(out)
+	if !ok || report.Spawns != (daemonSpawns{Hev: 1, Wstunnel: 2}) {
+		t.Fatalf("status spawns = %+v (ok=%v):\n%s", report.Spawns, ok, out)
+	}
+}

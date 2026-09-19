@@ -249,7 +249,14 @@ start_daemon() {
 	pidfile=$1
 	logfile=$2
 	shift 2
-	pid_alive "$pidfile" "$1" && return 0
+	if pid_alive "$pidfile" "$1"
+	then
+		# A daemon found alive without a counter predates the counter (the
+		# script was upgraded in place under it); it is adopted as its own
+		# first spawn so the first real respawn reads 2 and is reported.
+		[ -e "${pidfile%.pid}.spawns" ] || echo 1 > "${pidfile%.pid}.spawns"
+		return 0
+	fi
 	rm -f "$pidfile"
 	logfile=$(log_target "$logfile")
 	start-stop-daemon -S -bmq -p "$pidfile" -x /bin/sh -- \
@@ -259,9 +266,9 @@ start_daemon() {
 
 # spawns PIDFILE: how many times start_daemon has spawned this daemon since
 # its counter was last removed by stop (0 with no counter). A daemon that is
-# found alive is not a spawn, so a count that keeps growing between the
-# watchdog's converges is a daemon that keeps dying; the server reads it
-# from status and says so.
+# found alive is not a spawn (one found alive with no counter is adopted as
+# spawn 1), so a count that keeps growing between the watchdog's converges
+# is a daemon that keeps dying; the server reads it from status and says so.
 spawns() {
 	n=0
 	[ -r "${1%.pid}.spawns" ] && read -r n < "${1%.pid}.spawns"
