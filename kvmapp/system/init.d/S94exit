@@ -619,8 +619,11 @@ restore_sysctls() {
 	other_slot_up && return 0
 	[ -r "$FORWARD_FILE" ] || return 0
 	IFS== read -r key value < "$FORWARD_FILE"
-	rm -f "$FORWARD_FILE"
+	# The record is removed only on the path that puts the value back, so a
+	# stop that declines to restore leaves the pre-exit value for the next
+	# start to keep and a later stop to restore.
 	tailscaled_running && return 0
+	rm -f "$FORWARD_FILE"
 	[ -n "$key" ] || return 0
 	sysctl -q -w "$key=$value" 2>/dev/null || log "restore $key=$value failed"
 }

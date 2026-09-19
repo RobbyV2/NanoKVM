@@ -770,6 +770,31 @@ func TestS94exitStopRestoresSysctlsAndFencesWhileForwardingStaysOn(t *testing.T)
 		}
 	})
 
+	// The stop that declines to restore keeps the record, so the value
+	// ip_forward held before any slot touched it survives a stop and start
+	// while tailscaled is up and goes back on the first stop that restores.
+	t.Run("the record outlives a stop under tailscaled", func(t *testing.T) {
+		h := newS94(t)
+		h.gadgetNIC("usb0", "10.1.2.1/24")
+		start(t, h, "0")
+		pidfile := filepath.Join(h.runDir, "tailscaled.pid")
+		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		stop(t, h, "0")
+		if _, err := os.Stat(filepath.Join(h.runDir, "exit.ip_forward")); err != nil {
+			t.Errorf("the ip_forward record did not survive a stop under tailscaled: %v", err)
+		}
+		start(t, h, "0")
+		if err := os.Remove(pidfile); err != nil {
+			t.Fatal(err)
+		}
+		stop(t, h, "0")
+		if got := sysctl(h, "net.ipv4.ip_forward"); got != "0" {
+			t.Errorf("ip_forward after a stop and start under tailscaled = %q, want the 0 it held before the first start", got)
+		}
+	})
+
 	t.Run("another slot is up", func(t *testing.T) {
 		h := newS94(t)
 		h.gadgetNIC("usb0", "10.1.2.1/24")
