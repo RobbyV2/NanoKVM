@@ -46,6 +46,11 @@ token shown in the Exit panel (`[a-z2-9]{8}`, no `0 o 1 l i`).
 For §3–§11 the consumer must have **no other uplink** (Wi-Fi off, other Ethernet unplugged) or the
 result says nothing about the tunnel. §12 puts it back.
 
+BusyBox `netstat` here rejects `-p` and exits non-zero, which with stderr discarded reads as an empty
+result, so every listener question in this doc is answered with `ss -lnupt` (or `ss -lntp`, `ss -ntu`)
+in place of `netstat -lntp`. `conntrack` is absent as well, so each step that offers a
+`/proc/net/nf_conntrack` fallback takes it.
+
 Counters: every 30 s the watchdog runs `S94exit start 0`, which replaces `EXIT0`, `EXIT0_NAT` and
 `EXIT0_MASQ` in one `iptables-restore -n` transaction, so their `iptables -L … -v -n -x` packet counters **reset every 30 s**.
 Read them within a few seconds of generating the traffic. Cumulative numbers are `dns_redirected`
@@ -106,8 +111,8 @@ kvm# ls -l /dev/net/tun; grep -c tun /proc/misc
 kvm# ip tuntap add dev tuntest mode tun && ip addr add 198.18.9.1/32 dev tuntest && ip link set tuntest mtu 1280 up && ip -d link show tuntest && cat /sys/class/net/tuntest/carrier; ip link del tuntest
 ```
 
-Expected: `crw-------  10, 200 /dev/net/tun`; `1`; the add succeeds, `ip -d link` shows `tun` and
-`mtu 1280`, carrier prints `0` (persistent tun with no reader: that is the fail-closed state D6
+Expected: `/dev/net/tun` at `10, 200`, mode `0666` on this image; `1`; the add succeeds, `ip -d link`
+shows `tun` and `mtu 1280`, carrier prints `0` (persistent tun with no reader: that is the fail-closed state D6
 relies on). Pass: no `Operation not permitted` / `No such device`.
 
 ### 0.4 Userland binaries and the iptables backend
@@ -121,22 +126,30 @@ kvm# iptables -S FORWARD; iptables -t nat -S PREROUTING; iptables -t nat -S POST
 
 Expected: `ip` is iproute2 (`ip utility, iproute2-…`), **not** a BusyBox applet (BusyBox `ip rule`
 does not accept `unreachable` and `ip route replace unreachable default …` may fail: S94exit needs
-the real one). `iptables v1.8.x (nf_tables)` on FULL, `(legacy)` on MINIMAL; both are fine if 0.10
-passes. `flock`, `start-stop-daemon`, `sysctl`, `awk`, `udhcpd` present. Record whether `tcpdump`
-and `conntrack` exist: several later steps have a fallback if not. Save the three baseline chain
-listings for §12's before/after comparison.
+the real one). `iptables -V` names the backend the image carries, legacy or nf_tables, and S94exit
+runs on either once 0.10 passes; the FULL image on this unit reports legacy:
+
+```
+iptables v1.8.9 (legacy)
+/usr/sbin/xtables-legacy-multi
+```
+
+`flock`, `start-stop-daemon`, `sysctl`, `awk`, `udhcpd` present, `conntrack` MISSING. Record whether
+`tcpdump` exists. Save the three baseline chain listings for §12's before/after comparison.
 
 ### 0.5 Who owns port 53, and is dnsmasq configured
 
 ```sh
 kvm# ls -l /etc/dnsmasq.conf /etc/dnsmasq.d 2>&1; pgrep -a dnsmasq
-kvm# netstat -lnup | grep ':53 '; netstat -lntp | grep ':53 '
+kvm# ss -lnupt              # who holds :53 and :10800, with the process name
 kvm# cat /etc/resolv.conf
 ```
 
-Expected on a stock unit: no `/etc/dnsmasq.conf`, no dnsmasq process, nothing on `:53`. If anything
-listens on `0.0.0.0:53` or `$GW:53`, **the enable in §1 will fail** at `start listeners: dns forwarder on
-$GW:53: … address already in use` (the D3 dnsmasq drop-in is not implemented in the server; `grep -rl
+Expected on a stock unit: no `/etc/dnsmasq.conf`, no dnsmasq process, nothing on `:53`. Once the slot
+is enabled the same command shows `:53` held by NanoKVM-Server on the gateway address alone, udp and
+tcp on `$GW:53` (`10.163.245.1:53` on this unit), with the SOCKS front door on `127.0.0.1:10800` and
+nothing on `0.0.0.0`. If anything listens on `0.0.0.0:53` or `$GW:53`, **the enable in §1 will fail**
+at `start listeners: dns forwarder on $GW:53: … address already in use` (the D3 dnsmasq drop-in is not implemented in the server; `grep -rl
 dnsmasq server/` is empty). File that with the listener's cmdline before continuing, then stop it
 for the run (`/etc/init.d/S80dnsmasq stop`).
 
@@ -144,13 +157,15 @@ for the run (`/etc/init.d/S80dnsmasq stop`).
 
 ```sh
 kvm# sysctl -n net.ipv4.ip_forward
-kvm# grep -n ip_forward /etc/init.d/S98tailscaled
-kvm# /etc/init.d/S98tailscaled stop; sysctl -n net.ipv4.ip_forward
+kvm# ls -l /etc/init.d/S98tailscaled /usr/bin/tailscale 2>&1; pgrep -a tailscaled; ls -l /var/run/tailscaled.pid 2>&1
 ```
 
-Expected: `S98tailscaled` line 31 is `sysctl -w net.ipv4.ip_forward=0`; after `stop` the value is `0`.
-This is the condition the watchdog must undo: re-check in §1 step 1.6 (`forward=1` within 30 s
-of the stop while the slot is enabled). Restart tailscaled afterwards if the unit uses it.
+On an image that runs tailscaled, `S98tailscaled` carries `sysctl -w net.ipv4.ip_forward=0` in its
+stop path and the value reads `0` after `S98tailscaled stop`, which is the condition the watchdog
+undoes: re-check in §1 step 1.6 (`forward=1` within 30 s of the stop while the slot is enabled), and
+restart tailscaled before going on. This unit ships `/usr/bin/tailscale` and nothing else, no init
+script, no daemon and no `/var/run/tailscaled.pid`, so the stop and restart pass is skipped here and
+`S94exit stop` is the only thing that touches `ip_forward`.
 
 ### 0.7 Gadget netdev timing at a clean boot
 
@@ -185,6 +200,16 @@ IN-endpoint count the hardware reports. Record `num_dev_in_eps` and the FIFO dep
 presentation manager's static table (`6 / 5 / [768,512,512,384,128,128]`) is an assumption this
 confirms or corrects. If debugfs is not mounted: `mount -t debugfs none /sys/kernel/debug`.
 
+The reading on this unit matches `presentation/capability.go` staticV1 exactly:
+
+```
+g_tx_fifo_size[1..6] = 768, 512, 512, 384, 128, 128
+num_dev_ep = 7
+```
+
+Six of the seven IN endpoints have a dedicated TX FIFO, so six is the usable count, and the five
+linked functions charge IN = 6, exactly full, against OUT = 3 of 5.
+
 ### 0.9 `ip rule … unreachable` accepted
 
 ```sh
@@ -212,7 +237,9 @@ Expected: every `-A` succeeds and `-S` echoes it back. Fail: `No chain/target/ma
 kvm# free -m; grep -E 'VmRSS|VmSize' /proc/$(pidof NanoKVM-Server)/status
 ```
 
-Record. The under-load numbers are taken in §3 step 3.9 (hev, wstunnel, server at 256 sessions).
+Record. At rest NanoKVM-Server holds `VmRSS` near 38 MB behind a ~1.2 GB Go arena in `VmSize`, and
+hev-socks5-tunnel near 1.9 MB against its 64 MiB address-space cap. The under-load numbers are taken
+in §3 step 3.9 (hev, wstunnel, server at 256 sessions).
 
 ### 0.12 Shipped files are present and executable
 
