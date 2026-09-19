@@ -794,8 +794,9 @@ func TestS94exitStopRestoresSysctlsAndFencesWhileForwardingStaysOn(t *testing.T)
 }
 
 // /tmp is an 80 MB tmpfs and wstunnel logs an open/close pair for every
-// upstream probe, so each daemon log is truncated in place by the converge
-// once it passes the cap, while a log under it is left alone.
+// upstream probe, so each daemon log is cut back in place to its last 64 KiB
+// by the converge once it passes the cap, while a log under it is left
+// alone.
 func TestS94exitConvergeTruncatesALogPastTheCap(t *testing.T) {
 	h := newS94(t)
 	slot := MustSlot("0")
@@ -809,8 +810,13 @@ func TestS94exitConvergeTruncatesALogPastTheCap(t *testing.T) {
 
 	hevLog := filepath.Join(h.root, "tmp", "exit0-hev.log")
 	wsLog := filepath.Join(h.root, "tmp", "exit0-wstunnel.log")
-	big := strings.Repeat("x", 1024*1024+1)
-	if err := os.WriteFile(hevLog, []byte(big), 0o644); err != nil {
+	// Every byte is its offset mod 26 as a letter, so the kept tail is
+	// recognisable by its first and last bytes and by its whole content.
+	big := make([]byte, 1024*1024+1)
+	for i := range big {
+		big[i] = byte('a' + i%26)
+	}
+	if err := os.WriteFile(hevLog, big, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(wsLog, []byte("kept\n"), 0o644); err != nil {
@@ -819,8 +825,20 @@ func TestS94exitConvergeTruncatesALogPastTheCap(t *testing.T) {
 	if out, code := h.run("start", "0"); code != 0 {
 		t.Fatalf("second start exited %d:\n%s", code, out)
 	}
-	if info, err := os.Stat(hevLog); err != nil || info.Size() != 0 {
-		t.Fatalf("hev log past the cap was not truncated in place: err=%v info=%v", err, info)
+	const tail = 64 * 1024
+	got, err := os.ReadFile(hevLog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := big[len(big)-tail:]
+	if len(got) != tail || got[0] != want[0] || got[len(got)-1] != want[len(want)-1] {
+		t.Fatalf("hev log past the cap holds %d bytes %q..%q, want the last %d bytes %q..%q", len(got), got[:1], got[len(got)-1:], tail, want[:1], want[len(want)-1:])
+	}
+	if string(got) != string(want) {
+		t.Fatal("hev log past the cap does not hold the original's last 64 KiB")
+	}
+	if _, err := os.Stat(hevLog + ".tail"); !os.IsNotExist(err) {
+		t.Fatalf("tail temp file left behind: %v", err)
 	}
 	if got, _ := os.ReadFile(wsLog); string(got) != "kept\n" {
 		t.Fatalf("wstunnel log under the cap was touched: %q", got)

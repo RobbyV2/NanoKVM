@@ -34,12 +34,14 @@ FORWARD_FILE="$RUN_DIR/exit.ip_forward"
 # Address-space cap for hev-socks5-tunnel (D24), in KiB, applied through
 # ulimit -v in the subshell that starts it.
 HEV_AS_KB=${HEV_AS_KB:-65536}
-# Size, in KiB, above which a daemon log is truncated in place by the next
-# converge, and the free space the log's filesystem must have for a daemon to
-# be started with its output on the log at all. /tmp is an 80 MB tmpfs shared
-# with the server tree; wstunnel aborts on its first failed stderr write, so a
-# full /tmp must never reach it.
+# Size, in KiB, above which a daemon log is cut back in place by the next
+# converge, how much of its end is kept when it is, and the free space the
+# log's filesystem must have for a daemon to be started with its output on
+# the log at all. /tmp is an 80 MB tmpfs shared with the server tree;
+# wstunnel aborts on its first failed stderr write, so a full /tmp must never
+# reach it.
 LOG_CAP_KB=${LOG_CAP_KB:-1024}
+LOG_TAIL_KB=${LOG_TAIL_KB:-64}
 LOG_RESERVE_KB=${LOG_RESERVE_KB:-512}
 
 # D21 as REJECT rules, used only when the env carries no REJECT4 (the server
@@ -194,9 +196,12 @@ ensure_binary() {
 	return 1
 }
 
-# trim_log LOGFILE: a log past LOG_CAP_KB is truncated in place. The daemon
-# holds it with O_APPEND, so it keeps writing at the new end; the file is
-# never renamed or removed under a running writer.
+# trim_log LOGFILE: a log past LOG_CAP_KB is cut back in place to its last
+# LOG_TAIL_KB: the tail is copied to a sibling temp file, the log is
+# truncated and the tail appended back. The daemon holds the log with
+# O_APPEND, so it keeps writing at the new end; the file is never renamed or
+# removed under a running writer. A tail copy that fails (no space left)
+# leaves a plain truncation.
 trim_log() {
 	[ -f "$1" ] || return 0
 	size=$(wc -c < "$1" 2>/dev/null | tr -d ' ')
@@ -204,7 +209,14 @@ trim_log() {
 		''|*[!0-9]*) return 0 ;;
 	esac
 	[ "$size" -gt $((LOG_CAP_KB * 1024)) ] || return 0
-	: > "$1"
+	if tail -c $((LOG_TAIL_KB * 1024)) "$1" > "$1.tail" 2>/dev/null
+	then
+		: > "$1"
+		cat "$1.tail" >> "$1"
+	else
+		: > "$1"
+	fi
+	rm -f "$1.tail"
 }
 
 # log_target LOGFILE: the file a daemon's output goes to. With less than
