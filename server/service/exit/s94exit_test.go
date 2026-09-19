@@ -790,3 +790,83 @@ func TestS94exitStopRestoresSysctlsAndFencesWhileForwardingStaysOn(t *testing.T)
 		}
 	})
 }
+
+// /tmp is an 80 MB tmpfs and wstunnel logs an open/close pair for every
+// upstream probe, so each daemon log is truncated in place by the converge
+// once it passes the cap, while a log under it is left alone.
+func TestS94exitConvergeTruncatesALogPastTheCap(t *testing.T) {
+	h := newS94(t)
+	slot := MustSlot("0")
+	cfg := testConfig(slot)
+	cfg.Mode = "wstunnel"
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, cfg, "usb0")
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+
+	hevLog := filepath.Join(h.root, "tmp", "exit0-hev.log")
+	wsLog := filepath.Join(h.root, "tmp", "exit0-wstunnel.log")
+	big := strings.Repeat("x", 1024*1024+1)
+	if err := os.WriteFile(hevLog, []byte(big), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(wsLog, []byte("kept\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, code := h.run("start", "0"); code != 0 {
+		t.Fatalf("second start exited %d:\n%s", code, out)
+	}
+	if info, err := os.Stat(hevLog); err != nil || info.Size() != 0 {
+		t.Fatalf("hev log past the cap was not truncated in place: err=%v info=%v", err, info)
+	}
+	if got, _ := os.ReadFile(wsLog); string(got) != "kept\n" {
+		t.Fatalf("wstunnel log under the cap was touched: %q", got)
+	}
+	// The running daemons were left alone: truncation is not a restart.
+	if h.count(h.traceLines(), "start-stop-daemon -S") != 0 {
+		t.Fatalf("truncating a log restarted a daemon:\n%s", strings.Join(h.traceLines(), "\n"))
+	}
+}
+
+// A daemon started while the log's filesystem is nearly full gets /dev/null
+// for its output and the converge says so on stderr: wstunnel aborts on its
+// first failed stderr write, and a full /tmp used to respawn it every 30 s.
+func TestS94exitStartsDaemonsOnDevNullWhenTheLogFilesystemIsFull(t *testing.T) {
+	h := newS94(t)
+	slot := MustSlot("0")
+	h.gadgetNIC("usb0", "10.1.2.1/24")
+	h.writeEnv(slot, testConfig(slot), "usb0")
+	hevLog := h.root + "/tmp/exit0-hev.log"
+
+	roomy := h.env
+	h.env = append(append([]string{}, roomy...), "STUB_DF_AVAIL=0")
+	out, code := h.run("start", "0")
+	if code != 0 {
+		t.Fatalf("start with a full log filesystem exited %d:\n%s", code, out)
+	}
+	trace := strings.Join(h.traceLines(), "\n")
+	if !strings.Contains(trace, "-x /bin/sh -- -c "+daemonWrapper+" sh /dev/null "+h.root+"/bin/hev-socks5-tunnel") {
+		t.Fatalf("hev was not started on /dev/null:\n%s", trace)
+	}
+	if !strings.Contains(trace, "df -Pk "+h.root+"/tmp") {
+		t.Fatalf("free space was not read from the log's directory:\n%s", trace)
+	}
+	if !strings.Contains(out, hevLog) || !strings.Contains(out, "0 KiB free") || !strings.Contains(out, "/dev/null") {
+		t.Fatalf("no warning naming the log and the free space:\n%s", out)
+	}
+
+	// With room on the filesystem a fresh daemon logs to the file.
+	h.killDaemons()
+	h.env = roomy
+	out, code = h.run("start", "0")
+	if code != 0 {
+		t.Fatalf("start exited %d:\n%s", code, out)
+	}
+	if strings.Contains(out, "/dev/null") {
+		t.Fatalf("warning printed with free space:\n%s", out)
+	}
+	if trace := strings.Join(h.traceLines(), "\n"); !strings.Contains(trace, "-x /bin/sh -- -c "+daemonWrapper+" sh "+hevLog+" "+h.root+"/bin/hev-socks5-tunnel") {
+		t.Fatalf("hev was not started on its log with free space:\n%s", trace)
+	}
+}

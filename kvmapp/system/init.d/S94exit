@@ -34,6 +34,13 @@ FORWARD_FILE="$RUN_DIR/exit.ip_forward"
 # Address-space cap for hev-socks5-tunnel (D24), in KiB, applied through
 # ulimit -v in the subshell that starts it.
 HEV_AS_KB=${HEV_AS_KB:-65536}
+# Size, in KiB, above which a daemon log is truncated in place by the next
+# converge, and the free space the log's filesystem must have for a daemon to
+# be started with its output on the log at all. /tmp is an 80 MB tmpfs shared
+# with the server tree; wstunnel aborts on its first failed stderr write, so a
+# full /tmp must never reach it.
+LOG_CAP_KB=${LOG_CAP_KB:-1024}
+LOG_RESERVE_KB=${LOG_RESERVE_KB:-512}
 
 # D21 as REJECT rules, used only when the env carries no REJECT4 (the server
 # renders the list from the same Go policy the front door enforces).
@@ -187,6 +194,40 @@ ensure_binary() {
 	return 1
 }
 
+# trim_log LOGFILE: a log past LOG_CAP_KB is truncated in place. The daemon
+# holds it with O_APPEND, so it keeps writing at the new end; the file is
+# never renamed or removed under a running writer.
+trim_log() {
+	[ -f "$1" ] || return 0
+	size=$(wc -c < "$1" 2>/dev/null | tr -d ' ')
+	case "$size" in
+		''|*[!0-9]*) return 0 ;;
+	esac
+	[ "$size" -gt $((LOG_CAP_KB * 1024)) ] || return 0
+	: > "$1"
+}
+
+# log_target LOGFILE: the file a daemon's output goes to. With less than
+# LOG_RESERVE_KB free on the log's filesystem the daemon gets /dev/null and
+# the converge says so, since a daemon whose writes fail (wstunnel aborts on
+# the first one) is worse than a daemon without a log. An unreadable df keeps
+# the log.
+log_target() {
+	dir=${1%/*}
+	[ -n "$dir" ] || dir=/
+	free=$(df -Pk "$dir" 2>/dev/null | awk 'END { print $4 }')
+	case "$free" in
+		''|*[!0-9]*) echo "$1"; return 0 ;;
+	esac
+	if [ "$free" -lt "$LOG_RESERVE_KB" ]
+	then
+		log "$1: only ${free} KiB free on its filesystem; daemon output goes to /dev/null"
+		echo /dev/null
+		return 0
+	fi
+	echo "$1"
+}
+
 # start_daemon PIDFILE LOGFILE BINARY ARGS...
 #
 # start-stop-daemon -S with a live pidfile answers "already running" and exits
@@ -210,6 +251,7 @@ start_daemon() {
 	shift 2
 	pid_alive "$pidfile" "$1" && return 0
 	rm -f "$pidfile"
+	logfile=$(log_target "$logfile")
 	start-stop-daemon -S -bmq -p "$pidfile" -x /bin/sh -- \
 		-c 'exec >>"$1" 2>&1; shift; exec "$@"' sh "$logfile" "$@" 9>&-
 }
@@ -256,6 +298,8 @@ apply_core() {
 
 start_daemons() {
 	ok=1
+	trim_log "$HEV_LOG"
+	trim_log "$WS_LOG"
 	ensure_binary hev-socks5-tunnel || ok=0
 	if [ "$ok" = 1 ]
 	then

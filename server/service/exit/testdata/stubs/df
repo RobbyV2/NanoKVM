@@ -1,0 +1,9 @@
+#!/bin/sh
+# Stub df: one POSIX (-P) line for whatever path is asked, with
+# $STUB_DF_AVAIL KiB available (a generous default); the script reads the
+# fourth column of the last line the way it does on BusyBox.
+echo "df $*" >> "$STUB_TRACE"
+avail=${STUB_DF_AVAIL:-65536}
+echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
+echo "tmpfs 80308 $((80308 - avail)) $avail 100% /tmp"
+exit 0
