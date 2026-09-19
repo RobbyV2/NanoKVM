@@ -1153,6 +1153,8 @@ const tr = {
             'Bu sayfa düz http üzerinden sunuluyor: belirteç ve çıkış ile NanoKVM arasındaki tüm trafik şifresizdir.',
           warnWstunnelUnverified:
             'wstunnel bir sertifika parmak izi sabitleyemez. CA imzalı bir sertifika olmadan NanoKVM’e bağlantısı kimliği doğrulanmamıştır.',
+          warnWstunnelDefender:
+            'Windows Defender indirilen wstunnel ikili dosyasını karantinaya alıp günlüğüne hiçbir şey yazmadan tüneli durdurabilir; yerel komutlar hiçbir ikili dosya indirmez.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

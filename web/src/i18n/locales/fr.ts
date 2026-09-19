@@ -1168,6 +1168,8 @@ const fr = {
             'Cette page est servie en http simple : le jeton et tout le trafic entre la sortie et le NanoKVM circulent en clair.',
           warnWstunnelUnverified:
             "wstunnel ne peut pas épingler une empreinte de certificat. Sans certificat signé par une AC, sa connexion au NanoKVM n'est pas authentifiée.",
+          warnWstunnelDefender:
+            'Windows Defender peut mettre en quarantaine le binaire wstunnel téléchargé et arrêter le tunnel sans rien écrire dans son journal ; les commandes natives ne téléchargent aucun binaire.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

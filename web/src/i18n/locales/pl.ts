@@ -1159,6 +1159,8 @@ const pl = {
             'Ta strona jest serwowana przez zwykłe http: token i cały ruch między wyjściem a NanoKVM są nieszyfrowane.',
           warnWstunnelUnverified:
             'wstunnel nie potrafi przypiąć odcisku certyfikatu. Bez certyfikatu podpisanego przez CA jego połączenie z NanoKVM nie jest uwierzytelnione.',
+          warnWstunnelDefender:
+            'Windows Defender może przenieść pobrany plik binarny wstunnel do kwarantanny i zatrzymać tunel, nie zapisując niczego w swoim dzienniku; polecenia natywne nie pobierają żadnego pliku binarnego.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

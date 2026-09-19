@@ -1147,6 +1147,8 @@ const cz = {
             'Tato stránka je poskytována přes nešifrované http: token i veškerý provoz mezi výstupem a NanoKVM jsou v otevřené podobě.',
           warnWstunnelUnverified:
             'wstunnel neumí připnout otisk certifikátu. Bez certifikátu podepsaného CA není jeho spojení s NanoKVM ověřené.',
+          warnWstunnelDefender:
+            'Windows Defender může stažený binární soubor wstunnel přesunout do karantény a zastavit tunel, aniž by cokoli zapsal do svého logu; nativní příkazy žádný binární soubor nestahují.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

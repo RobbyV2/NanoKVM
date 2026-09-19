@@ -1154,6 +1154,8 @@ const ca = {
             'Aquesta pàgina se serveix per http sense xifrar: el testimoni i tot el trànsit entre la sortida i el NanoKVM van en clar.',
           warnWstunnelUnverified:
             'wstunnel no pot fixar una empremta de certificat. Sense un certificat signat per una CA, la seva connexió amb el NanoKVM no està autenticada.',
+          warnWstunnelDefender:
+            'El Windows Defender pot posar en quarantena el binari de wstunnel baixat i aturar el túnel sense deixar res al seu registre; les ordres natives no baixen cap binari.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

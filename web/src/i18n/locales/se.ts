@@ -1152,6 +1152,8 @@ const se = {
             'Den här sidan levereras över vanlig http: token och all trafik mellan exit och NanoKVM går i klartext.',
           warnWstunnelUnverified:
             'wstunnel kan inte låsa ett certifikat-fingeravtryck. Utan ett CA-signerat certifikat är dess anslutning till NanoKVM inte autentiserad.',
+          warnWstunnelDefender:
+            'Windows Defender kan sätta den hämtade wstunnel-binären i karantän och stoppa tunneln utan att skriva något i sin logg; de nativa kommandona hämtar ingen binär.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

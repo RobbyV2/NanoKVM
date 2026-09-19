@@ -1158,6 +1158,8 @@ const pt_br = {
             'Esta página é servida por http simples: o token e todo o tráfego entre a saída e o NanoKVM trafegam em texto claro.',
           warnWstunnelUnverified:
             'O wstunnel não consegue fixar uma impressão digital de certificado. Sem um certificado assinado por uma CA, a conexão dele com o NanoKVM não é autenticada.',
+          warnWstunnelDefender:
+            'O Windows Defender pode colocar em quarentena o binário do wstunnel baixado e parar o túnel sem escrever nada no próprio log; os comandos nativos não baixam nenhum binário.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

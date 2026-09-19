@@ -1153,6 +1153,8 @@ const da = {
             'Denne side leveres over almindelig http: tokenet og al trafik mellem exit og NanoKVM er ukrypteret.',
           warnWstunnelUnverified:
             'wstunnel kan ikke fastlåse et certifikat-fingeraftryk. Uden et CA-signeret certifikat er dens forbindelse til NanoKVM ikke autentificeret.',
+          warnWstunnelDefender:
+            'Windows Defender kan sætte den hentede wstunnel-binær i karantæne og stoppe tunnelen uden at skrive noget i sin log; de native kommandoer henter ingen binær.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

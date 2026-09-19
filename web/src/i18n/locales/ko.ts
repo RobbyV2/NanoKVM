@@ -1134,6 +1134,8 @@ const ko = {
             '이 페이지는 평문 http로 제공됩니다. 토큰과 출구-NanoKVM 사이의 모든 트래픽이 암호화되지 않습니다.',
           warnWstunnelUnverified:
             'wstunnel은 인증서 지문을 고정할 수 없습니다. CA 서명 인증서가 없으면 NanoKVM으로의 연결은 인증되지 않습니다.',
+          warnWstunnelDefender:
+            'Windows Defender가 내려받은 wstunnel 바이너리를 격리하여 로그에 아무것도 남기지 않은 채 터널을 끊을 수 있습니다. 네이티브 명령은 바이너리를 내려받지 않습니다.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

@@ -136,6 +136,9 @@ export const ExitCommands = ({
           )}
           {view.cleartext && <li>{t('settings.exit.commands.warnCleartext')}</li>}
           {view.wstunnelUnverified && <li>{t('settings.exit.commands.warnWstunnelUnverified')}</li>}
+          {mode === 'wstunnel' && platform === 'windows' && (
+            <li>{t('settings.exit.commands.warnWstunnelDefender')}</li>
+          )}
           {view.schemeMismatch && (
             <li className="break-all">
               {t('settings.exit.commands.warnSchemeMismatch', {

@@ -1158,6 +1158,8 @@ const id = {
             'Halaman ini disajikan lewat http biasa: token dan seluruh lalu lintas antara keluar dan NanoKVM tidak terenkripsi.',
           warnWstunnelUnverified:
             'wstunnel tidak dapat menyematkan sidik jari sertifikat. Tanpa sertifikat yang ditandatangani CA, koneksinya ke NanoKVM tidak terautentikasi.',
+          warnWstunnelDefender:
+            'Windows Defender dapat mengarantina biner wstunnel yang diunduh dan menghentikan tunnel tanpa menulis apa pun ke lognya; perintah native tidak mengunduh biner apa pun.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

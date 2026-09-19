@@ -1096,6 +1096,8 @@ const zh_tw = {
           warnCleartext: '本頁透過明文 http 提供：權杖以及出口與 NanoKVM 之間的所有流量均未加密。',
           warnWstunnelUnverified:
             'wstunnel 無法固定憑證指紋。沒有 CA 簽發的憑證時，它到 NanoKVM 的連線不經身分驗證。',
+          warnWstunnelDefender:
+            'Windows Defender 可能會隔離下載的 wstunnel 二進位檔並中斷隧道，且不在其記錄中留下任何內容；原生命令不會下載二進位檔。',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

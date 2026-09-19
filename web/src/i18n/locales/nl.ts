@@ -1165,6 +1165,8 @@ const nl = {
             'Deze pagina wordt via gewoon http geserveerd: het token en al het verkeer tussen de exit en de NanoKVM zijn onversleuteld.',
           warnWstunnelUnverified:
             'wstunnel kan geen certificaatvingerafdruk vastzetten. Zonder door een CA ondertekend certificaat is zijn verbinding met de NanoKVM niet geauthenticeerd.',
+          warnWstunnelDefender:
+            'Windows Defender kan de gedownloade wstunnel-binary in quarantaine plaatsen en de tunnel stoppen zonder iets in zijn logboek te schrijven; de native commando’s downloaden geen binary.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

@@ -1165,6 +1165,8 @@ const it = {
             "Questa pagina è servita in http semplice: il token e tutto il traffico tra l'uscita e il NanoKVM sono in chiaro.",
           warnWstunnelUnverified:
             "wstunnel non può bloccare un'impronta del certificato. Senza un certificato firmato da una CA la sua connessione al NanoKVM non è autenticata.",
+          warnWstunnelDefender:
+            'Windows Defender può mettere in quarantena il binario wstunnel scaricato e fermare il tunnel senza scrivere nulla nel proprio log; i comandi nativi non scaricano alcun binario.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

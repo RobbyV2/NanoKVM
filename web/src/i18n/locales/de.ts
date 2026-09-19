@@ -1166,6 +1166,8 @@ const de = {
             'Diese Seite wird über einfaches http ausgeliefert: Token und sämtlicher Verkehr zwischen Exit und NanoKVM sind unverschlüsselt.',
           warnWstunnelUnverified:
             'wstunnel kann keinen Zertifikat-Fingerabdruck festlegen. Ohne CA-signiertes Zertifikat ist seine Verbindung zum NanoKVM nicht authentifiziert.',
+          warnWstunnelDefender:
+            'Windows Defender kann die heruntergeladene wstunnel-Binärdatei in Quarantäne verschieben und den Tunnel beenden, ohne etwas in sein Log zu schreiben; die nativen Befehle laden keine Binärdatei herunter.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

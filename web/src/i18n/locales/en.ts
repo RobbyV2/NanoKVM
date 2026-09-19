@@ -1147,6 +1147,8 @@ const en = {
             'This page is served over plain http: the token and all traffic between the exit and the NanoKVM are cleartext.',
           warnWstunnelUnverified:
             'wstunnel cannot pin a certificate fingerprint. Without a CA-signed certificate its connection to the NanoKVM is unauthenticated.',
+          warnWstunnelDefender:
+            'Windows Defender may quarantine the downloaded wstunnel binary and stop the tunnel with nothing in its log; the native commands download no binary.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

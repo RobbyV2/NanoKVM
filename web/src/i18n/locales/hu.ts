@@ -1161,6 +1161,8 @@ const hu = {
             'Ez az oldal sima http-n érkezik: a token és a kilépő és a NanoKVM közti minden forgalom titkosítatlan.',
           warnWstunnelUnverified:
             'A wstunnel nem tud tanúsítvány-ujjlenyomatot rögzíteni. CA által aláírt tanúsítvány nélkül a NanoKVM-hez való kapcsolata nem hitelesített.',
+          warnWstunnelDefender:
+            'A Windows Defender karanténba helyezheti a letöltött wstunnel binárist, és úgy állítja le az alagutat, hogy semmit nem ír a naplójába; a natív parancsok nem töltenek le binárist.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

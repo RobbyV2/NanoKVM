@@ -1147,6 +1147,8 @@ const vi = {
             'Trang này được phục vụ qua http thường: mã thông báo và toàn bộ lưu lượng giữa thiết bị thoát và NanoKVM đều không mã hóa.',
           warnWstunnelUnverified:
             'wstunnel không thể ghim dấu vân tay chứng chỉ. Không có chứng chỉ do CA ký, kết nối của nó tới NanoKVM không được xác thực.',
+          warnWstunnelDefender:
+            'Windows Defender có thể cách ly tệp nhị phân wstunnel đã tải về và dừng đường hầm mà không ghi gì vào nhật ký của nó; các lệnh gốc không tải về tệp nhị phân nào.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

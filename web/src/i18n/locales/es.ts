@@ -1163,6 +1163,8 @@ const es = {
             'Esta página se sirve por http sin cifrar: el token y todo el tráfico entre la salida y el NanoKVM van en claro.',
           warnWstunnelUnverified:
             'wstunnel no puede fijar una huella de certificado. Sin un certificado firmado por una CA, su conexión con el NanoKVM no está autenticada.',
+          warnWstunnelDefender:
+            'Windows Defender puede poner en cuarentena el binario de wstunnel descargado y detener el túnel sin dejar nada en su registro; los comandos nativos no descargan ningún binario.',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',

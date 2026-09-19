@@ -1152,6 +1152,8 @@ const ja = {
             'このページは平文の http で提供されています。トークンと、出口と NanoKVM 間のすべての通信は暗号化されません。',
           warnWstunnelUnverified:
             'wstunnel は証明書フィンガープリントを固定できません。CA 署名の証明書がない場合、NanoKVM への接続は認証されません。',
+          warnWstunnelDefender:
+            'Windows Defender がダウンロードした wstunnel バイナリを隔離し、ログに何も残さないままトンネルを停止することがあります。ネイティブのコマンドはバイナリをダウンロードしません。',
           windows: 'Windows PowerShell',
           macos: 'macOS',
           linux: 'Linux',
