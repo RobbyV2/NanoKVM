@@ -115,8 +115,9 @@ func TestCommandsSnapshot(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			rsp := renderCommands(slot, cfg, tc.origin, tc.cert)
-			if len(rsp.Native) != 3 || len(rsp.Wstunnel) != 3 {
-				t.Fatalf("expected three platforms per mode, got %d/%d", len(rsp.Native), len(rsp.Wstunnel))
+			// windows twice (powershell and cmd), then macos and linux.
+			if len(rsp.Native) != 4 || len(rsp.Wstunnel) != 4 {
+				t.Fatalf("expected four commands per mode, got %d/%d", len(rsp.Native), len(rsp.Wstunnel))
 			}
 			if rsp.WstunnelVersion != WstunnelVersion || rsp.Scheme != tc.origin.Scheme || rsp.Host != tc.origin.Host || rsp.WstunnelRepo != wstunnelRepoURL {
 				t.Fatalf("header = %+v", rsp)
@@ -146,17 +147,31 @@ func TestCommandsSnapshot(t *testing.T) {
 					t.Fatalf("wstunnel command is not pinned: %s", cmd.Command)
 				}
 				verify := strings.Contains(cmd.Command, "--tls-verify-certificate")
-				wantVerify := tc.origin.TLS() && !tc.cert.SelfSigned
+				wantVerify := VerifyTLS(tc.origin, tc.cert)
 				if verify != wantVerify {
 					t.Fatalf("%s verify=%v want %v: %s", tc.name, verify, wantVerify, cmd.Command)
 				}
 			}
+			// The native clients follow the same rule wstunnel does: verify a
+			// CA-signed certificate, trust the transport for the unit's own
+			// self-signed one, and carry the token either way.
+			wantInsecure := tc.origin.TLS() && !VerifyTLS(tc.origin, tc.cert)
 			for _, cmd := range rsp.Native {
 				hasK := strings.Contains(cmd.Command, "-fsSLk") || strings.Contains(cmd.Command, "RemoteCertificateValidationCallback")
-				if hasK != tc.origin.TLS() {
-					t.Fatalf("%s %s insecure-fetch=%v want %v: %s", tc.name, cmd.Platform, hasK, tc.origin.TLS(), cmd.Command)
+				if hasK != wantInsecure {
+					t.Fatalf("%s %s %s insecure-fetch=%v want %v: %s", tc.name, cmd.Platform, cmd.Shell, hasK, wantInsecure, cmd.Command)
 				}
 				if cmd.Platform != "windows" {
+					continue
+				}
+				if cmd.Shell == "cmd" {
+					// cmd has no pipeline into a language host, so it saves the
+					// client and hands the file to powershell -File.
+					for _, want := range []string{`curl.exe -fsSL`, `-o "%TEMP%\nexit-client.ps1"`, `powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\nexit-client.ps1"`} {
+						if !strings.Contains(cmd.Command, want) {
+							t.Fatalf("%s windows cmd command lacks %q: %s", tc.name, want, cmd.Command)
+						}
+					}
 					continue
 				}
 				// A scriptblock callback throws "no Runspace available" off
@@ -170,7 +185,10 @@ func TestCommandsSnapshot(t *testing.T) {
 				if !strings.HasSuffix(cmd.Command, fetch) {
 					t.Fatalf("%s windows command does not end with the fetch %q: %s", tc.name, fetch, cmd.Command)
 				}
-				if !tc.origin.TLS() {
+				// The trust prefix only exists to get past a certificate no CA
+				// can vouch for, so a CA-signed one carries the bare fetch just
+				// as plain http does.
+				if !wantInsecure {
 					if cmd.Command != fetch {
 						t.Fatalf("%s windows command carries a prefix: %s", tc.name, cmd.Command)
 					}
@@ -278,17 +296,17 @@ func TestRenderClientTemplating(t *testing.T) {
 	slot := MustSlot("0")
 	cfg := testConfig(slot)
 	origin := Origin{Scheme: "https", Host: "kvm.example.net"}
-	if _, ok := RenderClient("client.nope", slot, cfg, origin, ""); ok {
+	if _, ok := RenderClient("client.nope", slot, cfg, origin, false); ok {
 		t.Fatal("unknown client rendered")
 	}
 	// Every placeholder must be gone after templating (client.sh keeps a
 	// literal `__*)` guard that refuses to run untemplated, so the check is by
 	// placeholder name). client.sh fetches and gets the http scheme; the three
 	// clients open the socket and get the ws scheme (plan, W3 <-> W1).
-	placeholders := []string{phScheme, phHost, phSlot, phToken, phFingerprint, phAllowPrivate}
+	placeholders := []string{phScheme, phHost, phSlot, phToken, phVerify, phAllowPrivate}
 	for name := range clientNames {
 		for _, o := range []Origin{origin, {Scheme: "http", Host: "10.1.2.1"}} {
-			body, ok := RenderClient(name, slot, cfg, o, "ab12")
+			body, ok := RenderClient(name, slot, cfg, o, true)
 			if !ok {
 				t.Fatalf("%s is not embedded", name)
 			}
@@ -364,7 +382,14 @@ func TestTemplatedValuesAreQuotedPerLanguage(t *testing.T) {
 	// themselves, and the UI's readdressing treats a quote as a url boundary.
 	rsp := renderCommands(MustSlot("0"), testConfig(MustSlot("0")), Origin{Scheme: "https", Host: "kvm.example.net:8443"}, Certificate{})
 	for _, cmd := range allCommands(rsp) {
-		if !strings.Contains(cmd.Command, "'https://kvm.example.net:8443/exit/0/client.") && !strings.Contains(cmd.Command, "'wss://kvm.example.net:8443'") {
+		// cmd.exe has no single-quote literal, so its commands quote with the
+		// double quote its own parser understands.
+		quoted := cmd.Shell == "cmd" &&
+			(strings.Contains(cmd.Command, `"https://kvm.example.net:8443/exit/0/client.`) ||
+				strings.Contains(cmd.Command, `"wss://kvm.example.net:8443"`))
+		quoted = quoted || strings.Contains(cmd.Command, "'https://kvm.example.net:8443/exit/0/client.") ||
+			strings.Contains(cmd.Command, "'wss://kvm.example.net:8443'")
+		if !quoted {
 			t.Errorf("%s %s does not quote its url: %s", cmd.Platform, cmd.Shell, cmd.Command)
 		}
 	}
@@ -386,7 +411,7 @@ func TestRenderClientRefusesHostMetacharacters(t *testing.T) {
 			t.Errorf("ValidHost(%q) = true", host)
 		}
 		for name := range clientNames {
-			if body, ok := RenderClient(name, slot, cfg, Origin{Scheme: "http", Host: host}, ""); ok {
+			if body, ok := RenderClient(name, slot, cfg, Origin{Scheme: "http", Host: host}, false); ok {
 				t.Errorf("%s rendered for host %q:\n%s", name, host, body)
 			}
 		}
@@ -396,7 +421,7 @@ func TestRenderClientRefusesHostMetacharacters(t *testing.T) {
 		if !ValidHost(host) {
 			t.Errorf("ValidHost(%q) = false", host)
 		}
-		if _, ok := RenderClient("client.sh", slot, cfg, Origin{Scheme: "http", Host: host}, ""); !ok {
+		if _, ok := RenderClient("client.sh", slot, cfg, Origin{Scheme: "http", Host: host}, false); !ok {
 			t.Errorf("client.sh refused host %q", host)
 		}
 	}

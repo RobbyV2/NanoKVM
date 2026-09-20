@@ -1159,15 +1159,18 @@ const nl = {
             'Het bevat een geheim dat het internet van het doelsysteem bepaalt en wordt opgeslagen in uw shell-geschiedenis.',
           warnReach:
             'Alles wat het exit-apparaat kan bereiken, wordt bereikbaar vanaf het doelsysteem.',
-          warnFingerprint:
-            'De exit verbindt pas na controle van de certificaatvingerafdruk {{fingerprint}}.',
           warnCleartext:
             'Deze pagina wordt via gewoon http geserveerd: het token en al het verkeer tussen de exit en de NanoKVM zijn onversleuteld.',
-          warnWstunnelUnverified:
-            'wstunnel kan geen certificaatvingerafdruk vastzetten. Zonder door een CA ondertekend certificaat is zijn verbinding met de NanoKVM niet geauthenticeerd.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender kan de gedownloade wstunnel-binary in quarantaine plaatsen en de tunnel stoppen zonder iets in zijn logboek te schrijven; de native commando’s downloaden geen binary.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Script bekijken',
@@ -1179,8 +1182,6 @@ const nl = {
           rewritten: 'Geadresseerd aan {{host}}, het adres dat deze browser heeft bereikt.',
           warnSchemeMismatch:
             'De NanoKVM zag deze pagina opgevraagd via {{server}}, maar de browser bereikte hem op {{local}}. De opdrachten zijn geadresseerd aan {{server}}; laat de proxy X-Forwarded-Proto sturen zodat ze het adres volgen dat u gebruikt.',
-          warnFingerprintReaddressed:
-            'Het script pint de certificaatvingerafdruk {{fingerprint}} van deze NanoKVM. Als {{host}} een ander certificaat toont, zoals een proxy die TLS afhandelt, weigert de exit te verbinden; laat TLS door tot de NanoKVM of bereik hem rechtstreeks.',
           unavailable: 'Geen commando voor dit platform.',
           regenerateHint:
             'Er is een exit verbonden. Genereer het token opnieuw zodra het geplakte commando niet meer nodig is; de exit moet dan met het nieuwe commando worden herstart.',

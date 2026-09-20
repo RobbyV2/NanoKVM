@@ -30,7 +30,7 @@ SCHEME = "__SCHEME__"
 HOST = "__HOST__"
 SLOT = "__SLOT__"
 TOKEN = "__TOKEN__"
-FINGERPRINT = "__FINGERPRINT__"
+VERIFY = "__VERIFY__" == "1"
 ALLOW_PRIVATE = "__ALLOW_PRIVATE__" == "1"
 
 # Frame types.
@@ -677,33 +677,33 @@ class Exit(object):
 
 
 def connect_ws():
-    """Dial, TLS with fingerprint pin, HTTP upgrade. Returns (socket, is_tls, leftover)."""
+    """Dial, TLS, HTTP upgrade. Returns (socket, is_tls, leftover)."""
     scheme = {"http": "ws", "https": "wss"}.get(SCHEME, SCHEME)
     if scheme not in ("ws", "wss"):
         raise RuntimeError("bad scheme %r" % SCHEME)
     tls = scheme == "wss"
-    fp = FINGERPRINT.replace(":", "").strip().lower()
-    if tls and not fp:
-        raise RuntimeError("wss without a certificate fingerprint: refusing to connect unverified")
     host, port = parse_host(HOST, 443 if tls else 80)
     sock = socket.create_connection((host, port), timeout=10)
     try:
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         if tls:
-            # The NanoKVM's certificate is normally self-signed: trust is the pin, not a CA.
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
             sni = None
             try:
                 ipaddress.ip_address(host)
             except ValueError:
                 sni = host
+            if VERIFY:
+                # A CA-signed certificate is installed, so check it the ordinary way.
+                ctx.load_default_certs(ssl.Purpose.SERVER_AUTH)
+                ctx.check_hostname = sni is not None
+            else:
+                # The unit's own certificate is self-signed and no CA store can
+                # vouch for it. Trust the transport, as wstunnel does against the
+                # same host, and let the token authenticate the session.
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
             sock = ctx.wrap_socket(sock, server_hostname=sni)
-            der = sock.getpeercert(binary_form=True)
-            got = hashlib.sha256(der or b"").hexdigest()
-            if got != fp:
-                raise RuntimeError("certificate fingerprint mismatch: expected %s got %s; refusing" % (fp, got))
         key = base64.b64encode(os.urandom(16)).decode()
         req = ("GET /exit/%s/native HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                "Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\nAuthorization: Bearer %s\r\n"
@@ -755,8 +755,8 @@ def main():
     if hasattr(signal, "SIGPIPE"):
         signal.signal(signal.SIGPIPE, signal.SIG_IGN)
     scheme = {"http": "ws", "https": "wss"}.get(SCHEME, SCHEME)
-    log("exit client for %s://%s/exit/%s (allowPrivate=%s, pin=%s)" % (
-        scheme, HOST, SLOT, ALLOW_PRIVATE, (FINGERPRINT[:16] + "...") if FINGERPRINT else "none"))
+    log("exit client for %s://%s/exit/%s (allowPrivate=%s, verifyTLS=%s)" % (
+        scheme, HOST, SLOT, ALLOW_PRIVATE, VERIFY))
     backoff = 1
     while True:
         ex = None

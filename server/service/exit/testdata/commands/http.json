@@ -12,6 +12,12 @@
       "notes": "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
     },
     {
+      "platform": "windows",
+      "shell": "cmd",
+      "command": "curl.exe -fsSL -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit-client.ps1\" \"http://10.12.34.1/exit/0/client.ps1\" \u0026\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File \"%TEMP%\\nexit-client.ps1\"",
+      "notes": "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
+    },
+    {
       "platform": "macos",
       "shell": "bash",
       "command": "curl -fsSL -H 'Authorization: Bearer k7m2p9vx' 'http://10.12.34.1/exit/0/client.sh' | sh",
@@ -29,6 +35,12 @@
       "platform": "windows",
       "shell": "powershell",
       "command": "$v='10.7.1'; $a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $h=@{amd64='deb3c8b8d9fecf5428f7e0caabbc13aeb3b1edbfba49e1724a7a065c027bd0f2';arm64='1d642b29aba0e05c5564adf1dfe2e4494cd10b62331490471bdf6d6548085c96'}[$a]; $d=Join-Path $env:TEMP \"wstunnel-$v\"; New-Item -Force -ItemType Directory $d | Out-Null; $f=Join-Path $d 'wstunnel.tar.gz'; Invoke-WebRequest -UseBasicParsing \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_windows_$a.tar.gz\" -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }; tar -xzf $f -C $d; \u0026 (Join-Path $d 'wstunnel.exe') client -P exit/0 -H 'Authorization: Bearer k7m2p9vx' -R socks5://127.0.0.1:10820 'ws://10.12.34.1'",
+      "notes": "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
+    },
+    {
+      "platform": "windows",
+      "shell": "cmd",
+      "command": "if /i \"%PROCESSOR_ARCHITECTURE%\"==\"ARM64\" (mkdir \"%TEMP%\\wstunnel-10.7.1\" 2\u003enul \u0026 curl.exe -fsSLo \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_windows_arm64.tar.gz\" \u0026\u0026 certutil -hashfile \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" SHA256 | findstr /i /c:\"1d642b29aba0e05c5564adf1dfe2e4494cd10b62331490471bdf6d6548085c96\" \u003enul \u0026\u0026 tar -xzf \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" -C \"%TEMP%\\wstunnel-10.7.1\" \u0026\u0026 \"%TEMP%\\wstunnel-10.7.1\\wstunnel.exe\" client -P exit/0 -H \"Authorization: Bearer k7m2p9vx\" -R socks5://127.0.0.1:10820 \"ws://10.12.34.1\" || echo wstunnel setup failed) else (mkdir \"%TEMP%\\wstunnel-10.7.1\" 2\u003enul \u0026 curl.exe -fsSLo \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" \"https://github.com/erebe/wstunnel/releases/download/v10.7.1/wstunnel_10.7.1_windows_amd64.tar.gz\" \u0026\u0026 certutil -hashfile \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" SHA256 | findstr /i /c:\"deb3c8b8d9fecf5428f7e0caabbc13aeb3b1edbfba49e1724a7a065c027bd0f2\" \u003enul \u0026\u0026 tar -xzf \"%TEMP%\\wstunnel-10.7.1\\wstunnel.tar.gz\" -C \"%TEMP%\\wstunnel-10.7.1\" \u0026\u0026 \"%TEMP%\\wstunnel-10.7.1\\wstunnel.exe\" client -P exit/0 -H \"Authorization: Bearer k7m2p9vx\" -R socks5://127.0.0.1:10820 \"ws://10.12.34.1\" || echo wstunnel setup failed)",
       "notes": "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
     },
     {

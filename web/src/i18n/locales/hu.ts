@@ -1155,15 +1155,18 @@ const hu = {
           warnSecret:
             'Titkot tartalmaz, amely a célgép internetét vezérli, és a shell-előzményeibe kerül.',
           warnReach: 'Minden, amit a kilépő eszköz elér, elérhetővé válik a célgépről.',
-          warnFingerprint:
-            'A kilépő csak a {{fingerprint}} tanúsítvány-ujjlenyomat ellenőrzése után csatlakozik.',
           warnCleartext:
             'Ez az oldal sima http-n érkezik: a token és a kilépő és a NanoKVM közti minden forgalom titkosítatlan.',
-          warnWstunnelUnverified:
-            'A wstunnel nem tud tanúsítvány-ujjlenyomatot rögzíteni. CA által aláírt tanúsítvány nélkül a NanoKVM-hez való kapcsolata nem hitelesített.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'A Windows Defender karanténba helyezheti a letöltött wstunnel binárist, és úgy állítja le az alagutat, hogy semmit nem ír a naplójába; a natív parancsok nem töltenek le binárist.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Szkript megtekintése',
@@ -1175,8 +1178,6 @@ const hu = {
           rewritten: 'Címzett: {{host}}, a cím, amelyet ez a böngésző elért.',
           warnSchemeMismatch:
             'A NanoKVM ezt az oldalt {{server}} címen kérve látta, a böngésző viszont a {{local}} címen érte el. A parancsok a {{server}} címre szólnak; állítsa be a proxyt, hogy X-Forwarded-Proto fejlécet küldjön, így az Ön által használt címet követik.',
-          warnFingerprintReaddressed:
-            'A szkript ennek a NanoKVM-nek a {{fingerprint}} tanúsítvány-ujjlenyomatát rögzíti. Ha {{host}} más tanúsítványt mutat, például egy TLS-t lezáró proxy, a kijárat megtagadja a kapcsolódást; engedje át a TLS-t a NanoKVM-ig, vagy érje el közvetlenül.',
           unavailable: 'Ehhez a platformhoz nincs parancs.',
           regenerateHint:
             'Egy kilépő csatlakozott. Ha a beillesztett parancsra már nincs szükség, generálja újra a tokent; a kilépőt ezután az új paranccsal kell újraindítani.',

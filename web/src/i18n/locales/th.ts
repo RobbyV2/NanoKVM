@@ -1124,15 +1124,18 @@ const th = {
           warnSecret:
             'คำสั่งมีข้อมูลลับที่ควบคุมอินเทอร์เน็ตของเครื่องเป้าหมาย และจะถูกบันทึกในประวัติเชลล์ของคุณ',
           warnReach: 'ทุกสิ่งที่อุปกรณ์ทางออกเข้าถึงได้จะเข้าถึงได้จากเครื่องเป้าหมายด้วย',
-          warnFingerprint:
-            'ทางออกจะเชื่อมต่อหลังตรวจสอบลายนิ้วมือใบรับรอง {{fingerprint}} แล้วเท่านั้น',
           warnCleartext:
             'หน้านี้ให้บริการผ่าน http ธรรมดา: โทเค็นและทราฟฟิกทั้งหมดระหว่างทางออกกับ NanoKVM ไม่ได้เข้ารหัส',
-          warnWstunnelUnverified:
-            'wstunnel ไม่สามารถตรึงลายนิ้วมือใบรับรองได้ หากไม่มีใบรับรองที่ลงนามโดย CA การเชื่อมต่อไปยัง NanoKVM จะไม่ได้รับการยืนยันตัวตน',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender อาจกักกันไบนารี wstunnel ที่ดาวน์โหลดมาและหยุดอุโมงค์โดยไม่เขียนอะไรลงในบันทึกของตัวเอง คำสั่งเนทีฟไม่ดาวน์โหลดไบนารีใด ๆ',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'ดูสคริปต์',
@@ -1144,8 +1147,6 @@ const th = {
           rewritten: 'ปรับที่อยู่เป็น {{host}} ซึ่งเป็นที่อยู่ที่เบราว์เซอร์นี้เข้าถึง',
           warnSchemeMismatch:
             'NanoKVM เห็นว่าหน้านี้ถูกขอผ่าน {{server}} แต่เบราว์เซอร์เข้าถึงที่ {{local}} คำสั่งถูกส่งไปยัง {{server}} ให้พร็อกซีส่ง X-Forwarded-Proto เพื่อให้คำสั่งใช้ที่อยู่ที่คุณใช้งาน',
-          warnFingerprintReaddressed:
-            'สคริปต์ตรึงลายนิ้วมือใบรับรอง {{fingerprint}} ของ NanoKVM นี้ หาก {{host}} แสดงใบรับรองอื่น เช่น พร็อกซีที่สิ้นสุด TLS ฝั่ง exit จะปฏิเสธการเชื่อมต่อ ให้ส่งผ่าน TLS ไปถึง NanoKVM หรือเข้าถึงโดยตรง',
           unavailable: 'ไม่มีคำสั่งสำหรับแพลตฟอร์มนี้',
           regenerateHint:
             'มีทางออกเชื่อมต่อแล้ว เมื่อไม่ต้องใช้คำสั่งที่วางไปแล้ว ให้สร้างโทเค็นใหม่ จากนั้นต้องเริ่มทางออกใหม่ด้วยคำสั่งใหม่',

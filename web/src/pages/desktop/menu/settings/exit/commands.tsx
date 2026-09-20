@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Modal, Tabs, Tooltip } from 'antd';
+import { Button, Input, Modal, Segmented, Tabs, Tooltip } from 'antd';
 import { CheckIcon, CopyIcon, FileCodeIcon, LoaderCircleIcon, ShieldAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,6 +39,7 @@ export const ExitCommands = ({
   const { t } = useTranslation();
 
   const [platform, setPlatform] = useState<ExitPlatform>(() => detectPlatform(navigator.userAgent));
+  const [shell, setShell] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
   const [script, setScript] = useState<{ name: string; body: string }>();
   const [isScriptLoading, setIsScriptLoading] = useState(false);
@@ -51,14 +52,23 @@ export const ExitCommands = ({
   const server = commands ? { scheme: commands.scheme, host: commands.host } : local;
 
   const list = commands ? commands[mode] : [];
-  const current = list.find((command) => command.platform === platform);
-  const view = presentCommand(mode, current, server, local, commands?.fingerprint ?? '');
+  // a platform can offer more than one shell (windows has powershell and cmd),
+  // so the shell is part of the selection and falls back to the first on offer
+  const shells = list.filter((command) => command.platform === platform).map((c) => c.shell);
+  const activeShell = shells.includes(shell) ? shell : (shells[0] ?? '');
+  const current = list.find(
+    (command) => command.platform === platform && command.shell === activeShell
+  );
+  const view = presentCommand(mode, current, server, local);
 
   // the latest-release variant of the wstunnel command, one per platform; an
-  // older server does not send the list at all, and then the block is not shown
+  // older server does not send the list at all, and then the block is not shown.
+  // It is only rendered for shells it was built for, so fall back by platform.
   const latestList = commands?.wstunnelLatest;
-  const latest = latestList?.find((command) => command.platform === platform);
-  const latestView = presentCommand(mode, latest, server, local, commands?.fingerprint ?? '');
+  const latest =
+    latestList?.find((command) => command.platform === platform && command.shell === activeShell) ??
+    latestList?.find((command) => command.platform === platform);
+  const latestView = presentCommand(mode, latest, server, local);
   const repo = commands?.wstunnelRepo ?? '';
 
   const serverAddress = `${server.scheme}://${server.host}`;
@@ -121,21 +131,8 @@ export const ExitCommands = ({
           <li>{t('settings.exit.commands.warnDownload')}</li>
           <li>{t('settings.exit.commands.warnSecret')}</li>
           <li>{t('settings.exit.commands.warnReach')}</li>
-          {view.pinsFingerprint && (
-            <li className="break-all">
-              {t('settings.exit.commands.warnFingerprint', { fingerprint: commands?.fingerprint })}
-            </li>
-          )}
-          {view.pinUncertain && (
-            <li className="break-all">
-              {t('settings.exit.commands.warnFingerprintReaddressed', {
-                fingerprint: commands?.fingerprint,
-                host: localAddress
-              })}
-            </li>
-          )}
           {view.cleartext && <li>{t('settings.exit.commands.warnCleartext')}</li>}
-          {view.wstunnelUnverified && <li>{t('settings.exit.commands.warnWstunnelUnverified')}</li>}
+          {view.trustsTransport && <li>{t('settings.exit.commands.warnTransportTrusted')}</li>}
           {mode === 'wstunnel' && platform === 'windows' && (
             <li>{t('settings.exit.commands.warnWstunnelDefender')}</li>
           )}
@@ -165,6 +162,17 @@ export const ExitCommands = ({
             label: t(`settings.exit.commands.${value}`),
             children: current ? (
               <div className="flex flex-col space-y-2">
+                {shells.length > 1 && (
+                  <Segmented
+                    size="small"
+                    value={activeShell}
+                    onChange={(value) => setShell(value as string)}
+                    options={shells.map((value) => ({
+                      value,
+                      label: t(`settings.exit.commands.shell.${value}`, value)
+                    }))}
+                  />
+                )}
                 <Input.TextArea
                   value={view.text}
                   readOnly

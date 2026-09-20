@@ -1147,15 +1147,18 @@ const da = {
           warnSecret:
             'Den indeholder en hemmelighed, der styrer målmaskinens internet, og gemmes i din shell-historik.',
           warnReach: 'Alt, hvad exit-enheden kan nå, bliver tilgængeligt fra målmaskinen.',
-          warnFingerprint:
-            'Exit forbinder først efter kontrol af certifikatets fingeraftryk {{fingerprint}}.',
           warnCleartext:
             'Denne side leveres over almindelig http: tokenet og al trafik mellem exit og NanoKVM er ukrypteret.',
-          warnWstunnelUnverified:
-            'wstunnel kan ikke fastlåse et certifikat-fingeraftryk. Uden et CA-signeret certifikat er dens forbindelse til NanoKVM ikke autentificeret.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender kan sætte den hentede wstunnel-binær i karantæne og stoppe tunnelen uden at skrive noget i sin log; de native kommandoer henter ingen binær.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Vis script',
@@ -1167,8 +1170,6 @@ const da = {
           rewritten: 'Adresseret til {{host}}, den adresse denne browser nåede.',
           warnSchemeMismatch:
             'NanoKVM så denne side anmodet over {{server}}, men browseren nåede den på {{local}}. Kommandoerne er adresseret til {{server}}; lad proxyen sende X-Forwarded-Proto, så de følger den adresse du bruger.',
-          warnFingerprintReaddressed:
-            'Scriptet fastgør certifikatfingeraftrykket {{fingerprint}} for denne NanoKVM. Hvis {{host}} viser et andet certifikat, f.eks. en proxy der terminerer TLS, nægter exit at forbinde; send TLS igennem til NanoKVM eller nå den direkte.',
           unavailable: 'Ingen kommando til denne platform.',
           regenerateHint:
             'En exit har forbundet. Generér tokenet igen, når den indsatte kommando ikke længere er nødvendig; exit skal derefter genstartes med den nye.',

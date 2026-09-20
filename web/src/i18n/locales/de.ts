@@ -1160,15 +1160,18 @@ const de = {
           warnSecret:
             'Er enthält ein Geheimnis, das über das Internet des Zielgeräts bestimmt, und wird in Ihrem Shell-Verlauf gespeichert.',
           warnReach: 'Alles, was das Exit-Gerät erreichen kann, wird vom Zielgerät aus erreichbar.',
-          warnFingerprint:
-            'Der Exit verbindet sich erst nach Prüfung des Zertifikat-Fingerabdrucks {{fingerprint}}.',
           warnCleartext:
             'Diese Seite wird über einfaches http ausgeliefert: Token und sämtlicher Verkehr zwischen Exit und NanoKVM sind unverschlüsselt.',
-          warnWstunnelUnverified:
-            'wstunnel kann keinen Zertifikat-Fingerabdruck festlegen. Ohne CA-signiertes Zertifikat ist seine Verbindung zum NanoKVM nicht authentifiziert.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender kann die heruntergeladene wstunnel-Binärdatei in Quarantäne verschieben und den Tunnel beenden, ohne etwas in sein Log zu schreiben; die nativen Befehle laden keine Binärdatei herunter.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Skript anzeigen',
@@ -1180,8 +1183,6 @@ const de = {
           rewritten: 'Adressiert an {{host}}, die Adresse, die dieser Browser erreicht hat.',
           warnSchemeMismatch:
             'Der NanoKVM hat diese Seite über {{server}} angefordert gesehen, der Browser hat sie aber unter {{local}} erreicht. Die Befehle sind an {{server}} adressiert; lassen Sie den Proxy X-Forwarded-Proto senden, damit sie der von Ihnen genutzten Adresse folgen.',
-          warnFingerprintReaddressed:
-            'Das Skript pinnt den Zertifikat-Fingerabdruck {{fingerprint}} dieses NanoKVM. Zeigt {{host}} ein anderes Zertifikat, etwa ein TLS-terminierender Proxy, verweigert der Exit die Verbindung; reichen Sie TLS zum NanoKVM durch oder erreichen Sie ihn direkt.',
           unavailable: 'Kein Befehl für diese Plattform.',
           regenerateHint:
             'Ein Exit hat sich verbunden. Sobald der eingefügte Befehl nicht mehr gebraucht wird, erzeugen Sie das Token neu; der Exit muss dann mit dem neuen Befehl neu gestartet werden.',

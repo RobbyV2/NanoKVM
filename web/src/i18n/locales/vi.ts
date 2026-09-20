@@ -1141,15 +1141,18 @@ const vi = {
           warnSecret:
             'Lệnh chứa một bí mật điều khiển Internet của máy đích và sẽ được lưu vào lịch sử shell của bạn.',
           warnReach: 'Mọi thứ thiết bị thoát truy cập được sẽ truy cập được từ máy đích.',
-          warnFingerprint:
-            'Thiết bị thoát chỉ kết nối sau khi xác minh dấu vân tay chứng chỉ {{fingerprint}}.',
           warnCleartext:
             'Trang này được phục vụ qua http thường: mã thông báo và toàn bộ lưu lượng giữa thiết bị thoát và NanoKVM đều không mã hóa.',
-          warnWstunnelUnverified:
-            'wstunnel không thể ghim dấu vân tay chứng chỉ. Không có chứng chỉ do CA ký, kết nối của nó tới NanoKVM không được xác thực.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender có thể cách ly tệp nhị phân wstunnel đã tải về và dừng đường hầm mà không ghi gì vào nhật ký của nó; các lệnh gốc không tải về tệp nhị phân nào.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Xem script',
@@ -1161,8 +1164,6 @@ const vi = {
           rewritten: 'Đã trỏ tới {{host}}, địa chỉ mà trình duyệt này đã truy cập.',
           warnSchemeMismatch:
             'NanoKVM thấy trang này được yêu cầu qua {{server}}, nhưng trình duyệt truy cập tại {{local}}. Các lệnh được gửi tới {{server}}; hãy cấu hình proxy gửi X-Forwarded-Proto để các lệnh dùng địa chỉ bạn đang dùng.',
-          warnFingerprintReaddressed:
-            'Tập lệnh ghim dấu vân tay chứng chỉ {{fingerprint}} của NanoKVM này. Nếu {{host}} đưa ra chứng chỉ khác, ví dụ proxy kết thúc TLS, exit sẽ từ chối kết nối; hãy cho TLS đi thẳng tới NanoKVM hoặc truy cập trực tiếp.',
           unavailable: 'Không có lệnh cho nền tảng này.',
           regenerateHint:
             'Một thiết bị thoát đã kết nối. Khi không còn cần lệnh đã dán, hãy tạo lại mã thông báo; sau đó phải khởi động lại thiết bị thoát bằng lệnh mới.',

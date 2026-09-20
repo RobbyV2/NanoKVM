@@ -15,7 +15,7 @@ SCHEME="__SCHEME__"
 HOST="__HOST__"
 SLOT="__SLOT__"
 TOKEN="__TOKEN__"
-FINGERPRINT="__FINGERPRINT__"
+VERIFY="__VERIFY__"
 
 fail() { printf 'nexit: %s\n' "$*" >&2; exit 1; }
 
@@ -52,40 +52,15 @@ fi
 
 # --- fetch the client -------------------------------------------------------------
 
-norm_fp() { printf '%s' "$1" | tr -d ':' | tr 'A-F' 'a-f'; }
-
-# Fingerprint of the certificate the host is serving right now, via openssl.
-served_fingerprint() {
-  h=$HOST; p=443
-  case "$h" in
-    \[*\]:*) p=${h##*]:}; h=${h#[}; h=${h%%]*} ;;
-    \[*\]) h=${h#[}; h=${h%]} ;;
-    *:*) p=${h##*:}; h=${h%:*} ;;
-  esac
-  sni=
-  case "$h" in
-    *[!0-9.]*) sni="-servername $h" ;;
-  esac
-  # shellcheck disable=SC2086
-  openssl s_client -connect "$h:$p" $sni </dev/null 2>/dev/null \
-    | openssl x509 -noout -fingerprint -sha256 2>/dev/null \
-    | sed 's/^.*=//' | tr -d ':' | tr 'A-F' 'a-f'
-}
-
 url="$BASE/client.$pick"
 body=$(curl -fsS --max-time 30 -H "Authorization: Bearer $TOKEN" "$url")
 rc=$?
-if [ $rc -ne 0 ] && [ "$SCHEME" = https ]; then
+if [ $rc -ne 0 ] && [ "$SCHEME" = https ] && [ "$VERIFY" != 1 ]; then
   case $rc in
     35|51|58|59|60|77|83|90|91)
-      # TLS failed: the NanoKVM normally serves a self-signed certificate. Refetch
-      # without CA verification only if the served certificate matches the pin.
-      [ -n "$FINGERPRINT" ] || fail "TLS verification failed (curl $rc) and no certificate fingerprint is pinned; refusing"
-      command -v openssl >/dev/null 2>&1 || fail "TLS verification failed (curl $rc); openssl is needed to check the certificate fingerprint before an unverified fetch"
-      served=$(served_fingerprint)
-      want=$(norm_fp "$FINGERPRINT")
-      [ -n "$served" ] || fail "could not read the certificate served by $HOST"
-      [ "$served" = "$want" ] || fail "certificate fingerprint mismatch: expected $want got $served; refusing"
+      # The NanoKVM normally serves a self-signed certificate, which no CA store
+      # can vouch for. Refetch without verification, the way wstunnel reaches the
+      # same host; the token in the header is what authenticates the request.
       body=$(curl -fsSk --max-time 30 -H "Authorization: Bearer $TOKEN" "$url")
       rc=$?
       ;;

@@ -30,7 +30,7 @@ $NexitScheme = '__SCHEME__'
 $NexitHost = '__HOST__'
 $NexitSlot = '__SLOT__'
 $NexitToken = '__TOKEN__'
-$NexitFingerprint = '__FINGERPRINT__'
+$NexitVerifyTls = ('__VERIFY__' -eq '1')
 $NexitAllowPrivate = ('__ALLOW_PRIVATE__' -eq '1')
 
 $T_HELLO = 0x01; $T_WELCOME = 0x02
@@ -170,45 +170,44 @@ function Test-DefaultRoute {
 
 # --- certificate pinning (compiled: script-block delegates cannot run on the TLS thread) --
 
-$NexitPinSource = @'
+$NexitTrustSource = @'
 using System;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-public static class NexitPin
+public static class NexitTrust
 {
-    public static string Expected = "";
-    public static string LastSeen = "";
-    public static int Calls = 0;
+    private static RemoteCertificateValidationCallback saved;
+    private static bool installed;
 
-    public static bool Validate(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
+    public static bool AcceptAny(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
     {
-        Calls++;
-        if (cert == null) { LastSeen = ""; return false; }
-        using (SHA256CryptoServiceProvider sha = new SHA256CryptoServiceProvider())
-        {
-            LastSeen = BitConverter.ToString(sha.ComputeHash(cert.GetRawCertData())).Replace("-", "").ToLowerInvariant();
-        }
-        return String.Equals(LastSeen, Expected, StringComparison.OrdinalIgnoreCase);
+        return true;
     }
 
-    public static void Install(string expected)
+    // The unit's own certificate is self-signed, so no CA store can vouch for it
+    // and .NET would refuse the handshake. Accept it the way wstunnel does
+    // against the same host; the token is what authenticates the session.
+    public static void Install()
     {
-        Expected = expected;
-        LastSeen = "";
-        Calls = 0;
-        ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(Validate);
+        if (!installed) { saved = ServicePointManager.ServerCertificateValidationCallback; installed = true; }
+        ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(AcceptAny);
+    }
+
+    public static void Restore()
+    {
+        if (installed) { ServicePointManager.ServerCertificateValidationCallback = saved; installed = false; }
     }
 }
 '@
 
-function Install-Pin([string]$Fingerprint) {
-    if ($null -eq ('NexitPin' -as [type])) {
-        Add-Type -TypeDefinition $NexitPinSource -ErrorAction Stop
+function Install-Trust {
+    if ($null -eq ('NexitTrust' -as [type])) {
+        Add-Type -TypeDefinition $NexitTrustSource -ErrorAction Stop
     }
-    [NexitPin]::Install($Fingerprint)
+    [NexitTrust]::Install()
 }
 
 # --- session state --------------------------------------------------------------------
@@ -544,20 +543,16 @@ function Connect-Kvm {
     if ($scheme -eq 'http') { $scheme = 'ws' } elseif ($scheme -eq 'https') { $scheme = 'wss' }
     if ($scheme -ne 'ws' -and $scheme -ne 'wss') { throw "bad scheme '$NexitScheme'" }
     $tls = ($scheme -eq 'wss')
-    $fp = ($NexitFingerprint -replace '[^0-9a-fA-F]', '').ToLowerInvariant()
-    if ($tls -and [string]::IsNullOrEmpty($fp)) { throw 'wss without a certificate fingerprint: refusing to connect unverified' }
     $uri = [System.Uri]("{0}://{1}/exit/{2}/native" -f $scheme, $NexitHost, $NexitSlot)
     if ($tls) {
         try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls12,Tls13' }
         catch { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 }
-        Install-Pin $fp
-        # A TLS connection left open by the `irm` fetch was validated with the permissive
-        # callback; make sure the WebSocket cannot reuse it.
-        try {
-            $httpUri = [System.Uri]("https://{0}/" -f $NexitHost)
-            $sp = [System.Net.ServicePointManager]::FindServicePoint($httpUri)
-            [void]$sp.CloseConnectionGroup('')
-        } catch { }
+        if ($NexitVerifyTls) {
+            # A CA-signed certificate is installed: let .NET check it as usual.
+            [NexitTrust]::Restore() 2>$null
+        } else {
+            Install-Trust
+        }
     }
     $ws = New-Object System.Net.WebSockets.ClientWebSocket
     $ws.Options.SetRequestHeader('Authorization', "Bearer $NexitToken")
@@ -568,21 +563,8 @@ function Connect-Kvm {
     } catch {
         $base = $_.Exception.GetBaseException().Message
         try { $ws.Dispose() } catch { }
-        if ($tls -and [NexitPin]::Calls -gt 0 -and [NexitPin]::LastSeen -ne $fp) {
-            throw ("certificate fingerprint mismatch: expected {0} got {1}; refusing" -f $fp, [NexitPin]::LastSeen)
-        }
         if ($base -match '404') { throw 'rejected (404): wrong token or slot, or this source is rate limited' }
         throw "connect failed: $base"
-    }
-    if ($tls) {
-        if ([NexitPin]::Calls -eq 0) {
-            try { $ws.Abort(); $ws.Dispose() } catch { }
-            throw 'the certificate was never presented for pinning (connection reused); refusing'
-        }
-        if ([NexitPin]::LastSeen -ne $fp) {
-            try { $ws.Abort(); $ws.Dispose() } catch { }
-            throw ("certificate fingerprint mismatch: expected {0} got {1}; refusing" -f $fp, [NexitPin]::LastSeen)
-        }
     }
     return $ws
 }
@@ -662,9 +644,7 @@ function Start-NexitClient {
     }
     $displayScheme = $NexitScheme
     if ($displayScheme -eq 'http') { $displayScheme = 'ws' } elseif ($displayScheme -eq 'https') { $displayScheme = 'wss' }
-    $pin = 'none'
-    if ($NexitFingerprint.Length -gt 0) { $pin = $NexitFingerprint.Substring(0, [Math]::Min(16, $NexitFingerprint.Length)) + '...' }
-    Write-NexitLog ("exit client for {0}://{1}/exit/{2} (allowPrivate={3}, pin={4})" -f $displayScheme, $NexitHost, $NexitSlot, $NexitAllowPrivate, $pin)
+    Write-NexitLog ("exit client for {0}://{1}/exit/{2} (allowPrivate={3}, verifyTLS={4})" -f $displayScheme, $NexitHost, $NexitSlot, $NexitAllowPrivate, $NexitVerifyTls)
     $savedCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
     $savedEap = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'

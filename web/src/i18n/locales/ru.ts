@@ -1149,15 +1149,18 @@ const ru = {
             'Она содержит секрет, управляющий интернетом целевого компьютера, и сохранится в истории вашей оболочки.',
           warnReach:
             'Всё, что доступно выходному устройству, становится доступным с целевого компьютера.',
-          warnFingerprint:
-            'Выход подключается только после проверки отпечатка сертификата {{fingerprint}}.',
           warnCleartext:
             'Эта страница отдаётся по обычному http: токен и весь трафик между выходом и NanoKVM передаются в открытом виде.',
-          warnWstunnelUnverified:
-            'wstunnel не умеет закреплять отпечаток сертификата. Без сертификата, подписанного ЦС, его соединение с NanoKVM не аутентифицировано.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender может поместить загруженный бинарный файл wstunnel в карантин и остановить туннель, ничего не записав в свой журнал; команды родного режима ничего не загружают.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Показать скрипт',
@@ -1169,8 +1172,6 @@ const ru = {
           rewritten: 'Адресовано {{host}} — адресу, по которому обратился этот браузер.',
           warnSchemeMismatch:
             'NanoKVM видел запрос этой страницы через {{server}}, но браузер открыл её по адресу {{local}}. Команды адресованы на {{server}}; настройте прокси на отправку X-Forwarded-Proto, чтобы команды использовали ваш адрес.',
-          warnFingerprintReaddressed:
-            'Скрипт закрепляет отпечаток сертификата {{fingerprint}} этого NanoKVM. Если {{host}} предъявит другой сертификат, например прокси, завершающий TLS, exit откажется подключаться; пропускайте TLS до NanoKVM или подключайтесь напрямую.',
           unavailable: 'Для этой платформы команды нет.',
           regenerateHint:
             'Выход подключился. Когда вставленная команда больше не нужна, перевыпустите токен; выход придётся перезапустить с новой командой.',

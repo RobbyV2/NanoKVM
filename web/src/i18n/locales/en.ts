@@ -1141,15 +1141,18 @@ const en = {
           warnSecret:
             "It contains a secret that controls the target's internet and will be saved in your shell history.",
           warnReach: 'Anything the exit device can reach becomes reachable from the target.',
-          warnFingerprint:
-            'The exit connects only after verifying the certificate fingerprint {{fingerprint}}.',
           warnCleartext:
             'This page is served over plain http: the token and all traffic between the exit and the NanoKVM are cleartext.',
-          warnWstunnelUnverified:
-            'wstunnel cannot pin a certificate fingerprint. Without a CA-signed certificate its connection to the NanoKVM is unauthenticated.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender may quarantine the downloaded wstunnel binary and stop the tunnel with nothing in its log; the native commands download no binary.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'View script',
@@ -1161,8 +1164,6 @@ const en = {
           rewritten: 'Addressed to {{host}}, the address this browser reached.',
           warnSchemeMismatch:
             'The NanoKVM saw this page requested over {{server}}, but the browser reached it at {{local}}. The commands are addressed to {{server}}; have the proxy send X-Forwarded-Proto so they follow the address you use.',
-          warnFingerprintReaddressed:
-            'The script pins the certificate fingerprint {{fingerprint}} of this NanoKVM. If {{host}} presents a different certificate, such as a proxy terminating TLS, the exit refuses to connect; pass TLS through to the NanoKVM or reach it directly.',
           unavailable: 'No command for this platform.',
           regenerateHint:
             'An exit has connected. Once the pasted command is no longer needed, regenerate the token; the exit then has to be restarted with the new one.',

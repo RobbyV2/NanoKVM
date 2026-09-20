@@ -1152,15 +1152,18 @@ const id = {
             'Perintah ini memuat rahasia yang mengendalikan internet target dan akan tersimpan di riwayat shell Anda.',
           warnReach:
             'Apa pun yang dapat dijangkau perangkat keluar menjadi terjangkau dari target.',
-          warnFingerprint:
-            'Keluar hanya tersambung setelah memverifikasi sidik jari sertifikat {{fingerprint}}.',
           warnCleartext:
             'Halaman ini disajikan lewat http biasa: token dan seluruh lalu lintas antara keluar dan NanoKVM tidak terenkripsi.',
-          warnWstunnelUnverified:
-            'wstunnel tidak dapat menyematkan sidik jari sertifikat. Tanpa sertifikat yang ditandatangani CA, koneksinya ke NanoKVM tidak terautentikasi.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender dapat mengarantina biner wstunnel yang diunduh dan menghentikan tunnel tanpa menulis apa pun ke lognya; perintah native tidak mengunduh biner apa pun.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Lihat skrip',
@@ -1172,8 +1175,6 @@ const id = {
           rewritten: 'Dialamatkan ke {{host}}, alamat yang dijangkau peramban ini.',
           warnSchemeMismatch:
             'NanoKVM melihat halaman ini diminta melalui {{server}}, tetapi peramban mencapainya di {{local}}. Perintah ditujukan ke {{server}}; atur proxy agar mengirim X-Forwarded-Proto supaya perintah mengikuti alamat yang Anda gunakan.',
-          warnFingerprintReaddressed:
-            'Skrip menyematkan sidik jari sertifikat {{fingerprint}} NanoKVM ini. Jika {{host}} menyajikan sertifikat lain, misalnya proxy yang mengakhiri TLS, exit menolak terhubung; teruskan TLS langsung ke NanoKVM atau akses langsung.',
           unavailable: 'Tidak ada perintah untuk platform ini.',
           regenerateHint:
             'Sebuah keluar telah terhubung. Setelah perintah yang ditempel tidak lagi diperlukan, buat ulang token; keluar kemudian harus dimulai ulang dengan perintah baru.',

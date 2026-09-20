@@ -1159,15 +1159,18 @@ const it = {
             "Contiene un segreto che controlla l'Internet della destinazione e verrà salvato nella cronologia della shell.",
           warnReach:
             'Tutto ciò che il dispositivo di uscita raggiunge diventa raggiungibile dalla destinazione.',
-          warnFingerprint:
-            "L'uscita si connette solo dopo aver verificato l'impronta del certificato {{fingerprint}}.",
           warnCleartext:
             "Questa pagina è servita in http semplice: il token e tutto il traffico tra l'uscita e il NanoKVM sono in chiaro.",
-          warnWstunnelUnverified:
-            "wstunnel non può bloccare un'impronta del certificato. Senza un certificato firmato da una CA la sua connessione al NanoKVM non è autenticata.",
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender può mettere in quarantena il binario wstunnel scaricato e fermare il tunnel senza scrivere nulla nel proprio log; i comandi nativi non scaricano alcun binario.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Mostra script',
@@ -1179,8 +1182,6 @@ const it = {
           rewritten: "Indirizzato a {{host}}, l'indirizzo raggiunto da questo browser.",
           warnSchemeMismatch:
             "Il NanoKVM ha visto questa pagina richiesta tramite {{server}}, ma il browser l'ha raggiunta su {{local}}. I comandi sono indirizzati a {{server}}; fai inviare X-Forwarded-Proto dal proxy così seguono l'indirizzo che usi.",
-          warnFingerprintReaddressed:
-            "Lo script fissa l'impronta del certificato {{fingerprint}} di questo NanoKVM. Se {{host}} presenta un certificato diverso, ad esempio un proxy che termina TLS, l'exit rifiuta di connettersi; fai passare TLS fino al NanoKVM o raggiungilo direttamente.",
           unavailable: 'Nessun comando per questa piattaforma.',
           regenerateHint:
             "Un'uscita si è connessa. Quando il comando incollato non serve più, rigenerare il token; l'uscita andrà poi riavviata con il nuovo comando.",

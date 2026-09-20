@@ -1148,15 +1148,18 @@ const ca = {
             "Conté un secret que controla l'Internet de l'equip de destinació i quedarà desat a l'historial de l'intèrpret d'ordres.",
           warnReach:
             "Tot el que pugui assolir el dispositiu de sortida passa a ser accessible des de l'equip de destinació.",
-          warnFingerprint:
-            "La sortida només es connecta després de verificar l'empremta del certificat {{fingerprint}}.",
           warnCleartext:
             'Aquesta pàgina se serveix per http sense xifrar: el testimoni i tot el trànsit entre la sortida i el NanoKVM van en clar.',
-          warnWstunnelUnverified:
-            'wstunnel no pot fixar una empremta de certificat. Sense un certificat signat per una CA, la seva connexió amb el NanoKVM no està autenticada.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'El Windows Defender pot posar en quarantena el binari de wstunnel baixat i aturar el túnel sense deixar res al seu registre; les ordres natives no baixen cap binari.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Mostra el script',
@@ -1168,8 +1171,6 @@ const ca = {
           rewritten: "Adreçada a {{host}}, l'adreça a què ha arribat aquest navegador.",
           warnSchemeMismatch:
             "El NanoKVM ha vist aquesta pàgina sol·licitada per {{server}}, però el navegador hi ha arribat per {{local}}. Les ordres s'adrecen a {{server}}; feu que el proxy enviï X-Forwarded-Proto perquè segueixin l'adreça que feu servir.",
-          warnFingerprintReaddressed:
-            "L'script fixa l'empremta del certificat {{fingerprint}} d'aquest NanoKVM. Si {{host}} presenta un certificat diferent, com un proxy que termina TLS, la sortida refusa connectar-se; passeu TLS directament al NanoKVM o accediu-hi directament.",
           unavailable: 'No hi ha cap ordre per a aquesta plataforma.',
           regenerateHint:
             "Una sortida s'ha connectat. Quan ja no necessiteu l'ordre enganxada, regenereu el testimoni; la sortida s'haurà de reiniciar amb la nova ordre.",

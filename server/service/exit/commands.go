@@ -265,36 +265,40 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	auth := "Authorization: Bearer " + cfg.Token
 	base := origin.base(slot)
 
+	verifyTLS := VerifyTLS(origin, cert)
+
 	insecure := ""
-	if origin.TLS() {
+	if origin.TLS() && !verifyTLS {
 		insecure = "k"
 	}
 	shFetch := fmt.Sprintf("curl -fsSL%s -H %s %s | sh", insecure, shQuote(auth), shQuote(base+"/client.sh"))
 
 	psFetch := fmt.Sprintf("irm -Headers @{Authorization=%s} %s | iex", psQuote("Bearer "+cfg.Token), psQuote(base+"/client.ps1"))
-	if origin.TLS() {
+	if origin.TLS() && !verifyTLS {
 		psFetch = psTrustPrefix + psFetch
 	}
+	cmdFetch := cmdNative(base, cfg.Token, origin.TLS() && !verifyTLS)
 
-	nativeNote := "The script pins the NanoKVM certificate by its SHA-256 fingerprint before trusting a byte."
-	if !origin.TLS() {
-		nativeNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
+	transportNote := "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
+	if verifyTLS {
+		transportNote = "The installed certificate is CA-signed, so the client verifies it the ordinary way."
 	}
+	if !origin.TLS() {
+		transportNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
+	}
+	nativeNote := transportNote
 
 	native := []proto.ExitCommand{
 		{Platform: "windows", Shell: "powershell", Command: psFetch, Notes: nativeNote},
+		{Platform: "windows", Shell: "cmd", Command: cmdFetch, Notes: nativeNote},
 		{Platform: "macos", Shell: "bash", Command: shFetch, Notes: nativeNote},
 		{Platform: "linux", Shell: "bash", Command: shFetch, Notes: nativeNote},
 	}
 
 	verify := ""
-	wstunnelNote := "wstunnel has no fingerprint pin; with the device's self-signed certificate its transport toward the NanoKVM is unauthenticated."
-	if origin.TLS() && cert.Fingerprint != "" && !cert.SelfSigned {
+	wstunnelNote := transportNote
+	if verifyTLS {
 		verify = " --tls-verify-certificate"
-		wstunnelNote = "The installed certificate is CA-signed, so wstunnel verifies it."
-	}
-	if !origin.TLS() {
-		wstunnelNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
 	}
 	// The client arguments are the same for every wstunnel command; only the
 	// string quoting follows the shell.
@@ -305,8 +309,11 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	client := clientArgs(shQuote)
 	psClient := clientArgs(psQuote)
 
+	cmdClient := clientArgs(cmdQuote)
+
 	wstunnel := []proto.ExitCommand{
 		{Platform: "windows", Shell: "powershell", Command: wstunnelWindows(psClient), Notes: wstunnelNote},
+		{Platform: "windows", Shell: "cmd", Command: wstunnelCmd(cmdClient), Notes: wstunnelNote},
 		{Platform: "macos", Shell: "bash", Command: wstunnelUnix("darwin", "shasum -a 256 -c -", client), Notes: wstunnelNote},
 		{Platform: "linux", Shell: "bash", Command: wstunnelUnix("linux", "sha256sum -c -", client), Notes: wstunnelNote},
 	}
@@ -367,6 +374,35 @@ func wstunnelWindows(client string) string {
 	}, "; ")
 }
 
+// wstunnelCmd renders the Mode B command for cmd.exe. curl.exe, tar.exe and
+// certutil are all built into Windows 10 1803 and later, so nothing is
+// installed first.
+//
+// The two architectures are written out in full rather than selected into a
+// variable, because cmd expands %VAR% when it parses the whole line, before any
+// set on that line has run: a value set and read in one command is always the
+// old one. PROCESSOR_ARCHITECTURE is already in the environment, so branching on
+// it is safe where branching on our own variable would not be.
+func wstunnelCmd(client string) string {
+	arch := func(a, sha string) string {
+		dir := `%TEMP%\wstunnel-` + WstunnelVersion
+		archive := dir + `\wstunnel.tar.gz`
+		// && all the way down and no exit /b: this is pasted into a console
+		// rather than run as a batch file, and exit /b closes that console,
+		// taking the error with it. A failed step stops the chain instead and
+		// the trailing || says so.
+		steps := strings.Join([]string{
+			fmt.Sprintf(`curl.exe -fsSLo "%s" "%swstunnel_%s_windows_%s.tar.gz"`, archive, wstunnelReleaseBase, WstunnelVersion, a),
+			fmt.Sprintf(`certutil -hashfile "%s" SHA256 | findstr /i /c:"%s" >nul`, archive, sha),
+			fmt.Sprintf(`tar -xzf "%s" -C "%s"`, archive, dir),
+			fmt.Sprintf(`"%s\wstunnel.exe" %s`, dir, client),
+		}, " && ")
+		return fmt.Sprintf(`mkdir "%s" 2>nul & %s || echo wstunnel setup failed`, dir, steps)
+	}
+	return fmt.Sprintf(`if /i "%%PROCESSOR_ARCHITECTURE%%"=="ARM64" (%s) else (%s)`,
+		arch("arm64", wstunnelSHA256["windows_arm64"]), arch("amd64", wstunnelSHA256["windows_amd64"]))
+}
+
 // wstunnelLatestUnix resolves the newest release from the releases/latest
 // redirect, downloads that tag's asset for the platform (linux or darwin) and
 // checks it against the same tag's checksums.txt with the given checker
@@ -418,13 +454,45 @@ func wstunnelLatestWindows(client string) string {
 	return fmt.Sprintf(`try { %s } catch { throw "could not fetch the latest wstunnel: $_ Download it from %s" }`, steps, wstunnelReleasesURL)
 }
 
+// VerifyTLS reports whether a client should check the serving certificate the
+// ordinary way. The unit ships a self-signed certificate that nothing can
+// verify, so there the clients trust the transport and the token is what
+// authenticates the session; install a CA-signed certificate and they verify
+// it properly. wstunnel's --tls-verify-certificate follows the same rule, and
+// the native clients follow it so the two modes behave alike.
+func VerifyTLS(origin Origin, cert Certificate) bool {
+	return origin.TLS() && cert.Fingerprint != "" && !cert.SelfSigned
+}
+
+// cmdNative renders the Mode A one-liner for cmd.exe. curl.exe and the rest of
+// the line are built into Windows 10 1803 and later, so nothing is installed,
+// but the client itself is PowerShell: cmd fetches it to a file and hands it
+// over with -File, which keeps the token out of a nested quoting level.
+func cmdNative(base, token string, insecure bool) string {
+	k := ""
+	if insecure {
+		k = "k"
+	}
+	script := `%TEMP%\nexit-client.ps1`
+	return fmt.Sprintf(
+		`curl.exe -fsSL%s -H "Authorization: Bearer %s" -o "%s" "%s" && powershell -NoProfile -ExecutionPolicy Bypass -File "%s"`,
+		k, token, script, base+"/client.ps1", script)
+}
+
+// cmdQuote wraps a value for a cmd.exe double-quoted argument. cmd has no
+// escape for a double quote inside one, so a value carrying one cannot be
+// rendered; ValidHost and the token alphabet both rule that out before here.
+func cmdQuote(value string) string {
+	return `"` + strings.ReplaceAll(value, `"`, "") + `"`
+}
+
 // Client template placeholders (plan: W3 <-> W1 contract).
 const (
 	phScheme       = "__SCHEME__"
 	phHost         = "__HOST__"
 	phSlot         = "__SLOT__"
 	phToken        = "__TOKEN__"
-	phFingerprint  = "__FINGERPRINT__"
+	phVerify       = "__VERIFY__"
 	phAllowPrivate = "__ALLOW_PRIVATE__"
 )
 
@@ -432,7 +500,7 @@ const (
 // it gets the http scheme; the three clients open the socket and get ws/wss.
 // It returns false for an unknown client and for a Host that fails ValidHost,
 // and the values it templates are escaped for the client's string literal.
-func RenderClient(name string, slot Slot, cfg Config, origin Origin, fingerprint string) ([]byte, bool) {
+func RenderClient(name string, slot Slot, cfg Config, origin Origin, verify bool) ([]byte, bool) {
 	escape, known := clientEscape[name]
 	if !known || !ValidHost(origin.Host) {
 		return nil, false
@@ -449,12 +517,16 @@ func RenderClient(name string, slot Slot, cfg Config, origin Origin, fingerprint
 	if cfg.AllowPrivate {
 		allow = "1"
 	}
+	verifyFlag := "0"
+	if verify {
+		verifyFlag = "1"
+	}
 	out := strings.NewReplacer(
 		phScheme, scheme,
 		phHost, escape(origin.Host),
 		phSlot, slot.ID,
 		phToken, escape(cfg.Token),
-		phFingerprint, escape(fingerprint),
+		phVerify, verifyFlag,
 		phAllowPrivate, allow,
 	).Replace(string(body))
 	return []byte(out), true

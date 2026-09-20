@@ -222,7 +222,7 @@ func TestAdminHandlersEnvelope(t *testing.T) {
 	if err := json.Unmarshal(data, &commands); err != nil {
 		t.Fatal(err)
 	}
-	if commands.Scheme != "http" || commands.Host != "kvm.local" || len(commands.Native) != 3 {
+	if commands.Scheme != "http" || commands.Host != "kvm.local" || len(commands.Native) != 4 {
 		t.Fatalf("commands = %+v", commands)
 	}
 	if len(commands.WstunnelLatest) != 3 || commands.WstunnelRepo != "https://github.com/erebe/wstunnel" {

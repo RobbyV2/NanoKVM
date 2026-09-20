@@ -1092,13 +1092,17 @@ const zh_tw = {
           warnDownload: '該命令會從此 NanoKVM 下載指令碼，並以你的使用者身分執行。',
           warnSecret: '它包含控制目標機上網的密鑰，並會儲存在你的 shell 歷史紀錄中。',
           warnReach: '出口裝置能存取的一切，目標機也將能存取。',
-          warnFingerprint: '出口只會在驗證憑證指紋 {{fingerprint}} 後才連線。',
           warnCleartext: '本頁透過明文 http 提供：權杖以及出口與 NanoKVM 之間的所有流量均未加密。',
-          warnWstunnelUnverified:
-            'wstunnel 無法固定憑證指紋。沒有 CA 簽發的憑證時，它到 NanoKVM 的連線不經身分驗證。',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender 可能會隔離下載的 wstunnel 二進位檔並中斷隧道，且不在其記錄中留下任何內容；原生命令不會下載二進位檔。',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: '檢視指令碼',
@@ -1110,8 +1114,6 @@ const zh_tw = {
           rewritten: '已改為指向 {{host}}，即本瀏覽器存取的位址。',
           warnSchemeMismatch:
             'NanoKVM 看到此頁面是透過 {{server}} 請求的，但瀏覽器是經由 {{local}} 存取。命令指向 {{server}}；請讓代理伺服器傳送 X-Forwarded-Proto，命令便會採用您使用的位址。',
-          warnFingerprintReaddressed:
-            '腳本固定此 NanoKVM 的憑證指紋 {{fingerprint}}。若 {{host}} 出示不同的憑證（例如終止 TLS 的代理伺服器），出口端會拒絕連線；請讓 TLS 直通至 NanoKVM，或直接存取它。',
           unavailable: '該平台沒有可用命令。',
           regenerateHint:
             '已有出口連線。不再需要貼上的命令後，請重新產生權杖；之後需用新命令重新啟動出口。',

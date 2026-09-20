@@ -1146,15 +1146,18 @@ const ja = {
           warnSecret:
             'ターゲット機のインターネットを制御する秘密情報が含まれ、シェル履歴に保存されます。',
           warnReach: '出口機器から到達できるものはすべて、ターゲット機からも到達可能になります。',
-          warnFingerprint:
-            '出口は証明書フィンガープリント {{fingerprint}} を検証してから接続します。',
           warnCleartext:
             'このページは平文の http で提供されています。トークンと、出口と NanoKVM 間のすべての通信は暗号化されません。',
-          warnWstunnelUnverified:
-            'wstunnel は証明書フィンガープリントを固定できません。CA 署名の証明書がない場合、NanoKVM への接続は認証されません。',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender がダウンロードした wstunnel バイナリを隔離し、ログに何も残さないままトンネルを停止することがあります。ネイティブのコマンドはバイナリをダウンロードしません。',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'スクリプトを表示',
@@ -1166,8 +1169,6 @@ const ja = {
           rewritten: 'このブラウザーがアクセスしたアドレス {{host}} 宛てに書き換えています。',
           warnSchemeMismatch:
             'NanoKVM はこのページが {{server}} で要求されたと認識していますが、ブラウザーは {{local}} でアクセスしています。コマンドは {{server}} 宛てです。プロキシに X-Forwarded-Proto を送らせると、使用中のアドレスに合わせられます。',
-          warnFingerprintReaddressed:
-            'スクリプトはこの NanoKVM の証明書フィンガープリント {{fingerprint}} を固定します。{{host}} が別の証明書（TLS を終端するプロキシなど）を提示すると、exit は接続を拒否します。TLS を NanoKVM までパススルーするか、直接アクセスしてください。',
           unavailable: 'このプラットフォーム向けのコマンドはありません。',
           regenerateHint:
             '出口が接続しました。貼り付けたコマンドが不要になったらトークンを再生成してください。その後、出口は新しいコマンドで再起動する必要があります。',

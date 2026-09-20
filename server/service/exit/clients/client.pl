@@ -29,7 +29,7 @@ my $SCHEME        = "__SCHEME__";
 my $HOST          = "__HOST__";
 my $SLOT          = "__SLOT__";
 my $TOKEN         = "__TOKEN__";
-my $FINGERPRINT   = "__FINGERPRINT__";
+my $VERIFY        = "__VERIFY__" eq "1";
 my $ALLOW_PRIVATE = "__ALLOW_PRIVATE__" eq "1";
 
 use constant {
@@ -516,21 +516,21 @@ sub connect_ws {
     my $scheme = $map{$SCHEME} || $SCHEME;
     die "bad scheme '$SCHEME'\n" unless $scheme eq "ws" || $scheme eq "wss";
     my $tls = $scheme eq "wss";
-    (my $fp = lc $FINGERPRINT) =~ s/[^0-9a-f]//g;
-    die "wss without a certificate fingerprint: refusing to connect unverified\n" if $tls && !$fp;
     my ($host, $port) = parse_host($HOST, $tls ? 443 : 80);
     my $sock;
     if ($tls) {
         eval { require IO::Socket::SSL; 1 } or die "IO::Socket::SSL is required for wss: $@";
         my $sni = ($host =~ /^[\d.]+$/ || $host =~ /:/) ? "" : $host;
-        # The NanoKVM's certificate is normally self-signed: trust is the pin, not a CA.
+        # With a CA-signed certificate installed, check it the ordinary way. The
+        # unit's own certificate is self-signed and no CA store can vouch for it,
+        # so there the transport is trusted as wstunnel trusts it against the same
+        # host, and the token is what authenticates the session.
+        my %verify = $VERIFY
+            ? (SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_PEER(), SSL_verifycn_scheme => "http")
+            : (SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE());
         $sock = IO::Socket::SSL->new(PeerHost => $host, PeerPort => $port, Timeout => 10,
-            SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE(), SSL_hostname => $sni)
+            %verify, SSL_hostname => $sni)
             or die "tls connect to $host:$port: " . ($IO::Socket::SSL::SSL_ERROR || $!) . "\n";
-        my $got = $sock->get_fingerprint("sha256") || "";
-        $got =~ s/^sha256\$//;
-        $got = lc $got;
-        die "certificate fingerprint mismatch: expected $fp got $got; refusing\n" if $got ne $fp;
     } else {
         my $class = eval { require IO::Socket::IP; 1 } ? "IO::Socket::IP" : "IO::Socket::INET";
         $sock = $class->new(PeerHost => $host, PeerPort => $port, Proto => "tcp", Timeout => 10)
@@ -582,8 +582,8 @@ sub main {
     $SIG{INT} = $SIG{TERM} = sub { $STOP = 1 };
     $SIG{PIPE} = "IGNORE";
     my %map = (http => "ws", https => "wss");
-    log_msg(sprintf("exit client for %s://%s/exit/%s (allowPrivate=%s, pin=%s)", $map{$SCHEME} || $SCHEME, $HOST, $SLOT,
-        $ALLOW_PRIVATE ? "true" : "false", $FINGERPRINT ? substr($FINGERPRINT, 0, 16) . "..." : "none"));
+    log_msg(sprintf("exit client for %s://%s/exit/%s (allowPrivate=%s, verifyTLS=%s)", $map{$SCHEME} || $SCHEME, $HOST, $SLOT,
+        $ALLOW_PRIVATE ? "true" : "false", $VERIFY ? "true" : "false"));
     my $backoff = 1;
     until ($STOP) {
         %S = (ws => undef, tls => 0, inbuf => "", out => [], out_off => 0, frag_op => undef, frag => "", streams => {},

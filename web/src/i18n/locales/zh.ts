@@ -1091,13 +1091,17 @@ const zh = {
           warnDownload: '该命令会从此 NanoKVM 下载脚本，并以你的用户身份运行。',
           warnSecret: '它包含控制目标机上网的密钥，并会保存在你的 shell 历史中。',
           warnReach: '出口设备能访问的一切，目标机也将能访问。',
-          warnFingerprint: '出口只会在验证证书指纹 {{fingerprint}} 后才连接。',
           warnCleartext: '本页通过明文 http 提供：令牌以及出口与 NanoKVM 之间的所有流量均未加密。',
-          warnWstunnelUnverified:
-            'wstunnel 无法固定证书指纹。没有 CA 签发的证书时，它到 NanoKVM 的连接不经身份验证。',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender 可能会隔离下载的 wstunnel 二进制文件并中断隧道，且不在其日志中留下任何记录；原生命令不下载二进制文件。',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: '查看脚本',
@@ -1108,8 +1112,6 @@ const zh = {
           rewritten: '已改为指向 {{host}}，即本浏览器访问的地址。',
           warnSchemeMismatch:
             'NanoKVM 看到此页面是通过 {{server}} 请求的，但浏览器是经由 {{local}} 访问的。命令指向 {{server}}；请让代理发送 X-Forwarded-Proto，命令便会采用您使用的地址。',
-          warnFingerprintReaddressed:
-            '脚本固定此 NanoKVM 的证书指纹 {{fingerprint}}。若 {{host}} 出示不同的证书（例如终止 TLS 的代理），出口端会拒绝连接；请让 TLS 直通至 NanoKVM，或直接访问它。',
           unavailable: '该平台没有可用命令。',
           regenerateHint:
             '已有出口连接。不再需要粘贴的命令后，请重新生成令牌；之后需用新命令重新启动出口。',

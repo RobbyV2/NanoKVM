@@ -1142,14 +1142,18 @@ const cz = {
           warnSecret:
             'Obsahuje tajemství, které řídí internet cílového počítače, a uloží se do historie vašeho shellu.',
           warnReach: 'Vše, na co výstupní zařízení dosáhne, bude dostupné z cílového počítače.',
-          warnFingerprint: 'Výstup se připojí jen po ověření otisku certifikátu {{fingerprint}}.',
           warnCleartext:
             'Tato stránka je poskytována přes nešifrované http: token i veškerý provoz mezi výstupem a NanoKVM jsou v otevřené podobě.',
-          warnWstunnelUnverified:
-            'wstunnel neumí připnout otisk certifikátu. Bez certifikátu podepsaného CA není jeho spojení s NanoKVM ověřené.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender může stažený binární soubor wstunnel přesunout do karantény a zastavit tunel, aniž by cokoli zapsal do svého logu; nativní příkazy žádný binární soubor nestahují.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Zobrazit skript',
@@ -1161,8 +1165,6 @@ const cz = {
           rewritten: 'Adresováno na {{host}}, adresu, kterou tento prohlížeč použil.',
           warnSchemeMismatch:
             'NanoKVM viděl požadavek na tuto stránku přes {{server}}, ale prohlížeč ji otevřel na {{local}}. Příkazy jsou adresovány na {{server}}; nastavte proxy, aby posílala X-Forwarded-Proto, a příkazy budou používat vaši adresu.',
-          warnFingerprintReaddressed:
-            'Skript připíná otisk certifikátu {{fingerprint}} tohoto NanoKVM. Pokud {{host}} předloží jiný certifikát, například proxy ukončující TLS, výstup odmítne připojení; propusťte TLS až k NanoKVM nebo se připojte přímo.',
           unavailable: 'Pro tuto platformu není žádný příkaz.',
           regenerateHint:
             'Výstup se připojil. Až vložený příkaz nebudete potřebovat, vygenerujte token znovu; výstup pak bude nutné spustit s novým příkazem.',

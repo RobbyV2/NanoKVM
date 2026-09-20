@@ -59,21 +59,17 @@ export type CommandView = {
   schemeMismatch: boolean;
   // the command carries the token over plain http
   cleartext: boolean;
-  // the script pins the fingerprint of the certificate the exit will see
-  pinsFingerprint: boolean;
-  // the script pins the device leaf, but the exit dials a readdressed host that
-  // may terminate tls with another certificate
-  pinUncertain: boolean;
-  // wstunnel dials https without --tls-verify-certificate (D16)
-  wstunnelUnverified: boolean;
+  // https, but the command trusts the transport instead of verifying it: the
+  // device's certificate is self-signed, so the token is what authenticates
+  // the session. Both modes follow the same rule.
+  trustsTransport: boolean;
 };
 
 export function presentCommand(
   mode: ExitMode,
   command: { command: string } | undefined,
   server: Origin,
-  local: Origin,
-  fingerprint: string
+  local: Origin
 ): CommandView {
   const known = !!server.scheme && !!server.host;
   const schemeMismatch = known && !!local.scheme && server.scheme !== local.scheme;
@@ -91,7 +87,6 @@ export function presentCommand(
   }
 
   const cleartext = scheme !== 'https';
-  const pins = !!command && mode === 'native' && !cleartext && !!fingerprint;
 
   return {
     text,
@@ -99,12 +94,15 @@ export function presentCommand(
     rewritten,
     schemeMismatch,
     cleartext,
-    pinsFingerprint: pins && !rewritten,
-    pinUncertain: pins && rewritten,
-    // the server adds the flag only behind a CA-signed certificate, so its
-    // absence is the tell
-    wstunnelUnverified:
-      !!command && mode === 'wstunnel' && !cleartext && !command.command.includes('--tls-verify')
+    // The server only emits the verifying form behind a CA-signed certificate,
+    // so in each mode the tell is what it had to add to get past a certificate
+    // no CA can vouch for.
+    trustsTransport:
+      !!command &&
+      !cleartext &&
+      (mode === 'wstunnel'
+        ? !command.command.includes('--tls-verify')
+        : command.command.includes('-fsSLk') || command.command.includes('NanoKVMExitTrust'))
   };
 }
 

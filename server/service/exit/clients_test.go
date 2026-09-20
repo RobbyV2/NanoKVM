@@ -31,7 +31,7 @@ func readClient(t *testing.T, name string) string {
 func TestClientsCarryPlaceholdersAndMarkers(t *testing.T) {
 	for name, marker := range clientMarkers {
 		text := readClient(t, name)
-		for _, ph := range []string{"__SCHEME__", "__HOST__", "__SLOT__", "__TOKEN__", "__FINGERPRINT__"} {
+		for _, ph := range []string{"__SCHEME__", "__HOST__", "__SLOT__", "__TOKEN__", "__VERIFY__"} {
 			if !strings.Contains(text, ph) {
 				t.Errorf("%s: missing placeholder %s", name, ph)
 			}

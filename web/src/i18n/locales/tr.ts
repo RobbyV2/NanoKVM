@@ -1147,15 +1147,18 @@ const tr = {
           warnSecret:
             'Hedefin internetini denetleyen bir sır içerir ve kabuk geçmişinize kaydedilir.',
           warnReach: 'Çıkış cihazının erişebildiği her şey hedeften erişilebilir olur.',
-          warnFingerprint:
-            'Çıkış yalnızca {{fingerprint}} sertifika parmak izini doğruladıktan sonra bağlanır.',
           warnCleartext:
             'Bu sayfa düz http üzerinden sunuluyor: belirteç ve çıkış ile NanoKVM arasındaki tüm trafik şifresizdir.',
-          warnWstunnelUnverified:
-            'wstunnel bir sertifika parmak izi sabitleyemez. CA imzalı bir sertifika olmadan NanoKVM’e bağlantısı kimliği doğrulanmamıştır.',
+          warnTransportTrusted:
+            "This NanoKVM's certificate is self-signed, so the command trusts the connection rather than verifying it and the token is what authenticates the session. Install a CA-signed certificate and the commands verify it instead.",
           warnWstunnelDefender:
             'Windows Defender indirilen wstunnel ikili dosyasını karantinaya alıp günlüğüne hiçbir şey yazmadan tüneli durdurabilir; yerel komutlar hiçbir ikili dosya indirmez.',
-          windows: 'Windows PowerShell',
+          shell: {
+            powershell: 'PowerShell',
+            cmd: 'Command Prompt',
+            bash: 'Bash'
+          },
+          windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
           viewScript: 'Betiği görüntüle',
@@ -1167,8 +1170,6 @@ const tr = {
           rewritten: 'Bu tarayıcının ulaştığı adres olan {{host}} için düzenlendi.',
           warnSchemeMismatch:
             "NanoKVM bu sayfanın {{server}} üzerinden istendiğini gördü, ancak tarayıcı ona {{local}} adresinden ulaştı. Komutlar {{server}} adresine yönelik; kullandığınız adresi izlemeleri için proxy'nin X-Forwarded-Proto göndermesini sağlayın.",
-          warnFingerprintReaddressed:
-            "Betik bu NanoKVM'nin sertifika parmak izini ({{fingerprint}}) sabitler. {{host}} farklı bir sertifika sunarsa, örneğin TLS'yi sonlandıran bir proxy, exit bağlanmayı reddeder; TLS'yi NanoKVM'ye kadar geçirin veya doğrudan erişin.",
           unavailable: 'Bu platform için komut yok.',
           regenerateHint:
             'Bir çıkış bağlandı. Yapıştırılan komuta artık gerek kalmadığında belirteci yeniden oluşturun; çıkış daha sonra yeni komutla yeniden başlatılmalıdır.',

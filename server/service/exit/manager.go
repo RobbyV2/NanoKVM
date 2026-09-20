@@ -1441,14 +1441,14 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 		c.Mux.ServeNative(w, r)
 		return true
 	case clientNames[strings.TrimPrefix(rest, "/")]:
-		var fingerprint string
+		var cert Certificate
 		origin := OriginOf(r)
 		if origin.TLS() {
-			if cert, err := readCertificate(); err == nil {
-				fingerprint = cert.Fingerprint
+			if c, err := readCertificate(); err == nil {
+				cert = c
 			}
 		}
-		body, found := RenderClient(strings.TrimPrefix(rest, "/"), slot, cfg, origin, fingerprint)
+		body, found := RenderClient(strings.TrimPrefix(rest, "/"), slot, cfg, origin, VerifyTLS(origin, cert))
 		if !found {
 			return false
 		}
