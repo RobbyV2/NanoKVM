@@ -16,10 +16,11 @@ Three machines. Keep a terminal open on each.
 
 Exit and Consumer have to be different machines. Running the pasted command on the consumer makes it
 its own exit: its packets leave over the gadget NIC, come back through the tunnel and are handed to
-its own routing table, so it loses the internet it was supposed to be providing. Anything that
-manages that machine remotely goes with it, including whatever would stop the client again. Recover
-from the NanoKVM: regenerate the token (§8), which refuses the stranded client for good, and bring up
-a real exit on the new one.
+its own routing table. With a real exit also connected the two supersede each other once a second
+(§9.3) and the consumer's traffic dies in the churn, which takes any remote management of that
+machine with it, including whatever would stop the client again. Give a client started over such a
+link its own stop timer before you start it, and keep the NanoKVM's own §8 token regeneration as the
+way to lock out a client you can no longer reach.
 
 Slot 0 only. Derived names, verbatim from `server/service/exit/slot.go` and `S94exit`:
 
@@ -1192,7 +1193,10 @@ Expected within ~1 s: B prints `connected:`; UI: peer becomes B, **`previousPeer
 `peerChangedAt`**, the panel shows the "changed from A" notice; server log:
 `exit0: … superseding session from <A> with <B>` at warn level (Mode B: `wstunnel peer <A> superseded by <B>`).
 A names its replacement as it goes: `session ended: websocket closed by kvm (1000 superseded by
-<B addr:port>)`, then `reconnecting in 1s`.
+<B addr:port>)`, then `reconnecting in 1s`. `client.ps1` prints the close code by name,
+`NormalClosure superseded by <B addr:port>`, and mixes in its own `websocket state CloseReceived` and
+`websocket send failed: An established connection was aborted by the software in your host machine`
+when the close lands mid-send. Observed ping-pong rate with two live clients: a swap every 1 to 2 s.
 Consumer, no action: `curl -4 -sS -o /dev/null -w '%{http_code}\n' https://example.com/` → `200`
 through B (`curl https://api.ipify.org` shows **B's** public IP).
 
