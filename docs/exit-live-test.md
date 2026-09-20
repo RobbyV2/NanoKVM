@@ -541,7 +541,10 @@ exit$ <paste the latest command>
 ```
 
 Expected on Linux and macOS: `wstunnel.tgz: OK`, then `Starting wstunnel client v<ver>` where `<ver>` is the
-tag `https://github.com/erebe/wstunnel/releases/latest` shows in a browser. Windows prints the same
+tag `https://github.com/erebe/wstunnel/releases/latest` shows in a browser. `<ver>` has already moved a
+major above the pinned `10.7.1`, and the restriction the kvm side writes does not depend on it: a v11
+client connects, opens the reverse listener and carries traffic against the same
+`wstunnel-restrict.yml`. Windows prints the same
 without the `OK` line (`Get-FileHash` does the comparison and a mismatch throws `wstunnel checksum
 mismatch`). Break one run on purpose (cut the exit's network before pasting, or change `_linux_` /
 `_darwin_` / `_windows_` in a saved copy to `_nope_`): Linux and macOS print `could not fetch the
