@@ -730,7 +730,17 @@ not the exit code. On the nf_tables-backed image the REJECT counter reads 0 like
 counter in `iptables -L EXIT0 -v -n -x` (the chain is replaced every 30 s and this build does not
 maintain them), so the evidence is conntrack, `ip -s link show exit0` or the capture, never the counter.
 
-Pass: fast refusal by default; `198.18.0.0/15`, `127/8`, `169.254/16` refused in both settings.
+The list covers forwarded traffic only. `EXIT0` hangs off `FORWARD`, so a packet the consumer addresses
+to one of the NanoKVM's own addresses lands in `INPUT` instead and never reaches the chain, and `INPUT`
+is policy ACCEPT with two eth0 rules. Both `$GW` and the tun's `198.18.0.1` therefore answer on every
+port the unit binds with a wildcard: `curl http://198.18.0.1/` returns the unit's own `307` in about
+5 ms and TCP 22 opens on both, while the routed `198.18.0.2` beside it is refused as the list says.
+The consumer already reaches the unit at `$GW`, so this is the reach of the REJECT list and not a
+second way in, but a slot that is meant to hide the unit from the consumer needs an `INPUT` rule of
+its own.
+
+Pass: fast refusal by default; `198.18.0.0/15` except `198.18.0.1`, `127/8` and `169.254/16` refused
+in both settings.
 
 ### 3.6 UDP through the tunnel
 
