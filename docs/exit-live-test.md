@@ -1119,7 +1119,10 @@ Expected: `WS-IDENTICAL` and `WS-NOAUTH-IDENTICAL`; no `101`, no `Sec-WebSocket-
 Two more, later: in §2.4 (Mode A route while in Mode B → 404) and after §12's disable
 (`curl -sk -i -H "Authorization: Bearer $TOKEN" $H2/exit/0/client.sh` with the slot off → IDENTICAL,
 correct token notwithstanding). Timing: `curl -sk -o /dev/null -w '%{time_total}\n'` for the
-unknown-slot and wrong-token cases should be within a millisecond or two of each other.
+unknown-slot and wrong-token cases should be within a millisecond or two of each other. Over https on
+this unit each request spends 140 to 190 ms in the TLS handshake and the two cases interleave with no
+consistent ordering across samples, so compare several rounds and look for a consistent gap rather
+than a single pair: the handshake noise is an order of magnitude larger than the compare.
 
 ### 7.4 No leak into logs
 
