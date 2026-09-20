@@ -1113,7 +1113,7 @@ const pl = {
             routing: 'Reguły routingu opartego na politykach i trasa odgradzająca są na miejscu',
             tun: 'Urządzenie tun istnieje i ma podłączonego czytelnika',
             hev: 'Translator tun2socks działa',
-            wstunnel: 'Serwer wstunnel działa (w trybie natywnym zawsze prawda)',
+          wstunnel: 'Serwer wstunnel działa (w trybie natywnym zawsze prawda)',
             dns: 'Forwarder DNS jest związany z adresem sieci USB',
             nat: 'Łańcuchy zapory istnieją i są podpięte'
           },
@@ -1136,8 +1136,11 @@ const pl = {
           title: 'Tryb',
           native: 'Natywny',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Zalecane. Na urządzeniu wyjściowym działa mały skrypt pobrany z tego NanoKVM, korzystając tylko z tego, co dostarcza system operacyjny (PowerShell, Python lub Perl), jako zwykły użytkownik, bez instalowania czegokolwiek i bez uprawnień administratora.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternatywa. Urządzenie wyjściowe pobiera przypięty plik binarny {{version}} i przed uruchomieniem sprawdza jego SHA-256.',
           whileEnabled:
@@ -1167,12 +1170,6 @@ const pl = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Pokaż skrypt',
-          scriptTitle: 'Skrypt {{name}}',
-          scriptFailed: 'Nie udało się pobrać skryptu',
-          scriptGated:
-            'Skrypt jest udostępniany tylko przy włączonym tunelu i aktualnym tokenie; każde odrzucone żądanie ogranicza ten adres.',
-          viewScriptDisabled: 'Włącz tunel, aby pobrać skrypt.',
           rewritten: 'Zaadresowane do {{host}}, adresu, pod który dotarła ta przeglądarka.',
           warnSchemeMismatch:
             'NanoKVM widział żądanie tej strony przez {{server}}, ale przeglądarka dotarła do niej pod {{local}}. Polecenia są adresowane do {{server}}; skonfiguruj proxy, by wysyłało X-Forwarded-Proto, a polecenia użyją Twojego adresu.',

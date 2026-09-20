@@ -1122,7 +1122,7 @@ const de = {
             routing: 'Policy-Routing-Regeln und Sperrroute sind gesetzt',
             tun: 'Das tun-Gerät existiert und hat einen Leser',
             hev: 'Der tun2socks-Übersetzer läuft',
-            wstunnel: 'Der wstunnel-Server läuft (im nativen Modus immer wahr)',
+          wstunnel: 'Der wstunnel-Server läuft (im nativen Modus immer wahr)',
             dns: 'Der DNS-Forwarder ist an die USB-Netzwerkadresse gebunden',
             nat: 'Die Firewall-Ketten sind vorhanden und eingehängt'
           },
@@ -1144,8 +1144,11 @@ const de = {
           title: 'Modus',
           native: 'Nativ',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Empfohlen. Ein kleines Skript von diesem NanoKVM läuft auf dem Exit-Gerät nur mit dem, was das Betriebssystem mitbringt (PowerShell, Python oder Perl), als normaler Benutzer, ohne Installation und ohne Administratorrechte.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternative. Das Exit-Gerät lädt die festgelegte Binärdatei {{version}} herunter und prüft ihre SHA-256-Summe vor dem Start.',
           whileEnabled:
@@ -1174,12 +1177,6 @@ const de = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Skript anzeigen',
-          scriptTitle: 'Skript {{name}}',
-          scriptFailed: 'Skript konnte nicht abgerufen werden',
-          scriptGated:
-            'Das Skript wird nur ausgeliefert, solange der Tunnel aktiviert und das Token aktuell ist; jede abgewiesene Anfrage drosselt diese Adresse.',
-          viewScriptDisabled: 'Tunnel aktivieren, um das Skript abzurufen.',
           rewritten: 'Adressiert an {{host}}, die Adresse, die dieser Browser erreicht hat.',
           warnSchemeMismatch:
             'Der NanoKVM hat diese Seite über {{server}} angefordert gesehen, der Browser hat sie aber unter {{local}} erreicht. Die Befehle sind an {{server}} adressiert; lassen Sie den Proxy X-Forwarded-Proto senden, damit sie der von Ihnen genutzten Adresse folgen.',

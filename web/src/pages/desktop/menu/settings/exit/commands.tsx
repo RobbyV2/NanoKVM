@@ -1,48 +1,31 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Modal, Segmented, Tabs, Tooltip } from 'antd';
-import { CheckIcon, CopyIcon, FileCodeIcon, LoaderCircleIcon, ShieldAlertIcon } from 'lucide-react';
+import { Button, Input, Segmented, Tabs } from 'antd';
+import { CheckIcon, CopyIcon, LoaderCircleIcon, ShieldAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { copyText } from '@/lib/clipboard.ts';
 import { getBaseUrl } from '@/lib/service.ts';
-import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
-import { detectPlatform, parseOrigin, presentCommand, scriptErrorKey } from './state.ts';
+import { detectPlatform, parseOrigin, presentCommand } from './state.ts';
 import { exitPlatforms } from './types.ts';
-import type { ExitCommands as Commands, ExitMode, ExitPlatform } from './types.ts';
+import type { ExitCommands as Commands, ExitPlatform, ExitWay } from './types.ts';
 
 type ExitCommandsProps = {
-  slot: string;
-  mode: ExitMode;
-  token: string;
+  way: ExitWay;
   commands?: Commands;
   hasConnected: boolean;
-  // the gate serves the script only while the slot is enabled and settled
-  scriptServed: boolean;
-};
-
-// what each platform's one-liner fetches, and therefore what "view script" shows
-const scriptNames: Record<ExitPlatform, string> = {
-  windows: 'client.ps1',
-  macos: 'client.sh',
-  linux: 'client.sh'
 };
 
 export const ExitCommands = ({
-  slot,
-  mode,
-  token,
+  way,
   commands,
   hasConnected,
-  scriptServed
 }: ExitCommandsProps) => {
   const { t } = useTranslation();
 
   const [platform, setPlatform] = useState<ExitPlatform>(() => detectPlatform(navigator.userAgent));
   const [shell, setShell] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
-  const [script, setScript] = useState<{ name: string; body: string }>();
-  const [isScriptLoading, setIsScriptLoading] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
   // the server templated from the request it saw; the browser knows better
@@ -51,24 +34,32 @@ export const ExitCommands = ({
   const local = useMemo(() => parseOrigin(getBaseUrl('http')), []);
   const server = commands ? { scheme: commands.scheme, host: commands.host } : local;
 
-  const list = commands ? commands[mode] : [];
+  const list = commands ? commands[way] : [];
+  // A mode offers what it offers: Mode A is the nexit binary and Windows only,
+  // Mode B carries all three. Showing a tab the server sent no command for is
+  // how the panel ends up saying "no command for this platform".
+  const platforms = exitPlatforms.filter((value) =>
+    list.some((command) => command.platform === value)
+  );
   // a platform can offer more than one shell (windows has powershell and cmd),
   // so the shell is part of the selection and falls back to the first on offer
-  const shells = list.filter((command) => command.platform === platform).map((c) => c.shell);
+  const activePlatform = platforms.includes(platform) ? platform : (platforms[0] ?? platform);
+  const shells = list.filter((command) => command.platform === activePlatform).map((c) => c.shell);
   const activeShell = shells.includes(shell) ? shell : (shells[0] ?? '');
   const current = list.find(
-    (command) => command.platform === platform && command.shell === activeShell
+    (command) => command.platform === activePlatform && command.shell === activeShell
   );
-  const view = presentCommand(mode, current, server, local);
+  const view = presentCommand(way, current, server, local);
 
   // the latest-release variant of the wstunnel command, one per platform; an
   // older server does not send the list at all, and then the block is not shown.
   // It is only rendered for shells it was built for, so fall back by platform.
-  const latestList = commands?.wstunnelLatest;
+  const latestList = way === 'wstunnel' ? commands?.wstunnelLatest : undefined;
   const latest =
-    latestList?.find((command) => command.platform === platform && command.shell === activeShell) ??
-    latestList?.find((command) => command.platform === platform);
-  const latestView = presentCommand(mode, latest, server, local);
+    latestList?.find(
+      (command) => command.platform === activePlatform && command.shell === activeShell
+    ) ?? latestList?.find((command) => command.platform === activePlatform);
+  const latestView = presentCommand(way, latest, server, local);
   const repo = commands?.wstunnelRepo ?? '';
 
   const serverAddress = `${server.scheme}://${server.host}`;
@@ -83,38 +74,6 @@ export const ExitCommands = ({
       })
       .catch(() => {
         setErrMsg(t('settings.exit.copyFailed'));
-      });
-  }
-
-  // the script route is token-gated outside /api, so a plain link would 404;
-  // the panel fetches it with the header the one-liner would send. Every
-  // rejection there counts against this address (D10), so the button is dead
-  // while the gate would refuse anyway
-  function viewScript() {
-    if (isScriptLoading || !scriptServed) return;
-    setIsScriptLoading(true);
-    setErrMsg('');
-
-    const name = scriptNames[platform];
-
-    fetch(`${getBaseUrl('http')}/exit/${slot}/${name}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then((rsp) => {
-        if (!rsp.ok) {
-          throw new Error(String(rsp.status));
-        }
-        return rsp.text();
-      })
-      .then((body) => {
-        setScript({ name, body });
-      })
-      .catch((err) => {
-        const httpStatus = Number((err as Error)?.message);
-        setErrMsg(t(`settings.exit.commands.${scriptErrorKey(httpStatus)}`));
-      })
-      .finally(() => {
-        setIsScriptLoading(false);
       });
   }
 
@@ -133,7 +92,7 @@ export const ExitCommands = ({
           <li>{t('settings.exit.commands.warnReach')}</li>
           {view.cleartext && <li>{t('settings.exit.commands.warnCleartext')}</li>}
           {view.trustsTransport && <li>{t('settings.exit.commands.warnTransportTrusted')}</li>}
-          {mode === 'wstunnel' && platform === 'windows' && (
+          {way === 'wstunnel' && activePlatform === 'windows' && (
             <li>{t('settings.exit.commands.warnWstunnelDefender')}</li>
           )}
           {view.schemeMismatch && (
@@ -155,9 +114,9 @@ export const ExitCommands = ({
       ) : (
         <Tabs
           size="small"
-          activeKey={platform}
+          activeKey={activePlatform}
           onChange={(key) => setPlatform(key as ExitPlatform)}
-          items={exitPlatforms.map((value) => ({
+          items={platforms.map((value) => ({
             key: value,
             label: t(`settings.exit.commands.${value}`),
             children: current ? (
@@ -192,23 +151,6 @@ export const ExitCommands = ({
                     {t(copiedKey === value ? 'settings.exit.copied' : 'settings.exit.copy')}
                   </Button>
 
-                  {mode === 'native' && (
-                    <Tooltip
-                      title={scriptServed ? '' : t('settings.exit.commands.viewScriptDisabled')}
-                      placement="bottom"
-                    >
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<FileCodeIcon size={14} />}
-                        loading={isScriptLoading}
-                        disabled={!scriptServed}
-                        onClick={viewScript}
-                      >
-                        {t('settings.exit.commands.viewScript')}
-                      </Button>
-                    </Tooltip>
-                  )}
                 </div>
 
                 {current.notes && <span className="text-xs text-neutral-500">{current.notes}</span>}
@@ -219,7 +161,7 @@ export const ExitCommands = ({
                   </span>
                 )}
 
-                {mode === 'wstunnel' && latestList && (
+                {way === 'wstunnel' && latestList && (
                   <div className="flex flex-col space-y-2 border-t border-neutral-700/60 pt-2">
                     <span className="text-xs">{t('settings.exit.commands.latestTitle')}</span>
 
@@ -303,19 +245,6 @@ export const ExitCommands = ({
 
       {errMsg && <span className="text-xs text-red-500">{errMsg}</span>}
 
-      <Modal
-        title={t('settings.exit.commands.scriptTitle', { name: script?.name ?? '' })}
-        open={!!script}
-        centered={true}
-        width={'80%'}
-        style={{ maxWidth: '900px' }}
-        footer={null}
-        onCancel={() => setScript(undefined)}
-      >
-        <ScrollArea className="h-[60vh] rounded bg-neutral-800/60 p-2">
-          <pre className="whitespace-pre font-mono text-xs text-neutral-300">{script?.body}</pre>
-        </ScrollArea>
-      </Modal>
     </div>
   );
 };

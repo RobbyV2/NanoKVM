@@ -1104,7 +1104,7 @@ const cz = {
             routing: 'Pravidla politiky směrování a uzavírací trasa jsou nastaveny',
             tun: 'Zařízení tun existuje a má připojeného čtenáře',
             hev: 'Překladač tun2socks běží',
-            wstunnel: 'Server wstunnel běží (v nativním režimu vždy pravda)',
+          wstunnel: 'Server wstunnel běží (v nativním režimu vždy pravda)',
             dns: 'DNS forwarder je navázán na adresu USB sítě',
             nat: 'Řetězce firewallu existují a jsou napojeny'
           },
@@ -1127,8 +1127,11 @@ const cz = {
           title: 'Režim',
           native: 'Nativní',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Doporučeno. Na výstupním zařízení běží malý skript stažený z tohoto NanoKVM pouze s tím, co dodává operační systém (PowerShell, Python nebo Perl), jako běžný uživatel, bez instalace a bez práv správce.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternativa. Výstupní zařízení stáhne připnutý binární soubor {{version}} a před spuštěním ověří jeho SHA-256.',
           whileEnabled:
@@ -1156,12 +1159,6 @@ const cz = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Zobrazit skript',
-          scriptTitle: 'Skript {{name}}',
-          scriptFailed: 'Skript se nepodařilo načíst',
-          scriptGated:
-            'Skript se poskytuje jen při zapnutém tunelu a platném tokenu; každý odmítnutý požadavek omezí tuto adresu.',
-          viewScriptDisabled: 'Pro načtení skriptu zapněte tunel.',
           rewritten: 'Adresováno na {{host}}, adresu, kterou tento prohlížeč použil.',
           warnSchemeMismatch:
             'NanoKVM viděl požadavek na tuto stránku přes {{server}}, ale prohlížeč ji otevřel na {{local}}. Příkazy jsou adresovány na {{server}}; nastavte proxy, aby posílala X-Forwarded-Proto, a příkazy budou používat vaši adresu.',

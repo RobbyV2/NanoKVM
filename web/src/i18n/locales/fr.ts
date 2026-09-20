@@ -1122,7 +1122,7 @@ const fr = {
             routing: 'Les règles de routage par politique et la route barrière sont en place',
             tun: "L'interface tun existe et un lecteur y est attaché",
             hev: 'Le traducteur tun2socks fonctionne',
-            wstunnel: 'Le serveur wstunnel fonctionne (toujours vrai en mode natif)',
+          wstunnel: 'Le serveur wstunnel fonctionne (toujours vrai en mode natif)',
             dns: "Le relais DNS est lié à l'adresse du réseau USB",
             nat: 'Les chaînes du pare-feu sont présentes et référencées'
           },
@@ -1145,8 +1145,11 @@ const fr = {
           title: 'Mode',
           native: 'Natif',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             "Recommandé. Un petit script récupéré depuis ce NanoKVM s'exécute sur l'appareil de sortie avec uniquement ce que fournit le système (PowerShell, Python ou Perl), en tant qu'utilisateur normal, sans rien installer et sans droits d'administrateur.",
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             "Alternative. L'appareil de sortie télécharge le binaire {{version}} épinglé et vérifie son SHA-256 avant de le lancer.",
           whileEnabled:
@@ -1176,12 +1179,6 @@ const fr = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Voir le script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: 'Impossible de récupérer le script',
-          scriptGated:
-            "Le script n'est servi que lorsque le tunnel est activé et le jeton à jour ; chaque requête refusée limite cette adresse.",
-          viewScriptDisabled: 'Activez le tunnel pour récupérer le script.',
           rewritten: "Adressée à {{host}}, l'adresse atteinte par ce navigateur.",
           warnSchemeMismatch:
             "Le NanoKVM a vu cette page demandée via {{server}}, mais le navigateur l'a atteinte à {{local}}. Les commandes sont adressées à {{server}} ; faites envoyer X-Forwarded-Proto par le proxy pour qu'elles suivent l'adresse que vous utilisez.",

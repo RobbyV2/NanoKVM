@@ -1109,7 +1109,7 @@ const ru = {
             routing: 'Правила политики маршрутизации и заграждающий маршрут на месте',
             tun: 'Устройство tun существует и к нему подключён читатель',
             hev: 'Транслятор tun2socks запущен',
-            wstunnel: 'Сервер wstunnel запущен (в родном режиме всегда истина)',
+          wstunnel: 'Сервер wstunnel запущен (в родном режиме всегда истина)',
             dns: 'DNS-форвардер привязан к адресу USB-сети',
             nat: 'Цепочки межсетевого экрана существуют и подключены'
           },
@@ -1132,8 +1132,11 @@ const ru = {
           title: 'Режим',
           native: 'Родной',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Рекомендуется. На выходном устройстве работает небольшой скрипт, загруженный с этого NanoKVM, только со средствами самой ОС (PowerShell, Python или Perl), от имени обычного пользователя, без установки и без прав администратора.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Альтернатива. Выходное устройство загружает закреплённый бинарный файл {{version}} и проверяет его SHA-256 перед запуском.',
           whileEnabled:
@@ -1163,12 +1166,6 @@ const ru = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Показать скрипт',
-          scriptTitle: 'Скрипт {{name}}',
-          scriptFailed: 'Не удалось получить скрипт',
-          scriptGated:
-            'Скрипт выдаётся только при включённом туннеле и актуальном токене; каждый отклонённый запрос ограничивает этот адрес.',
-          viewScriptDisabled: 'Включите туннель, чтобы получить скрипт.',
           rewritten: 'Адресовано {{host}} — адресу, по которому обратился этот браузер.',
           warnSchemeMismatch:
             'NanoKVM видел запрос этой страницы через {{server}}, но браузер открыл её по адресу {{local}}. Команды адресованы на {{server}}; настройте прокси на отправку X-Forwarded-Proto, чтобы команды использовали ваш адрес.',

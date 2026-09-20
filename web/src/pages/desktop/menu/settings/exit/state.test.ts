@@ -7,13 +7,11 @@ import {
   formatBytes,
   formatTime,
   formatUptime,
-  isScriptServed,
   isValidDNS,
   mergeSaved,
   parseOrigin,
   presentCommand,
   resolverProblem,
-  scriptErrorKey,
   serialRefresher,
   wsScheme
 } from './state.ts';
@@ -315,20 +313,6 @@ test('a private resolver needs allowPrivate, a public one never does', () => {
   assert.equal(resolverProblem('', true), 'dnsInvalid');
 });
 
-test('the script is asked for only while the gate would serve it', () => {
-  // the gate answers a disabled or pending slot with the same 404 as a wrong
-  // token and charges the source a failure (D10), so the panel must not ask
-  assert.equal(isScriptServed({ enabled: true, pending: false }), true);
-  assert.equal(isScriptServed({ enabled: false, pending: false }), false);
-  assert.equal(isScriptServed({ enabled: true, pending: true }), false);
-  assert.equal(isScriptServed({ enabled: false, pending: true }), false);
-});
-
-test('a 404 from the script route is named as the gate, anything else as a failure', () => {
-  assert.equal(scriptErrorKey(404), 'scriptGated');
-  assert.equal(scriptErrorKey(500), 'scriptFailed');
-  assert.equal(scriptErrorKey(0), 'scriptFailed');
-});
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 

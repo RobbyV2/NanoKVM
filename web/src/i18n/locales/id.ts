@@ -1112,7 +1112,7 @@ const id = {
             routing: 'Aturan policy routing dan rute pagar sudah terpasang',
             tun: 'Perangkat tun ada dan memiliki pembaca yang terpasang',
             hev: 'Penerjemah tun2socks berjalan',
-            wstunnel: 'Server wstunnel berjalan (selalu benar dalam mode native)',
+          wstunnel: 'Server wstunnel berjalan (selalu benar dalam mode native)',
             dns: 'Forwarder DNS terikat ke alamat jaringan USB',
             nat: 'Rantai firewall ada dan sudah dihubungkan'
           },
@@ -1135,8 +1135,11 @@ const id = {
           title: 'Mode',
           native: 'Native',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Disarankan. Skrip kecil yang diambil dari NanoKVM ini berjalan di perangkat keluar hanya dengan yang sudah ada di sistem operasi (PowerShell, Python, atau Perl), sebagai pengguna biasa, tanpa perlu menginstal apa pun dan tanpa hak administrator.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternatif. Perangkat keluar mengunduh biner {{version}} yang disematkan dan memverifikasi SHA-256-nya sebelum dijalankan.',
           whileEnabled:
@@ -1166,12 +1169,6 @@ const id = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Lihat skrip',
-          scriptTitle: 'Skrip {{name}}',
-          scriptFailed: 'Gagal mengambil skrip',
-          scriptGated:
-            'Skrip hanya dilayani saat tunnel aktif dan token masih berlaku; setiap permintaan yang ditolak membatasi alamat ini.',
-          viewScriptDisabled: 'Aktifkan tunnel untuk mengambil skrip.',
           rewritten: 'Dialamatkan ke {{host}}, alamat yang dijangkau peramban ini.',
           warnSchemeMismatch:
             'NanoKVM melihat halaman ini diminta melalui {{server}}, tetapi peramban mencapainya di {{local}}. Perintah ditujukan ke {{server}}; atur proxy agar mengirim X-Forwarded-Proto supaya perintah mengikuti alamat yang Anda gunakan.',

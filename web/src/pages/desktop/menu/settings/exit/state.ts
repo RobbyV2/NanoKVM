@@ -1,4 +1,4 @@
-import type { ExitConfig, ExitMode, ExitPlatform } from './types.ts';
+import type { ExitConfig, ExitPlatform, ExitWay } from './types.ts';
 
 // scheme is http or https, host is host[:port], both exactly as the server
 // templated them (D15) or as the browser reached this page
@@ -66,7 +66,7 @@ export type CommandView = {
 };
 
 export function presentCommand(
-  mode: ExitMode,
+  way: ExitWay,
   command: { command: string } | undefined,
   server: Origin,
   local: Origin
@@ -100,24 +100,10 @@ export function presentCommand(
     trustsTransport:
       !!command &&
       !cleartext &&
-      (mode === 'wstunnel'
+      (way === 'wstunnel'
         ? !command.command.includes('--tls-verify')
         : command.command.includes('-fsSLk') || command.command.includes('NanoKVMExitTrust'))
   };
-}
-
-// The token gate answers a disabled or pending slot with the same 404 as a
-// wrong token and charges the source a failure (D10), so the panel asks for
-// the script only while the gate would serve it: a few clicks on a disabled
-// slot would otherwise lock the operator's own address out of /exit/:slot/*.
-export function isScriptServed(status: { enabled: boolean; pending: boolean }): boolean {
-  return status.enabled && !status.pending;
-}
-
-// a 404 is the gate (disabled slot, stale token, rate-limited source), not a
-// broken server, and the message has to say so
-export function scriptErrorKey(httpStatus: number): 'scriptGated' | 'scriptFailed' {
-  return httpStatus === 404 ? 'scriptGated' : 'scriptFailed';
 }
 
 // One status request in flight at a time: a slow device must not pile up

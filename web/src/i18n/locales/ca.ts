@@ -1108,7 +1108,7 @@ const ca = {
             routing: "Les regles d'encaminament per política i la ruta de tancament hi són",
             tun: 'El dispositiu tun existeix i té un lector connectat',
             hev: 'El traductor tun2socks està en execució',
-            wstunnel: 'El servidor wstunnel està en execució (sempre cert en mode natiu)',
+          wstunnel: 'El servidor wstunnel està en execució (sempre cert en mode natiu)',
             dns: "El reenviador DNS està vinculat a l'adreça de la xarxa USB",
             nat: 'Les cadenes del tallafoc existeixen i estan enllaçades'
           },
@@ -1131,8 +1131,11 @@ const ca = {
           title: 'Mode',
           native: 'Natiu',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             "Recomanat. Un petit script baixat d'aquest NanoKVM s'executa al dispositiu de sortida només amb el que porta el sistema operatiu (PowerShell, Python o Perl), com a usuari normal, sense instal·lar res i sense drets d'administrador.",
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternativa. El dispositiu de sortida baixa el binari {{version}} fixat i en verifica el SHA-256 abans d’executar-lo.',
           whileEnabled:
@@ -1162,12 +1165,6 @@ const ca = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Mostra el script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: "No s'ha pogut obtenir el script",
-          scriptGated:
-            "L'script només se serveix mentre el túnel està activat i el token és vigent; cada petició refusada limita aquesta adreça.",
-          viewScriptDisabled: "Activa el túnel per obtenir l'script.",
           rewritten: "Adreçada a {{host}}, l'adreça a què ha arribat aquest navegador.",
           warnSchemeMismatch:
             "El NanoKVM ha vist aquesta pàgina sol·licitada per {{server}}, però el navegador hi ha arribat per {{local}}. Les ordres s'adrecen a {{server}}; feu que el proxy enviï X-Forwarded-Proto perquè segueixin l'adreça que feu servir.",

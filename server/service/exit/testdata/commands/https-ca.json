@@ -9,25 +9,27 @@
       "platform": "windows",
       "shell": "powershell",
       "command": "irm -Headers @{Authorization='Bearer k7m2p9vx'} 'https://kvm.example.net:8443/exit/0/client.ps1' | iex",
-      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way."
+      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way. The client is a PowerShell script: nothing is downloaded but the script itself."
     },
     {
       "platform": "windows",
       "shell": "cmd",
       "command": "curl.exe -fsSL -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit-client.ps1\" \"https://kvm.example.net:8443/exit/0/client.ps1\" \u0026\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File \"%TEMP%\\nexit-client.ps1\"",
-      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way."
+      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way. The client is a PowerShell script: nothing is downloaded but the script itself. cmd has no way to speak this protocol itself, so it saves the script and hands it to PowerShell; for a machine without PowerShell, use nexit."
+    }
+  ],
+  "nexit": [
+    {
+      "platform": "windows",
+      "shell": "cmd",
+      "command": "if /i \"%PROCESSOR_ARCHITECTURE%\"==\"ARM64\" (curl.exe -fsSL -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit.exe\" \"https://kvm.example.net:8443/exit/0/nexit-windows-arm64.exe\" \u0026\u0026 \"%TEMP%\\nexit.exe\" \"https://kvm.example.net:8443/exit/0\" --passcode \"k7m2p9vx\") else (curl.exe -fsSL -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit.exe\" \"https://kvm.example.net:8443/exit/0/nexit-windows-amd64.exe\" \u0026\u0026 \"%TEMP%\\nexit.exe\" \"https://kvm.example.net:8443/exit/0\" --passcode \"k7m2p9vx\")",
+      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way. nexit is a single binary and needs no PowerShell, python or perl on the machine."
     },
     {
-      "platform": "macos",
-      "shell": "bash",
-      "command": "curl -fsSL -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net:8443/exit/0/client.sh' | sh",
-      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way."
-    },
-    {
-      "platform": "linux",
-      "shell": "bash",
-      "command": "curl -fsSL -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net:8443/exit/0/client.sh' | sh",
-      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way."
+      "platform": "windows",
+      "shell": "powershell",
+      "command": "$a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $e=Join-Path $env:TEMP 'nexit.exe'; irm -Headers @{Authorization='Bearer k7m2p9vx'} \"https://kvm.example.net:8443/exit/0/nexit-windows-$a.exe\" -OutFile $e; \u0026 $e 'https://kvm.example.net:8443/exit/0' --passcode 'k7m2p9vx'",
+      "notes": "The installed certificate is CA-signed, so the client verifies it the ordinary way. nexit is a single binary and needs no PowerShell, python or perl on the machine."
     }
   ],
   "wstunnel": [

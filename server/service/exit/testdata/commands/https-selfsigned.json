@@ -9,25 +9,27 @@
       "platform": "windows",
       "shell": "powershell",
       "command": "if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -TypeDefinition 'using System.Net;using System.Net.Security;using System.Security.Cryptography.X509Certificates;public static class NanoKVMExitTrust{public static bool Ok(object s,X509Certificate c,X509Chain h,SslPolicyErrors e){return true;}public static void Install(){ServicePointManager.ServerCertificateValidationCallback=new RemoteCertificateValidationCallback(Ok);}}' }; [NanoKVMExitTrust]::Install(); irm -Headers @{Authorization='Bearer k7m2p9vx'} 'https://kvm.example.net/exit/0/client.ps1' | iex",
-      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
+      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session. The client is a PowerShell script: nothing is downloaded but the script itself."
     },
     {
       "platform": "windows",
       "shell": "cmd",
       "command": "curl.exe -fsSLk -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit-client.ps1\" \"https://kvm.example.net/exit/0/client.ps1\" \u0026\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File \"%TEMP%\\nexit-client.ps1\"",
-      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
+      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session. The client is a PowerShell script: nothing is downloaded but the script itself. cmd has no way to speak this protocol itself, so it saves the script and hands it to PowerShell; for a machine without PowerShell, use nexit."
+    }
+  ],
+  "nexit": [
+    {
+      "platform": "windows",
+      "shell": "cmd",
+      "command": "if /i \"%PROCESSOR_ARCHITECTURE%\"==\"ARM64\" (curl.exe -fsSLk -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit.exe\" \"https://kvm.example.net/exit/0/nexit-windows-arm64.exe\" \u0026\u0026 \"%TEMP%\\nexit.exe\" \"https://kvm.example.net/exit/0\" --passcode \"k7m2p9vx\" --insecure) else (curl.exe -fsSLk -H \"Authorization: Bearer k7m2p9vx\" -o \"%TEMP%\\nexit.exe\" \"https://kvm.example.net/exit/0/nexit-windows-amd64.exe\" \u0026\u0026 \"%TEMP%\\nexit.exe\" \"https://kvm.example.net/exit/0\" --passcode \"k7m2p9vx\" --insecure)",
+      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session. nexit is a single binary and needs no PowerShell, python or perl on the machine."
     },
     {
-      "platform": "macos",
-      "shell": "bash",
-      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net/exit/0/client.sh' | sh",
-      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
-    },
-    {
-      "platform": "linux",
-      "shell": "bash",
-      "command": "curl -fsSLk -H 'Authorization: Bearer k7m2p9vx' 'https://kvm.example.net/exit/0/client.sh' | sh",
-      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
+      "platform": "windows",
+      "shell": "powershell",
+      "command": "$a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}; $e=Join-Path $env:TEMP 'nexit.exe'; irm -Headers @{Authorization='Bearer k7m2p9vx'} \"https://kvm.example.net/exit/0/nexit-windows-$a.exe\" -OutFile $e; \u0026 $e 'https://kvm.example.net/exit/0' --passcode 'k7m2p9vx' --insecure",
+      "notes": "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session. nexit is a single binary and needs no PowerShell, python or perl on the machine."
     }
   ],
   "wstunnel": [

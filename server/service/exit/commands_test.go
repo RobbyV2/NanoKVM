@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -92,6 +91,7 @@ func TestCertificateFingerprint(t *testing.T) {
 // latest-fetch set.
 func allCommands(rsp proto.GetExitCommandsRsp) []proto.ExitCommand {
 	all := append([]proto.ExitCommand{}, rsp.Native...)
+	all = append(all, rsp.Nexit...)
 	all = append(all, rsp.Wstunnel...)
 	return append(all, rsp.WstunnelLatest...)
 }
@@ -115,9 +115,10 @@ func TestCommandsSnapshot(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			rsp := renderCommands(slot, cfg, tc.origin, tc.cert)
+			// Mode A is Windows only, one command per shell. Mode B carries
 			// windows twice (powershell and cmd), then macos and linux.
-			if len(rsp.Native) != 4 || len(rsp.Wstunnel) != 4 {
-				t.Fatalf("expected four commands per mode, got %d/%d", len(rsp.Native), len(rsp.Wstunnel))
+			if len(rsp.Native) != 2 || len(rsp.Wstunnel) != 4 {
+				t.Fatalf("expected 2 native and 4 wstunnel commands, got %d/%d", len(rsp.Native), len(rsp.Wstunnel))
 			}
 			if rsp.WstunnelVersion != WstunnelVersion || rsp.Scheme != tc.origin.Scheme || rsp.Host != tc.origin.Host || rsp.WstunnelRepo != wstunnelRepoURL {
 				t.Fatalf("header = %+v", rsp)
@@ -152,51 +153,46 @@ func TestCommandsSnapshot(t *testing.T) {
 					t.Fatalf("%s verify=%v want %v: %s", tc.name, verify, wantVerify, cmd.Command)
 				}
 			}
-			// The native clients follow the same rule wstunnel does: verify a
-			// CA-signed certificate, trust the transport for the unit's own
-			// self-signed one, and carry the token either way.
+			// Mode A, first way: the scripted client. Windows only, since
+			// macOS and Linux are served by wstunnel.
 			wantInsecure := tc.origin.TLS() && !VerifyTLS(tc.origin, tc.cert)
+			if len(rsp.Native) != 2 {
+				t.Fatalf("%s native = %+v, want one powershell and one cmd", tc.name, rsp.Native)
+			}
 			for _, cmd := range rsp.Native {
+				if cmd.Platform != "windows" {
+					t.Fatalf("%s native carries %s; macOS and Linux are served by Mode B", tc.name, cmd.Platform)
+				}
+				if !strings.Contains(cmd.Command, "/exit/0/client.ps1") {
+					t.Fatalf("%s %s does not fetch the script: %s", tc.name, cmd.Shell, cmd.Command)
+				}
 				hasK := strings.Contains(cmd.Command, "-fsSLk") || strings.Contains(cmd.Command, "RemoteCertificateValidationCallback")
 				if hasK != wantInsecure {
-					t.Fatalf("%s %s %s insecure-fetch=%v want %v: %s", tc.name, cmd.Platform, cmd.Shell, hasK, wantInsecure, cmd.Command)
+					t.Fatalf("%s %s insecure-fetch=%v want %v: %s", tc.name, cmd.Shell, hasK, wantInsecure, cmd.Command)
 				}
+			}
+
+			// Mode A, second way: nexit, a binary run directly. Nothing in
+			// its line may reach for a scripting host, which is its whole
+			// reason to exist.
+			if len(rsp.Nexit) != 2 {
+				t.Fatalf("%s nexit = %+v, want one cmd and one powershell", tc.name, rsp.Nexit)
+			}
+			for _, cmd := range rsp.Nexit {
 				if cmd.Platform != "windows" {
-					continue
+					t.Fatalf("%s nexit carries %s; it is the Windows client", tc.name, cmd.Platform)
+				}
+				if !strings.Contains(cmd.Command, "/exit/0/nexit-windows-") || !strings.Contains(cmd.Command, "--passcode") {
+					t.Fatalf("%s %s does not fetch and run nexit: %s", tc.name, cmd.Shell, cmd.Command)
+				}
+				if skip := strings.Contains(cmd.Command, "--insecure"); skip != wantInsecure {
+					t.Fatalf("%s %s insecure=%v want %v: %s", tc.name, cmd.Shell, skip, wantInsecure, cmd.Command)
 				}
 				if cmd.Shell == "cmd" {
-					// cmd has no pipeline into a language host, so it saves the
-					// client and hands the file to powershell -File.
-					for _, want := range []string{`curl.exe -fsSL`, `-o "%TEMP%\nexit-client.ps1"`, `powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\nexit-client.ps1"`} {
-						if !strings.Contains(cmd.Command, want) {
-							t.Fatalf("%s windows cmd command lacks %q: %s", tc.name, want, cmd.Command)
+					for _, banned := range []string{"powershell -", "| iex", "client.ps1"} {
+						if strings.Contains(cmd.Command, banned) {
+							t.Fatalf("%s nexit cmd falls back to a shell (%q): %s", tc.name, banned, cmd.Command)
 						}
-					}
-					continue
-				}
-				// A scriptblock callback throws "no Runspace available" off
-				// the pipeline thread under Windows PowerShell 5.1, so the
-				// https fetch is trusted through a compiled delegate, and
-				// the http command carries no prefix at all.
-				if strings.Contains(cmd.Command, "{$true}") {
-					t.Fatalf("%s windows command trusts through a scriptblock: %s", tc.name, cmd.Command)
-				}
-				fetch := fmt.Sprintf("irm -Headers @{Authorization='Bearer %s'} '%s://%s/exit/0/client.ps1' | iex", cfg.Token, tc.origin.Scheme, tc.origin.Host)
-				if !strings.HasSuffix(cmd.Command, fetch) {
-					t.Fatalf("%s windows command does not end with the fetch %q: %s", tc.name, fetch, cmd.Command)
-				}
-				// The trust prefix only exists to get past a certificate no CA
-				// can vouch for, so a CA-signed one carries the bare fetch just
-				// as plain http does.
-				if !wantInsecure {
-					if cmd.Command != fetch {
-						t.Fatalf("%s windows command carries a prefix: %s", tc.name, cmd.Command)
-					}
-					continue
-				}
-				for _, want := range []string{"Add-Type", "RemoteCertificateValidationCallback", "-as [type]", "[NanoKVMExitTrust]::Install()"} {
-					if !strings.Contains(cmd.Command, want) {
-						t.Fatalf("%s windows command lacks %q: %s", tc.name, want, cmd.Command)
 					}
 				}
 			}
@@ -381,14 +377,22 @@ func TestTemplatedValuesAreQuotedPerLanguage(t *testing.T) {
 	// space or a quote, so the quoting is only ever visible as the quotes
 	// themselves, and the UI's readdressing treats a quote as a url boundary.
 	rsp := renderCommands(MustSlot("0"), testConfig(MustSlot("0")), Origin{Scheme: "https", Host: "kvm.example.net:8443"}, Certificate{})
+	// Every url the templates carry, in the quoting of the shell that reads it:
+	// cmd has no single-quote literal and uses the double quote its own parser
+	// understands, the others use a single quote.
 	for _, cmd := range allCommands(rsp) {
-		// cmd.exe has no single-quote literal, so its commands quote with the
-		// double quote its own parser understands.
-		quoted := cmd.Shell == "cmd" &&
-			(strings.Contains(cmd.Command, `"https://kvm.example.net:8443/exit/0/client.`) ||
-				strings.Contains(cmd.Command, `"wss://kvm.example.net:8443"`))
-		quoted = quoted || strings.Contains(cmd.Command, "'https://kvm.example.net:8443/exit/0/client.") ||
-			strings.Contains(cmd.Command, "'wss://kvm.example.net:8443'")
+		var quoted bool
+		for _, url := range []string{
+			"https://kvm.example.net:8443/exit/0",
+			"wss://kvm.example.net:8443",
+		} {
+			if cmd.Shell == "cmd" {
+				quoted = quoted || strings.Contains(cmd.Command, `"`+url)
+				continue
+			}
+			quoted = quoted || strings.Contains(cmd.Command, "'"+url) ||
+				strings.Contains(cmd.Command, `"`+url)
+		}
 		if !quoted {
 			t.Errorf("%s %s does not quote its url: %s", cmd.Platform, cmd.Shell, cmd.Command)
 		}

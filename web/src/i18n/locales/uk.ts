@@ -1106,7 +1106,7 @@ const uk = {
             routing: 'Правила політики маршрутизації та загороджувальний маршрут на місці',
             tun: 'Пристрій tun існує і до нього підключено читача',
             hev: 'Транслятор tun2socks запущено',
-            wstunnel: 'Сервер wstunnel запущено (у рідному режимі завжди істина)',
+          wstunnel: 'Сервер wstunnel запущено (у рідному режимі завжди істина)',
             dns: 'DNS-форвардер прив’язано до адреси USB-мережі',
             nat: 'Ланцюжки брандмауера існують і підключені'
           },
@@ -1129,8 +1129,11 @@ const uk = {
           title: 'Режим',
           native: 'Рідний',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Рекомендовано. На вихідному пристрої працює невеликий скрипт, завантажений із цього NanoKVM, лише із засобами самої ОС (PowerShell, Python або Perl), від імені звичайного користувача, без встановлення та без прав адміністратора.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Альтернатива. Вихідний пристрій завантажує закріплений бінарний файл {{version}} і перевіряє його SHA-256 перед запуском.',
           whileEnabled:
@@ -1159,12 +1162,6 @@ const uk = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Показати скрипт',
-          scriptTitle: 'Скрипт {{name}}',
-          scriptFailed: 'Не вдалося отримати скрипт',
-          scriptGated:
-            'Скрипт видається лише за увімкненого тунелю та актуального токена; кожен відхилений запит обмежує цю адресу.',
-          viewScriptDisabled: 'Увімкніть тунель, щоб отримати скрипт.',
           rewritten: 'Адресовано {{host}} — адресі, за якою звернувся цей браузер.',
           warnSchemeMismatch:
             'NanoKVM бачив запит цієї сторінки через {{server}}, але браузер відкрив її за адресою {{local}}. Команди адресовано на {{server}}; налаштуйте проксі надсилати X-Forwarded-Proto, щоб команди використовували вашу адресу.',

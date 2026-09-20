@@ -1117,7 +1117,7 @@ const hu = {
             routing: 'A szabályalapú útválasztási szabályok és a lezáró útvonal a helyükön vannak',
             tun: 'A tun eszköz létezik és van hozzá olvasó csatolva',
             hev: 'A tun2socks fordító fut',
-            wstunnel: 'A wstunnel szerver fut (natív módban mindig igaz)',
+          wstunnel: 'A wstunnel szerver fut (natív módban mindig igaz)',
             dns: 'A DNS-továbbító az USB hálózati címhez van kötve',
             nat: 'A tűzfalláncok léteznek és be vannak fűzve'
           },
@@ -1139,8 +1139,11 @@ const hu = {
           title: 'Mód',
           native: 'Natív',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Ajánlott. Egy erről a NanoKVM-ről letöltött kis szkript fut a kilépő eszközön csak azzal, amit az operációs rendszer ad (PowerShell, Python vagy Perl), normál felhasználóként, telepítés és rendszergazdai jogok nélkül.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternatíva. A kilépő eszköz letölti a rögzített {{version}} binárist, és futtatás előtt ellenőrzi az SHA-256 értékét.',
           whileEnabled:
@@ -1169,12 +1172,6 @@ const hu = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Szkript megtekintése',
-          scriptTitle: '{{name}} szkript',
-          scriptFailed: 'A szkript letöltése nem sikerült',
-          scriptGated:
-            'A szkript csak bekapcsolt alagút és érvényes token mellett érhető el; minden elutasított kérés korlátozza ezt a címet.',
-          viewScriptDisabled: 'A szkript letöltéséhez kapcsolja be az alagutat.',
           rewritten: 'Címzett: {{host}}, a cím, amelyet ez a böngésző elért.',
           warnSchemeMismatch:
             'A NanoKVM ezt az oldalt {{server}} címen kérve látta, a böngésző viszont a {{local}} címen érte el. A parancsok a {{server}} címre szólnak; állítsa be a proxyt, hogy X-Forwarded-Proto fejlécet küldjön, így az Ön által használt címet követik.',

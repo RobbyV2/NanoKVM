@@ -1092,7 +1092,7 @@ const ko = {
             routing: '정책 라우팅 규칙과 차단 경로가 설정됨',
             tun: 'tun 장치가 존재하고 읽기 측이 연결됨',
             hev: 'tun2socks 변환기가 실행 중',
-            wstunnel: 'wstunnel 서버가 실행 중 (네이티브 모드에서는 항상 참)',
+          wstunnel: 'wstunnel 서버가 실행 중 (네이티브 모드에서는 항상 참)',
             dns: 'DNS 포워더가 USB 네트워크 주소에 바인딩됨',
             nat: '방화벽 체인이 존재하고 연결됨'
           },
@@ -1114,8 +1114,11 @@ const ko = {
           title: '모드',
           native: '네이티브',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             '권장. 이 NanoKVM에서 받은 작은 스크립트가 운영체제에 기본 포함된 것(PowerShell, Python 또는 Perl)만으로 일반 사용자 권한으로 출구 기기에서 실행됩니다. 설치할 것이 없고 관리자 권한도 필요 없습니다.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             '대안. 출구 기기가 고정된 {{version}} 바이너리를 내려받고 실행 전에 SHA-256을 검증합니다.',
           whileEnabled:
@@ -1143,12 +1146,6 @@ const ko = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: '스크립트 보기',
-          scriptTitle: '스크립트 {{name}}',
-          scriptFailed: '스크립트를 가져오지 못했습니다',
-          scriptGated:
-            '스크립트는 터널이 활성화되고 토큰이 최신일 때만 제공됩니다. 거부된 요청마다 이 주소가 속도 제한됩니다.',
-          viewScriptDisabled: '스크립트를 가져오려면 터널을 활성화하세요.',
           rewritten: '이 브라우저가 접속한 주소인 {{host}} 기준으로 다시 작성되었습니다.',
           warnSchemeMismatch:
             'NanoKVM은 이 페이지가 {{server}}로 요청된 것으로 보았지만 브라우저는 {{local}}로 접속했습니다. 명령은 {{server}}로 향합니다. 프록시가 X-Forwarded-Proto를 보내도록 설정하면 사용 중인 주소를 따릅니다.',

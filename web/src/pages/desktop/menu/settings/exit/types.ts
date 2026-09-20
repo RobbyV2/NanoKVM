@@ -2,6 +2,19 @@
 
 export type ExitMode = 'native' | 'wstunnel';
 
+// What the panel offers, which is not the same as the slot's mode: nexit and
+// the scripted client both speak Mode A, so both leave the slot in 'native'.
+export type ExitWay = 'native' | 'nexit' | 'wstunnel';
+
+export const exitWays: ExitWay[] = ['wstunnel', 'native', 'nexit'];
+
+// The slot mode a way needs the device to be in.
+export const wayMode: Record<ExitWay, ExitMode> = {
+  native: 'native',
+  nexit: 'native',
+  wstunnel: 'wstunnel'
+};
+
 export const exitModes: ExitMode[] = ['native', 'wstunnel'];
 
 export type ExitTunnelState = 'disconnected' | 'connecting' | 'connected';
@@ -129,6 +142,8 @@ export type ExitCommands = {
   wstunnelVersion: string;
   wstunnelRepo: string;
   native: ExitCommand[];
+  // the third way onto a Windows machine: the client shipped as a binary
+  nexit: ExitCommand[];
   wstunnel: ExitCommand[];
   // windows then linux; there is no macOS entry
   wstunnelLatest: ExitCommand[];

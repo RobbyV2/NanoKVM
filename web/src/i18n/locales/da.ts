@@ -1108,7 +1108,7 @@ const da = {
             routing: 'Policy-routingreglerne og spærreruten er på plads',
             tun: 'tun-enheden findes og har en læser tilknyttet',
             hev: 'tun2socks-oversætteren kører',
-            wstunnel: 'wstunnel-serveren kører (altid sand i native-tilstand)',
+          wstunnel: 'wstunnel-serveren kører (altid sand i native-tilstand)',
             dns: 'DNS-forwarderen er bundet til USB-netværksadressen',
             nat: 'Firewall-kæderne findes og er koblet ind'
           },
@@ -1131,8 +1131,11 @@ const da = {
           title: 'Tilstand',
           native: 'Native',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Anbefalet. Et lille script hentet fra denne NanoKVM kører på exit-enheden med kun det, styresystemet leverer (PowerShell, Python eller Perl), som almindelig bruger, uden noget at installere og uden administratorrettigheder.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternativ. Exit-enheden downloader den fastlåste {{version}}-binær og kontrollerer dens SHA-256, før den køres.',
           whileEnabled:
@@ -1161,12 +1164,6 @@ const da = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Vis script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: 'Kunne ikke hente scriptet',
-          scriptGated:
-            'Scriptet leveres kun, mens tunnelen er aktiveret og tokenet er gyldigt; hver afvist forespørgsel begrænser denne adresse.',
-          viewScriptDisabled: 'Aktivér tunnelen for at hente scriptet.',
           rewritten: 'Adresseret til {{host}}, den adresse denne browser nåede.',
           warnSchemeMismatch:
             'NanoKVM så denne side anmodet over {{server}}, men browseren nåede den på {{local}}. Kommandoerne er adresseret til {{server}}; lad proxyen sende X-Forwarded-Proto, så de følger den adresse du bruger.',

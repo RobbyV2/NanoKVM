@@ -48,3 +48,7 @@ kvmapp/exit/*.gz
 
 # Session memory hooks write scratch state here
 .remember/
+
+# nexit host builds; the shipped ones are cross-compiled into build/nexit/
+/nexit/nexit
+/nexit/nexit.exe

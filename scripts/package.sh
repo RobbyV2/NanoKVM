@@ -81,6 +81,31 @@ require_riscv64() {
     fi
 }
 
+# nexit is the one shipped binary that is not for the device: it runs on the
+# operator's Windows machine, so the riscv64 rule above would reject it and the
+# check has to read a PE header instead. "MZ", then the PE signature at the
+# offset stored at 0x3c, then the machine word after it: 0x8664 amd64,
+# 0xaa64 arm64.
+require_pe() {
+    local path="$1" want="$2" magic lfanew sig machine
+    magic=$(od -An -tx1 -N2 "$path" | tr -d ' \n')
+    if [ "$magic" != "4d5a" ]; then
+        echo "[ERROR] not a PE image: ${path#"$ROOT"/}" >&2
+        exit 1
+    fi
+    lfanew=$(od -An -tu4 -j60 -N4 "$path" | tr -d ' \n')
+    sig=$(od -An -tx1 -j"$lfanew" -N4 "$path" | tr -d ' \n')
+    if [ "$sig" != "50450000" ]; then
+        echo "[ERROR] ${path#"$ROOT"/} has no PE signature" >&2
+        exit 1
+    fi
+    machine=$(od -An -tx2 -j$((lfanew + 4)) -N2 "$path" | tr -d ' \n')
+    if [ "$machine" != "$want" ]; then
+        echo "[ERROR] ${path#"$ROOT"/} is PE machine 0x$machine, expected 0x$want" >&2
+        exit 1
+    fi
+}
+
 # musl finds libkvm.so only through the binary's own runpath: the library ships
 # in server/dl_lib and is nowhere on the default search path. A build without it
 # dies in the dynamic loader before main, which on the device looks like a
@@ -181,6 +206,12 @@ else
     require_file "$ROOT/build/exit/hev-socks5-tunnel" "run: make exit"
     require_file "$ROOT/kvmapp/exit/hev-socks5-tunnel.gz" "run: make exit"
     require_file "$ROOT/kvmapp/system/init.d/S94exit" "the exit converge script is tracked; restore it"
+    # And the Windows exit client, which the panel serves to the operator's own
+    # machine rather than running on the device.
+    require_file "$ROOT/build/nexit/nexit-windows-amd64.exe" "run: make nexit"
+    require_file "$ROOT/build/nexit/nexit-windows-arm64.exe" "run: make nexit"
+    require_file "$ROOT/kvmapp/exit/nexit-windows-amd64.exe.gz" "run: make nexit"
+    require_file "$ROOT/kvmapp/exit/nexit-windows-arm64.exe.gz" "run: make nexit"
 
     require_riscv64 "$ROOT/server/NanoKVM-Server"
     require_runpath "$ROOT/server/NanoKVM-Server"
@@ -191,11 +222,15 @@ else
     require_riscv64 "$ROOT/build/tunnels/newt"
     require_riscv64 "$ROOT/build/passthrough/usb-proxy"
     require_riscv64 "$ROOT/build/exit/hev-socks5-tunnel"
+    require_pe "$ROOT/build/nexit/nexit-windows-amd64.exe" "8664"
+    require_pe "$ROOT/build/nexit/nexit-windows-arm64.exe" "aa64"
 
     require_fresh "$ROOT/build/tunnels/wstunnel" "$ROOT/third_party/wstunnel" "make tunnels"
     require_fresh "$ROOT/build/tunnels/newt" "$ROOT/third_party/newt" "make tunnels"
     require_fresh "$ROOT/build/passthrough/usb-proxy" "$ROOT/third_party/usb-proxy" "make passthrough"
     require_fresh "$ROOT/build/exit/hev-socks5-tunnel" "$ROOT/third_party/hev-socks5-tunnel" "make exit"
+    require_same_gz "$ROOT/kvmapp/exit/nexit-windows-amd64.exe.gz" "$ROOT/build/nexit/nexit-windows-amd64.exe" "make nexit"
+    require_same_gz "$ROOT/kvmapp/exit/nexit-windows-arm64.exe.gz" "$ROOT/build/nexit/nexit-windows-arm64.exe" "make nexit"
     require_same_gz "$ROOT/kvmapp/tunnels/wstunnel.gz" "$ROOT/build/tunnels/wstunnel" "make tunnels"
     require_same_gz "$ROOT/kvmapp/tunnels/newt.gz" "$ROOT/build/tunnels/newt" "make tunnels"
     require_same_gz "$ROOT/kvmapp/passthrough/usb-proxy.gz" "$ROOT/build/passthrough/usb-proxy" "make passthrough"

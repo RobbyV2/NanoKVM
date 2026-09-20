@@ -1117,7 +1117,7 @@ const es = {
               'Las reglas de enrutamiento por política y la ruta de cierre están en su sitio',
             tun: 'El dispositivo tun existe y tiene un lector conectado',
             hev: 'El traductor tun2socks está en ejecución',
-            wstunnel: 'El servidor wstunnel está en ejecución (siempre cierto en modo nativo)',
+          wstunnel: 'El servidor wstunnel está en ejecución (siempre cierto en modo nativo)',
             dns: 'El reenviador DNS está enlazado a la dirección de la red USB',
             nat: 'Las cadenas del cortafuegos existen y están enlazadas'
           },
@@ -1140,8 +1140,11 @@ const es = {
           title: 'Modo',
           native: 'Nativo',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Recomendado. Un pequeño script descargado de este NanoKVM se ejecuta en el dispositivo de salida solo con lo que trae el sistema operativo (PowerShell, Python o Perl), como usuario normal, sin instalar nada y sin permisos de administrador.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternativa. El dispositivo de salida descarga el binario {{version}} fijado y verifica su SHA-256 antes de ejecutarlo.',
           whileEnabled:
@@ -1171,12 +1174,6 @@ const es = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Ver script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: 'No se pudo obtener el script',
-          scriptGated:
-            'El script solo se sirve mientras el túnel está activado y el token es vigente; cada petición rechazada limita esta dirección.',
-          viewScriptDisabled: 'Activa el túnel para obtener el script.',
           rewritten: 'Dirigido a {{host}}, la dirección a la que llegó este navegador.',
           warnSchemeMismatch:
             'El NanoKVM vio esta página solicitada por {{server}}, pero el navegador llegó a ella por {{local}}. Los comandos están dirigidos a {{server}}; haga que el proxy envíe X-Forwarded-Proto para que sigan la dirección que usted usa.',

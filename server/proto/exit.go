@@ -133,8 +133,12 @@ type GetExitCommandsRsp struct {
 	WstunnelVersion string        `json:"wstunnelVersion"`
 	WstunnelRepo    string        `json:"wstunnelRepo"` // upstream repository, the manual fallback for the latest commands
 	Native          []ExitCommand `json:"native"`
-	Wstunnel        []ExitCommand `json:"wstunnel"`
-	WstunnelLatest  []ExitCommand `json:"wstunnelLatest"` // windows, macos, linux; release resolved at run time
+	// Nexit is the third way onto a Windows machine: the client this project
+	// ships as a binary, for a host with no usable scripting host. It speaks
+	// the same protocol as Native, so the slot stays in the native mode.
+	Nexit          []ExitCommand `json:"nexit"`
+	Wstunnel       []ExitCommand `json:"wstunnel"`
+	WstunnelLatest []ExitCommand `json:"wstunnelLatest"` // windows, macos, linux; release resolved at run time
 }
 
 // GetExitLogsRsp is the tail of the slot's daemon logs, token-shaped values redacted.

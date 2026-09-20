@@ -1057,7 +1057,7 @@ const zh = {
             routing: '策略路由规则和围栏路由已就位',
             tun: 'tun 设备存在且有读取端接入',
             hev: 'tun2socks 转换器正在运行',
-            wstunnel: 'wstunnel 服务端正在运行（原生模式下始终为真）',
+          wstunnel: 'wstunnel 服务端正在运行（原生模式下始终为真）',
             dns: 'DNS 转发器已绑定到 USB 网络地址',
             nat: '防火墙链已存在并已挂接'
           },
@@ -1078,8 +1078,11 @@ const zh = {
           title: '模式',
           native: '原生',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             '推荐。从此 NanoKVM 获取的小脚本在出口设备上运行，只用操作系统自带的工具（PowerShell、Python 或 Perl），以普通用户身份运行，无需安装，也不需要管理员权限。',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             '备选。出口设备下载固定版本 {{version}} 的二进制文件，并在运行前校验其 SHA-256。',
           whileEnabled: '隧道启用时切换模式会断开已连接的出口设备，请用新模式的命令重新启动它。'
@@ -1104,11 +1107,6 @@ const zh = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: '查看脚本',
-          scriptTitle: '脚本 {{name}}',
-          scriptFailed: '获取脚本失败',
-          scriptGated: '只有在隧道启用且令牌有效时才会提供脚本；每次被拒绝的请求都会对此地址限速。',
-          viewScriptDisabled: '启用隧道后才能获取脚本。',
           rewritten: '已改为指向 {{host}}，即本浏览器访问的地址。',
           warnSchemeMismatch:
             'NanoKVM 看到此页面是通过 {{server}} 请求的，但浏览器是经由 {{local}} 访问的。命令指向 {{server}}；请让代理发送 X-Forwarded-Proto，命令便会采用您使用的地址。',

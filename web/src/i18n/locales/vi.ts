@@ -1104,7 +1104,7 @@ const vi = {
             routing: 'Các quy tắc định tuyến theo chính sách và tuyến chặn đã có',
             tun: 'Thiết bị tun tồn tại và có trình đọc gắn vào',
             hev: 'Bộ chuyển đổi tun2socks đang chạy',
-            wstunnel: 'Máy chủ wstunnel đang chạy (luôn đúng ở chế độ gốc)',
+          wstunnel: 'Máy chủ wstunnel đang chạy (luôn đúng ở chế độ gốc)',
             dns: 'Bộ chuyển tiếp DNS đã gắn vào địa chỉ mạng USB',
             nat: 'Các chuỗi tường lửa đã có và được nối vào'
           },
@@ -1126,8 +1126,11 @@ const vi = {
           title: 'Chế độ',
           native: 'Gốc',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Khuyến nghị. Một script nhỏ tải từ NanoKVM này chạy trên thiết bị thoát chỉ với những gì hệ điều hành có sẵn (PowerShell, Python hoặc Perl), với tư cách người dùng thường, không cần cài gì và không cần quyền quản trị.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Thay thế. Thiết bị thoát tải tệp nhị phân {{version}} đã ghim và kiểm tra SHA-256 trước khi chạy.',
           whileEnabled:
@@ -1155,12 +1158,6 @@ const vi = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Xem script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: 'Không lấy được script',
-          scriptGated:
-            'Script chỉ được cung cấp khi tunnel đang bật và token còn hiệu lực; mỗi yêu cầu bị từ chối sẽ giới hạn địa chỉ này.',
-          viewScriptDisabled: 'Bật tunnel để lấy script.',
           rewritten: 'Đã trỏ tới {{host}}, địa chỉ mà trình duyệt này đã truy cập.',
           warnSchemeMismatch:
             'NanoKVM thấy trang này được yêu cầu qua {{server}}, nhưng trình duyệt truy cập tại {{local}}. Các lệnh được gửi tới {{server}}; hãy cấu hình proxy gửi X-Forwarded-Proto để các lệnh dùng địa chỉ bạn đang dùng.',

@@ -32,6 +32,17 @@ SUPPORT_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoK
 VISION_BUILD_CMD := . ./home/build/MaixCDK/bin/activate && cd /home/build/NanoKVM/support/sg2002 && ./build kvm_vision && ./build kvm_vision add_to_kvmapp
 RELEASE_BUILD_CMD := /home/build/NanoKVM/scripts/build-in-container.sh
 
+# nexit is the only shipped binary that does not run on the device: it is the
+# exit client for a Windows machine with no usable scripting host. One build
+# per architecture, identical for every unit and every slot, because a binary
+# whose bytes change per download never accumulates the reputation that keeps
+# an antivirus from taking it.
+NEXIT_VERSION := 1.0.0
+NEXIT_BUILD_CMD := cd /home/build/NanoKVM/nexit && go mod download && mkdir -p /home/build/NanoKVM/build/nexit && \
+	for a in amd64 arm64; do GOOS=windows GOARCH=$$a CGO_ENABLED=0 go build -trimpath \
+	-ldflags "-s -w -X main.version=$(NEXIT_VERSION)" \
+	-o /home/build/NanoKVM/build/nexit/nexit-windows-$$a.exe . || exit 1; done
+
 # Tunnel binaries are staged uncompressed under build/ so package.sh can assert
 # on the real ELF before the gzipped seeds ship in kvmapp/tunnels/. CARGO_HOME
 # is redirected into the workspace so the registry is reachable from the host,
@@ -243,8 +254,18 @@ exit: check-root builder-image
 	@mkdir -p kvmapp/exit
 	@gzip -9 -n -c build/exit/hev-socks5-tunnel > kvmapp/exit/hev-socks5-tunnel.gz
 
+# Cross-build the Windows exit client and seed it into kvmapp/exit, on the same
+# terms as the device binaries: staged uncompressed under build/ for
+# package.sh's header check, shipped gzipped, gzip -n for reproducibility.
+nexit: check-root builder-image
+	@echo "Building nexit..."
+	@$(DOCKER_RUN_BASE) $(DOCKER_TTY) $(IMAGE_NAME) /bin/bash -c '$(NEXIT_BUILD_CMD)'
+	@mkdir -p kvmapp/exit
+	@gzip -9 -n -c build/nexit/nexit-windows-amd64.exe > kvmapp/exit/nexit-windows-amd64.exe.gz
+	@gzip -9 -n -c build/nexit/nexit-windows-arm64.exe > kvmapp/exit/nexit-windows-arm64.exe.gz
+
 # Assemble the release package and its manifest
-package: check-version tunnels passthrough exit
+package: check-version tunnels passthrough exit nexit
 	@scripts/package.sh "$(VERSION)"
 
 # Full local release: riscv64 artifacts + frontend + package.

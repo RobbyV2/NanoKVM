@@ -8,11 +8,17 @@ import * as api from '@/api/extensions/exit.ts';
 import { ExitAdvanced } from './advanced.tsx';
 import { ExitCommands } from './commands.tsx';
 import { ExitLogs } from './logs.tsx';
-import { isScriptServed, mergeSaved, serialRefresher } from './state.ts';
+import { mergeSaved, serialRefresher } from './state.ts';
 import { ExitStatusCard } from './status.tsx';
 import { ExitToken } from './token.tsx';
-import { exitModes } from './types.ts';
-import type { ExitCommands as Commands, ExitConfig, ExitMode, ExitStatus } from './types.ts';
+import { exitWays, wayMode } from './types.ts';
+import type {
+  ExitCommands as Commands,
+  ExitConfig,
+  ExitMode,
+  ExitStatus,
+  ExitWay
+} from './types.ts';
 
 type ExitSlotProps = {
   initial: ExitStatus;
@@ -218,6 +224,12 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
   }
 
   const mode = config?.mode ?? status.mode;
+  // The slot has two modes; the panel offers three ways, because nexit and the
+  // scripted client share Mode A. The way is remembered here so switching to
+  // nexit and back does not look like a device change.
+  const [pickedWay, setPickedWay] = useState<ExitWay | ''>('');
+  const way: ExitWay = pickedWay && wayMode[pickedWay] === mode ? pickedWay : mode;
+  const setWay = setPickedWay;
   const isBusy = action !== '' || status.pending;
   // the manager switches mode live (restart of the daemons through S94exit,
   // restrict yaml rewritten, front door rewired); the price is that the
@@ -290,19 +302,26 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
           <div className="flex flex-col space-y-1">
             <span>{t('settings.exit.mode.title')}</span>
             <span className="text-xs text-neutral-500">
-              {mode === 'wstunnel'
+              {way === 'wstunnel'
                 ? t('settings.exit.mode.wstunnelDesc', {
                     version: commands?.wstunnelVersion || 'wstunnel'
                   })
-                : t('settings.exit.mode.nativeDesc')}
+                : t(`settings.exit.mode.${way}Desc`)}
             </span>
           </div>
 
           <Segmented
             disabled={isBusy || isAdvancedSaving || !config}
-            value={mode}
-            onChange={(value) => selectMode(value as ExitMode)}
-            options={exitModes.map((value) => ({
+            value={way}
+            onChange={(value) => {
+              const picked = value as ExitWay;
+              setWay(picked);
+              // nexit and the scripted client are both Mode A, so picking
+              // between them changes what the panel shows and leaves the
+              // slot alone.
+              if (wayMode[picked] !== mode) selectMode(wayMode[picked]);
+            }}
+            options={exitWays.map((value) => ({
               label: t(`settings.exit.mode.${value}`),
               value
             }))}
@@ -317,12 +336,9 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       <Divider className="opacity-50" />
 
       <ExitCommands
-        slot={slot}
-        mode={mode}
-        token={status.token}
+        way={way}
         commands={commands}
         hasConnected={!!status.lastConnectedAt}
-        scriptServed={isScriptServed(status)}
       />
 
       <Divider className="opacity-50" />

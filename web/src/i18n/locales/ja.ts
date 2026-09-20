@@ -1107,7 +1107,7 @@ const ja = {
             routing: 'ポリシールーティングの規則とフェンス経路が設定済み',
             tun: 'tun デバイスが存在し、読み取り側が接続済み',
             hev: 'tun2socks 変換器が稼働中',
-            wstunnel: 'wstunnel サーバーが稼働中（ネイティブモードでは常に真）',
+          wstunnel: 'wstunnel サーバーが稼働中（ネイティブモードでは常に真）',
             dns: 'DNS フォワーダーが USB ネットワークアドレスに束縛済み',
             nat: 'ファイアウォールのチェーンが存在し、接続済み'
           },
@@ -1130,8 +1130,11 @@ const ja = {
           title: 'モード',
           native: 'ネイティブ',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             '推奨。この NanoKVM から取得した小さなスクリプトを、OS に標準で含まれるもの（PowerShell、Python または Perl）だけを使い、一般ユーザーとして出口機器で実行します。インストールは不要で、管理者権限も必要ありません。',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             '代替。出口機器が固定バージョン {{version}} のバイナリをダウンロードし、実行前に SHA-256 を検証します。',
           whileEnabled:
@@ -1160,12 +1163,6 @@ const ja = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'スクリプトを表示',
-          scriptTitle: 'スクリプト {{name}}',
-          scriptFailed: 'スクリプトを取得できませんでした',
-          scriptGated:
-            'スクリプトはトンネルが有効でトークンが最新のときだけ提供されます。拒否された要求ごとにこのアドレスがレート制限されます。',
-          viewScriptDisabled: 'スクリプトを取得するにはトンネルを有効にしてください。',
           rewritten: 'このブラウザーがアクセスしたアドレス {{host}} 宛てに書き換えています。',
           warnSchemeMismatch:
             'NanoKVM はこのページが {{server}} で要求されたと認識していますが、ブラウザーは {{local}} でアクセスしています。コマンドは {{server}} 宛てです。プロキシに X-Forwarded-Proto を送らせると、使用中のアドレスに合わせられます。',

@@ -1440,6 +1440,9 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 		}
 		c.Mux.ServeNative(w, r)
 		return true
+	case nexitAssets[strings.TrimPrefix(rest, "/")] != "":
+		serveNexit(w, r, nexitAssets[strings.TrimPrefix(rest, "/")])
+		return true
 	case clientNames[strings.TrimPrefix(rest, "/")]:
 		var cert Certificate
 		origin := OriginOf(r)

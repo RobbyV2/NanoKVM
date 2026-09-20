@@ -1123,10 +1123,13 @@ const en = {
         },
         mode: {
           title: 'Mode',
-          native: 'Native',
+          native: 'Script',
+          nexit: 'nexit',
           wstunnel: 'wstunnel',
           nativeDesc:
             'Recommended. A small script fetched from this NanoKVM runs on the exit device with only what the OS ships (PowerShell, Python or Perl), as a normal user, with nothing to install and no administrator rights.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternative. The exit device downloads the pinned {{version}} binary and verifies its SHA-256 before running it.',
           whileEnabled:
@@ -1155,12 +1158,6 @@ const en = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'View script',
-          scriptTitle: 'Script {{name}}',
-          scriptFailed: 'Failed to fetch the script',
-          scriptGated:
-            'The script is served only while the tunnel is enabled and the token is current; every refused request rate-limits this address.',
-          viewScriptDisabled: 'Enable the tunnel to fetch the script.',
           rewritten: 'Addressed to {{host}}, the address this browser reached.',
           warnSchemeMismatch:
             'The NanoKVM saw this page requested over {{server}}, but the browser reached it at {{local}}. The commands are addressed to {{server}}; have the proxy send X-Forwarded-Proto so they follow the address you use.',

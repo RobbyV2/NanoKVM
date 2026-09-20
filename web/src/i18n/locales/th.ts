@@ -1085,7 +1085,7 @@ const th = {
             routing: 'กฎ policy routing และเส้นทางกั้นถูกตั้งค่าแล้ว',
             tun: 'อุปกรณ์ tun มีอยู่และมีตัวอ่านเชื่อมต่อแล้ว',
             hev: 'ตัวแปลง tun2socks กำลังทำงาน',
-            wstunnel: 'เซิร์ฟเวอร์ wstunnel กำลังทำงาน (เป็นจริงเสมอในโหมดเนทีฟ)',
+          wstunnel: 'เซิร์ฟเวอร์ wstunnel กำลังทำงาน (เป็นจริงเสมอในโหมดเนทีฟ)',
             dns: 'ตัวส่งต่อ DNS ผูกกับที่อยู่เครือข่าย USB แล้ว',
             nat: 'เชนไฟร์วอลล์มีอยู่และเชื่อมต่อแล้ว'
           },
@@ -1109,8 +1109,11 @@ const th = {
           title: 'โหมด',
           native: 'เนทีฟ',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'แนะนำ สคริปต์ขนาดเล็กที่ดึงจาก NanoKVM นี้จะทำงานบนอุปกรณ์ทางออกโดยใช้เพียงสิ่งที่ระบบปฏิบัติการมีอยู่แล้ว (PowerShell, Python หรือ Perl) ในฐานะผู้ใช้ทั่วไป ไม่ต้องติดตั้งอะไรและไม่ต้องใช้สิทธิ์ผู้ดูแลระบบ',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'ทางเลือก อุปกรณ์ทางออกจะดาวน์โหลดไบนารี {{version}} ที่ตรึงไว้ และตรวจสอบ SHA-256 ก่อนรัน',
           whileEnabled:
@@ -1138,12 +1141,6 @@ const th = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'ดูสคริปต์',
-          scriptTitle: 'สคริปต์ {{name}}',
-          scriptFailed: 'ดึงสคริปต์ไม่สำเร็จ',
-          scriptGated:
-            'สคริปต์จะให้บริการเฉพาะเมื่อเปิดใช้ทันเนลและโทเค็นเป็นปัจจุบัน ทุกคำขอที่ถูกปฏิเสธจะจำกัดอัตราของที่อยู่นี้',
-          viewScriptDisabled: 'เปิดใช้ทันเนลเพื่อดึงสคริปต์',
           rewritten: 'ปรับที่อยู่เป็น {{host}} ซึ่งเป็นที่อยู่ที่เบราว์เซอร์นี้เข้าถึง',
           warnSchemeMismatch:
             'NanoKVM เห็นว่าหน้านี้ถูกขอผ่าน {{server}} แต่เบราว์เซอร์เข้าถึงที่ {{local}} คำสั่งถูกส่งไปยัง {{server}} ให้พร็อกซีส่ง X-Forwarded-Proto เพื่อให้คำสั่งใช้ที่อยู่ที่คุณใช้งาน',

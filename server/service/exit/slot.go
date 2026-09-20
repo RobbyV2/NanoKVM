@@ -38,8 +38,11 @@ var (
 const (
 	HevBinary      = "hev-socks5-tunnel"
 	WstunnelBinary = "wstunnel"
-	S94Script      = "S94exit"
-	S30Script      = "S30rndis"
+	// NexitBinary is served to the operator's Windows machine, never run
+	// here, and ships gzipped per architecture beside the device seeds.
+	NexitBinary = "nexit"
+	S94Script   = "S94exit"
+	S30Script   = "S30rndis"
 	// GadgetRouteMarker, relative to ConfigDir, tells S30rndis to hand out the
 	// gateway and DNS options (D4). Content is the slot id that owns the NIC.
 	GadgetRouteMarker = "gadget.route"

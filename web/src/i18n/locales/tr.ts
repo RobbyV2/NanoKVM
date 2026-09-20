@@ -1108,7 +1108,7 @@ const tr = {
             routing: 'İlke tabanlı yönlendirme kuralları ve kapama rotası yerinde',
             tun: 'tun aygıtı var ve bir okuyucu bağlı',
             hev: 'tun2socks çevirici çalışıyor',
-            wstunnel: 'wstunnel sunucusu çalışıyor (yerel modda her zaman doğru)',
+          wstunnel: 'wstunnel sunucusu çalışıyor (yerel modda her zaman doğru)',
             dns: 'DNS iletici USB ağ adresine bağlı',
             nat: 'Güvenlik duvarı zincirleri mevcut ve bağlanmış'
           },
@@ -1131,8 +1131,11 @@ const tr = {
           title: 'Mod',
           native: 'Yerel',
           wstunnel: 'wstunnel',
+          nexit: 'nexit',
           nativeDesc:
             'Önerilen. Bu NanoKVM’den alınan küçük bir betik çıkış cihazında yalnızca işletim sisteminin sunduklarıyla (PowerShell, Python veya Perl), normal kullanıcı olarak çalışır; kurulacak bir şey ve yönetici hakkı gerekmez.',
+          nexitDesc:
+            'Windows. The same client as a single binary, for a machine with no usable PowerShell. It runs from the Command Prompt with nothing else involved, and uses the same slot as the script.',
           wstunnelDesc:
             'Alternatif. Çıkış cihazı sabitlenmiş {{version}} ikili dosyasını indirir ve çalıştırmadan önce SHA-256 değerini doğrular.',
           whileEnabled:
@@ -1161,12 +1164,6 @@ const tr = {
           windows: 'Windows',
           macos: 'macOS',
           linux: 'Linux',
-          viewScript: 'Betiği görüntüle',
-          scriptTitle: '{{name}} betiği',
-          scriptFailed: 'Betik alınamadı',
-          scriptGated:
-            'Betik yalnızca tünel etkin ve belirteç güncelken sunulur; reddedilen her istek bu adresi hız sınırına sokar.',
-          viewScriptDisabled: 'Betiği almak için tüneli etkinleştirin.',
           rewritten: 'Bu tarayıcının ulaştığı adres olan {{host}} için düzenlendi.',
           warnSchemeMismatch:
             "NanoKVM bu sayfanın {{server}} üzerinden istendiğini gördü, ancak tarayıcı ona {{local}} adresinden ulaştı. Komutlar {{server}} adresine yönelik; kullandığınız adresi izlemeleri için proxy'nin X-Forwarded-Proto göndermesini sağlayın.",

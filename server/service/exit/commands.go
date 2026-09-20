@@ -267,18 +267,6 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 
 	verifyTLS := VerifyTLS(origin, cert)
 
-	insecure := ""
-	if origin.TLS() && !verifyTLS {
-		insecure = "k"
-	}
-	shFetch := fmt.Sprintf("curl -fsSL%s -H %s %s | sh", insecure, shQuote(auth), shQuote(base+"/client.sh"))
-
-	psFetch := fmt.Sprintf("irm -Headers @{Authorization=%s} %s | iex", psQuote("Bearer "+cfg.Token), psQuote(base+"/client.ps1"))
-	if origin.TLS() && !verifyTLS {
-		psFetch = psTrustPrefix + psFetch
-	}
-	cmdFetch := cmdNative(base, cfg.Token, origin.TLS() && !verifyTLS)
-
 	transportNote := "The device's certificate is self-signed, so the client trusts the transport the way wstunnel does and the token is what authenticates the session."
 	if verifyTLS {
 		transportNote = "The installed certificate is CA-signed, so the client verifies it the ordinary way."
@@ -286,13 +274,34 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 	if !origin.TLS() {
 		transportNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
 	}
-	nativeNote := transportNote
 
+	insecureFetch := origin.TLS() && !verifyTLS
+	insecure := ""
+	if insecureFetch {
+		insecure = "k"
+	}
+
+	// Three ways onto a Windows machine, and the operator picks. This is the
+	// first: the scripted client, which downloads nothing but the script.
+	// macOS and Linux are served by wstunnel rather than by a second thing to
+	// maintain here, so Mode A's own list is Windows only.
+	psFetch := fmt.Sprintf("irm -Headers @{Authorization=%s} %s | iex", psQuote("Bearer "+cfg.Token), psQuote(base+"/client.ps1"))
+	if insecureFetch {
+		psFetch = psTrustPrefix + psFetch
+	}
+	nativeNote := transportNote + " The client is a PowerShell script: nothing is downloaded but the script itself."
 	native := []proto.ExitCommand{
 		{Platform: "windows", Shell: "powershell", Command: psFetch, Notes: nativeNote},
-		{Platform: "windows", Shell: "cmd", Command: cmdFetch, Notes: nativeNote},
-		{Platform: "macos", Shell: "bash", Command: shFetch, Notes: nativeNote},
-		{Platform: "linux", Shell: "bash", Command: shFetch, Notes: nativeNote},
+		{Platform: "windows", Shell: "cmd", Command: cmdNative(base, cfg.Token, insecure), Notes: nativeNote +
+			" cmd has no way to speak this protocol itself, so it saves the script and hands it to PowerShell; for a machine without PowerShell, use nexit."},
+	}
+
+	// The second: nexit, the client this project ships as a binary, for a host
+	// with no usable scripting host at all. Same protocol, same slot mode.
+	nexitNote := transportNote + " nexit is a single binary and needs no PowerShell, python or perl on the machine."
+	nexit := []proto.ExitCommand{
+		{Platform: "windows", Shell: "cmd", Command: nexitCmd(base, cfg.Token, insecureFetch), Notes: nexitNote},
+		{Platform: "windows", Shell: "powershell", Command: nexitPowerShell(base, cfg.Token, insecureFetch), Notes: nexitNote},
 	}
 
 	verify := ""
@@ -333,6 +342,7 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 		WstunnelVersion: WstunnelVersion,
 		WstunnelRepo:    wstunnelRepoURL,
 		Native:          native,
+		Nexit:           nexit,
 		Wstunnel:        wstunnel,
 		WstunnelLatest:  latest,
 	}
@@ -371,6 +381,42 @@ func wstunnelWindows(client string) string {
 		`if ((Get-FileHash $f -Algorithm SHA256).Hash.ToLower() -ne $h) { throw 'wstunnel checksum mismatch' }`,
 		`tar -xzf $f -C $d`,
 		`& (Join-Path $d 'wstunnel.exe') ` + client,
+	}, "; ")
+}
+
+// nexitCmd renders the Mode A command for cmd.exe. Nothing in it is a
+// scripting host: curl.exe fetches the client and the client is run directly,
+// which is the whole point of shipping a binary. The architecture is chosen
+// from PROCESSOR_ARCHITECTURE, already in the environment, for the reason
+// wstunnelCmd gives.
+func nexitCmd(base, token string, insecure bool) string {
+	exe := `%TEMP%\nexit.exe`
+	k := ""
+	skip := ""
+	if insecure {
+		k = "k"
+		skip = " --insecure"
+	}
+	arch := func(a string) string {
+		return fmt.Sprintf(
+			`curl.exe -fsSL%s -H "Authorization: Bearer %s" -o "%s" "%s/nexit-windows-%s.exe" && "%s" "%s" --passcode "%s"%s`,
+			k, token, exe, base, a, exe, base, token, skip)
+	}
+	return fmt.Sprintf(`if /i "%%PROCESSOR_ARCHITECTURE%%"=="ARM64" (%s) else (%s)`, arch("arm64"), arch("amd64"))
+}
+
+// nexitPowerShell is the same fetch and run for a PowerShell window, for
+// operators who have one and would rather not drop to cmd.
+func nexitPowerShell(base, token string, insecure bool) string {
+	skip := ""
+	if insecure {
+		skip = " --insecure"
+	}
+	return strings.Join([]string{
+		`$a=if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {'arm64'} else {'amd64'}`,
+		`$e=Join-Path $env:TEMP 'nexit.exe'`,
+		fmt.Sprintf(`irm -Headers @{Authorization=%s} "%s/nexit-windows-$a.exe" -OutFile $e`, psQuote("Bearer "+token), base),
+		fmt.Sprintf(`& $e %s --passcode %s%s`, psQuote(base), psQuote(token), skip),
 	}, "; ")
 }
 
@@ -464,19 +510,16 @@ func VerifyTLS(origin Origin, cert Certificate) bool {
 	return origin.TLS() && cert.Fingerprint != "" && !cert.SelfSigned
 }
 
-// cmdNative renders the Mode A one-liner for cmd.exe. curl.exe and the rest of
-// the line are built into Windows 10 1803 and later, so nothing is installed,
-// but the client itself is PowerShell: cmd fetches it to a file and hands it
-// over with -File, which keeps the token out of a nested quoting level.
-func cmdNative(base, token string, insecure bool) string {
-	k := ""
-	if insecure {
-		k = "k"
-	}
+// cmdNative renders the scripted Mode A client for cmd.exe. curl.exe is built
+// into Windows 10 1803 and later, but the client itself is PowerShell and cmd
+// has no sockets of its own, so this fetches the script and hands it over with
+// -File. That is a convenience for an operator who lives in cmd, not a way
+// onto a machine without PowerShell: nexit is that.
+func cmdNative(base, token, insecure string) string {
 	script := `%TEMP%\nexit-client.ps1`
 	return fmt.Sprintf(
 		`curl.exe -fsSL%s -H "Authorization: Bearer %s" -o "%s" "%s" && powershell -NoProfile -ExecutionPolicy Bypass -File "%s"`,
-		k, token, script, base+"/client.ps1", script)
+		insecure, token, script, base+"/client.ps1", script)
 }
 
 // cmdQuote wraps a value for a cmd.exe double-quoted argument. cmd has no
