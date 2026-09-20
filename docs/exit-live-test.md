@@ -1073,12 +1073,18 @@ bound, one udhcpd, every `S94exit` field 1, `hev_spawns` 1 and an empty hev log,
 reconnected by itself on its documented backoff. Cumulative `dns_redirected` resets to 0, because
 `stop` clears it.
 
-The consumer half does not follow automatically. The gadget rebinds during boot (`dmesg` shows
-`configfs-gadget gadget: uvc: uvc_function_bind()` around 18 s) and `/sys/kernel/config/usb_gadget/g0/UDC`
-holds the controller, yet `cat /sys/class/udc/*/state` can read `not attached` with `usb0` `NO-CARRIER`
-and an empty lease file, which is the host never re-enumerating rather than anything the slot did.
-Check that state before reading any consumer result after a reboot; it is fixed from the consumer,
-by rescanning or by cycling the composite device there, not from the kvm.
+Measured timeline on this unit, against a consumer that was awake: ping back 12 s after it went down,
+`S94exit status 0` all 1 with `rc=0` and the UDC `configured` at 29 s of uptime, and the exit client's
+session re-established 22 s after the drop. At that point the udhcpd conf still carried `opt router`
+and `opt dns`, `gadget.route` still held the slot, there was exactly one udhcpd, `:10800` and `$GW:53`
+were both listening, the DNAT named the current gateway and `ip_forward` was 1.
+
+The consumer half only follows if the consumer is awake. Against a host in modern standby the gadget
+rebinds during boot and `/sys/kernel/config/usb_gadget/g0/UDC` holds the controller, yet
+`cat /sys/class/udc/*/state` reads `not attached` with `usb0` `NO-CARRIER` and an empty lease file:
+the host is not enumerating, and neither a slot disable/enable nor anything else on the kvm brings it
+back. Check that state before reading any consumer result after a reboot, and note that a consumer
+whose only uplink is this slot cannot be woken remotely once it is there.
 
 ### 6.3 Boot with the exit already gone
 
