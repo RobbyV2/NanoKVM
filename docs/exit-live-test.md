@@ -1281,12 +1281,23 @@ on the consumer ends with a reset at that moment). Remove the DROP rule; A recon
 (A's own 75 s no-frame rule may fire first — either is a pass). Pass: dead peer detected ≤ 100 s,
 supersede ≤ 1 s.
 
+Read the tunnel state, not the socket: A cannot receive the FIN through its own DROP rule, so
+`ss -tn state established` still lists the connection long after the session is over. Measured here,
+`lastConnectedAt` moved 66 s after the rule went in, with A's own no-frame rule firing about 50 s
+later and A back on the slot 18 s after the rule came out. Query the status from the unit itself
+(`curl -sk https://127.0.0.1/...` after logging in there), since the DROP also blocks the tester's
+own API access when the tester is A.
+
 ### 9.5 pinPeer
 
 Advanced → pinPeer on (`POST /0/config {pinPeer:true}`), A connected. B pastes the command.
 Expected: B gets `rejected (404)` (Mode A mux `PinPeer refuses a different RemoteAddr`; Mode B
 `refusing wstunnel from B, pinned to A` in the server log), A stays connected, consumer unaffected.
 pinPeer off → B's next retry supersedes. Turn pinPeer off.
+
+Confirmed: with the pin on, B holding the correct token gets
+`connect failed: rejected (404): wrong token or slot, or this source is rate limited` on every retry
+through its backoff, while A's `uptimeSeconds` keeps climbing and the consumer never notices.
 
 ---
 
