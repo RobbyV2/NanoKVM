@@ -860,8 +860,13 @@ lin$ time curl -4 -sS -m 10 -o /dev/null https://example.com/; dig example.com +
 
 Expected: **DNS `status: SERVFAIL`** (Windows: "Server failed"), returned immediately (< 100 ms), not a
 timeout; a curl to a literal IP (`curl -m 10 https://1.1.1.1/`) fails within ~1 s with connection
-refused/reset (`exitcode 7` or `56`), never the full 10 s (front door answers `0x03` in under a
-millisecond, hev RSTs). `Test-NetConnection` `False` quickly.
+refused/reset, never the full 10 s (front door answers `0x03` in under a millisecond, hev RSTs).
+The exit code follows where the RST lands: `7` or `56` when the connect itself is refused, and `35`
+`Recv failure: Connection was reset` when it arrives during the TLS handshake, which is what a
+Windows consumer reports (observed: `exit=35` at 216 ms). That is the same string §2.3 records for a
+Defender kill, so read it together with the tunnel state: here the panel says disconnected and every
+destination fails, while under Defender the tunnel is up and the client's own process is gone.
+`Test-NetConnection` `False` quickly.
 
 ```sh
 kvm# tcpdump -ni eth0 -c 20 -w /tmp/leak.pcap 'not port 22 and (src net 10.0.0.0/8 or dst net 10.0.0.0/8) and not host '"$GW"'' & sleep 1
