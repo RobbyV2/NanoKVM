@@ -1326,6 +1326,14 @@ kvm# grep -ciE 'error|fail' /tmp/exit0-hev.log
 Expected: `exit0` errors/dropped `0`; `FragFails 0`, `ReasmFails 0`; no new hev errors. RSS check of
 hev during the transfer (3.9's command) stays flat.
 
+`speed.cloudflare.com/__down` answers `403` to both the consumer and the exit, so it measures nothing
+here; use a published image with a checksum instead. Measured on this unit, Windows consumer, Mode A,
+`alpine-standard-3.21.0-x86_64.iso`: `http=200 size=251658240 speed=688097 time=365.7`, SHA-256 equal
+to the published one, against `speed=2643939` for the same file fetched by the exit device itself, so
+roughly a quarter of the exit's own throughput. Through the whole transfer hev RSS sat at 2360 kB and
+fell to 2320 kB, `exit0` counted 0 errors and 0 dropped, every `Frag` and `Reasm` counter in
+`/proc/net/snmp` stayed 0, and `/tmp/exit0-hev.log` stayed empty.
+
 ### 10.4 Upload
 
 ```powershell
@@ -1340,7 +1348,9 @@ lin$ head -c 200M /dev/urandom > /tmp/big.bin; curl -4 -sS -o /dev/null -w '%{ht
 Expected: `200 209715200 bytes` (`200 200000000` on macOS/Linux depending on `head -c 200M`), no
 stall. The upload exercises the consumer → exit0 → SOCKS → WS direction and the kvm-side WINDOW
 credit; if it stalls at exactly 128 KiB or 4 MiB, that is a flow-control bug, not MTU — file with the
-client's output. Pass: both directions complete with the exact byte count.
+client's output. `__up` does answer `200`, unlike `__down` above. Measured on this unit, Windows
+consumer, Mode A, 20 MiB: `http=200 sent=20971520 speed=582186 time=36.0`, the exact byte count and
+no stall at 128 KiB or 4 MiB. Pass: both directions complete with the exact byte count.
 
 ### 10.5 Repeat 10.3 in Mode B
 
