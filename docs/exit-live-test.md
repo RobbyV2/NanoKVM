@@ -986,6 +986,15 @@ Expected on the exit: `session ended … / reconnecting in 1s / 2s / 4s …` unt
 Consumer: internet resumes untouched. Pass: resumes within 60 s without consumer action; the client
 never exceeds 30 s between attempts.
 
+Both halves measured here. The operator disconnect gives exactly
+`session ended: websocket closed by kvm (1000 disconnected by operator)`, `reconnecting in 1s`, and a
+new session one second later, with the backoff reset as described. The restart gives
+`connect failed: [Errno 61] Connection refused` on the 1 s, 2 s and 4 s attempts and a session on the
+8 s one, 15 s end to end, after which the unit shows every field 1, one udhcpd and `$GW:53` bound on
+both udp and tcp by the new pid. A consumer whose only uplink is the tunnel was reachable again 56 s
+after the restart was issued, with nothing done to it. Note that the restart invalidates admin
+sessions, so log in again before reading the status.
+
 ---
 
 ## 6. NanoKVM reboot
