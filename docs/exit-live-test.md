@@ -771,7 +771,12 @@ Expected: an NTP reply (a Unix timestamp near now). This is SOCKS UDP ASSOCIATE 
 mac$ curl -sS --parallel --parallel-immediate --parallel-max 50 -o /dev/null -w '%{http_code}\n' $(for i in $(seq 50); do echo "https://example.com/?i=$i"; done) | sort | uniq -c
 ```
 
-Expected: `50 200`. Then hold 256+ idle connections open:
+Expected: `50 200`. On a Windows consumer count curl's own exit code instead: `--parallel` loses some
+of its `-w` lines when stdout is redirected, so the tally reads 40 to 45 of 50 across runs while every
+transfer in fact succeeded. `curl.exe -s -S --parallel ... 1>codes.txt 2>errs.txt` then `$LASTEXITCODE`
+of `0` with an empty `errs.txt` is the pass, and the `200`s that do land confirm the shape.
+
+Then hold 256+ idle connections open:
 
 ```sh
 mac$ python3 -c "
@@ -784,9 +789,21 @@ for i in range(300):
 print('open',len(s)); time.sleep(60)"
 ```
 
-Expected: the first 256 connect; from the 257th the front door answers SOCKS `0x01` and hev resets,
-so `connect` fails fast (refused), matching `max-session-count: 256`/`maxStreams=256`. Record how
-many opened. While they are open, take the measurements in 3.9.
+This does not reach the cap, and the reason is worth knowing before reading the numbers. hev completes
+the consumer's TCP handshake in its own stack and opens an upstream session only when data first
+flows, then reaps that session once the connection goes quiet while leaving the consumer's socket up.
+So 300 idle connections cost 6 front-door sessions, and every `connect` succeeds however many you
+open. Driving a TLS handshake on all 300 as they are opened does not reach it either: all 300
+complete with no failure, the front door peaks near 126 concurrent sessions because the early ones
+are already being reaped, and it falls back to 8 while the 300 sockets sit open.
+
+Reaching `max-session-count: 256`/`maxStreams=256` therefore needs 256+ connections each carrying
+traffic continuously, not merely open. Record what you see: `ss -tn state established '( sport = :10800 )'`
+on the kvm is the live session count, and the consumer's own socket count is not it.
+
+Expected as written here: 300 connects succeed, 300 TLS handshakes succeed, front door peaks around
+126 and settles to single digits when the connections idle, and nothing in `/tmp/exit0-hev.log`.
+While they are open, take the measurements in 3.9.
 
 ### 3.8 Idle keepalive
 
@@ -809,6 +826,11 @@ frame) ≈ 36 MB worst case over 0.11's baseline and should come back down after
 wstunnel (Mode B) similar to the tunnel page's numbers. Record all six numbers. Pass: no process
 killed, `free` shows no swap thrash (`Swap: used` steady), the D24 ≈ 24 MB target is within 2× or the
 discrepancy is filed.
+
+Measured on this unit with 300 consumer connections and 300 completed TLS handshakes: hev RSS 2248 kB
+at idle, 6284 kB at the peak and back to 3500 kB once they went quiet, VmSize 12916 kB against the
+65536 kB `ulimit -v`; NanoKVM-Server RSS 52256 kB; `free -m` steady at 157 total with no swap
+movement; `/tmp/exit0-hev.log` empty throughout.
 
 ---
 
