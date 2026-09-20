@@ -56,7 +56,9 @@ result says nothing about the tunnel. §12 puts it back.
 
 BusyBox `netstat` here rejects `-p` and exits non-zero, which with stderr discarded reads as an empty
 result, so every listener question in this doc is answered with `ss -lnupt` (or `ss -lntp`, `ss -ntu`)
-in place of `netstat -lntp`. `conntrack` is absent as well, so each step that offers a
+in place of `netstat -lntp`. This BusyBox has no `pgrep` or `pkill` either: use `pidof <name>` and
+`ps w | grep '[n]ame'`, and remember that a `grep` whose own command line contains the string counts
+itself. `conntrack` is absent as well, so each step that offers a
 `/proc/net/nf_conntrack` fallback takes it.
 
 The Windows consumer here resolves `example.com` to `127.0.0.1`, so every `win>` step that needs
@@ -600,6 +602,14 @@ Expected: the forward tunnel and the non-loopback reverse tunnel are refused (ws
 upgrade error / the server log shows the restriction denying it; `netstat -lntp | grep 2222` on the
 NanoKVM stays empty); both curls print `404`. Pass: nothing but the reverse SOCKS on 10820 is ever
 accepted.
+
+Confirmed on this unit. `/tmp/exit0-wstunnel.log` carries one WARN per attempt,
+`Rejecting connection with not allowed destination: RemoteAddr { protocol: ReverseTcp, host: Ipv4(0.0.0.0), port: 2222 }`,
+the kvm's listener set stays `*:22 *:443 *:80 $GW:53 127.0.0.1:10800 127.0.0.1:10810` with no 2222,
+and a curl through the forward tunnel's local `127.0.0.1:2222` comes back `exit=56` in 188 ms against
+the same WARN. Both route checks print `404`. A Mode A client left running across the switch reports
+`rejected (404): wrong token or slot, or this source is rate limited` and retries, which is the same
+refusal seen from the client side.
 
 Switch back to **native** for the rest of the checklist (or repeat §3–§11 in both modes if time
 allows; at minimum do §3, §4, §5, §10 in Mode B once). After switching back:
