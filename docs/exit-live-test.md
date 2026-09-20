@@ -1044,6 +1044,19 @@ Expected: `200`, no consumer-side action. Record: power-off → NIC up on the co
 successful consumer curl (s). Pass: downstream converged without the UI being opened, one udhcpd,
 lease with gateway, internet back once the exit reconnected.
 
+The kvm half converges on its own and needs nothing: after an unplanned power-cycle reboot this unit
+came back with rules `1000`/`1001`, table 100, `exit0` up at carrier 1, `127.0.0.1:10800` and `$GW:53`
+bound, one udhcpd, every `S94exit` field 1, `hev_spawns` 1 and an empty hev log, and the exit client
+reconnected by itself on its documented backoff. Cumulative `dns_redirected` resets to 0, because
+`stop` clears it.
+
+The consumer half does not follow automatically. The gadget rebinds during boot (`dmesg` shows
+`configfs-gadget gadget: uvc: uvc_function_bind()` around 18 s) and `/sys/kernel/config/usb_gadget/g0/UDC`
+holds the controller, yet `cat /sys/class/udc/*/state` can read `not attached` with `usb0` `NO-CARRIER`
+and an empty lease file, which is the host never re-enumerating rather than anything the slot did.
+Check that state before reading any consumer result after a reboot; it is fixed from the consumer,
+by rescanning or by cycling the composite device there, not from the kvm.
+
 ### 6.3 Boot with the exit already gone
 
 Stop the exit client, reboot the NanoKVM again. Expected: identical downstream state; consumer
