@@ -828,6 +828,10 @@ Leave the tunnel idle for 5 minutes (no consumer traffic). Expected: UI stays **
 whole time (`uptimeSeconds` climbs past 300, no `connectedAt` reset); the client prints nothing
 about reconnecting; then §3.3's curl works first try. Pass: no reconnect in 5 min idle.
 
+Confirmed: `uptimeSeconds` ran from 70 to 356 with `connectedAt` unchanged and the client printing
+nothing at all after its `connected:` line. A consumer that only heartbeats a management agent counts
+as idle for this purpose and still exercises the 20 s ping.
+
 ### 3.9 RSS at idle and under 256 sessions
 
 Run at idle (after 3.8) and again during 3.7's hold:
@@ -1409,6 +1413,14 @@ no stall at 128 KiB or 4 MiB. Pass: both directions complete with the exact byte
 
 Switch to wstunnel (§2), reconnect, rerun 10.3 and 10.4. Expected: same outcome; throughput is not
 windowed by nexit so it may be higher. Switch back to native.
+
+It is higher. The same image over the same path and the same exit device: `speed=1749175` in 143.9 s
+against Mode A's `speed=688097` in 365.7 s, checksum matching in both, so roughly two and a half
+times. Memory stayed flat throughout, hev at 1644 kB and wstunnel at 9412 kB.
+
+The switch itself drops the tunnel for a few seconds while the manager restarts the listeners. On a
+consumer whose only uplink is the slot that is an outage, so anything managing it remotely goes away
+and comes back; here it returned unaided about 80 s after the switch.
 
 ---
 
