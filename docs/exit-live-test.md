@@ -14,6 +14,13 @@ Three machines. Keep a terminal open on each.
 | Consumer | the host the NanoKVM's USB-C is plugged into | `win>` (PowerShell), `mac$`, `lin$` |
 | Exit | the laptop that browses to the UI and runs the pasted command | `exit$` / `exit>` |
 
+Exit and Consumer have to be different machines. Running the pasted command on the consumer makes it
+its own exit: its packets leave over the gadget NIC, come back through the tunnel and are handed to
+its own routing table, so it loses the internet it was supposed to be providing. Anything that
+manages that machine remotely goes with it, including whatever would stop the client again. Recover
+from the NanoKVM: regenerate the token (§8), which refuses the stranded client for good, and bring up
+a real exit on the new one.
+
 Slot 0 only. Derived names, verbatim from `server/service/exit/slot.go` and `S94exit`:
 
 | Thing | Value |
@@ -1184,6 +1191,8 @@ exit-B$ <paste the same command (same token)>
 Expected within ~1 s: B prints `connected:`; UI: peer becomes B, **`previousPeer` = A with
 `peerChangedAt`**, the panel shows the "changed from A" notice; server log:
 `exit0: … superseding session from <A> with <B>` at warn level (Mode B: `wstunnel peer <A> superseded by <B>`).
+A names its replacement as it goes: `session ended: websocket closed by kvm (1000 superseded by
+<B addr:port>)`, then `reconnecting in 1s`.
 Consumer, no action: `curl -4 -sS -o /dev/null -w '%{http_code}\n' https://example.com/` → `200`
 through B (`curl https://api.ipify.org` shows **B's** public IP).
 
