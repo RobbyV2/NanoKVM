@@ -386,8 +386,12 @@ exit$ xcode-select -p; python3 -c 'import ssl, socket, selectors; print("py ok")
 exit$ <paste the macOS command>
 ```
 
-Expected: `connected: streamWindow=131072 connWindow=4194304 maxStreams=256`; `pgrep -fl 'python3 -c'`
-shows the client (or `perl -e` if `xcode-select -p` failed: then also record that). UI peer `os: darwin`,
+Expected: `connected: streamWindow=131072 connWindow=4194304 maxStreams=256`; `pgrep -af python3`
+shows the client (or `perl -e` if `xcode-select -p` failed: then also record that). Match on `python3`
+rather than `python3 -c`: a Homebrew interpreter runs as
+`…/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c`, which
+`pgrep -fl 'python3 -c'` misses. The perl client says `allowPrivate=false` where the python one says
+`allowPrivate=False`; both report the same slot. UI peer `os: darwin`,
 `hostname` = `scutil --get LocalHostName`. On https: `client.sh` will first log curl `(60)` on the
 verified fetch, then compare the served certificate's SHA-256 against the pin with `openssl s_client`
 and refetch with `-k`; watch that it does **not** refetch when the pin is wrong (edit
@@ -421,6 +425,28 @@ kvm# sysctl -w net.ipv4.ip_forward=0; sleep 35; sysctl -n net.ipv4.ip_forward; $
 
 Expected: `1` and `forward=1` (the 30 s converge ran `S94exit start 0`). UI `downstream.forward`
 never showed red for more than one poll. Pass: `1`.
+
+### 1.7 Egress, without the consumer
+
+The SOCKS front door takes the same path the consumer's packets take once hev has turned them into
+CONNECTs, so one curl on the NanoKVM shows whether the tunnel carries traffic before the consumer is
+in the picture. It speaks only atyp 1 and 4, because hev only ever hands it addresses it read out of
+an IP header; a name lands as atyp 3 and comes back REP 8, so `--socks5-hostname` cannot be used here
+and names stay the forwarder's job (§11).
+
+```sh
+kvm# curl -s -m 25 --socks5 127.0.0.1:10800 https://1.1.1.1/cdn-cgi/trace | grep -E '^(ip|loc)='   # egress address
+kvm# nslookup www.iana.org $GW | tail -6                                                           # the forwarder, same path
+```
+
+```
+ip=203.0.113.9
+loc=US
+```
+
+Expected: `ip=` is the **exit device's** public address, never the NanoKVM's own; `nslookup` answers
+from `$GW`. With `--socks5-hostname` instead: `Can't complete SOCKS5 connection … (8)`, which is the
+atyp rejection and not a tunnel fault. Pass: the exit's address, and a resolved name.
 
 ---
 
