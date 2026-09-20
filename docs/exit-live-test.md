@@ -1530,6 +1530,15 @@ UVC sentinel is present. Then, from the exit browser's KVM view with the consume
 All while §3.3's curl loop runs on the consumer (`while :; do curl -4 -sS -o /dev/null https://example.com/; sleep 1; done`).
 Pass: nothing degrades with traffic flowing.
 
+Measured on this unit, profile `/boot/usb.dev` + `/boot/usb.ncm`, whose `c.1` binds `hid.GS0`,
+`ncm.usb0`, `uac2.mic0`, `uac2.spk0` and `uvc.cam0` and no mass storage. Windows names them
+`USB Input Device` (HIDClass), `UsbNcm Host Device` (Net), two `Speaker 1` nodes (MEDIA) and
+`Camera 1` (Camera), so match on the class rather than the friendly name: a filter looking for
+"Keyboard" or "Mouse" finds nothing here. Over a 60-iteration curl loop the UDC stayed `configured`,
+`usb0` stayed up, every node stayed `OK`, the UVC stream counters stayed 0 and the hev log stayed
+empty; 58 of 60 requests returned 200, with two consecutive failures that left no trace in the
+client log or the hev log and were upstream rather than the tunnel.
+
 ### 12.2 The disable/enable rebind cycle
 
 Exit browser: Exit switch **off** → confirm.
@@ -1593,6 +1602,11 @@ win> Get-PnpDevice -PresentOnly | ? InstanceId -like 'USB\VID_1D6B*' | ft Status
 Expected: every interface `OK`, the two audio nodes included. An audio node at `Error` with problem
 code 10 means the host's first UVC class request beat the video node's event subscription and ep0 is
 wedged; nothing on the host recovers it, only another gadget rebind does.
+
+Three cycles on this unit read identically. Off: `routing=0 tun=0 hev=0 nat=0`, one udhcpd, no hev
+process, no `exit0`, zero `EXIT0` rule references. On: every field 1, `hev_spawns` back to 1, one
+udhcpd, UDC `configured`. Afterwards the consumer held its lease, every node reported `OK` with
+nothing in an error state, and its egress still matched the exit device's public address.
 
 ### 12.4 Bridge exclusion
 
