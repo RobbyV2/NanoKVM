@@ -542,6 +542,13 @@ lookup lands, with nothing in its own log; at the consumer the bound requests co
 the extraction directory the same command connects and carries traffic. The panel's Windows
 wstunnel tab carries this warning.
 
+Still current, re-confirmed on signature `1.459.270.0` with engine `1.1.26080.3`: the download and
+the checksum pass, `tar` extracts a 10344448-byte `wstunnel.exe`, `--version` prints `wstunnel-cli
+10.7.1`, and about 110 s later the file is simply gone, with one `Get-MpThreatDetection` row,
+`ThreatID 2147731849`, `SeverityID 5`, `ActionSuccess True`, naming the extracted path. With
+`Add-MpPreference -ExclusionPath` on that directory the same sequence survives 115 s with no
+detection at all, so the exclusion is the whole difference.
+
 The latest commands, each platform:
 
 ```sh
