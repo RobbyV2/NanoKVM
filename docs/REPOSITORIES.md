@@ -229,15 +229,24 @@ import graph, kernelint tier 1, plus the web tests and `pnpm build`.
 ### Kernel builds
 
 The kernel is built out of tree in `LicheeRV-Nano-Build`; nothing here builds it,
-and there is no kernel source, `.config` or defconfig in this repo. The local
-image `nanokvm-kbuild-agenta` is the app builder plus `flex bison bc libssl-dev
-libelf-dev kmod cpio rsync device-tree-compiler`, run as root so it could mount
-loop devices. Take the recipe from `LicheeRV-Nano-Build/README.md` and its
-`CLAUDE.md` — `source build/cvisetup.sh`, `defconfig sg2002_licheervnano_sd` (or
-`…_minimal`), `build_all` — with the SDK on a case-sensitive filesystem. No
-canonical containerized kernel-build entrypoint is checked into either repo, and
-`nanokvm-kbuild-agenta` is not reproducible from either tree; treat it as an
-artifact. A kernel-only OTA package is produced from *this* repo by
+and there is no kernel source, `.config` or defconfig in this repo. The builder is
+`LicheeRV-Nano-Build/docker/kbuild.Dockerfile` (ubuntu:22.04, the SDK CI's package
+list, host-tools, libfuse2). From the SDK root, on a case-sensitive filesystem:
+
+```sh
+docker build -t nanokvm-kbuild:22.04 -f docker/kbuild.Dockerfile docker
+ln -sfn /usr/local/host-tools host-tools
+docker run --rm -v "$PWD":/work -w /work nanokvm-kbuild:22.04 \
+  bash -c 'source build/cvisetup.sh && defconfig sg2002_licheervnano_sd && build_all'
+```
+
+That produces `install/soc_sg2002_licheervnano_sd/{fip.bin,boot.sd,images/*.img}`
+(about 35 minutes cold on 24 cores, most of it Buildroot). To make a flashable
+image, merge a staged app tree — `build/release/nanokvm_<v>/` from `make package`
+copied to `<dir>/kvmapp` — with `kvm/merge_nanokvm_app.sh -a <dir> -i <img> -f`,
+run in the same image with `--privileged --device /dev/fuse -u 0` because it
+mounts the rootfs through `host/fuse2fs`. The older `nanokvm-kbuild-agenta`
+image is superseded. A kernel-only OTA package is produced from *this* repo by
 `KERNEL_ITB=/path/to/boot.itb scripts/package.sh <kernel-version>`.
 
 ---
