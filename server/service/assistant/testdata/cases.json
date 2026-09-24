@@ -1,0 +1,39 @@
+[
+  {"name": "gemini-single", "provider": "gemini",
+   "settings": {"geminiBaseUrl": "https://g.example/v1beta", "geminiModel": "gm", "geminiApiKey": "k"},
+   "turns": [{"role": "user", "text": "Q", "images": ["aW1nMQ==", "aW1nMg=="]}]},
+  {"name": "gemini-thinking", "provider": "gemini",
+   "settings": {"geminiBaseUrl": "https://g.example/v1beta/", "geminiModel": "gm", "geminiApiKey": "k", "geminiThinking": true, "thinkingBudget": 1024},
+   "turns": [{"role": "user", "text": "Q", "images": ["aW1n"]}]},
+  {"name": "gemini-thinking-zero-budget", "provider": "gemini",
+   "settings": {"geminiBaseUrl": "https://g.example/v1beta", "geminiModel": "gm", "geminiApiKey": "k", "geminiThinking": true, "thinkingBudget": 0},
+   "turns": [{"role": "user", "text": "", "images": ["aW1n"]}]},
+  {"name": "gemini-two-turn", "provider": "gemini", "thinking": false,
+   "settings": {"geminiBaseUrl": "https://g.example/v1beta//", "geminiModel": "gm", "geminiApiKey": "k y/+=&!*'()~", "geminiThinking": true},
+   "turns": [
+     {"role": "user", "text": "anchor", "images": ["aW1n"]},
+     {"role": "assistant", "text": "OK"},
+     {"role": "user", "text": "P", "attachments": [
+       {"name": "notes.TXT", "b64": "aGVsbG8=", "text": "hello"},
+       {"name": "a.pdf", "b64": "cGRm"}, {"name": "p.png", "b64": "cG5n"},
+       {"name": "s.mp3", "b64": "bXAz"}, {"name": "noext", "b64": "eA==", "text": "x"}]}]},
+  {"name": "openrouter-single-default-base", "provider": "openrouter",
+   "settings": {"orModel": "om", "orApiKey": "sk"},
+   "turns": [{"role": "user", "text": "Q", "images": ["aW1nMQ==", "aW1nMg=="]}]},
+  {"name": "openrouter-reasoning", "provider": "openrouter",
+   "settings": {"orBaseUrl": "https://or.example/api/v1/", "orModel": "om", "orApiKey": "sk", "orReasoning": true, "orReasoningEffort": "high"},
+   "turns": [{"role": "user", "text": "Q", "images": ["aW1n"]}]},
+  {"name": "openrouter-two-turn-all-kinds", "provider": "openrouter", "thinking": false,
+   "settings": {"orModel": "om", "orApiKey": "sk", "orReasoning": true},
+   "turns": [
+     {"role": "user", "text": "anchor", "images": ["aW1n"]},
+     {"role": "assistant", "text": "OK"},
+     {"role": "user", "text": "P", "attachments": [
+       {"name": "a.md", "b64": "IyBo", "text": "# h"}, {"name": "b.csv", "b64": "MSwy", "text": "1,2"},
+       {"name": "c.pdf", "b64": "cGRm"}, {"name": "d.jpg", "b64": "anBn"},
+       {"name": "e.wav", "b64": "d2F2"}, {"name": "f.m4a", "b64": "bTRh"},
+       {"name": "g.mov", "b64": "bW92"}]}]},
+  {"name": "openrouter-empty-text", "provider": "openrouter",
+   "settings": {"orModel": "om"},
+   "turns": [{"role": "user", "text": ""}]}
+]

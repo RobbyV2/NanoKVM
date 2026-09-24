@@ -15,9 +15,6 @@ const (
 	ConfigFile           = "/etc/kvm/assistant.json"
 	defaultGeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 	defaultORBaseURL     = "https://openrouter.ai/api/v1"
-
-	// thinkingStep is temporary here; Task 3 moves it next to the hotkey logic.
-	thinkingStep = 512
 )
 
 var (

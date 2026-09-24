@@ -1,0 +1,322 @@
+{
+  "gemini-single": {
+    "url": "https://g.example/v1beta/models/gm:generateContent?key=k",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Q"
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "aW1nMQ=="
+              }
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "aW1nMg=="
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "gemini-thinking": {
+    "url": "https://g.example/v1beta/models/gm:generateContent?key=k",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Q"
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "aW1n"
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "thinkingConfig": {
+          "thinkingBudget": 1024
+        }
+      }
+    }
+  },
+  "gemini-thinking-zero-budget": {
+    "url": "https://g.example/v1beta/models/gm:generateContent?key=k",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "aW1n"
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "thinkingConfig": {
+          "thinkingBudget": 512
+        }
+      }
+    }
+  },
+  "gemini-two-turn": {
+    "url": "https://g.example/v1beta/models/gm:generateContent?key=k%20y%2F%2B%3D%26!*'()~",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "anchor"
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "aW1n"
+              }
+            }
+          ]
+        },
+        {
+          "role": "model",
+          "parts": [
+            {
+              "text": "OK"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "P"
+            },
+            {
+              "inline_data": {
+                "mime_type": "text/plain",
+                "data": "aGVsbG8="
+              }
+            },
+            {
+              "inline_data": {
+                "mime_type": "application/pdf",
+                "data": "cGRm"
+              }
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "cG5n"
+              }
+            },
+            {
+              "inline_data": {
+                "mime_type": "audio/mpeg",
+                "data": "bXAz"
+              }
+            },
+            {
+              "inline_data": {
+                "mime_type": "text/plain",
+                "data": "eA=="
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "openrouter-single-default-base": {
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer sk",
+      "HTTP-Referer": "https://github.com/chaice",
+      "X-Title": "ChAIce"
+    },
+    "body": {
+      "model": "om",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Q"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,aW1nMQ=="
+              }
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,aW1nMg=="
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "openrouter-reasoning": {
+    "url": "https://or.example/api/v1/chat/completions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer sk",
+      "HTTP-Referer": "https://github.com/chaice",
+      "X-Title": "ChAIce"
+    },
+    "body": {
+      "model": "om",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Q"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,aW1n"
+              }
+            }
+          ]
+        }
+      ],
+      "reasoning": {
+        "effort": "high"
+      }
+    }
+  },
+  "openrouter-two-turn-all-kinds": {
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer sk",
+      "HTTP-Referer": "https://github.com/chaice",
+      "X-Title": "ChAIce"
+    },
+    "body": {
+      "model": "om",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "anchor"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,aW1n"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": "OK"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "P\n\nThe following text files were attached:\n\n--- a.md ---\n# h\n\n--- b.csv ---\n1,2\n"
+            },
+            {
+              "type": "file",
+              "file": {
+                "filename": "c.pdf",
+                "file_data": "data:application/pdf;base64,cGRm"
+              }
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/jpeg;base64,anBn"
+              }
+            },
+            {
+              "type": "input_audio",
+              "input_audio": {
+                "data": "d2F2",
+                "format": "wav"
+              }
+            },
+            {
+              "type": "input_audio",
+              "input_audio": {
+                "data": "bTRh",
+                "format": "m4a"
+              }
+            },
+            {
+              "type": "video_url",
+              "video_url": {
+                "url": "data:video/quicktime;base64,bW92"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "openrouter-empty-text": {
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer ",
+      "HTTP-Referer": "https://github.com/chaice",
+      "X-Title": "ChAIce"
+    },
+    "body": {
+      "model": "om",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": ""
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
