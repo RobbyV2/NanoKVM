@@ -106,6 +106,7 @@ func defaultConfig() Config {
 		GeminiBaseURL:     defaultGeminiBaseURL,
 		ThinkingBudget:    thinkingStep,
 		ORBaseURL:         defaultORBaseURL,
+		ORModel:           "openai/gpt-6-astra",
 		ORReasoningEffort: "low",
 	}
 }

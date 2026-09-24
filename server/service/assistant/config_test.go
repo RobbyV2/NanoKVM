@@ -27,6 +27,9 @@ func TestMissingConfigIsDefaults(t *testing.T) {
 	if cfg.Provider != "openrouter" || !cfg.UI || cfg.Enabled || cfg.ThinkingBudget != 512 || cfg.ORReasoningEffort != "low" {
 		t.Fatalf("defaults wrong: %+v", cfg)
 	}
+	if cfg.ORModel != "openai/gpt-6-astra" {
+		t.Fatalf("default ORModel=%q", cfg.ORModel)
+	}
 }
 
 func TestPartialFileKeepsDefaults(t *testing.T) {
