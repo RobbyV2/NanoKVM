@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"syscall"
 
 	"NanoKVM-Server/service/bootslot"
 	"NanoKVM-Server/utils"
@@ -49,6 +50,11 @@ func installPreparedPackage(sourceDir string, kernel *kernelPayload) error {
 	if err := utils.ChmodRecursively(AppDir, 0o755); err != nil {
 		return fmt.Errorf("failed to chmod: %w", err)
 	}
+
+	// The new tree is only in the page cache until writeback. A reset in the
+	// seconds after an update (seen on a 2.8.1 -> 2.8.2 install) left version,
+	// tunnels/wstunnel.gz and tunnels/newt.gz empty or truncated on flash.
+	syscall.Sync()
 
 	return nil
 }
