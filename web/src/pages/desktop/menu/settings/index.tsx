@@ -16,6 +16,7 @@ import {
   ScreenShareIcon,
   SettingsIcon,
   SmartphoneIcon,
+  SparklesIcon,
   UsbIcon,
   UserRoundIcon
 } from 'lucide-react';
@@ -33,6 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { About } from './about';
 import { Account } from './account';
 import { Appearance } from './appearance';
+import { AssistantSettings } from './assistant';
 import { Device } from './device';
 import { Display } from './display';
 import { Exit } from './exit';
@@ -79,6 +81,7 @@ export const Settings = () => {
           { id: 'vnc', icon: <ScreenShareIcon size={16} />, component: <Vnc /> },
           { id: 'passthrough', icon: <UsbIcon size={16} />, component: <Passthrough /> },
           { id: 'mcp', icon: <BotIcon size={16} />, component: <MCP /> },
+          { id: 'assistant', icon: <SparklesIcon size={16} />, component: <AssistantSettings /> },
           {
             id: 'tailscale',
             icon: <TailscaleIcon />,

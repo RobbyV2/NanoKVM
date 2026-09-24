@@ -677,6 +677,42 @@ const en = {
         okBtn: 'Confirm',
         cancelBtn: 'Cancel'
       },
+      assistant: {
+        title: 'Assistant',
+        enabled: 'Enable assistant',
+        enabledDesc:
+          'Ctrl Ctrl + key on this page captures the remote screen and asks an LLM from the device',
+        ui: 'Show UI',
+        uiDesc:
+          'Status bar, context count, dots and overlays. Hotkeys keep working when off; the FRQ box still shows.',
+        provider: 'Provider',
+        baseUrl: 'Base URL',
+        model: 'Model',
+        apiKey: 'API key',
+        secretSet: 'Saved. Leave empty to keep it.',
+        clear: 'Clear',
+        thinking: 'Enable thinking',
+        thinkingBudget: 'Thinking budget',
+        reasoning: 'Enable reasoning',
+        reasoningEffort: 'Reasoning effort',
+        proxy: 'Relay',
+        proxyUrl: 'Relay URL (empty: direct)',
+        proxyPass: 'Relay password',
+        behaviour: 'Behaviour',
+        copyClipboard: 'Copy answer to clipboard',
+        answerSel: 'Default answer selection mode',
+        contextSel: 'Default context selection mode',
+        frqSel: 'Default FRQ selection mode',
+        quadClickMCQ: 'Quad-click MCQ activation',
+        attachments: 'Attachments',
+        attachmentsDesc: 'Sent with every question (20 MB total)',
+        upload: 'Upload',
+        save: 'Save',
+        saved: 'Saved',
+        hotkeys: 'Hotkeys (press Ctrl twice, then the key)',
+        hotkeyList:
+          'A answer MCQ · F answer FRQ · C add context · T clear contexts · S show/hide FRQ box · M send FRQ box text · P freeze screen · L crop and lock · ↑/↓ thinking · R reload · Esc cancel selection'
+      },
       about: {
         title: 'About NanoKVM',
         information: 'Information',
