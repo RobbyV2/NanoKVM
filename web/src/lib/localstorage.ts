@@ -20,6 +20,8 @@ const MENU_DISABLED_ITEMS_KEY = 'nano-kvm-menu-disabled-items';
 const MENU_AUTO_HIDE_KEY = 'nano-kvm-menu-auto-hide';
 const KEYBOARD_LED_STATUS_VISIBLE_KEY = 'nano-kvm-keyboard-led-status-visible';
 const POWER_CONFIRM_KEY = 'nano-kvm-power-confirm';
+const ASSISTANT_FRQ_TEXT_KEY = 'nano-kvm-assistant-frq-text';
+const ASSISTANT_FRQ_RECT_KEY = 'nano-kvm-assistant-frq-rect';
 
 type ItemWithExpiry = {
   value: string;
@@ -268,4 +270,29 @@ export function getPowerConfirm() {
 
 export function setPowerConfirm(enabled: boolean) {
   localStorage.setItem(POWER_CONFIRM_KEY, String(enabled));
+}
+
+export type AssistantFrqRect = { left: number; top: number; width: number; height: number };
+
+export function getAssistantFrqText(): string {
+  return localStorage.getItem(ASSISTANT_FRQ_TEXT_KEY) || '';
+}
+
+export function setAssistantFrqText(text: string): void {
+  localStorage.setItem(ASSISTANT_FRQ_TEXT_KEY, text);
+}
+
+export function getAssistantFrqRect(): AssistantFrqRect | null {
+  try {
+    const rect = JSON.parse(localStorage.getItem(ASSISTANT_FRQ_RECT_KEY) || 'null');
+    return rect && [rect.left, rect.top, rect.width, rect.height].every(Number.isFinite)
+      ? rect
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setAssistantFrqRect(rect: AssistantFrqRect): void {
+  localStorage.setItem(ASSISTANT_FRQ_RECT_KEY, JSON.stringify(rect));
 }

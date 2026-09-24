@@ -12,6 +12,9 @@ const keyboardLocksAtom = atom<Set<KeyboardLockSource>>(new Set<KeyboardLockSour
 // is the keyboard enabled (Disable keyboard events when input is required)
 export const isKeyboardEnableAtom = atom((get) => get(keyboardLocksAtom).size === 0);
 
+// which sources hold the lock (the assistant lets its own FRQ box through)
+export const keyboardLockSourcesAtom = atom((get) => get(keyboardLocksAtom));
+
 export const keyboardLockAtom = atom(null, (get, set, action: KeyboardLockAction) => {
   const locks = new Set(get(keyboardLocksAtom));
   if (action.locked) {
