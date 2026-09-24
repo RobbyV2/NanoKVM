@@ -112,6 +112,8 @@ func loadConfig(paths []string, readFile func(string) ([]byte, error)) (cfg file
 
 func parseConfig(data []byte) (fileConfig, error) {
 	var cfg fileConfig
+	// Windows editors such as Notepad may save the file with a UTF-8 BOM.
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&cfg); err != nil {

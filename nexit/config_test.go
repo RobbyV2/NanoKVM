@@ -146,6 +146,12 @@ func TestLoadConfig(t *testing.T) {
 			wantCfg:  fileConfig{Address: "exe", Passcode: "d", Insecure: &tru, AllowPrivate: new(bool)},
 		},
 		{
+			name:     "a leading UTF-8 BOM is accepted",
+			files:    map[string]string{"/user/nexit.json": "\xef\xbb\xbf" + goodJSON},
+			wantPath: "/user/nexit.json",
+			wantCfg:  fileConfig{Address: "wss://kvm/exit/0", Passcode: "p1"},
+		},
+		{
 			name:    "bad JSON names the path",
 			files:   map[string]string{"/user/nexit.json": `{"address":`},
 			wantErr: []string{"/user/nexit.json"},
