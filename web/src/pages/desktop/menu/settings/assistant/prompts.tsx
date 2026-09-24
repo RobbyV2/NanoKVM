@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, message, Popconfirm, Tag } from 'antd';
+import { Alert, Button, Input, message, Popconfirm, Tag } from 'antd';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,7 @@ export const PromptsSection = () => {
   const [entries, setEntries] = useState<DraftEntry[] | null>(null);
   const [isDefault, setIsDefault] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const newId = () => ++nextId.current;
 
@@ -36,11 +37,27 @@ export const PromptsSection = () => {
     }
     setEntries(toDraft(rsp.data.entries));
     setIsDefault(rsp.data.isDefault);
+    setLoadError(null);
     return true;
   }
 
+  function errorText(err: unknown) {
+    return err instanceof Error && err.message
+      ? err.message
+      : t('settings.assistant.requestFailed');
+  }
+
   useEffect(() => {
-    api.getPrompts().then((rsp) => apply(rsp));
+    api
+      .getPrompts()
+      .then((rsp) => {
+        if (rsp.code !== 0) {
+          setLoadError(rsp.msg || t('settings.assistant.promptsLoadFailed'));
+          return;
+        }
+        apply(rsp);
+      })
+      .catch((err) => setLoadError(errorText(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,18 +105,52 @@ export const PromptsSection = () => {
       if (apply(await api.savePrompts(body))) {
         message.success(t('settings.assistant.promptsSaved'));
       }
+    } catch (err) {
+      message.error(errorText(err));
     } finally {
       setIsSaving(false);
     }
   }
 
   async function reset() {
-    if (apply(await api.resetPrompts())) {
-      message.success(t('settings.assistant.promptsResetDone'));
+    try {
+      if (apply(await api.resetPrompts())) {
+        message.success(t('settings.assistant.promptsResetDone'));
+      }
+    } catch (err) {
+      message.error(errorText(err));
     }
   }
 
-  if (!entries) return null;
+  const resetButton = (
+    <Popconfirm
+      placement="top"
+      title={t('settings.assistant.promptsResetConfirm')}
+      okText={t('settings.assistant.promptsResetOk')}
+      cancelText={t('settings.assistant.promptsResetCancel')}
+      onConfirm={reset}
+    >
+      <Button>{t('settings.assistant.promptsReset')}</Button>
+    </Popconfirm>
+  );
+
+  // Reset (DELETE) never reads the prompts file, so it recovers from a
+  // file that fails to load or parse.
+  if (!entries) {
+    if (!loadError) return null;
+    return (
+      <div className="flex flex-col gap-3">
+        <span className="font-medium">{t('settings.assistant.prompts')}</span>
+        <Alert
+          type="error"
+          showIcon
+          message={t('settings.assistant.promptsLoadFailed')}
+          description={loadError}
+        />
+        <div className="flex justify-end">{resetButton}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -174,15 +225,7 @@ export const PromptsSection = () => {
       </div>
 
       <div className="flex justify-end gap-2">
-        <Popconfirm
-          placement="top"
-          title={t('settings.assistant.promptsResetConfirm')}
-          okText={t('settings.assistant.promptsResetOk')}
-          cancelText={t('settings.assistant.promptsResetCancel')}
-          onConfirm={reset}
-        >
-          <Button>{t('settings.assistant.promptsReset')}</Button>
-        </Popconfirm>
+        {resetButton}
         <Button type="primary" loading={isSaving} onClick={save}>
           {t('settings.assistant.promptsSave')}
         </Button>

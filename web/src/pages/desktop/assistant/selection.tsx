@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { atom, useAtom, useAtomValue, useStore } from 'jotai';
 
 import { assistantConfigAtom } from '@/jotai/assistant.ts';
 
@@ -10,11 +10,17 @@ type Pending = { resolve: (rect: Rect | null) => void };
 const pendingSelectionAtom = atom<Pending | null>(null);
 
 // Resolves with the dragged rectangle (viewport CSS px), or null on Escape.
+// A new request supersedes an unresolved one: the old promise resolves null so
+// its caller takes the cancel path instead of hanging forever.
 export function useRequestSelection() {
-  const setPending = useSetAtom(pendingSelectionAtom);
+  const store = useStore();
   return useCallback(
-    () => new Promise<Rect | null>((resolve) => setPending({ resolve })),
-    [setPending]
+    () =>
+      new Promise<Rect | null>((resolve) => {
+        store.get(pendingSelectionAtom)?.resolve(null);
+        store.set(pendingSelectionAtom, { resolve });
+      }),
+    [store]
   );
 }
 

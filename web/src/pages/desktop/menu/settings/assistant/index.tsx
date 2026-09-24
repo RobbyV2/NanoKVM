@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Divider, Input, InputNumber, message, Select, Switch, Upload } from 'antd';
+import { Alert, Button, Divider, Input, InputNumber, message, Select, Switch, Upload } from 'antd';
 import { useSetAtom } from 'jotai';
 import { Trash2Icon, UploadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -31,14 +31,39 @@ export const AssistantSettings = () => {
   const [secrets, setSecrets] = useState(emptySecrets);
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getAssistantConfig().then((rsp) => rsp.code === 0 && setConfig(rsp.data));
+    loadConfig();
     loadAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function errorText(err: unknown) {
+    return err instanceof Error && err.message
+      ? err.message
+      : t('settings.assistant.requestFailed');
+  }
+
+  function loadConfig() {
+    setLoadError(null);
+    api
+      .getAssistantConfig()
+      .then((rsp) => {
+        if (rsp.code !== 0) {
+          setLoadError(rsp.msg || t('settings.assistant.loadFailed'));
+          return;
+        }
+        setConfig(rsp.data);
+      })
+      .catch((err) => setLoadError(errorText(err)));
+  }
+
   function loadAttachments() {
-    api.listAttachments().then((rsp) => rsp.code === 0 && setAttachments(rsp.data));
+    api
+      .listAttachments()
+      .then((rsp) => rsp.code === 0 && setAttachments(rsp.data))
+      .catch((err) => message.error(errorText(err)));
   }
 
   function update<K extends keyof AssistantConfig>(key: K, value: AssistantConfig[K]) {
@@ -69,28 +94,53 @@ export const AssistantSettings = () => {
         setSecrets(emptySecrets);
         message.success(t('settings.assistant.saved'));
       }
+    } catch (err) {
+      message.error(errorText(err));
     } finally {
       setIsSaving(false);
     }
   }
 
   async function clearSecret(flag: 'clearGeminiApiKey' | 'clearOrApiKey' | 'clearProxyPass') {
-    applyResponse(await api.setAssistantConfig({ [flag]: true }));
+    try {
+      applyResponse(await api.setAssistantConfig({ [flag]: true }));
+    } catch (err) {
+      message.error(errorText(err));
+    }
   }
 
   async function upload(file: File) {
-    const rsp = await api.uploadAttachment(file);
-    if (rsp.code !== 0) message.error(rsp.msg);
+    try {
+      const rsp = await api.uploadAttachment(file);
+      if (rsp.code !== 0) message.error(rsp.msg);
+    } catch (err) {
+      message.error(errorText(err));
+    }
     loadAttachments();
   }
 
   async function remove(name: string) {
-    const rsp = await api.deleteAttachment(name);
-    if (rsp.code !== 0) message.error(rsp.msg);
+    try {
+      const rsp = await api.deleteAttachment(name);
+      if (rsp.code !== 0) message.error(rsp.msg);
+    } catch (err) {
+      message.error(errorText(err));
+    }
     loadAttachments();
   }
 
-  if (!config) return null;
+  if (!config) {
+    if (!loadError) return null;
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message={t('settings.assistant.loadFailed')}
+        description={loadError}
+        action={<Button onClick={loadConfig}>{t('settings.assistant.retry')}</Button>}
+      />
+    );
+  }
 
   const secretInput = (key: SecretKey, has: boolean, flag: Parameters<typeof clearSecret>[0]) => (
     <>
