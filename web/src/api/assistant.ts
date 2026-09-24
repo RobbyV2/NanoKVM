@@ -42,6 +42,11 @@ export type Crop = { x: number; y: number; w: number; h: number };
 export type AttachmentInfo = { name: string; size: number };
 export type ReasoningResult = { label: string; changed: boolean; config: AssistantConfig };
 
+// The editable prompts: one entry per prompts.toml table, one field per key.
+export type PromptField = { key: string; value: string };
+export type PromptEntry = { name: string; fields: PromptField[] };
+export type PromptSet = { entries: PromptEntry[]; isDefault: boolean };
+
 export const ASSISTANT_DISABLED = -2;
 export const ASSISTANT_NO_ANSWER = -3;
 
@@ -98,4 +103,16 @@ export function uploadAttachment(file: File) {
 
 export function deleteAttachment(name: string) {
   return http.delete(`/api/assistant/attachments?name=${encodeURIComponent(name)}`);
+}
+
+export function getPrompts() {
+  return http.get('/api/assistant/prompts');
+}
+
+export function savePrompts(entries: PromptEntry[]) {
+  return http.post('/api/assistant/prompts', { entries });
+}
+
+export function resetPrompts() {
+  return http.delete('/api/assistant/prompts');
 }

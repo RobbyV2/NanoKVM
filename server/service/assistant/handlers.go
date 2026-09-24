@@ -36,6 +36,9 @@ func (h *Handler) Register(g gin.IRoutes) {
 	g.GET("/attachments", h.ListAttachments)
 	g.POST("/attachments", h.UploadAttachment)
 	g.DELETE("/attachments", h.DeleteAttachment)
+	g.GET("/prompts", h.GetPrompts)
+	g.POST("/prompts", h.SavePrompts)
+	g.DELETE("/prompts", h.ResetPrompts)
 }
 
 func respondErr(c *gin.Context, err error, data any) {
@@ -202,4 +205,40 @@ func (h *Handler) DeleteAttachment(c *gin.Context) {
 		return
 	}
 	rsp.OkRsp(c)
+}
+
+func respondPrompts(c *gin.Context, set PromptSet, err error, action string) {
+	var rsp proto.Response
+	c.Header("Cache-Control", "no-store")
+	if err != nil {
+		if errors.Is(err, errInvalidConfig) {
+			rsp.ErrRsp(c, codeError, err.Error())
+			return
+		}
+		log.Errorf("assistant: %s prompts: %v", action, err)
+		rsp.ErrRsp(c, codeError, action+" assistant prompts failed")
+		return
+	}
+	rsp.OkRspWithData(c, set)
+}
+
+func (h *Handler) GetPrompts(c *gin.Context) {
+	set, err := loadPromptSet()
+	respondPrompts(c, set, err, "get")
+}
+
+func (h *Handler) SavePrompts(c *gin.Context) {
+	var req promptsFile
+	if err := c.ShouldBindJSON(&req); err != nil {
+		var rsp proto.Response
+		rsp.ErrRsp(c, codeError, "invalid arguments")
+		return
+	}
+	set, err := savePrompts(req.Entries)
+	respondPrompts(c, set, err, "save")
+}
+
+func (h *Handler) ResetPrompts(c *gin.Context) {
+	set, err := resetPrompts()
+	respondPrompts(c, set, err, "reset")
 }

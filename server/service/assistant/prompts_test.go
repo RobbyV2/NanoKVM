@@ -20,7 +20,7 @@ func TestGetPromptJoinsUniversalAndKind(t *testing.T) {
 }
 
 func TestEmbeddedPromptsParse(t *testing.T) {
-	if _, err := loadPrompts(); err != nil {
+	if _, err := embeddedPrompts(); err != nil {
 		t.Fatalf("embedded prompts.toml: %v", err)
 	}
 }

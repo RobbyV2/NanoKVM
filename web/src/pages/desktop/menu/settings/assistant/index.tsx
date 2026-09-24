@@ -9,6 +9,8 @@ import * as api from '@/api/assistant.ts';
 import type { AssistantConfig, AssistantConfigUpdate, AttachmentInfo } from '@/api/assistant.ts';
 import { assistantConfigAtom } from '@/jotai/assistant.ts';
 
+import { PromptsSection } from './prompts.tsx';
+
 type SecretKey = 'geminiApiKey' | 'orApiKey' | 'proxyPass';
 const emptySecrets: Record<SecretKey, string> = { geminiApiKey: '', orApiKey: '', proxyPass: '' };
 
@@ -214,6 +216,9 @@ export const AssistantSettings = () => {
           {t('settings.assistant.save')}
         </Button>
       </div>
+
+      <Divider />
+      <PromptsSection />
 
       <Divider />
       <Row

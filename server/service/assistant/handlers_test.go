@@ -103,3 +103,39 @@ func TestContextScreenshotAndAttachmentEndpoints(t *testing.T) {
 }
 
 func mustJSON(v any) string { b, _ := json.Marshal(v); return string(b) }
+
+func TestPromptsEndpoints(t *testing.T) {
+	useTestPrompts(t, inlineDefaultTOML)
+	s := testService(t, "http://unused", &fakeCapturer{})
+	r := testEngine(t, s)
+
+	code, out, w := call(t, r, "GET", "/api/assistant/prompts", "")
+	data := out["data"].(map[string]any)
+	if code != 0 || data["isDefault"] != true || len(data["entries"].([]any)) != 3 || w.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("get default: code %d", code)
+	}
+
+	code, out, _ = call(t, r, "POST", "/api/assistant/prompts", `{"entries":[{"name":"mcq","fields":[{"key":"prompt","value":"X"}]}]}`)
+	data = out["data"].(map[string]any)
+	if code != 0 || data["isDefault"] != false || len(data["entries"].([]any)) != 1 {
+		t.Fatalf("post: code %d", code)
+	}
+	_, out, _ = call(t, r, "GET", "/api/assistant/prompts", "")
+	if out["data"].(map[string]any)["isDefault"] != false {
+		t.Fatal("get after save still default")
+	}
+
+	code, out, _ = call(t, r, "POST", "/api/assistant/prompts", `{"entries":[{"name":"a.b","fields":[]}]}`)
+	if code != codeError || !strings.HasPrefix(out["msg"].(string), "invalid arguments") {
+		t.Fatalf("invalid name: code %d msg %v", code, out["msg"])
+	}
+	if code, _, _ := call(t, r, "POST", "/api/assistant/prompts", `not json`); code != codeError {
+		t.Fatalf("bad json code %d", code)
+	}
+
+	code, out, _ = call(t, r, "DELETE", "/api/assistant/prompts", "")
+	data = out["data"].(map[string]any)
+	if code != 0 || data["isDefault"] != true || len(data["entries"].([]any)) != 3 {
+		t.Fatalf("delete: code %d", code)
+	}
+}
