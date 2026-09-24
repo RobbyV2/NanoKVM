@@ -114,6 +114,7 @@ func server(r *gin.Engine) {
 	hidRouter(r)
 	controlRouter(r, control, picoclawService)
 	mcpRouter(r, control, picoclawService)
+	assistantRouter(r)
 	picoclawRouter(r, picoclawService)
 	wsRouter(r)
 	sourcesRouter(r, sourceService)
