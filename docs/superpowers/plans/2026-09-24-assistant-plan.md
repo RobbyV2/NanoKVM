@@ -21,6 +21,7 @@
    - The Ctrl-Ctrl prefix stays armed until an action key or the next Ctrl press. There is no time limit on the action key.
    - Pressing ↑ when OpenRouter effort is already `high` shows "Reasoning: off (already)".
    - An F answer goes into the FRQ box without making it visible.
+7. The extension's page CSS and menu auto-close (page-style) were removed at the user's request.
 
 ## Global Constraints
 

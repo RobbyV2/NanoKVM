@@ -11,7 +11,6 @@ import { keyboardLockSourcesAtom } from '@/jotai/keyboard.ts';
 import { useAssistantActions } from './actions.ts';
 import { FreezeOverlay } from './freeze.tsx';
 import { FRQ_LOCK_SOURCE, FrqBox } from './frq-box.tsx';
-import { usePageStyle } from './page-style.ts';
 import { useQuadClick } from './quad-click.ts';
 import { Selection, useRequestSelection } from './selection.tsx';
 import { StatusBar } from './status.tsx';
@@ -56,7 +55,6 @@ const AssistantRuntime = ({ config }: { config: AssistantConfig }) => {
 
   useHotkeys(hotkeysAllowed, actions);
   useQuadClick(config.quadClickMCQ, actions.quadClick);
-  usePageStyle(config.ui);
   useEffect(() => () => actions.teardown(), [actions]);
 
   return createPortal(
