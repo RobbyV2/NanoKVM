@@ -4514,3 +4514,61 @@ export const AssistantSettings = () => {
 
 - **Spec coverage:** every file the spec lists maps to a task, with two exceptions. `contexts.go`, `attachments.go` and the flows are Tasks 6–7, and `flows.go` is named `service.go` because it also holds the Service. The spec's prompts setting is intentionally dropped (see Deviations).
 - **Types used across tasks:** `Crop` has the same `{x,y,w,h}` fraction shape in Go and TS. `ReasoningResult.config` is a `PublicConfig`, which matches the TS `AssistantConfig`. `FRQ_LOCK_SOURCE` is defined in `frq-box.tsx` and used in `index.tsx`.
+
+---
+
+### Task 14: Editable prompts in settings (added 2026-09-24 at the user's request)
+
+The user now wants the prompts to be editable in the settings UI. This supersedes Deviation 1's "prompts are not a setting". The firmware default is still the bundled `prompts.toml`, and **nobody may open, read or print it**. That includes tests, logs, reports, and API responses captured into agent context. Tests may parse it and assert structure (counts, types), but never print values.
+
+**Model.** The prompts are an ordered list of **entries**, one per TOML top-level table (for example `universal`, `mcq`). Each entry is an ordered list of **fields** (`key` → string `value`, for example `prompt`). The UI lists whatever entries and fields exist, with nothing hard-coded, and lets the admin add and remove both.
+
+**Files:**
+- Modify: `server/service/assistant/prompts.go`, `server/service/assistant/service.go` (only if needed), `server/service/assistant/handlers.go` (routes)
+- Create: `server/service/assistant/prompts_store_test.go` (or extend `prompts_test.go`)
+- Modify: `web/src/api/assistant.ts`, `web/src/pages/desktop/menu/settings/assistant/index.tsx` (or a new `prompts.tsx` beside it), `web/src/i18n/locales/en.ts`
+
+**Server:**
+- Storage for the override: `/etc/kvm/assistant/prompts.json` (mode 0600, `utils.WriteFileAtomic`). The path is a package var so tests can redirect it.
+  - Shape: `{"entries":[{"name":"universal","fields":[{"key":"prompt","value":"..."}]}]}`.
+  - JSON is used so the admin's order is kept.
+  - If the file doesn't exist, the embedded `prompts.toml` is the source.
+- Default order when converting the embedded TOML (TOML maps lose order): `universal` first, then the other tables alphabetically. Within a table, `prompt` first, then the other keys alphabetically.
+- Non-string values in the embedded TOML: a test `TestEmbeddedPromptsFitEditableModel` asserts that every top-level value is a table and every field value is a string, without printing anything. If it fails, report NEEDS_CONTEXT. Do not work around it by reading the file.
+- `loadPrompts()` returns `map[string]any` as before, built from the override if present, otherwise from the embedded default. `getPrompt` is unchanged, so the ask flows read whatever is current. Read the override on every ask (it's small). The embedded parse can stay behind `sync.Once`.
+- Types:
+  - `type PromptField struct{ Key string \`json:"key"\`; Value string \`json:"value"\` }`
+  - `type PromptEntry struct{ Name string \`json:"name"\`; Fields []PromptField \`json:"fields"\` }`
+  - `type PromptSet struct{ Entries []PromptEntry \`json:"entries"\`; IsDefault bool \`json:"isDefault"\` }` (`isDefault` is only on GET responses)
+- Validation on save (return `errInvalidConfig`-style `-1` "invalid arguments" with a specific message):
+  - Entry names are non-empty after trimming, unique, and contain no `.`, `[` or `]`.
+  - Field keys are non-empty after trimming and unique within their entry.
+  - Total JSON size is at most 256 KB.
+  - Zero entries is allowed, and asks then use `"\n\n"` exactly as `getPrompt` already does.
+- Routes, admin-only and on the same group:
+  - `GET /api/assistant/prompts` → `PromptSet` (current prompts, with `isDefault`)
+  - `POST /api/assistant/prompts` `{entries}` → saves and returns the new `PromptSet`
+  - `DELETE /api/assistant/prompts` → removes the override and returns the default `PromptSet`
+- Tests use inline TOML or inline JSON, never the embedded file's values:
+  - store round trip keeps order
+  - validation failures
+  - override takes precedence in `loadPrompts`/`getPrompt`
+  - reset falls back to the default
+  - handler codes
+  - `TestEmbeddedPromptsFitEditableModel` as above
+
+**Web:**
+- API: `getPrompts()`, `savePrompts(entries)`, `resetPrompts()`, plus the types above.
+- A "Prompts" section in the Assistant settings tab, below Behaviour and above Attachments, with its own Save and "Reset to default" buttons (Reset asks for confirmation with an antd `Modal.confirm` or `Popconfirm`):
+  - Each entry is a bordered card with an editable name `Input`, a "Remove entry" button, its fields, and an "Add field" button.
+  - Each field has a key `Input` (narrow), a "Remove field" button, and a large value `Input.TextArea`. The textarea spans the full width, is monospace, uses `autoSize={{ minRows: 8, maxRows: 30 }}`, and can be resized.
+  - An "Add entry" button at the bottom creates `{name: '', fields: [{key: 'prompt', value: ''}]}`.
+  - A "Default" or "Customized" tag reflects `isDefault`.
+  - Show server validation errors with `message.error(rsp.msg)`.
+- i18n keys go in `en.ts` under `settings.assistant.prompts*`.
+- The settings modal already holds the keyboard lock, so typing in the textareas doesn't reach the target.
+
+**Verify:**
+- Go: GOTEST on the full package, plus gofmt and vet.
+- Web: `tsc --noEmit`, eslint on the touched files, `node --experimental-strip-types --test "src/**/*.test.ts"`, and `vite build`.
+- Commit: `assistant: editable prompts, bundled prompts.toml as default`.
