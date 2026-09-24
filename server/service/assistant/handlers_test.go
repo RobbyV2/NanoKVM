@@ -102,6 +102,35 @@ func TestContextScreenshotAndAttachmentEndpoints(t *testing.T) {
 	}
 }
 
+func TestUploadAttachmentRejectsOversizedBody(t *testing.T) {
+	old := uploadBodyLimit
+	uploadBodyLimit = 4 << 10
+	t.Cleanup(func() { uploadBodyLimit = old })
+	s := testService(t, "http://unused", &fakeCapturer{})
+	r := testEngine(t, s)
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, _ := mw.CreateFormFile("file", "big.bin")
+	fw.Write(make([]byte, 64<<10))
+	mw.Close()
+	req := httptest.NewRequest("POST", "/api/assistant/attachments", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var out map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatalf("status %d body %q", w.Code, w.Body.String())
+	}
+	if out["code"] != float64(codeError) || out["msg"] != ErrAttachmentsFull.Error() {
+		t.Fatalf("oversized upload: %d %v", w.Code, out)
+	}
+	_, out, _ = call(t, r, "GET", "/api/assistant/attachments", "")
+	if list, _ := out["data"].([]any); len(list) != 0 {
+		t.Fatalf("oversized upload stored: %v", out)
+	}
+}
+
 func mustJSON(v any) string { b, _ := json.Marshal(v); return string(b) }
 
 func TestPromptsEndpoints(t *testing.T) {

@@ -15,6 +15,7 @@ const (
 	ConfigFile           = "/etc/kvm/assistant.json"
 	defaultGeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 	defaultORBaseURL     = "https://openrouter.ai/api/v1"
+	defaultORModel       = "openai/gpt-6-astra"
 )
 
 var (
@@ -106,7 +107,7 @@ func defaultConfig() Config {
 		GeminiBaseURL:     defaultGeminiBaseURL,
 		ThinkingBudget:    thinkingStep,
 		ORBaseURL:         defaultORBaseURL,
-		ORModel:           "openai/gpt-6-astra",
+		ORModel:           defaultORModel,
 		ORReasoningEffort: "low",
 	}
 }
@@ -231,7 +232,7 @@ func applyUpdate(c Config, u ConfigUpdate) (Config, error) {
 	setTrimmed(&c.GeminiBaseURL, u.GeminiBaseURL, defaultGeminiBaseURL)
 	setTrimmed(&c.ORBaseURL, u.ORBaseURL, defaultORBaseURL)
 	setTrimmed(&c.GeminiModel, u.GeminiModel, "")
-	setTrimmed(&c.ORModel, u.ORModel, "")
+	setTrimmed(&c.ORModel, u.ORModel, defaultORModel)
 	setTrimmed(&c.ProxyURL, u.ProxyURL, "")
 	setSecret(&c.GeminiAPIKey, u.GeminiAPIKey, u.ClearGeminiAPIKey)
 	setSecret(&c.ORAPIKey, u.ORAPIKey, u.ClearORAPIKey)

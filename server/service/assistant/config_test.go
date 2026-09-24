@@ -75,8 +75,8 @@ func TestApplyUpdateValidates(t *testing.T) {
 			t.Fatalf("update %+v: err=%v", u, err)
 		}
 	}
-	cfg, _ := applyUpdate(base, ConfigUpdate{ORBaseURL: ptr("  "), ProxyURL: ptr(" http://r:1 ")})
-	if cfg.ORBaseURL != defaultORBaseURL || cfg.ProxyURL != "http://r:1" {
+	cfg, _ := applyUpdate(base, ConfigUpdate{ORBaseURL: ptr("  "), ORModel: ptr("  "), ProxyURL: ptr(" http://r:1 ")})
+	if cfg.ORBaseURL != defaultORBaseURL || cfg.ORModel != defaultORModel || cfg.ProxyURL != "http://r:1" {
 		t.Fatalf("normalise wrong: %+v", cfg)
 	}
 }

@@ -178,8 +178,23 @@ func (h *Handler) ListAttachments(c *gin.Context) {
 	rsp.OkRspWithData(c, list)
 }
 
+// uploadBodyLimit caps the raw multipart body before it is parsed, so an
+// oversized upload is rejected without spooling it to memory or /tmp. The
+// 1 MB slack covers multipart framing; Put still enforces the exact total.
+var uploadBodyLimit int64 = maxAttachmentBytes + 1<<20
+
 func (h *Handler) UploadAttachment(c *gin.Context) {
 	var rsp proto.Response
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, uploadBodyLimit)
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			rsp.ErrRsp(c, codeError, ErrAttachmentsFull.Error())
+			return
+		}
+		rsp.ErrRsp(c, codeError, "invalid arguments")
+		return
+	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		rsp.ErrRsp(c, codeError, "invalid arguments")
