@@ -33,6 +33,29 @@ export const FrqBox = () => {
     return () => setKeyboardLock({ source: FRQ_LOCK_SOURCE, locked: false });
   }, [setKeyboardLock]);
 
+  // Clicks on the remote screen preventDefault on mousedown, so focus would stay in
+  // the editable and the keyboard lock would never be released. Blur on any
+  // mousedown outside the box; the event itself is left untouched.
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      const editable = editableRef.current;
+      if (!editable || document.activeElement !== editable) return;
+      const box = boxRef.current;
+      if (box && e.target instanceof Node && box.contains(e.target)) return;
+      editable.blur();
+    };
+    document.addEventListener('mousedown', onDocDown, true);
+    return () => document.removeEventListener('mousedown', onDocDown, true);
+  }, []);
+
+  // Hiding the box (display:none) does not reliably fire blur, so release the lock.
+  useEffect(() => {
+    if (visible) return;
+    const editable = editableRef.current;
+    if (editable && document.activeElement === editable) editable.blur();
+    setKeyboardLock({ source: FRQ_LOCK_SOURCE, locked: false });
+  }, [visible, setKeyboardLock]);
+
   // Drag on the box background (not the text, not the 8 px resize border).
   useEffect(() => {
     const el = boxRef.current;
