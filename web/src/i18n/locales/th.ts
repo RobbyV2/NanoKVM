@@ -1120,6 +1120,18 @@ const th = {
             'การเปลี่ยนโหมดขณะที่อุโมงค์เปิดอยู่จะตัดการเชื่อมต่ออุปกรณ์ทางออกที่เชื่อมต่ออยู่ ให้เริ่มใหม่ด้วยคำสั่งของโหมดใหม่'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'รันบนอุปกรณ์ทางออก',
           description:
             'วางคำสั่งหนึ่งคำสั่งบนเครื่องที่มีอินเทอร์เน็ตที่ต้องการให้เครื่องเป้าหมายใช้ คำสั่งจะเชื่อมต่อใหม่เรื่อย ๆ จนกว่าคุณจะหยุด',

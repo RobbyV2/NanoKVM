@@ -1,9 +1,15 @@
 import { http } from '@/lib/http.ts';
+import { getBaseUrl } from '@/lib/service.ts';
+import {
+  nexitDownloadRequest,
+  withBrowserOrigin
+} from '@/pages/desktop/menu/settings/exit/state.ts';
+import type { NexitDownload } from '@/pages/desktop/menu/settings/exit/state.ts';
 import type { SetExitConfigReq } from '@/pages/desktop/menu/settings/exit/types.ts';
 
 // Admin API of the exit tunnel, JWT and admin role, {code,msg,data} envelope.
-// The token-gated /exit/:slot/* surface is not here: it is what the exit device
-// calls, and the panel only reaches it to show a script (see commands.tsx).
+// The token-gated /exit/:slot/* surface is what the exit device calls; the
+// panel reaches it only to download nexit and its nexit.json (downloadNexit).
 
 const base = '/api/extensions/exit';
 
@@ -55,4 +61,32 @@ export function getCommands(slot: string) {
 // hev and wstunnel log tails, token-shaped values redacted
 export function getLogs(slot: string) {
   return http.get(`${base}/${slot}/logs`);
+}
+
+// fetch nexit.exe or nexit.json from the token-gated surface with the slot's
+// token and save it under the name nexit expects. The gate answers every
+// refusal (disabled slot, wrong token, locked source) with the same 404.
+export async function downloadNexit(slot: string, token: string, download: NexitDownload) {
+  const { url, init } = nexitDownloadRequest(getBaseUrl('http'), slot, token, download.asset);
+  const rsp = await fetch(url, init);
+  if (!rsp.ok) {
+    throw new Error(`HTTP ${rsp.status}`);
+  }
+  // nexit.json's address follows the domain this panel is opened on, not the
+  // Host a tunnel or proxy handed the device
+  const blob =
+    download.key === 'config'
+      ? new Blob([withBrowserOrigin(await rsp.text(), window.location)], {
+          type: 'application/json'
+        })
+      : await rsp.blob();
+
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = download.file;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(href);
 }

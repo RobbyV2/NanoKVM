@@ -309,3 +309,63 @@ export function resolverProblem(value: string, allowPrivate: boolean): ResolverP
   }
   return '';
 }
+
+// what the nexit section offers to download: both Windows builds, saved as
+// nexit.exe, and the slot's nexit.json, which nexit.exe reads when it is
+// double-clicked. The assets are the same token-gated paths the commands fetch.
+export type NexitDownload = {
+  key: 'x64' | 'arm64' | 'config';
+  asset: string;
+  file: string;
+};
+
+export const nexitDownloads: NexitDownload[] = [
+  { key: 'x64', asset: 'nexit-windows-amd64.exe', file: 'nexit.exe' },
+  { key: 'arm64', asset: 'nexit-windows-arm64.exe', file: 'nexit.exe' },
+  { key: 'config', asset: 'nexit.json', file: 'nexit.json' }
+];
+
+// the fetch for one of them: the slot's token as a bearer, as the commands
+// send it, and never in the url or the cache
+export function nexitDownloadRequest(
+  baseUrl: string,
+  slot: string,
+  token: string,
+  asset: string
+): { url: string; init: RequestInit } {
+  return {
+    url: `${baseUrl.replace(/\/+$/, '')}/exit/${slot}/${asset}`,
+    init: { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+  };
+}
+
+// nexit.json's address is templated from the Host the device saw, which a
+// tunnel or reverse proxy may have rewritten to the LAN address. Point it at
+// the origin the browser is actually on, keeping the server's path and every
+// other field. Anything unparseable is returned as it came.
+export function withBrowserOrigin(json: string, loc: { protocol: string; host: string }): string {
+  if (!loc.host) return json;
+
+  let config: unknown;
+  try {
+    config = JSON.parse(json);
+  } catch {
+    return json;
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return json;
+
+  const record = config as Record<string, unknown>;
+  if (typeof record.address !== 'string') return json;
+
+  let url: URL;
+  try {
+    url = new URL(record.address);
+  } catch {
+    return json;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return json;
+
+  const scheme = loc.protocol === 'https:' ? 'https' : 'http';
+  record.address = `${scheme}://${loc.host}${url.pathname}${url.search}${url.hash}`;
+  return JSON.stringify(record, null, 2) + '\n';
+}

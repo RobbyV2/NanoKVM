@@ -1144,6 +1144,18 @@ const nb = {
             'Bytte av modus mens tunnelen er aktiv kobler fra den tilkoblede exit-enheten; start den igjen med den nye modusens kommando.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Kjør på exit-enheten',
           description:
             'Lim inn én kommando på maskinen hvis internett målmaskinen skal bruke. Den fortsetter å koble til igjen til du stopper den.',

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -228,13 +229,55 @@ func Commands(slot Slot, cfg Config, origin Origin) (proto.GetExitCommandsRsp, e
 	if !ValidHost(origin.Host) {
 		return proto.GetExitCommandsRsp{}, ErrBadHost
 	}
-	var cert Certificate
+	return renderCommands(slot, cfg, origin, certificateFor(origin)), nil
+}
+
+// certificateFor is the serving certificate as the commands and the served
+// files see it: read on https, the zero value on http or when it is unreadable.
+func certificateFor(origin Origin) Certificate {
 	if origin.TLS() {
 		if c, err := readCertificate(); err == nil {
-			cert = c
+			return c
 		}
 	}
-	return renderCommands(slot, cfg, origin, cert), nil
+	return Certificate{}
+}
+
+// fetchTarget is what the Mode A one-liners point at: the slot's base url, and
+// whether the fetch and nexit must skip certificate verification (https with a
+// certificate the client cannot verify, which adds -k and --insecure). The
+// commands and nexit.json both take it from here so they cannot drift apart.
+func fetchTarget(slot Slot, origin Origin, cert Certificate) (base string, insecure bool) {
+	return origin.base(slot), origin.TLS() && !VerifyTLS(origin, cert)
+}
+
+// nexitFile is the nexit.json the device serves. The keys are nexit's own
+// (nexit/config.go), which rejects any key it does not know.
+type nexitFile struct {
+	Address      string `json:"address"`
+	Passcode     string `json:"passcode"`
+	Insecure     bool   `json:"insecure"`
+	AllowPrivate bool   `json:"allowPrivate"`
+}
+
+// NexitConfig renders the slot's nexit.json: the address, passcode and
+// --insecure the nexit one-liners carry, plus the slot's allowPrivate the
+// scripted clients get. It returns false for a Host that fails ValidHost.
+func NexitConfig(slot Slot, cfg Config, origin Origin, cert Certificate) ([]byte, bool) {
+	if !ValidHost(origin.Host) {
+		return nil, false
+	}
+	base, insecure := fetchTarget(slot, origin, cert)
+	body, err := json.MarshalIndent(nexitFile{
+		Address:      base,
+		Passcode:     cfg.Token,
+		Insecure:     insecure,
+		AllowPrivate: cfg.AllowPrivate,
+	}, "", "  ")
+	if err != nil {
+		return nil, false
+	}
+	return append(body, '\n'), true
 }
 
 // psTrustSource is the C# behind psTrustPrefix: a compiled trust-all
@@ -263,7 +306,7 @@ const psTrustPrefix = "if (-not ('NanoKVMExitTrust' -as [type])) { Add-Type -Typ
 // quotes, PowerShell single quotes), so the quoting is the second fence.
 func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) proto.GetExitCommandsRsp {
 	auth := "Authorization: Bearer " + cfg.Token
-	base := origin.base(slot)
+	base, insecureFetch := fetchTarget(slot, origin, cert)
 
 	verifyTLS := VerifyTLS(origin, cert)
 
@@ -275,7 +318,6 @@ func renderCommands(slot Slot, cfg Config, origin Origin, cert Certificate) prot
 		transportNote = "Plain http: the token and every byte between the exit and the NanoKVM travel in cleartext."
 	}
 
-	insecureFetch := origin.TLS() && !verifyTLS
 	insecure := ""
 	if insecureFetch {
 		insecure = "k"

@@ -336,6 +336,9 @@ export const ExitSlot = ({ initial, showSlot, setIsLocked }: ExitSlotProps) => {
       <Divider className="opacity-50" />
 
       <ExitCommands
+        slot={slot}
+        token={status.token}
+        enabled={status.enabled}
         way={way}
         commands={commands}
         hasConnected={!!status.lastConnectedAt}

@@ -1194,6 +1194,18 @@ const en = {
             "Switching mode while the tunnel is enabled drops the connected exit device; restart it with the new mode's command."
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64, most PCs)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe. To open one of those folders, paste its path into the File Explorer address bar. After regenerating the token or changing these settings, download nexit.json again and replace the old file; the browser may save it as "nexit (1).json".',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless. A nexit.json in %ProgramData% can be read by every local user.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Run on the exit device',
           description:
             'Paste one command on the machine whose internet the target should use. It keeps reconnecting until you stop it.',

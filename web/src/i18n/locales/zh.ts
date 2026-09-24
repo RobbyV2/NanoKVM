@@ -1088,6 +1088,18 @@ const zh = {
           whileEnabled: '隧道启用时切换模式会断开已连接的出口设备，请用新模式的命令重新启动它。'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: '在出口设备上运行',
           description:
             '在你希望目标机借用其网络的那台机器上粘贴一条命令。它会持续重连，直到你停止它。',

@@ -1143,6 +1143,18 @@ const ru = {
             'Смена режима при включённом туннеле отключает подключённое выходное устройство; запустите его заново командой нового режима.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Выполните на выходном устройстве',
           description:
             'Вставьте одну команду на компьютере, чей интернет должна использовать цель. Она будет переподключаться, пока вы её не остановите.',

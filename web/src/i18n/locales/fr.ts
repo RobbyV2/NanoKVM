@@ -1156,6 +1156,18 @@ const fr = {
             "Changer de mode avec le tunnel activé déconnecte l'appareil de sortie connecté ; relancez-le avec la commande du nouveau mode."
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: "À exécuter sur l'appareil de sortie",
           description:
             "Collez une commande sur la machine dont la cible doit utiliser l'Internet. Elle se reconnecte en boucle jusqu'à ce que vous l'arrêtiez.",

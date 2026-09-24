@@ -1,22 +1,38 @@
 import { useMemo, useState } from 'react';
 import { Button, Input, Segmented, Tabs } from 'antd';
-import { CheckIcon, CopyIcon, LoaderCircleIcon, ShieldAlertIcon } from 'lucide-react';
+import {
+  CheckIcon,
+  CopyIcon,
+  DownloadIcon,
+  LoaderCircleIcon,
+  ShieldAlertIcon
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { downloadNexit } from '@/api/extensions/exit.ts';
 import { copyText } from '@/lib/clipboard.ts';
 import { getBaseUrl } from '@/lib/service.ts';
 
-import { detectPlatform, parseOrigin, presentCommand } from './state.ts';
+import { detectPlatform, nexitDownloads, parseOrigin, presentCommand } from './state.ts';
+import type { NexitDownload } from './state.ts';
 import { exitPlatforms } from './types.ts';
 import type { ExitCommands as Commands, ExitPlatform, ExitWay } from './types.ts';
 
 type ExitCommandsProps = {
+  slot: string;
+  // the slot's token, which the nexit downloads present as a bearer
+  token: string;
+  // the gate serves nothing for a disabled slot
+  enabled: boolean;
   way: ExitWay;
   commands?: Commands;
   hasConnected: boolean;
 };
 
 export const ExitCommands = ({
+  slot,
+  token,
+  enabled,
   way,
   commands,
   hasConnected,
@@ -27,6 +43,7 @@ export const ExitCommands = ({
   const [shell, setShell] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
   const [errMsg, setErrMsg] = useState('');
+  const [downloading, setDownloading] = useState('');
 
   // the server templated from the request it saw; the browser knows better
   // what host it actually reached (D15), but the scheme decides flags the
@@ -75,6 +92,18 @@ export const ExitCommands = ({
       .catch(() => {
         setErrMsg(t('settings.exit.copyFailed'));
       });
+  }
+
+  function download(item: NexitDownload) {
+    setDownloading(item.key);
+    setErrMsg('');
+    downloadNexit(slot, token, item)
+      .catch((err) => {
+        setErrMsg(
+          t('settings.exit.commands.nexitFiles.failed', { error: err?.message || String(err) })
+        );
+      })
+      .finally(() => setDownloading(''));
   }
 
   return (
@@ -233,6 +262,40 @@ export const ExitCommands = ({
             )
           }))}
         />
+      )}
+
+      {way === 'nexit' && commands && (
+        <div className="flex flex-col space-y-2 border-t border-neutral-700/60 pt-2">
+          <span className="text-xs">{t('settings.exit.commands.nexitFiles.title')}</span>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {nexitDownloads.map((item) => (
+              <Button
+                key={item.key}
+                size="small"
+                icon={<DownloadIcon size={14} />}
+                loading={downloading === item.key}
+                disabled={!enabled || !token || (downloading !== '' && downloading !== item.key)}
+                onClick={() => download(item)}
+              >
+                {t(`settings.exit.commands.nexitFiles.${item.key}`)}
+              </Button>
+            ))}
+          </div>
+
+          {!enabled && (
+            <span className="text-xs text-neutral-500">
+              {t('settings.exit.commands.nexitFiles.needsEnabled')}
+            </span>
+          )}
+
+          <span className="text-xs text-neutral-500">
+            {t('settings.exit.commands.nexitFiles.instructions')}
+          </span>
+          <span className="text-xs text-amber-500">
+            {t('settings.exit.commands.nexitFiles.secret')}
+          </span>
+        </div>
       )}
 
       {hasConnected && (
