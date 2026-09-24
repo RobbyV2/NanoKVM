@@ -38,7 +38,8 @@ func TestCropBounds(t *testing.T) {
 }
 
 func TestCropBoundsEmpty(t *testing.T) {
-	for _, c := range []Crop{{X: 0.5, Y: 0.5}, {X: 1.2, Y: 0, W: 0.5, H: 1}, {X: math.NaN(), W: 1, H: 1}} {
+	for _, c := range []Crop{{X: 0.5, Y: 0.5}, {X: 1.2, Y: 0, W: 0.5, H: 1}, {X: math.NaN(), W: 1, H: 1},
+		{X: 1.2, W: -0.5, H: 1}, {X: 0.5, Y: 0, W: -0.2, H: 1}, {X: math.Inf(1), W: 1, H: 1}} {
 		if _, err := cropBounds(c, 100, 100); !errors.Is(err, ErrEmptyCrop) {
 			t.Fatalf("crop %+v: err=%v", c, err)
 		}

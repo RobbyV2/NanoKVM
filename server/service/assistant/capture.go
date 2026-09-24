@@ -38,6 +38,9 @@ func cropBounds(c Crop, w, h int) (image.Rectangle, error) {
 			return image.Rectangle{}, ErrEmptyCrop
 		}
 	}
+	if c.W <= 0 || c.H <= 0 {
+		return image.Rectangle{}, ErrEmptyCrop
+	}
 	x0 := math.Floor(c.X * float64(w))
 	y0 := math.Floor(c.Y * float64(h))
 	x1 := math.Ceil((c.X + c.W) * float64(w))
