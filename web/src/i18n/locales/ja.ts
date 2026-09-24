@@ -1141,6 +1141,18 @@ const ja = {
             'トンネルが有効なままモードを切り替えると、接続中の出口機器は切断されます。新しいモードのコマンドで再起動してください。'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: '出口機器で実行',
           description:
             'ターゲット機に使わせたいインターネット回線を持つマシンで、コマンドを 1 つ貼り付けてください。停止するまで再接続を続けます。',

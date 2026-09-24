@@ -309,3 +309,32 @@ export function resolverProblem(value: string, allowPrivate: boolean): ResolverP
   }
   return '';
 }
+
+// what the nexit section offers to download: both Windows builds, saved as
+// nexit.exe, and the slot's nexit.json, which nexit.exe reads when it is
+// double-clicked. The assets are the same token-gated paths the commands fetch.
+export type NexitDownload = {
+  key: 'x64' | 'arm64' | 'config';
+  asset: string;
+  file: string;
+};
+
+export const nexitDownloads: NexitDownload[] = [
+  { key: 'x64', asset: 'nexit-windows-amd64.exe', file: 'nexit.exe' },
+  { key: 'arm64', asset: 'nexit-windows-arm64.exe', file: 'nexit.exe' },
+  { key: 'config', asset: 'nexit.json', file: 'nexit.json' }
+];
+
+// the fetch for one of them: the slot's token as a bearer, as the commands
+// send it, and never in the url or the cache
+export function nexitDownloadRequest(
+  baseUrl: string,
+  slot: string,
+  token: string,
+  asset: string
+): { url: string; init: RequestInit } {
+  return {
+    url: `${baseUrl.replace(/\/+$/, '')}/exit/${slot}/${asset}`,
+    init: { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+  };
+}

@@ -1150,6 +1150,18 @@ const hu = {
             'A mód váltása bekapcsolt tunnel mellett bontja a csatlakozott kilépő eszköz kapcsolatát; indítsa újra az új mód parancsával.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Futtassa a kilépő eszközön',
           description:
             'Illesszen be egy parancsot azon a gépen, amelynek internetét a célgépnek használnia kell. Addig csatlakozik újra, amíg le nem állítja.',

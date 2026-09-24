@@ -96,3 +96,17 @@ func serveNexit(w http.ResponseWriter, r *http.Request, seed string) {
 		log.Warnf("exit: serving %s stopped: %s", seed, err)
 	}
 }
+
+// nexitConfigName is the token-gated path of the slot's nexit.json, the file
+// nexit.exe reads when it is started with no arguments.
+const nexitConfigName = "nexit.json"
+
+// serveNexitConfig sends a rendered nexit.json as a download. It carries the
+// slot's token, so like nexit.exe it is never cached.
+func serveNexitConfig(w http.ResponseWriter, body []byte) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+nexitConfigName+`"`)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
+}

@@ -1443,15 +1443,17 @@ func (m *Manager) Gate(w http.ResponseWriter, r *http.Request, slotID, rest stri
 	case nexitAssets[strings.TrimPrefix(rest, "/")] != "":
 		serveNexit(w, r, nexitAssets[strings.TrimPrefix(rest, "/")])
 		return true
-	case clientNames[strings.TrimPrefix(rest, "/")]:
-		var cert Certificate
+	case rest == "/"+nexitConfigName:
 		origin := OriginOf(r)
-		if origin.TLS() {
-			if c, err := readCertificate(); err == nil {
-				cert = c
-			}
+		body, found := NexitConfig(slot, cfg, origin, certificateFor(origin))
+		if !found {
+			return false
 		}
-		body, found := RenderClient(strings.TrimPrefix(rest, "/"), slot, cfg, origin, VerifyTLS(origin, cert))
+		serveNexitConfig(w, body)
+		return true
+	case clientNames[strings.TrimPrefix(rest, "/")]:
+		origin := OriginOf(r)
+		body, found := RenderClient(strings.TrimPrefix(rest, "/"), slot, cfg, origin, VerifyTLS(origin, certificateFor(origin)))
 		if !found {
 			return false
 		}

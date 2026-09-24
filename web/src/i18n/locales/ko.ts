@@ -1125,6 +1125,18 @@ const ko = {
             '터널이 켜진 상태에서 모드를 바꾸면 연결된 출구 장치가 끊어집니다. 새 모드의 명령으로 다시 시작하세요.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: '출구 기기에서 실행',
           description:
             '대상이 사용할 인터넷을 가진 컴퓨터에 명령 하나를 붙여 넣으세요. 중지할 때까지 계속 다시 연결합니다.',

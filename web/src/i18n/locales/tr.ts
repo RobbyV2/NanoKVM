@@ -1142,6 +1142,18 @@ const tr = {
             'Tünel etkinken mod değiştirmek bağlı çıkış cihazının bağlantısını keser; yeni modun komutuyla yeniden başlatın.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Çıkış cihazında çalıştırın',
           description:
             'Hedefin internetini kullanacağı makinede tek bir komut yapıştırın. Siz durdurana kadar yeniden bağlanmaya devam eder.',

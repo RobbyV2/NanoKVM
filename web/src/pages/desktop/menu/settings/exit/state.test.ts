@@ -9,6 +9,8 @@ import {
   formatUptime,
   isValidDNS,
   mergeSaved,
+  nexitDownloadRequest,
+  nexitDownloads,
   parseOrigin,
   presentCommand,
   resolverProblem,
@@ -389,4 +391,24 @@ test('the advanced form is re-seeded only when the values it edits change', () =
   assert.notEqual(advancedValuesKey({ ...config, allowPrivate: true }), advancedValuesKey(config));
   assert.notEqual(advancedValuesKey({ ...config, pinPeer: true }), advancedValuesKey(config));
   assert.equal(advancedValuesKey(undefined), '');
+});
+
+test('the nexit downloads are the two binaries and the config, saved under the names nexit looks for', () => {
+  assert.deepEqual(
+    nexitDownloads.map((d) => [d.key, d.asset, d.file]),
+    [
+      ['x64', 'nexit-windows-amd64.exe', 'nexit.exe'],
+      ['arm64', 'nexit-windows-arm64.exe', 'nexit.exe'],
+      ['config', 'nexit.json', 'nexit.json']
+    ]
+  );
+});
+
+test('a nexit download goes to the slot behind the token gate with the token as a bearer', () => {
+  const request = nexitDownloadRequest('https://kvm.example.org:8443/', '1', 'k7m2p9vx', 'nexit.json');
+  assert.equal(request.url, 'https://kvm.example.org:8443/exit/1/nexit.json');
+  assert.deepEqual(request.init.headers, { Authorization: 'Bearer k7m2p9vx' });
+  assert.equal(request.init.cache, 'no-store');
+  // the token never travels in the url
+  assert.ok(!request.url.includes('k7m2p9vx'));
 });

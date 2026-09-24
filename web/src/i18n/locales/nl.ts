@@ -1153,6 +1153,18 @@ const nl = {
             'Van modus wisselen terwijl de tunnel actief is verbreekt het verbonden exit-apparaat; start het opnieuw met het commando van de nieuwe modus.'
         },
         commands: {
+          nexitFiles: {
+            title: 'Or download nexit and its config file',
+            x64: 'Download nexit (x64)',
+            arm64: 'Download nexit (ARM64)',
+            config: 'Download nexit.json',
+            instructions:
+              'Put nexit.json next to nexit.exe, or in %APPDATA%\\nexit\\, or (as administrator) in %ProgramData%\\nexit\\, then double-click nexit.exe.',
+            secret:
+              "nexit.json contains this slot's passcode, like the commands above. Keep it private; regenerating the token makes it useless.",
+            needsEnabled: 'Enable the slot to download these files.',
+            failed: 'Download failed: {{error}}'
+          },
           title: 'Uitvoeren op het exit-apparaat',
           description:
             'Plak één commando op de machine waarvan het doelsysteem het internet moet gebruiken. Het blijft opnieuw verbinden tot u het stopt.',
