@@ -7,9 +7,9 @@ import (
 
 // Context images live in memory, per device (the extension kept them per
 // browser profile). T and a server restart clear them.
-const maxContextBytes = 16 << 20
+const maxContextBytes = 8 << 20
 
-var ErrContextsFull = errors.New("context images exceed 16 MB; clear them with T")
+var ErrContextsFull = errors.New("context images exceed 8 MB; clear them with T")
 
 type Contexts struct {
 	mu     sync.Mutex

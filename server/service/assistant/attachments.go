@@ -5,12 +5,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"NanoKVM-Server/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +18,12 @@ import (
 // sends its bundled attachments/ folder.
 const (
 	AttachmentsDir     = "/etc/kvm/assistant/attachments"
-	maxAttachmentBytes = 20 << 20
+	maxAttachmentBytes = 4 << 20
 )
 
 var (
 	ErrAttachmentName  = errors.New("invalid attachment name")
-	ErrAttachmentsFull = errors.New("attachments exceed 20 MB")
+	ErrAttachmentsFull = errors.New("attachments exceed 4 MB")
 	skippedNames       = map[string]bool{".gitignore": true, "index.json": true, ".DS_Store": true}
 )
 
@@ -75,7 +74,11 @@ func (s *AttachmentStore) list() ([]AttachmentInfo, error) {
 	return out, nil
 }
 
-func (s *AttachmentStore) Put(name string, r io.Reader) error {
+// PutStream streams r into a temp file inside the attachments dir (flash,
+// not the RAM-backed /tmp) and renames it into place, so an upload never
+// sits in memory. The total across all attachments is capped; replacing a
+// same-name file does not count its old size.
+func (s *AttachmentStore) PutStream(name string, r io.Reader) error {
 	if !validAttachmentName(name) {
 		return ErrAttachmentName
 	}
@@ -92,17 +95,50 @@ func (s *AttachmentStore) Put(name string, r io.Reader) error {
 			used += a.Size
 		}
 	}
-	data, err := io.ReadAll(io.LimitReader(r, maxAttachmentBytes-used+1))
-	if err != nil {
-		return err
-	}
-	if used+int64(len(data)) > maxAttachmentBytes {
+	if used > maxAttachmentBytes {
 		return ErrAttachmentsFull
 	}
 	if err := os.MkdirAll(s.dir, 0o700); err != nil {
 		return err
 	}
-	return utils.WriteFileAtomic(filepath.Join(s.dir, name), data, 0o600)
+	// Dot-prefixed so list() never shows a partial upload.
+	tmp, err := os.CreateTemp(s.dir, ".upload-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	ok := false
+	defer func() {
+		if !ok {
+			tmp.Close()
+			os.Remove(tmpName)
+		}
+	}()
+	n, err := io.Copy(tmp, io.LimitReader(r, maxAttachmentBytes-used+1))
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			return ErrAttachmentsFull
+		}
+		return err
+	}
+	if used+n > maxAttachmentBytes {
+		return ErrAttachmentsFull
+	}
+	if err := tmp.Chmod(0o600); err != nil {
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, filepath.Join(s.dir, name)); err != nil {
+		return err
+	}
+	ok = true
+	return nil
 }
 
 func (s *AttachmentStore) Delete(name string) error {

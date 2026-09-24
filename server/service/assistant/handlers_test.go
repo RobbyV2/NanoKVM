@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"mime/multipart"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -128,6 +129,9 @@ func TestUploadAttachmentRejectsOversizedBody(t *testing.T) {
 	_, out, _ = call(t, r, "GET", "/api/assistant/attachments", "")
 	if list, _ := out["data"].([]any); len(list) != 0 {
 		t.Fatalf("oversized upload stored: %v", out)
+	}
+	if entries, _ := os.ReadDir(s.attachments.dir); len(entries) != 0 {
+		t.Fatalf("oversized upload left files: %v", entries)
 	}
 }
 

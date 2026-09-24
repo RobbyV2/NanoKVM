@@ -727,7 +727,7 @@ const en = {
         retry: 'Retry',
         requestFailed: 'Request failed',
         attachments: 'Attachments',
-        attachmentsDesc: 'Sent with every question (20 MB total)',
+        attachmentsDesc: 'Sent with every question (4 MB total)',
         upload: 'Upload',
         save: 'Save',
         saved: 'Saved',

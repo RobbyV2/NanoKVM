@@ -178,39 +178,43 @@ func (h *Handler) ListAttachments(c *gin.Context) {
 	rsp.OkRspWithData(c, list)
 }
 
-// uploadBodyLimit caps the raw multipart body before it is parsed, so an
-// oversized upload is rejected without spooling it to memory or /tmp. The
-// 1 MB slack covers multipart framing; Put still enforces the exact total.
+// uploadBodyLimit caps the raw multipart body. The 1 MB slack covers
+// multipart framing; PutStream enforces the exact total while streaming the
+// file part straight to flash (never buffered in memory or /tmp).
 var uploadBodyLimit int64 = maxAttachmentBytes + 1<<20
 
 func (h *Handler) UploadAttachment(c *gin.Context) {
 	var rsp proto.Response
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, uploadBodyLimit)
-	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			rsp.ErrRsp(c, codeError, ErrAttachmentsFull.Error())
+	mr, err := c.Request.MultipartReader()
+	if err != nil {
+		rsp.ErrRsp(c, codeError, "invalid arguments")
+		return
+	}
+	for {
+		part, err := mr.NextPart()
+		if err != nil {
+			var tooBig *http.MaxBytesError
+			if errors.As(err, &tooBig) {
+				rsp.ErrRsp(c, codeError, ErrAttachmentsFull.Error())
+				return
+			}
+			rsp.ErrRsp(c, codeError, "invalid arguments")
 			return
 		}
-		rsp.ErrRsp(c, codeError, "invalid arguments")
+		if part.FormName() != "file" || part.FileName() == "" {
+			part.Close()
+			continue
+		}
+		err = h.svc.attachments.PutStream(part.FileName(), part)
+		part.Close()
+		if err != nil {
+			respondErr(c, err, nil)
+			return
+		}
+		rsp.OkRsp(c)
 		return
 	}
-	file, err := c.FormFile("file")
-	if err != nil {
-		rsp.ErrRsp(c, codeError, "invalid arguments")
-		return
-	}
-	f, err := file.Open()
-	if err != nil {
-		respondErr(c, err, nil)
-		return
-	}
-	defer f.Close()
-	if err := h.svc.attachments.Put(file.Filename, f); err != nil {
-		respondErr(c, err, nil)
-		return
-	}
-	rsp.OkRsp(c)
 }
 
 func (h *Handler) DeleteAttachment(c *gin.Context) {

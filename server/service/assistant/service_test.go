@@ -103,7 +103,7 @@ func TestAskFRQWithCropAndAttachmentsUsesTwoTurns(t *testing.T) {
 	cfg, _ := s.loadConfig()
 	cfg.ORReasoning = true
 	s.loadConfig = func() (Config, error) { return cfg, nil }
-	s.attachments.Put("notes.txt", strings.NewReader("hello"))
+	s.attachments.PutStream("notes.txt", strings.NewReader("hello"))
 
 	res, err := s.Ask(context.Background(), AskRequest{Kind: "frq", Crop: &Crop{X: 0, Y: 0, W: 0.5, H: 0.5}})
 	if err != nil || res.Answer != "answer" || len(or.bodies) != 2 {

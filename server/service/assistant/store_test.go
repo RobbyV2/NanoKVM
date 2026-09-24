@@ -35,7 +35,7 @@ func TestAttachmentStore(t *testing.T) {
 		t.Fatalf("missing dir: %v %v", list, err)
 	}
 	for _, bad := range []string{"", ".", "..", "../x", "a/b", ".hidden", "index.json"} {
-		if err := s.Put(bad, strings.NewReader("x")); !errors.Is(err, ErrAttachmentName) {
+		if err := s.PutStream(bad, strings.NewReader("x")); !errors.Is(err, ErrAttachmentName) {
 			t.Fatalf("name %q: err=%v", bad, err)
 		}
 	}
@@ -45,13 +45,13 @@ func TestAttachmentStore(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{"a\\b", "/etc/passwd", "x\x00y"} {
-		if err := s.Put(bad, strings.NewReader("x")); !errors.Is(err, ErrAttachmentName) {
+		if err := s.PutStream(bad, strings.NewReader("x")); !errors.Is(err, ErrAttachmentName) {
 			t.Fatalf("name %q: err=%v", bad, err)
 		}
 	}
-	s.Put("b.txt", strings.NewReader("\uFEFFhello"))
-	s.Put("a.pdf", strings.NewReader("%PDF"))
-	s.Put("bin.txt", bytes.NewReader([]byte{'a', 0, 'b'}))
+	s.PutStream("b.txt", strings.NewReader("\uFEFFhello"))
+	s.PutStream("a.pdf", strings.NewReader("%PDF"))
+	s.PutStream("bin.txt", bytes.NewReader([]byte{'a', 0, 'b'}))
 	list, _ := s.List()
 	if len(list) != 3 || list[0].Name != "a.pdf" || list[1].Name != "b.txt" {
 		t.Fatalf("list %+v", list)
@@ -65,8 +65,22 @@ func TestAttachmentStore(t *testing.T) {
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", info.Mode())
 	}
-	if err := s.Put("big.bin", bytes.NewReader(make([]byte, maxAttachmentBytes))); !errors.Is(err, ErrAttachmentsFull) {
+	if err := s.PutStream("big.bin", bytes.NewReader(make([]byte, maxAttachmentBytes))); !errors.Is(err, ErrAttachmentsFull) {
 		t.Fatalf("cap err=%v", err)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 3 {
+		t.Fatalf("cap left files behind: %v", entries)
+	}
+	// Replacing a same-name file does not count its old size against the cap.
+	full := make([]byte, maxAttachmentBytes-int64(len("%PDF"))-int64(len("\uFEFFhello"))-3)
+	if err := s.PutStream("bin.txt", bytes.NewReader(full)); err != nil {
+		t.Fatalf("fill: %v", err)
+	}
+	if err := s.PutStream("bin.txt", bytes.NewReader(full)); err != nil {
+		t.Fatalf("replace: %v", err)
+	}
+	if err := s.PutStream("bin.txt", bytes.NewReader([]byte{'a', 0, 'b'})); err != nil {
+		t.Fatal(err)
 	}
 	if err := s.Delete("b.txt"); err != nil {
 		t.Fatal(err)
