@@ -338,3 +338,34 @@ export function nexitDownloadRequest(
     init: { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
   };
 }
+
+// nexit.json's address is templated from the Host the device saw, which a
+// tunnel or reverse proxy may have rewritten to the LAN address. Point it at
+// the origin the browser is actually on, keeping the server's path and every
+// other field. Anything unparseable is returned as it came.
+export function withBrowserOrigin(json: string, loc: { protocol: string; host: string }): string {
+  if (!loc.host) return json;
+
+  let config: unknown;
+  try {
+    config = JSON.parse(json);
+  } catch {
+    return json;
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return json;
+
+  const record = config as Record<string, unknown>;
+  if (typeof record.address !== 'string') return json;
+
+  let url: URL;
+  try {
+    url = new URL(record.address);
+  } catch {
+    return json;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return json;
+
+  const scheme = loc.protocol === 'https:' ? 'https' : 'http';
+  record.address = `${scheme}://${loc.host}${url.pathname}${url.search}${url.hash}`;
+  return JSON.stringify(record, null, 2) + '\n';
+}

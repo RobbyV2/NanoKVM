@@ -1,6 +1,9 @@
 import { http } from '@/lib/http.ts';
 import { getBaseUrl } from '@/lib/service.ts';
-import { nexitDownloadRequest } from '@/pages/desktop/menu/settings/exit/state.ts';
+import {
+  nexitDownloadRequest,
+  withBrowserOrigin
+} from '@/pages/desktop/menu/settings/exit/state.ts';
 import type { NexitDownload } from '@/pages/desktop/menu/settings/exit/state.ts';
 import type { SetExitConfigReq } from '@/pages/desktop/menu/settings/exit/types.ts';
 
@@ -69,7 +72,14 @@ export async function downloadNexit(slot: string, token: string, download: Nexit
   if (!rsp.ok) {
     throw new Error(`HTTP ${rsp.status}`);
   }
-  const blob = await rsp.blob();
+  // nexit.json's address follows the domain this panel is opened on, not the
+  // Host a tunnel or proxy handed the device
+  const blob =
+    download.key === 'config'
+      ? new Blob([withBrowserOrigin(await rsp.text(), window.location)], {
+          type: 'application/json'
+        })
+      : await rsp.blob();
 
   const href = URL.createObjectURL(blob);
   const link = document.createElement('a');
