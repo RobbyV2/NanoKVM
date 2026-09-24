@@ -22,6 +22,7 @@ import {
 import { OverlayBoundary, PanelBoundary } from '@/components/error-boundary.tsx';
 import { Head } from '@/components/head.tsx';
 
+import { Assistant } from './assistant';
 import { CaptureStatusOverlay, useCaptureStatus } from './capture-status';
 import { Keyboard } from './keyboard';
 import { Menu } from './menu';
@@ -283,6 +284,9 @@ export const Desktop = () => {
           <OverlayBoundary name="input">
             <Mouse />
             <Keyboard />
+          </OverlayBoundary>
+          <OverlayBoundary name="assistant">
+            <Assistant />
           </OverlayBoundary>
         </div>
       )}
