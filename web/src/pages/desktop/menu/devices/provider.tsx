@@ -92,6 +92,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     captures.current.delete(sinkID);
     await running.capture.stop();
     setActive((current) => {
+      if (captures.current.has(sinkID)) return current;
       const next = new Set(current);
       next.delete(sinkID);
       return next;
@@ -263,26 +264,25 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       clearError(sink.id);
+      const running: RunningCapture = {
+        capture:
+          sink.kind === 'speaker'
+            ? new SpeakerPlayback()
+            : sink.kind === 'camera'
+              ? new CameraCapture()
+              : new MicrophoneCapture(),
+        deviceID: offer.deviceID,
+        streamID: offer.id,
+        kind: sink.kind,
+        demand: demandKey(sink)
+      };
+      captures.current.set(sink.id, running);
       try {
         if (sink.kind === 'speaker') {
-          const playback = new SpeakerPlayback();
-          captures.current.set(sink.id, {
-            capture: playback,
-            deviceID: offer.deviceID,
-            streamID: offer.id,
-            kind: sink.kind,
-            demand: demandKey(sink)
-          });
+          const playback = running.capture as SpeakerPlayback;
           await playback.start(muted.has(sink.id));
         } else if (sink.kind === 'camera') {
-          const capture = new CameraCapture();
-          captures.current.set(sink.id, {
-            capture,
-            deviceID: offer.deviceID,
-            streamID: offer.id,
-            kind: sink.kind,
-            demand: demandKey(sink)
-          });
+          const capture = running.capture as CameraCapture;
           await capture.start(
             offer.deviceID,
             sink.demand,
@@ -293,14 +293,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
             (message) => setError(sink.id, message)
           );
         } else {
-          const capture = new MicrophoneCapture();
-          captures.current.set(sink.id, {
-            capture,
-            deviceID: offer.deviceID,
-            streamID: offer.id,
-            kind: sink.kind,
-            demand: demandKey(sink)
-          });
+          const capture = running.capture as MicrophoneCapture;
           await capture.start(
             offer.deviceID,
             (payload) => {
@@ -310,8 +303,12 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
             muted.has(sink.id)
           );
         }
+        // Permission and play promises can settle after a release or a new
+        // demand. Only the capture still registered for this sink owns its UI.
+        if (captures.current.get(sink.id) !== running) return;
         setActive((current) => new Set(current).add(sink.id));
       } catch (error) {
+        if (captures.current.get(sink.id) !== running) return;
         await stopCapture(sink.id);
         setError(sink.id, mediaError(error, t));
       }

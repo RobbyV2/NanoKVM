@@ -1,5 +1,8 @@
 import type { Demand, SourceKind } from '@/api/sources.ts';
 
+// See playback.ts: the bundler only emits the worklet for the `?worker&url`
+// form, so a production build served nothing for the bare new URL() version.
+import audioWorkletUrl from './audio.worklet.ts?worker&url';
 import {
   captureHealthyMS,
   captureProgress,
@@ -9,9 +12,6 @@ import {
   type CaptureSample
 } from './health.ts';
 import { PcmPacketizer } from './pcm.ts';
-// See playback.ts: the bundler only emits the worklet for the `?worker&url`
-// form, so a production build served nothing for the bare new URL() version.
-import audioWorkletUrl from './audio.worklet.ts?worker&url';
 
 type FrameHandler = (payload: ArrayBuffer) => void;
 type ErrorHandler = (message: string) => void;
@@ -91,7 +91,16 @@ export class CameraCapture {
   async start(deviceID: string, demand: Demand, onFrame: FrameHandler, onError: ErrorHandler) {
     this.params = { deviceID, demand, onFrame, onError };
     this.restarts = 0;
-    await this.open(++this.generation);
+    const generation = ++this.generation;
+    try {
+      await this.open(generation);
+    } catch (error) {
+      // Stopping capture aborts a pending play() in Firefox and Chrome. A
+      // retired attempt must not fail (and stop) its replacement in the caller.
+      if (this.generation !== generation) return;
+      this.teardown();
+      throw error;
+    }
   }
 
   stop() {
@@ -154,7 +163,7 @@ export class CameraCapture {
     const width = demand.width || 640;
     const height = demand.height || 480;
     const fps = demand.fps || 15;
-    this.stream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         deviceId: deviceID ? { exact: deviceID } : undefined,
         width: { ideal: width },
@@ -162,13 +171,22 @@ export class CameraCapture {
         frameRate: { ideal: fps, max: fps }
       }
     });
-    this.video = document.createElement('video');
-    this.video.muted = true;
-    this.video.playsInline = true;
-    this.video.srcObject = this.stream;
-    await this.video.play();
-    this.worker = new Worker(new URL('./camera.worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = ({ data }: MessageEvent<CameraWorkerResponse>) => {
+    if (this.generation !== generation) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    this.stream = stream;
+    const video = document.createElement('video');
+    this.video = video;
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+    await video.play();
+    if (this.generation !== generation) return;
+    const worker = new Worker(new URL('./camera.worker.ts', import.meta.url), { type: 'module' });
+    this.worker = worker;
+    worker.onmessage = ({ data }: MessageEvent<CameraWorkerResponse>) => {
+      if (this.generation !== generation || this.stopped) return;
       this.encoding = false;
       if (data.error) onError(data.error);
       if (data.payload) {
@@ -176,7 +194,8 @@ export class CameraCapture {
         onFrame(data.payload);
       }
     };
-    this.worker.onerror = () => {
+    worker.onerror = () => {
+      if (this.generation !== generation || this.stopped) return;
       this.encoding = false;
       onError('Camera encoder stopped');
     };
@@ -209,18 +228,19 @@ export class CameraCapture {
       this.timer = window.setTimeout(encode, due - now);
     };
     const encode = async () => {
-      if (this.stopped || !this.video) return;
+      if (this.generation !== generation || this.stopped) return;
       arm();
-      if (!this.encoding && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      if (!this.encoding && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         this.encoding = true;
         try {
-          const bitmap = await createImageBitmap(this.video);
-          if (this.stopped) {
+          const bitmap = await createImageBitmap(video);
+          if (this.generation !== generation || this.stopped) {
             bitmap.close();
             return;
           }
-          this.worker?.postMessage({ id: ++this.frameID, bitmap, width, height }, [bitmap]);
+          worker.postMessage({ id: ++this.frameID, bitmap, width, height }, [bitmap]);
         } catch (error) {
+          if (this.generation !== generation || this.stopped) return;
           this.encoding = false;
           onError(error instanceof Error ? error.message : 'Camera frame failed');
         }
