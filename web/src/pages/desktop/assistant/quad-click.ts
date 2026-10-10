@@ -1,22 +1,32 @@
 import { useEffect } from 'react';
 
-// Four clicks within 2 s anywhere but the assistant's own UI -> MCQ.
+import { hasLocalOverlay, isRemoteScreen } from './interaction-guard.ts';
+import { QuadClickMatcher } from './quad-click-matcher.ts';
+
+// Four clicks within 2 s on the remote picture -> MCQ.
 export function useQuadClick(enabled: boolean, onQuad: () => void) {
   useEffect(() => {
     if (!enabled) return;
-    let stamps: number[] = [];
+    const matcher = new QuadClickMatcher();
+    const reset = () => matcher.reset();
+    const onPointerDown = (e: PointerEvent) => {
+      if (!isRemoteScreen(e.target) || hasLocalOverlay(document)) reset();
+    };
     const handler = (e: MouseEvent) => {
-      const target = e.target as Element | null;
-      if (target?.closest?.('.chaice-overlay, #llm-answer, #frq-box, #context-count')) return;
-      const now = Date.now();
-      stamps.push(now);
-      stamps = stamps.filter((t) => now - t < 2000);
-      if (stamps.length >= 4) {
-        stamps = [];
+      const allowed = e.button === 0 && isRemoteScreen(e.target) && !hasLocalOverlay(document);
+      if (matcher.click(allowed)) {
         onQuad();
       }
     };
     document.addEventListener('click', handler, true);
-    return () => document.removeEventListener('click', handler, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('focusin', reset, true);
+    window.addEventListener('blur', reset);
+    return () => {
+      document.removeEventListener('click', handler, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('focusin', reset, true);
+      window.removeEventListener('blur', reset);
+    };
   }, [enabled, onQuad]);
 }

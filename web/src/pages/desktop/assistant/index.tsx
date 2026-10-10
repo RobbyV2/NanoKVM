@@ -10,7 +10,7 @@ import { keyboardLockSourcesAtom } from '@/jotai/keyboard.ts';
 
 import { useAssistantActions } from './actions.ts';
 import { FreezeOverlay } from './freeze.tsx';
-import { FRQ_LOCK_SOURCE, FrqBox } from './frq-box.tsx';
+import { FrqBox } from './frq-box.tsx';
 import { useQuadClick } from './quad-click.ts';
 import { Selection, useRequestSelection } from './selection.tsx';
 import { StatusBar } from './status.tsx';
@@ -51,10 +51,10 @@ const AssistantRuntime = ({ config }: { config: AssistantConfig }) => {
   const requestSelection = useRequestSelection();
   const actions = useAssistantActions(requestSelection);
   const lockSources = useAtomValue(keyboardLockSourcesAtom);
-  const hotkeysAllowed = [...lockSources].every((source) => source === FRQ_LOCK_SOURCE);
+  const hotkeysAllowed = lockSources.size === 0;
 
   useHotkeys(hotkeysAllowed, actions);
-  useQuadClick(config.quadClickMCQ, actions.quadClick);
+  useQuadClick(config.quadClickMCQ && hotkeysAllowed, actions.quadClick);
   useEffect(() => () => actions.teardown(), [actions]);
 
   return createPortal(
