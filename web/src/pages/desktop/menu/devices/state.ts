@@ -8,6 +8,18 @@ import type {
 
 export const emptySnapshot: SourcesSnapshot = { sinks: [], sources: [], bindings: [] };
 
+// Local capture readiness is not delivery. The device is authoritative about
+// fallback output, including when the browser still owns an open camera track.
+export function sourceStatus(sink: SourceSink, active: boolean, live: boolean): string {
+  if (!live) return 'devices.stale';
+  if (sink.binding?.state === 'orphaned') return 'devices.resuming';
+  if (sink.kind !== 'speaker' && sink.kind !== 'usb_device' && !sink.demand.streaming) return '';
+  if (sink.output === 'black') return 'devices.black';
+  if (sink.output === 'silence') return 'devices.silence';
+  if (active) return sink.kind === 'speaker' ? 'devices.receiving' : 'devices.sending';
+  return '';
+}
+
 function replaceBinding(sinks: SourceSink[], binding: Binding | null, sinkID: string) {
   return sinks.map((sink) => (sink.id === sinkID ? { ...sink, binding } : sink));
 }

@@ -4,7 +4,7 @@ import test from 'node:test';
 import type { ClaimRefusal, SourceSink, SourcesSnapshot } from '../../../../api/sources.ts';
 import { BrowserSourceClient, type DeviceOffer } from './client.ts';
 import { PcmPacketizer } from './pcm.ts';
-import { mediaSlotRows, mediaSlots, reduceSources } from './state.ts';
+import { mediaSlotRows, mediaSlots, reduceSources, sourceStatus } from './state.ts';
 import { encodeMediaFrame } from './transport.ts';
 
 test('NKMF frame uses network byte order and bounded identifiers', () => {
@@ -154,6 +154,22 @@ test('source reconnect replaces its live entry', () => {
   assert.equal(replaced.sources[0].label, 'Tablet');
 });
 
+test('camera status reports device fallback even while local capture is active', () => {
+  const sink: SourceSink = {
+    id: 'uvc.cam0',
+    kind: 'camera',
+    label: 'Camera',
+    slot: 0,
+    demand: { streaming: true, width: 640, height: 480, fps: 30 },
+    output: 'black',
+    binding: null
+  };
+  assert.equal(sourceStatus(sink, true, true), 'devices.black');
+  assert.equal(sourceStatus({ ...sink, output: 'source' }, true, true), 'devices.sending');
+  assert.equal(sourceStatus({ ...sink, output: 'source' }, true, false), 'devices.stale');
+  assert.equal(sourceStatus({ ...sink, demand: { streaming: false } }, true, true), '');
+});
+
 test('source close rejects readiness and reports unavailable', { timeout: 1000 }, async () => {
   const values = new Map<string, string>();
   Object.defineProperty(globalThis, 'window', {
@@ -202,8 +218,7 @@ test('source close rejects readiness and reports unavailable', { timeout: 1000 }
       onError: (_sink, message) => errors.push(message),
       onOwned() {},
       onRefused() {},
-      onRevoked() {},
-      onSnapshot() {}
+      onRevoked() {}
     },
     () => new ClosingSocket() as unknown as WebSocket
   );
@@ -287,7 +302,6 @@ async function connectedClient(
       onError() {},
       onRefused() {},
       onRevoked() {},
-      onSnapshot() {},
       ...callbacks
     },
     () => socket as unknown as WebSocket
@@ -302,6 +316,50 @@ async function connectedClient(
   await ready;
   return client;
 }
+
+test('an obsolete source handshake cannot complete or own the replacement connection', async () => {
+  installBrowserGlobals();
+  const oldSocket = new ControlSocket();
+  const newSocket = new ControlSocket();
+  const sockets = [oldSocket, newSocket];
+  const owned: string[][] = [];
+  const client = new BrowserSourceClient(
+    'alice',
+    {
+      onConnection() {},
+      onOwned: (sinks) => owned.push([...sinks]),
+      onError() {},
+      onRefused() {},
+      onRevoked() {}
+    },
+    () => sockets.shift() as unknown as WebSocket
+  );
+  const oldReady = client.setOffers([cameraOffer]);
+  const rejected = assert.rejects(oldReady, /Media source closed/);
+  oldSocket.deliver({ type: 'source_ready', source: { id: 'old' } });
+  client.close();
+  let ready = false;
+  const newReady = client.setOffers([cameraOffer]).then(() => {
+    ready = true;
+  });
+  await rejected;
+  await flush();
+  assert.equal(ready, false, 'replacement must wait for its own hello');
+  oldSocket.deliver({
+    type: 'claimed',
+    binding: { sink_id: 'uvc.cam0', stream_id: 'cam_a' },
+    token: 'old-lease'
+  });
+  assert.deepEqual(client.selections(), []);
+  assert.equal(
+    owned.some((sinks) => sinks.includes('uvc.cam0')),
+    false
+  );
+  newSocket.deliver({ type: 'source_ready', source: { id: 'new' } });
+  await newReady;
+  assert.equal(client.sourceId(), 'new');
+  client.close();
+});
 
 test('a revoked binding reaches the browser with its reason', { timeout: 1000 }, async () => {
   installBrowserGlobals();
@@ -495,8 +553,7 @@ test(
         onOwned() {},
         onError() {},
         onRefused() {},
-        onRevoked() {},
-        onSnapshot() {}
+        onRevoked() {}
       },
       () => {
         const socket = new ControlSocket();

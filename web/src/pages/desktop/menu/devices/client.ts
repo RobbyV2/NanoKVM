@@ -3,7 +3,6 @@ import type {
   ClaimRefusal,
   MediaSource,
   SourceKind,
-  SourcesSnapshot,
   SourceStream
 } from '@/api/sources.ts';
 
@@ -33,7 +32,6 @@ export type StoredLease = {
 type SourceReady = {
   type: 'source_ready';
   source: MediaSource;
-  snapshot: SourcesSnapshot;
 };
 
 type ControlResponse =
@@ -59,7 +57,6 @@ type ClientCallbacks = {
   onError: (sinkID: string, message: string) => void;
   onRefused: (refusal: ClaimRefusal) => void;
   onRevoked: (sinkID: string, reason: string) => void;
-  onSnapshot: (snapshot: SourcesSnapshot) => void;
   onBinary?: (data: ArrayBuffer) => Promise<ArrayBuffer | undefined>;
   // A speaker slot sends audio the other way, so the same socket that carries
   // browser frames out carries gadget frames in.
@@ -265,6 +262,7 @@ export class BrowserSourceClient {
     this.socket = socket;
     socket.binaryType = 'arraybuffer';
     socket.onopen = () => {
+      if (this.socket !== socket) return;
       socket.send(
         JSON.stringify({
           type: 'hello',
@@ -279,12 +277,15 @@ export class BrowserSourceClient {
         })
       );
     };
-    socket.onmessage = (event) => void this.onMessage(event);
-    socket.onerror = () => this.callbacks.onConnection('disconnected');
+    socket.onmessage = (event) => void this.onMessage(socket, event);
+    socket.onerror = () => {
+      if (this.socket === socket) this.callbacks.onConnection('disconnected');
+    };
     socket.onclose = (event) => this.onClose(socket, event);
   }
 
-  private async onMessage(event: MessageEvent) {
+  private async onMessage(socket: WebSocket, event: MessageEvent) {
+    if (this.socket !== socket) return;
     if (event.data instanceof ArrayBuffer) {
       // Two binary protocols share this socket. NKMF is media, and for a
       // speaker slot it arrives rather than leaves; everything else is a
@@ -296,7 +297,8 @@ export class BrowserSourceClient {
       }
       try {
         const response = await this.callbacks.onBinary?.(event.data);
-        if (response && this.socket?.readyState === WebSocket.OPEN) this.socket.send(response);
+        if (response && this.socket === socket && socket.readyState === WebSocket.OPEN)
+          socket.send(response);
       } catch (error) {
         this.callbacks.onError(
           'ffs.hybrid',
@@ -314,10 +316,12 @@ export class BrowserSourceClient {
     }
     if (response.type === 'source_ready') {
       this.sourceID = response.source?.id || '';
-      this.callbacks.onSnapshot(response.snapshot);
+      // Sink state is ordered by /sources/events. A snapshot delivered on
+      // this independent socket can predate demand already seen there.
       this.callbacks.onError('connection', '');
       this.reconnectDelay = 1000;
-      await this.resumeLeases();
+      await this.resumeLeases(socket);
+      if (this.socket !== socket || socket.readyState !== WebSocket.OPEN) return;
       this.isReady = true;
       this.callbacks.onConnection('connected');
       this.resolveReady();
@@ -400,7 +404,7 @@ export class BrowserSourceClient {
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, 10000);
   }
 
-  private async resumeLeases() {
+  private async resumeLeases(socket: WebSocket) {
     for (const lease of [...this.leases]) {
       const offer = this.offers.find(
         (candidate) => candidate.kind === lease.kind && candidate.deviceID === lease.deviceID
@@ -418,7 +422,7 @@ export class BrowserSourceClient {
       let failure: Error | undefined;
       for (const delay of resumeRetryDelaysMS) {
         if (delay > 0) await this.wait(delay);
-        if (this.socket?.readyState !== WebSocket.OPEN) return;
+        if (this.socket !== socket || socket.readyState !== WebSocket.OPEN) return;
         try {
           await this.request(lease.sinkID, {
             type: 'resume',
@@ -436,7 +440,7 @@ export class BrowserSourceClient {
 
       // A socket that went away mid-resume says nothing about the lease. Leave
       // it stored and let the next connection resume it.
-      if (this.socket?.readyState !== WebSocket.OPEN) return;
+      if (this.socket !== socket || socket.readyState !== WebSocket.OPEN) return;
       if (failure) {
         this.removeLease(lease.sinkID);
         this.callbacks.onError(lease.sinkID, failure.message);

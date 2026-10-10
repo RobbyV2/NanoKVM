@@ -71,6 +71,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const eventsRetry = useRef<number>();
   const eventsConnect = useRef<() => void>();
   const captures = useRef(new Map<string, RunningCapture>());
+  const stoppedByUser = useRef(new Set<string>());
   const stopTimers = useRef(new Map<string, number>());
   // Which sinks the host is actually reading right now. A capture outlives its
   // demand by mediaGrace so a brief blip does not tear the camera down, and for
@@ -127,7 +128,6 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
           void stopCapture(sinkID);
           if (sinkID === 'ffs.hybrid') closeRelay();
         },
-        onSnapshot: setSnapshot,
         onBinary: async (data) => usbRelay.current?.handle(data),
         onAudio: (frame) => {
           const running = captures.current.get(frame.sinkID);
@@ -160,15 +160,17 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       eventsSocket.current = socket;
       socket.onopen = () => {
         retryDelay = 1000;
-        setEventsConnection('connected');
       };
       socket.onmessage = (message) => {
+        if (eventsSocket.current !== socket || !mounted.current) return;
         if (typeof message.data !== 'string') return;
         try {
           const event = JSON.parse(message.data) as api.SourcesEvent;
           setSnapshot((current) => reduceSources(current, event));
+          if (event.type === 'snapshot') setEventsConnection('connected');
         } catch {
           setEventsConnection('disconnected');
+          socket.close(1002, 'Invalid media state');
         }
       };
       socket.onclose = (event) => {
@@ -182,18 +184,15 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         eventsRetry.current = window.setTimeout(connect, retryDelay);
         retryDelay = Math.min(retryDelay * 2, 10000);
       };
-      socket.onerror = () => setEventsConnection('disconnected');
+      socket.onerror = () => {
+        if (eventsSocket.current === socket) setEventsConnection('disconnected');
+      };
     };
     eventsConnect.current = connect;
 
-    void api
-      .getSources()
-      .then((response) => {
-        if (response.code === 0 && mounted.current) setSnapshot(response.data as SourcesSnapshot);
-      })
-      .catch(() => {
-        if (mounted.current) setEventsConnection('disconnected');
-      });
+    // Subscribe starts with a snapshot and then ordered changes. REST and
+    // source-handshake snapshots can arrive later with older host demand;
+    // applying either here can silently stop a camera the host is reading.
     connect();
 
     return () => {
@@ -317,6 +316,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
+    let obsolete = false;
     const leaseBySink = new Map(client.selections().map((lease) => [lease.sinkID, lease]));
     const wanted = new Set<string>();
     for (const sink of snapshot.sinks) {
@@ -325,8 +325,11 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
       // arrives, so it runs on the claim rather than on host demand.
       const canRun =
         sourceConnection === 'connected' &&
+        !stoppedByUser.current.has(sink.id) &&
         owned.has(sink.id) &&
         !!lease &&
+        sink.binding?.source_id === client.sourceId() &&
+        sink.binding.stream_id === lease.streamID &&
         (sink.demand.streaming || sink.kind === 'speaker') &&
         sink.binding?.state !== 'orphaned' &&
         sink.binding?.state !== 'suspended';
@@ -338,12 +341,19 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
         stopTimers.current.delete(sink.id);
         const running = captures.current.get(sink.id);
         if (running && running.demand !== demandKey(sink)) {
-          void stopCapture(sink.id).then(() => startCapture(sink, lease));
+          void stopCapture(sink.id).then(() => {
+            if (!obsolete) void startCapture(sink, lease);
+          });
         } else {
           void startCapture(sink, lease);
         }
       } else if (captures.current.has(sink.id)) {
-        if (sourceConnection !== 'connected' || !owned.has(sink.id)) {
+        if (
+          stoppedByUser.current.has(sink.id) ||
+          sourceConnection !== 'connected' ||
+          !owned.has(sink.id) ||
+          !sink.binding
+        ) {
           void stopCapture(sink.id);
         } else if (!stopTimers.current.has(sink.id)) {
           const timer = window.setTimeout(() => void stopCapture(sink.id), mediaGrace);
@@ -360,6 +370,9 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
     for (const sinkID of [...demanded.current]) {
       if (!snapshot.sinks.some((sink) => sink.id === sinkID)) demanded.current.delete(sinkID);
     }
+    return () => {
+      obsolete = true;
+    };
   }, [client, owned, snapshot.sinks, sourceConnection, startCapture, stopCapture]);
 
   useEffect(
@@ -477,6 +490,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   const share = useCallback(
     async (sink: SourceSink, selectedDeviceID?: string) => {
+      stoppedByUser.current.delete(sink.id);
       setBusy((current) => new Set(current).add(sink.id));
       clearError(sink.id);
       clearAttempt(sink.id);
@@ -528,6 +542,7 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   const takeover = useCallback(
     async (sink: SourceSink, selectedDeviceID?: string) => {
+      stoppedByUser.current.delete(sink.id);
       setBusy((current) => new Set(current).add(sink.id));
       clearError(sink.id);
       try {
@@ -561,6 +576,9 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
 
   const release = useCallback(
     async (sinkID: string) => {
+      // Stop means stop even while release awaits the server. An intervening
+      // demand/binding event must not reopen the camera during that request.
+      stoppedByUser.current.add(sinkID);
       setBusy((current) => new Set(current).add(sinkID));
       clearError(sinkID);
       clearAttempt(sinkID);
@@ -606,7 +624,6 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const setSlots = useCallback(async (slots: api.SourceSlot[]) => {
     const response = await api.setSourceSlots(slots);
     if (response.code !== 0) throw new Error(response.msg);
-    setSnapshot(response.data as SourcesSnapshot);
   }, []);
 
   const setSinkMuted = useCallback((sinkID: string, value: boolean) => {
@@ -632,7 +649,6 @@ export const SourcesProvider = ({ children }: { children: ReactNode }) => {
   const disconnectAll = useCallback(async () => {
     const response = await api.disconnectSources();
     if (response.code !== 0) throw new Error(response.msg);
-    setSnapshot(response.data as SourcesSnapshot);
     for (const sinkID of captures.current.keys()) await stopCapture(sinkID);
     closeRelay();
   }, [closeRelay, stopCapture]);

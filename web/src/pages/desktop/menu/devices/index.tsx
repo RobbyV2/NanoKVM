@@ -13,14 +13,14 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import * as presentation from '@/api/presentation.ts';
+import type { PresentationProfile, PresentationStatus } from '@/api/presentation.ts';
 import type { SourceSink } from '@/api/sources.ts';
 import { MenuItem } from '@/components/menu-item.tsx';
 
-import * as presentation from '@/api/presentation.ts';
-import type { PresentationProfile, PresentationStatus } from '@/api/presentation.ts';
-
 import { useDevices } from './context.ts';
 import { cameraCap, cameraOptions, withCameraCap } from './modes.ts';
+import { sourceStatus } from './state.ts';
 import { WebUSBRelay } from './webusb.ts';
 
 export const Devices = () => {
@@ -209,6 +209,7 @@ const SinkRow = ({
   const busy = state.busy.has(sink.id);
   const demand = sink.demand.streaming;
   const active = state.active.has(sink.id);
+  const status = sourceStatus(sink, active, state.eventsConnection === 'connected');
   const isUSB = sink.kind === 'usb_device';
   // A speaker is rendered, not captured: no getUserMedia, so no permission and
   // no secure-context requirement.
@@ -302,16 +303,15 @@ const SinkRow = ({
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-neutral-500">
-              {active
-                ? t(isSpeaker ? 'devices.receiving' : 'devices.sending')
-                : sink.output === 'black'
-                  ? t('devices.black')
-                  : sink.output === 'silence'
-                    ? t('devices.silence')
-                    : sink.binding?.state === 'orphaned'
-                      ? t('devices.resuming')
-                      : ''}
+            <span
+              className={clsx(
+                'text-xs',
+                status === 'devices.black' || status === 'devices.silence'
+                  ? 'text-amber-400'
+                  : 'text-neutral-500'
+              )}
+            >
+              {status ? t(status) : ''}
             </span>
             <div className="flex shrink-0 items-center gap-2">
               {(sink.kind === 'microphone' || isSpeaker) && active && (
