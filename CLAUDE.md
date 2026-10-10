@@ -27,51 +27,46 @@ React error #130 ("expected a class/function but got: object"), and because the
 error escapes to react-router's error boundary it takes the entire desktop route
 down, not just the keyboard.
 
-This was verified by bisection rather than inference: upstream at `761b02e^`
-(Vite 7.3.2) renders the virtual keyboard correctly, while both upstream `main` and
-our `main` (Vite 8.2.0) throw. The bug is therefore present in the pristine upstream
-tree — we did not introduce it, we inherited it by merging. Note that
-`optimizeDeps.needsInterop` does **not** fix it; that was tried and reverted.
-
 Our patch renames the default import and unwraps `.default` when it is present, so
 it is correct under either interop. **Delete it and restore the plain
 `import Keyboard from 'react-simple-keyboard'` as soon as upstream resolves the
 Vite 8 interop problem**, either by fixing the import themselves or by moving to a
 Vite release that restores the behaviour.
 
-## Workspace and sibling repositories
+## Workspace and builds
 
-Full detail — workspace layout, cloning, building, per-repo merge procedures,
-device runtime facts and known gotchas — is in `docs/REPOSITORIES.md`. Read it
-before touching anything outside this repo. The essentials:
+Read `docs/REPOSITORIES.md` before working outside this application. Merge
+`upstream/main` here and `upstream/NanoKVM` in the companion SDK's
+`nanokvm-custom` branch. Preserve each fork's explicit behavior and submodule
+contracts. Inspect actual worktrees/remotes instead of assuming a machine layout.
 
-- Repos live side by side under a workspace root (`<workspace>/`, which on the
-  author's Mac is `~/Documents/apcs`): `NanoKVM` (this repo), the kernel SDK fork
-  `LicheeRV-Nano-Build`, the non-git artifact drop `nanokvm-firmware`, and six
-  `git worktree` checkouts of this repo named `NanoKVM-*`.
-- Merge `upstream/main` here. In `LicheeRV-Nano-Build` work on `nanokvm-custom`
-  and merge `upstream/NanoKVM` — **never** `upstream/main`; its own `CLAUDE.md`
-  is the authority.
-- On macOS the SDK checkout permanently shows ~38 files as modified. They are
-  case-collision artifacts: never commit them, never `git add -A` there, and
-  never build a kernel from a case-insensitive checkout.
-- `third_party/` holds four submodules (`wstunnel`, `newt`, `usb-proxy`,
-  `hev-socks5-tunnel`), each a fork on a branch named `NanoKVM` with an
-  `upstream` remote already configured. `hev-socks5-tunnel` has nested
-  submodules, so checkouts need `git submodule update --init --recursive`.
-- To bump one: merge `upstream/main` on the `NanoKVM` branch, `git push origin
-  NanoKVM`, then `git add third_party/<name>` and commit here, naming the
-  upstream sha and every resolution in the message. Re-run `make tunnels` /
-  `make passthrough` afterwards or `package.sh`'s `require_fresh` will refuse.
-- The newt fork carries `f1ba26b` "strip unused subsystems" (removes the
-  self-updater, Docker socket scanner, OTel, Prometheus, pprof). It must be
-  re-applied on every upstream merge, and `NEWT_VERSION` in the `Makefile` must
-  follow the newt tag that is an ancestor of the fork head.
-- Builder-image gotcha: the local `nanokvm-builder-local-501-20` was built with
-  uid 1000, so on a uid-501 host `make app` fails with `mkdir
-  /home/build/.cache: permission denied`. Fix with `make rebuild-image`, or work
-  around it with `make app DOCKER_TTY= UID=1000 GID=1000
-  IMAGE_NAME=nanokvm-builder-local-501-20`.
-- Host-side checks: `cd web && pnpm exec tsc --noEmit` and `cd server && gofmt -l .`
-  work. Go builds and `go test ./...` on darwin fail by design (cgo against
-  `dl_lib/libkvm.so`, plus Linux-only source) — use `make app` in the container.
+Build the server with `make app DOCKER_TTY=` in the provided Docker builder; the
+native application requires RISC-V cgo/libkvm. From `web`, `corepack pnpm test`
+and `corepack pnpm build` run the frontend checks. Read `scripts/README.md` before
+changing release packaging. Read the SDK's own `CLAUDE.md` before kernel work.
+
+## Documentation contract
+
+Documentation describes the current architecture, invariants, interfaces and
+operating procedures. Keep it objective and independent of a particular session.
+Do not add investigation diaries, dated implementation plans, chronological
+reports, abandoned approaches or conversations. Git history records changes.
+Update current guidance when behavior changes and remove obsolete instructions.
+
+## Browser media and device operation
+
+Browser webcam sharing lives in `web/src/pages/desktop/menu/devices/` and the
+`sources`/`media` server packages. HDMI desktop streaming is a separate path in
+`web/src/pages/desktop/screen/` and `server/service/stream/`. Read each package's
+`CLAUDE.md` before changing it. An error in one path does not justify resetting
+USB presentation, EDID, networking or the custom kernel.
+
+Use installed Playwright and isolated headless browser contexts for UI checks;
+do not attach to the operator's browser or reinstall existing browsers. Verify
+real frame content and host display as well as transport counters. Mock assistant
+requests and block remote HID sends when testing local assistant gestures.
+
+Web-only deployment updates both `/kvmapp/server/web` and `/tmp/server/web`, with
+assets first and `index.html` renamed last. Keep staging/backups under `/root`,
+retain hashes needed by open tabs and verify the deployed assets. A hard refresh
+loads the new code. See `docs/REPOSITORIES.md` for build and runtime details.

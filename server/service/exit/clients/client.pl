@@ -6,7 +6,7 @@
 # Served fully templated from GET /exit/<slot>/client.pl; takes no arguments.
 # Perl 5.18+ core modules only; IO::Socket::SSL is loaded only for wss.
 #
-# Protocol: docs/superpowers/specs/2026-09-15-exit-tunnel-design.md, section
+# Protocol: server/service/exit/clients/README.md, section
 # "The nexit/1 protocol (Mode A)". Frames are type:u8 stream:u32be payload,
 # exactly one per WebSocket binary message, at most 16 KiB of payload.
 # HELLO's hostname and os strings carry a one-byte length prefix.

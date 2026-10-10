@@ -7,3 +7,10 @@ Isochronous transfers are possible on this kernel and are refused by policy, not
 Both isochronous guards run before `SurrenderUDC` and stay on by default: a refusal before surrender costs nothing, a failure after it costs the keyboard and mouse until Stop. `AllowIsochronous` lifts them for one attempt. Recovery for that case rests on `Terminate` and on `raw_process_ep_io` waiting interruptibly, so SIGTERM breaks a blocked transfer out and the supervisor reclaims the UDC; the liveness watchdog does not cover it, because an interruptible wait reports `S` and not `D`.
 
 The tier-2 VM cannot judge any of this. It never loads raw-gadget, and the `dummy_hcd.c` it builds from kernel.org v6.8 compiles zero isochronous endpoint capabilities — every ISO `EP_INFO` is commented out under "we don't provide isochronous endpoints since we don't support them". An ISO `USB_RAW_IOCTL_EP_ENABLE` there fails with `-EBUSY` and no gadget endpoints available, which is a fact about dummy_hcd and says nothing about dwc2. Treat a tier-2 isochronous result as a false negative.
+
+## Distinguish shared cameras from passthrough
+
+Devices → Share camera sends browser-encoded MJPEG through the source registry to
+the UVC media manager. It does not acquire an Exact or Hybrid session. Check the
+passthrough status before attributing a suspended sink to UDC surrender; stopping
+or replacing the persistent USB profile is not a browser camera repair.

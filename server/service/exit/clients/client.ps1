@@ -6,12 +6,12 @@
 # the consumer behind it asks for. Served fully templated from
 # GET /exit/<slot>/client.ps1 and run with `irm ... | iex`; takes no arguments.
 #
-# Protocol: docs/superpowers/specs/2026-09-15-exit-tunnel-design.md, section
+# Protocol: server/service/exit/clients/README.md, section
 # "The nexit/1 protocol (Mode A)". Frames are type:u8 stream:u32be payload, exactly
 # one per WebSocket binary message, at most 16 KiB of payload. HELLO's hostname and
 # os strings carry a one-byte length prefix.
 #
-# Architecture (spec "Client architecture"): one outstanding ReceiveAsync for the
+# Architecture: one outstanding ReceiveAsync for the
 # WebSocket plus one ReadAsync/ReceiveAsync and, for TCP, at most one WriteAsync per
 # stream, polled with Task.WaitAny every 250 ms; kvm DATA is queued per stream (the
 # kvm's window bounds the queue) and its credit is returned only when the write has

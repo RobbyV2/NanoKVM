@@ -1,563 +1,210 @@
-# Repositories, workspace layout and maintenance
+# Repositories, builds and device operation
 
-The set of repositories this work spans, how to get from nothing to a working
-checkout, how to build, and how to merge upstream into each. Companion to the
-root `CLAUDE.md` (which tracks temporary local patches) and `scripts/README.md`
-(which owns the release/OTA contract).
+## Workspace and ownership
 
-Paths are relative to a workspace root, `<workspace>/`. On the author's Mac that
-is `~/Documents/apcs`; nothing below depends on that choice.
+| Repository | Branch | Upstream | Owns |
+| --- | --- | --- | --- |
+| `NanoKVM` | `main` | `sipeed/NanoKVM:main` | Go application, React UI, system scripts, native support and OTA packaging |
+| `LicheeRV-Nano-Build` | `nanokvm-custom` | `sipeed/LicheeRV-Nano-Build:NanoKVM` | Kernel, U-Boot, OpenSBI, Buildroot and SD images |
 
----
+The forks are under `RobbyV2` on GitHub. Merge only the upstream branch in this
+table. The SDK's `upstream/main` targets MaixCAM and has a different rootfs and
+boot configuration. Read its `CLAUDE.md` before editing or merging it.
 
-## Workspace layout
+`third_party/{wstunnel,newt,usb-proxy,hev-socks5-tunnel}` are submodules. Each fork
+uses the `NanoKVM` branch and its project's upstream `main`. Read actual pins with
+`git submodule status --recursive`; do not infer a pin from a document. The hev
+fork contains nested submodules, so initialize with `--recursive`.
 
-| Path | What it is | Remotes / branch | Merge from |
-|---|---|---|---|
-| `<workspace>/NanoKVM` | This repo. Go server, React web UI, `kvmapp/` device tree, `support/sg2002` C++ daemons, OTA packaging. | `origin` = `https://github.com/RobbyV2/NanoKVM`, `upstream` = `https://github.com/sipeed/NanoKVM.git`; branch `main` | `upstream/main` |
-| `<workspace>/LicheeRV-Nano-Build` | Fork of the Sophgo CVI SDK: U-Boot, OpenSBI, FSBL, Linux 5.10, Buildroot rootfs, SD image. | `origin` = `RobbyV2/LicheeRV-Nano-Build`, `upstream` = `sipeed/LicheeRV-Nano-Build`; branch `nanokvm-custom` | `upstream/NanoKVM` — **never** `upstream/main` |
-| `<workspace>/nanokvm-firmware` | **Not a git repo.** A flat drop of built flash artifacts plus analysis docs. | n/a | n/a |
-| `<workspace>/NanoKVM-*` | Six sibling `git worktree` checkouts of this repo, one per branch. | same repo | `upstream/main` |
-| `<workspace>/NanoKVM/third_party/*` | Four submodules, each a fork on a branch named `NanoKVM`. | below | each project's upstream |
+Additional sibling worktrees and firmware artifact directories are optional.
+Use `git worktree list`, `git status`, and `git remote -v` to inspect the current
+checkout. A directory of built firmware is not an independent build system.
 
-### Submodules (`.gitmodules`)
+## Source map
 
-| Path | `origin` | `upstream` | Pin today |
-|---|---|---|---|
-| `third_party/wstunnel` | `RobbyV2/wstunnel` | `erebe/wstunnel` | `8373db0` (`v10.7.1-13-g8373db0`) |
-| `third_party/newt` | `RobbyV2/newt` | `fosrl/newt` | `79b7f41` (`1.17.0-3-g79b7f41`) |
-| `third_party/usb-proxy` | `RobbyV2/usb-proxy` | `AristoChen/usb-proxy` | `b9c0706` |
-| `third_party/hev-socks5-tunnel` | `RobbyV2/hev-socks5-tunnel` | `heiher/hev-socks5-tunnel` | `9a06bc6` (tag `2.17.1`) |
+| Feature | Application code |
+| --- | --- |
+| Browser camera, microphone and speaker | `web/src/pages/desktop/menu/devices/`, `server/service/sources/`, `server/service/media/` |
+| HDMI desktop streaming | `web/src/pages/desktop/screen/`, `server/service/stream/`, native vision library |
+| Assistant gestures and requests | `web/src/pages/desktop/assistant/`, `server/service/assistant/` |
+| Persistent USB presentation | `server/service/presentation/` |
+| Browser WebUSB relay | `server/service/webusb/`, browser `devices/webusb.ts` |
+| Exact/Hybrid passthrough | `server/service/passthrough/`, `server/service/functionfs/` |
+| Network bridge | `server/service/bridge/` |
+| Exit tunnel | `server/service/exit/`, `server/proto/exit.go`, `nexit/` |
+| EDID | `server/service/edid/` |
+| A/B kernel installation | `server/service/bootslot/`, `server/service/application/kernel.go`, SDK `scripts/ab/` |
 
-All four are on branch `NanoKVM`. `hev-socks5-tunnel` has four nested submodules
-of its own (`src/core`, `third-part/{hev-task-system,lwip,yaml}`), so
-`git submodule update --init` is not enough — it needs `--recursive`.
+Per-package `CLAUDE.md` files define the relevant invariants. The browser webcam
+path sends JPEG/NKMF into UVC; HDMI H.264 and WebUSB are independent paths.
 
-### `nanokvm-firmware`
+## Builds and tests
 
-Artifacts: `boot.sd` (the FIT — LZMA kernel + DTB + initramfs), `fip.bin`
-(FSBL + OpenSBI + U-Boot), `uEnv.txt` (the A/B boot policy),
-`nanokvm_2.8.1.tar.gz` + `latest.json` (an app-only OTA package), and
-`kernel-config-from-boot.sd.txt` — the expanded `.config` read back out of the
-shipped `boot.sd` with `extract-ikconfig`, which is ground truth for "what does
-the shipped kernel actually have" and beats any defconfig reading. Docs:
-`README.md`, `firmware-flash-and-recovery.md`, `first-boot-plan.md`,
-`kernel-feature-matrix.md`, `nanokvm-evidence-usage.md` and `nanokvm-evidence.sh`
-(a read-only on-device evidence collector), plus `emulation/` (a QEMU harness and
-regenerated stock-vs-custom configs).
+Frontend requirements are Node >=22 and pnpm >=11. `corepack pnpm` can be used
+where the standalone pnpm shim is absent. From `web`, run `pnpm test`, `pnpm
+build`, and ESLint on changed files. The build includes TypeScript checking.
 
-The boot chain comes from `LicheeRV-Nano-Build` (`build_all`), the tarball from
-this repo's `make release VERSION=x.y.z`. Nothing there is generated by a tool
-that lives there; it is a drop, not a build system, and it is not versioned.
-
----
-
-## Cloning from scratch
+The RISC-V application uses the Docker builder and Sophgo's x86_64 host toolchain:
 
 ```sh
-mkdir -p <workspace> && cd <workspace>
-
-git clone --recurse-submodules https://github.com/RobbyV2/NanoKVM.git
-cd NanoKVM
-git remote add upstream https://github.com/sipeed/NanoKVM.git && git fetch upstream
-# Each submodule needs its own upstream remote for merges:
-git -C third_party/wstunnel          remote add upstream https://github.com/erebe/wstunnel.git
-git -C third_party/newt              remote add upstream https://github.com/fosrl/newt.git
-git -C third_party/usb-proxy         remote add upstream https://github.com/AristoChen/usb-proxy.git
-git -C third_party/hev-socks5-tunnel remote add upstream https://github.com/heiher/hev-socks5-tunnel.git
+make builder-image
+make check-image
+make app DOCKER_TTY=
 ```
 
-If you cloned without `--recurse-submodules`, recover with
-`git submodule update --init --recursive`.
+`DOCKER_TTY=` is required without an interactive terminal. The image name defaults
+to `nanokvm-builder-local-<uid>-<gid>`; `IMAGE_NAME` selects an existing builder.
+The image's `/home/build` ownership must match the build user's UID/GID. Rebuild
+with the correct Docker build arguments when those identities differ.
 
-### Sibling worktrees
+| Target | Output |
+| --- | --- |
+| `make app` | `server/NanoKVM-Server` |
+| `make web` | `web/dist/` |
+| `make support` | `kvmapp/kvm_system/kvm_system` |
+| `make vision` | `kvmapp/server/dl_lib/` |
+| `make tunnels` | `kvmapp/tunnels/{wstunnel,newt}.gz` |
+| `make passthrough` | `kvmapp/passthrough/usb-proxy.gz` |
+| `make exit` | `kvmapp/exit/hev-socks5-tunnel.gz` |
+| `make release-build` | All application RISC-V artifacts |
+| `make release VERSION=x.y.z` | Application package and manifest |
+| `make kernelint[-tier1\|-tier2\|-watchdog\|-zram]` | Kernel integration tests in QEMU |
 
-```sh
-cd <workspace>/NanoKVM
-git worktree add ../NanoKVM-functionfs            functionfs-phase6
-git worktree add ../NanoKVM-media-browser         codex/media-browser
-git worktree add ../NanoKVM-media-gadget          codex/media-gadget
-git worktree add ../NanoKVM-media-registry        codex/media-registry
-git worktree add ../NanoKVM-presentation-surface  codex/presentation-surface
-git worktree add ../NanoKVM-webusb                codex/webusb
-```
+The server requires cgo and the RISC-V `libkvm.so`. Setting `CGO_ENABLED=0`
+drops `common.GetKvmVision`; it does not provide a portable application build.
+Tests for independent packages can run on the host. The CI workflow derives that
+package set from the import graph, runs Go tests/vet and kernel integration, and
+builds/tests the frontend. Direct frame-queue tests are independent of libkvm:
+`go test -race ./service/stream/direct/internal/framequeue` from `server`.
 
-All six branches exist on `origin` at the same commits, so from a fresh clone add
-`-b <branch> origin/<branch>`. `git worktree list` also shows prunable entries
-under `/private/tmp` and eight agent worktrees under `.claude/worktrees/`;
-`git worktree prune` clears the prunable ones, and the agent ones are not feature
-branches.
+Cross-compiled C/C++ must carry the C906 flags on compile and link commands:
+`-mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d`.
+Verify the ELF interpreter and `$ORIGIN/dl_lib` RPATH against the device. Use the
+Makefile/build scripts instead of a separate ad hoc application build.
 
-### The kernel SDK — must be on a case-sensitive filesystem
+Rust tunnel builds use `riscv64gc-unknown-linux-musl`, `rust-lld`, static CRT,
+`uuid_unstable`, and release opt-level `z`. The older host-tools linker does not
+accept every ISA attribute produced by Rust. Keep the Makefile's explicit feature
+set; do not replace it with `--all-features`.
 
-```sh
-cd <workspace>
-git clone https://github.com/RobbyV2/LicheeRV-Nano-Build.git
-cd LicheeRV-Nano-Build
-git remote add upstream https://github.com/sipeed/LicheeRV-Nano-Build.git
-git fetch upstream && git checkout nanokvm-custom
-```
+## Kernel builds
 
-On macOS (APFS, case-insensitive) this checkout is fine to read and to merge
-carefully, but **it must never be used to build a kernel**. The Linux tree holds
-file pairs differing only in case, so one member of each pair silently carries
-the other's content. Test any checkout first:
-
-```sh
-echo AAA > casetestA && echo bbb > casetesta && ls -1 casetest*   # one line = case-insensitive
-```
-
-For real kernel work, clone onto a case-sensitive volume, into a Docker named
-volume, or inside the Linux container. A bind mount of the macOS tree does **not**
-fix it. `host-tools` is a dangling gitignored symlink to `/usr/local/host-tools`
-and is not a submodule; the container supplies it, or fetch it from
-`sophgo/host-tools`.
-
----
-
-## Building
-
-Everything riscv64 builds inside one Docker builder image; nothing riscv64 builds
-natively on macOS. OrbStack provides Docker here. The image is `linux/amd64` and
-runs under emulation on Apple silicon — every `docker run` prints a
-platform-mismatch warning, which is expected, and Sophgo's host-tools toolchain
-is x86_64-only so there is no native alternative. It is slow but works;
-`make app` takes about two minutes.
-
-```sh
-make builder-image    # builds docker/Dockerfile as nanokvm-builder-local-$(id -u)-$(id -g), if absent
-make rebuild-image    # forces --no-cache with the current host uid/gid
-make check-image      # prints go version and riscv64-unknown-linux-musl-gcc -v
-make shell            # interactive container with the MaixCDK venv activated
-```
-
-### The builder-image uid gotcha
-
-`docker/Dockerfile` bakes `ARG DOCKER_UID=1000 / DOCKER_GID=1000` and creates
-`/home/build` owned by them; the entrypoint then `gosu`s to the `UID`/`GID` the
-Makefile passes from the host. The locally present image
-`nanokvm-builder-local-501-20` was built with the default uid 1000 despite its
-name, so on a uid-501 host `make app` fails with:
-
-```
-failed to initialize build cache at /home/build/.cache/go-build:
-mkdir /home/build/.cache: permission denied
-```
-
-```sh
-make rebuild-image                                                   # correct fix
-make app UID=1000 GID=1000 IMAGE_NAME=nanokvm-builder-local-501-20   # workaround
-```
-
-Add `DOCKER_TTY=` to any invocation from a non-interactive shell — the Makefile
-default is `-it` and fails without a TTY. CI does this plus `IMAGE_NAME=<digest>`.
-`make` refuses to run as root (`check-root`).
-
-### Targets
-
-| Target | Runs | Produces |
-|---|---|---|
-| `make app` | container | `server/NanoKVM-Server` via `server/build.sh` (cgo, BoringCrypto, `$ORIGIN/dl_lib` RPATH) |
-| `make support` | container | `kvmapp/kvm_system/kvm_system` |
-| `make vision` | container | `kvmapp/server/dl_lib/` (`libkvm.so` and friends) |
-| `make web` | **host** | `web/dist`; needs Node ≥22 / pnpm ≥11 — the builder image has no Node |
-| `make tunnels` | container | `kvmapp/tunnels/{wstunnel,newt}.gz` |
-| `make passthrough` | container | `kvmapp/passthrough/usb-proxy.gz`, with libusb 1.0.26 + jsoncpp 1.9.5 cross-built statically first |
-| `make exit` | container | `kvmapp/exit/hev-socks5-tunnel.gz`, staged uncompressed under `build/exit/` (`HEV_BUILD_CMD`) |
-| `make edid-profiles` | container | regenerates `server/service/edid/profiles_gen.go` (needs network) |
-| `make release-build` | container | all riscv64 artifacts in one pass (`scripts/build-in-container.sh`) |
-| `make package VERSION=x.y.z` | host | `build/release/nanokvm_<v>.tar.gz` + `latest.json`; depends on `tunnels` + `passthrough` + `exit` |
-| `make release VERSION=x.y.z` | both | `release-build` → `web` → `package` |
-| `make kernelint[-tier1\|-tier2\|-watchdog\|-zram]` | QEMU | the `//go:build kernelint` tests |
-
-`kvmapp/tunnels/*.gz`, `kvmapp/passthrough/*.gz` and `kvmapp/exit/*.gz` are
-**gitignored**, so a fresh clone has no seeds and `make tunnels` /
-`make passthrough` / `make exit` are required before `make package`. `package.sh`'s `require_fresh` refuses a seed older than the
-submodule it came from — that is how 2.7.0 shipped a stale `usb-proxy`. `gzip -9
--n` is mandatory; the `-n` keeps the timestamp out, which is what makes the
-tarball reproducible.
-
-### Cross-building a new riscv64 binary
-
-Copy the Makefile's recipes rather than inventing flags. Go without cgo (the
-`newt` pattern) is `CGO_ENABLED=0 GOOS=linux GOARCH=riscv64 go build -trimpath
--ldflags="-s -w"`. For C/C++, `-mcpu=c906fdv -march=rv64imafdcv0p7xthead
--mcmodel=medany -mabi=lp64d` must reach the **link** line as well as the compile
-line, or `ld` selects `/lib/ld-musl-riscv64xthead.so.1` while the device runs
-`/lib/ld-musl-riscv64v0p7_xthead.so.1` and nothing starts. Rust targets
-`riscv64gc-unknown-linux-musl`, linked with the toolchain's own `rust-lld`
-(host-tools `ld` is binutils 2.35 and rejects rustc's `zifencei` ISA attribute),
-`RUSTFLAGS="--cfg uuid_unstable -C target-feature=+crt-static"`, never
-`--all-features`.
-
-`hev-socks5-tunnel` cross-builds statically to about 190 KB with `make exit`,
-whose recipe (`HEV_BUILD_CMD` in the Makefile) is, with `$(RISCV_ARCH_FLAGS)`
-on both the compile and the link line:
-
-  ```sh
-  make CROSS_PREFIX=riscv64-unknown-linux-musl- ENABLE_STATIC=1 \
-       CFLAGS="-Os -mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d -ffunction-sections -fdata-sections" \
-       LFLAGS="-mcpu=c906fdv -march=rv64imafdcv0p7xthead -mcmodel=medany -mabi=lp64d -static -Wl,--gc-sections"
-  ```
-
-  `scripts/package.sh` checks the seed with `require_file`, `require_riscv64`,
-  `require_fresh` (against `third_party/hev-socks5-tunnel`) and
-  `require_same_gz`; `.gitignore` has `kvmapp/exit/*.gz`.
-
-### Host-side checks
-
-```sh
-cd web && pnpm exec tsc --noEmit        # clean; pnpm build is tsc && vite build
-cd server && gofmt -l .                 # clean
-```
-
-**Go builds and tests on a macOS host are partially broken by design**, and that
-is not a regression to chase. `cd server && GOOS=linux GOARCH=riscv64
-CGO_ENABLED=0 go build ./...` fails with `undefined: common.GetKvmVision` in
-`service/stream` and `service/vm`, because `server/common/kvm_vision.go` is a cgo
-file linking `-L../dl_lib -lkvm` and disabling cgo drops the file with it; use
-`make app` instead. `go test ./...` on darwin fails to build `NanoKVM-Server`,
-`router`, `service/functionfs`, `service/media`, `service/passthrough`,
-`service/picoclaw`, `service/webusb` and `service/ws` — the first group is
-Linux-only source excluded by build tags, while `picoclaw` and `ws` reach
-`common` and need the riscv64 `libkvm.so`, which needs `libopencv_video.so.409`
-from the device rootfs, so those two can only ever run on a real NanoKVM.
-Everything else passes. CI (`.github/workflows/test.yml`, `ubuntu-latest`) is the
-real gate: `gofmt`, `go vet ./...`, `go test` over a package set derived from the
-import graph, kernelint tier 1, plus the web tests and `pnpm build`.
-
-### Kernel builds
-
-The kernel is built out of tree in `LicheeRV-Nano-Build`; nothing here builds it,
-and there is no kernel source, `.config` or defconfig in this repo. The builder is
-`LicheeRV-Nano-Build/docker/kbuild.Dockerfile` (ubuntu:22.04, the SDK CI's package
-list, host-tools, libfuse2). From the SDK root, on a case-sensitive filesystem:
+Use a case-sensitive SDK checkout. Linux headers include paths differing only by
+case; a bind mount cannot repair files already collided on a case-insensitive
+host. Never commit those filesystem artifacts. Check incoming paths against local
+case collisions before merging the SDK.
 
 ```sh
 docker build -t nanokvm-kbuild:22.04 -f docker/kbuild.Dockerfile docker
-ln -sfn /usr/local/host-tools host-tools
 docker run --rm -v "$PWD":/work -w /work nanokvm-kbuild:22.04 \
   bash -c 'source build/cvisetup.sh && defconfig sg2002_licheervnano_sd && build_all'
 ```
 
-That produces `install/soc_sg2002_licheervnano_sd/{fip.bin,boot.sd,images/*.img}`
-(about 35 minutes cold on 24 cores, most of it Buildroot). To make a flashable
-image, merge a staged app tree — `build/release/nanokvm_<v>/` from `make package`
-copied to `<dir>/kvmapp` — with `kvm/merge_nanokvm_app.sh -a <dir> -i <img> -f`,
-run in the same image with `--privileged --device /dev/fuse -u 0` because it
-mounts the rootfs through `host/fuse2fs`. The older `nanokvm-kbuild-agenta`
-image is superseded. A kernel-only OTA package is produced from *this* repo by
-`KERNEL_ITB=/path/to/boot.itb scripts/package.sh <kernel-version>`.
+The image supplies `/usr/local/host-tools`; the SDK's `host-tools` link must resolve
+to it. Output lives under `install/soc_sg2002_licheervnano_sd/`. To assemble an SD
+image, use `kvm/merge_nanokvm_app.sh` with the staged application tree and the SDK
+builder's fuse support. Both script lists in that merge script must include every
+required application init script.
 
----
+A kernel-only package is produced by
+`KERNEL_ITB=/path/to/boot.itb scripts/package.sh <version>` in NanoKVM. Follow the
+A/B installation contract; `/boot` has limited space and cannot hold a third
+kernel. Browser-only corrections do not require a kernel update.
 
-## Merging upstream
+## Upstream and release contracts
 
-### `NanoKVM` (this repo)
+Preserve the fork's presentation, bridge, media, assistant, exit and packaging
+behavior during upstream merges. `S30rndis` resolves the live gadget NIC from
+ConfigFS, supports NCM, matches DHCP daemons by config path and supports repeated
+start after a rebind. Do not replace those contracts with hardcoded `usb0` logic.
+
+The newt fork excludes Docker scanning, self-updating, telemetry, Prometheus,
+OpenTelemetry and pprof. Keep those deletions when merging upstream and keep
+`NEWT_VERSION` aligned with the fork's base tag. Build Go dependencies with the
+version supplied by the builder. Test usb-proxy changes in its own repository
+and with the relevant kernel integration tier.
+
+After a submodule changes, rebuild its compressed seed. Seeds are gitignored;
+a fresh clone needs those builds before packaging. The package script checks
+artifact architecture, freshness, RPATH and compressed/uncompressed equivalence.
+Use `gzip -9 -n` for reproducible seeds.
+
+`scripts/README.md` owns the release contract. `latest.json` stores SHA-512 as
+base64 of the raw digest. Release archives use GNU tar and `SOURCE_DATE_EPOCH`.
+Application and kernel payloads are separate so an A/B rollback cannot leave an
+untested application/kernel combination. CDN publication is a separate operation;
+building or pushing source does not offer firmware to devices.
+
+## Runtime paths and service lifetime
+
+| Path | Purpose |
+| --- | --- |
+| `/kvmapp/server` | Persistent application binary, libraries and web assets |
+| `/tmp/server` | Running application tree copied by `S95nanokvm` |
+| `/etc/kvm` | Persistent configuration and runtime-managed application state |
+| `/etc/kvm/bin` | Extracted managed binaries |
+| `/root` | Deployment staging, rollback archives and diagnostic output |
+| `/boot` | Bootloader policy and A/B kernel slots |
+
+An application OTA replaces `/kvmapp`; settings that must survive belong under
+`/etc/kvm`. `/tmp` is a small shared tmpfs used by the application, DHCP and other
+services. `S95nanokvm` copies the whole persistent server directory, so backup
+binaries or web trees beside the server consume tmpfs on every restart. Keep
+staging and backups under `/root`, and inspect `df -h /tmp` before deployment.
+
+Restart over SSH with independent standard streams:
 
 ```sh
-git fetch upstream && git merge upstream/main
-git submodule update --init --recursive
-make rebuild-image        # only if docker/** changed
-make release-build && make web
+/etc/init.d/S95nanokvm restart > /root/nanokvm-restart.log 2>&1 < /dev/null
 ```
 
-Recurring conflict hot spots, all deliberate divergences: `Makefile`,
-`docker/Dockerfile`, all of `scripts/`, `kvmapp/system/init.d/S03usbdev` and
-`S30rndis`, `support/sg2002/kvm_system/main/lib/system_init/system_init.cpp`,
-`web/src/pages/desktop/menu/settings/index.tsx`, and all 24 files under
-`web/src/i18n/locales/`.
+Leaving server stdout/stderr attached to the SSH pipe can keep the session open
+and terminate the server with SIGPIPE when it logs after the connection closes.
+Inspect `/proc/<pid>/fd/1` and `/proc/<pid>/fd/2` to locate current output. UVC and
+startup traces also appear in `dmesg`.
 
-`S30rndis` is intentionally stock-upstream with exactly four changes (the gate
-admits NCM, the interface is resolved from configfs instead of spelled `usb0`,
-`udhcpd` is matched by config path because BusyBox writes no pidfile, and `start`
-raises the link and replaces the running `udhcpd` so it can be re-run after every
-gadget rebind). Take upstream's file and re-apply those four rather than keeping ours
-wholesale — it is copied over `/etc/init.d` on every update, so a rewrite here
-rewrites the gadget NIC's addressing on every device in the field. After merging,
-re-read the "Temporary local patches" section of the root `CLAUDE.md` and delete
-anything upstream has fixed; today that list holds one entry, the
-`react-simple-keyboard` CJS default-import unwrap in
-`web/src/pages/desktop/virtual-keyboard/index.tsx`.
+When JWT's configured signing key is empty, the server generates an in-memory
+key at startup. Restarting invalidates old cookies; fresh login distinguishes
+session expiry from media/network failure. WebSocket 4401 means expired/revoked
+session. A generic 1006 needs its underlying browser or network error.
 
-### Submodules
+## Deploying application changes
 
-Each already has both remotes (`git -C third_party/<name> remote -v`). The
-procedure, modelled on commits `b8ba6d5` and `87a805b`:
+For a web-only update, build and back up both web trees under `/root`, install new
+assets in `/kvmapp/server/web` and `/tmp/server/web`, then rename the new
+`index.html` into place last. Keep previous hashed assets while open tabs can
+still request them. The static server needs no restart. Verify hashes and the
+served index, then hard-refresh an isolated browser and test the deployed page.
 
-```sh
-cd third_party/<name>
-git fetch upstream && git checkout NanoKVM && git merge upstream/main
-# resolve, build, test
-git push origin NanoKVM
-cd ../.. && git add third_party/<name> && git commit
-make tunnels     # or make passthrough / make exit — the seeds must be rebuilt after a bump
-```
+For a server update, stage the binary under `/root`, verify architecture/library
+requirements, back up the persistent binary there, and replace the persistent
+binary by rename before restarting with the command above. Confirm the new PID,
+served assets, authenticated API, device state and media output after restart.
+Preserve configuration, the USB profile, native libraries and the custom kernel
+unless the change specifically requires updating them.
 
-The superproject commit message must name the upstream sha the fork now contains
-and every conflict resolution; that record is the only place the resolution rule
-survives.
+The device has BusyBox utilities. Its `tar` supports plain `-cf`/`-xf` and may
+reject `-z`; use a plain host-created tar instead of assuming GNU options. The
+installed SCP server can require the client's legacy mode (`scp -O`).
 
-- **wstunnel** — the fork's entire delta is a riscv64 entry in
-  `.github/workflows/release.yaml`. No Rust source patch. It conflicts only if
-  upstream reworks its release matrix, and is worth offering upstream so the
-  divergence can go to zero.
-- **newt** — the fork is one large deletion commit, `f1ba26b` *"strip unused
-  subsystems"* (34 files, +55 −3431): it removes `docker/`,
-  `internal/telemetry/`, `internal/state/telemetry_view.go`, all of `updates/`
-  (the self-updater), `packages/advantech/`, and the flags `--docker-socket`,
-  `--docker-enforce-network-validation`, `--metrics`, `--otlp`,
-  `--metrics-admin-addr`, `--metrics-async-bytes`, `--pprof`, `--region` plus
-  `NEWT_METRICS_PROMETHEUS_ENABLED`. **Every upstream change touching those paths
-  conflicts by construction.** Standing rule: keep the deletion, drop upstream's
-  re-additions, re-strip anything newly added that pulls otel / prometheus / moby
-  / grpc / pprof back in, then `go mod tidy` and keep `go 1.25.0` — the builder
-  image pins Go 1.25.0, so upstream's `go 1.26.0` alone fails the build. The
-  2026-09-15 merge to upstream 1.17.0 re-applied the strip on top of upstream's
-  move of root `config.go` into `newtconfig/`, a rename-vs-modify conflict that
-  recurs whenever the file moves. The self-update goroutine must never come back:
-  it fetched upstream's 35.5 MB `linux_riscv64` build every six hours and renamed
-  it over the running binary on flash. `NEWT_VERSION` in the `Makefile` (today
-  `1.17.0`) is baked in through `-X main.newtVersion` and must follow the tag
-  `git -C third_party/newt describe --tags` reports as the fork head's base.
-- **usb-proxy** — five fork commits rewriting the hot path (`device-libusb.cpp`,
-  `proxy.cpp`, `host-raw-gadget.cpp`, `usb-proxy.cpp`) plus `Makefile` and
-  `misc.h`, so upstream work there conflicts substantively rather than textually.
-  Run `make test` in the submodule after a merge, then `make kernelint-tier2`.
-- **hev-socks5-tunnel** — pinned at tag `2.17.1`; every checkout and merge needs
-  `--recursive`.
+## Boot and USB contracts
 
-### `LicheeRV-Nano-Build`
+Boot scripts run in SysV order. `S01fs` mounts ConfigFS/debugfs, `S02abtrial` guards
+a kernel trial, `S02zram` configures swap, `S03usbdev` prepares the gadget and
+`S95nanokvm` starts the application. The presentation manager binds the UDC after
+its functions and media event subscriptions are ready. Never reorder binding
+ahead of the UVC subscription: this fork forwards UVC class requests to userspace.
 
-Its own `CLAUDE.md` is the authoritative policy; read it before any merge. The
-short version:
+`new_app_init()` copies a fixed init-script list, SDK image assembly has two
+script lists, and extensions can install their own seeds at service startup.
+Choose the correct delivery mechanism. App initialization removes `S99*`; new
+scripts must use another supported slot. Do not assume a shipped seed is installed.
 
-- Merge `upstream/NanoKVM`. **Never** `upstream/main` — that is the MaixCAM line,
-  and a wholesale merge has already been done once and reverted (`6c9d872ff` →
-  `fe9a949e6`). Cherry-pick individual commits from `main` and say in the message
-  why they apply to NanoKVM.
-- The recurring conflict resolutions to keep are enumerated there: the trimmed
-  buildroot defconfig, the `1581056` KB ROOTFS partition, the overlay `init.d`
-  whitelist, `CONFIG_ZRAM`/`CONFIG_ZSMALLOC`, the `kvm/` gitignore rule, and both
-  script loops in `kvm/merge_nanokvm_app.sh`.
-- Run the case-collision safety check before every merge, since those 38 paths
-  always look dirty and will hide a real incoming change:
+Read the live network function's `ifname` rather than assuming `usb0`. A profile
+apply can re-enumerate both camera and network functions. Read active profile
+contents and ConfigFS links; names do not imply which functions are enabled.
 
-  ```sh
-  git status --porcelain | awk '{print $2}' | sort > /tmp/dirty.txt
-  git diff --name-only nanokvm-custom...upstream/NanoKVM | sort > /tmp/incoming.txt
-  comm -12 /tmp/dirty.txt /tmp/incoming.txt     # empty means safe to merge
-  ```
-
-- Never commit those files and never `git add -A` there. There is also an
-  untracked `out/` build directory.
-
----
-
-## Release and OTA, in brief
-
-`scripts/README.md` is the authority; read it before touching packaging.
-`make release VERSION=x.y.z` produces `build/release/nanokvm_<v>.tar.gz` and
-`latest.json`. Points that are easy to get wrong: `latest.json`'s `sha512` is
-**base64** of the raw digest, not hex (hex passes every local eye test and fails
-on every device); reproducibility comes from `SOURCE_DATE_EPOCH` plus GNU tar
-flags, which macOS `bsdtar` cannot do; `package.sh` gates on `require_riscv64`,
-`require_runpath` (`$ORIGIN/dl_lib`, absent means the server dies in the loader
-before `main`), `require_fresh` and `require_same_gz`; a package carries an
-application **or** a kernel, never both; and uploading to
-`cdn.sipeed.com/nanokvm/` is deliberately manual and is the only step that
-actually offers an update to devices — no workflow touches the CDN.
-
----
-
-## Device runtime facts an agent needs
-
-**Boot chain.** sysvinit `rcS` runs `/etc/init.d/S*` in order. Seeds live in
-`kvmapp/system/init.d/`: `S00kmod`, `S01fs` (mounts `/boot` vfat, configfs,
-debugfs), `S02abtrial` (kernel A/B trial watchdog), `S02zram`, `S03usbdev`
-(builds the USB gadget), `S03usbhid` (hid-only variant), `S15kvmhwd`, `S29bridge`,
-`S30eth`, `S30rndis`, `S30wifi`, `S50avahi-daemon`, `S50ssdpd`, `S50sshd`,
-`S80dnsmasq`, `S95nanokvm` (the core services), `S96picoclaw`, `S97newt`,
-`S97wstunnel`, `S98tailscaled`. **`S99*` is unusable** — every new-app init runs
-`rm -f /etc/init.d/S99*`. `S97` is the free slot.
-
-**Three ways a script reaches `/etc/init.d`; picking the wrong one silently ships
-nothing.** (1) `support/sg2002/kvm_system/main/lib/system_init/system_init.cpp`
-`new_app_init()` `cp -f`s a hardcoded list on every app update — `S00kmod`,
-`S01fs`, `S02zram`, `S03usbdev`, `S15kvmhwd`, `S29bridge`, `S30eth`, `S30rndis`,
-`S50sshd`, `S95nanokvm`, conditionally `S30wifi` and `S98tailscaled` — and
-changing it means rebuilding `kvm_system`. (2)
-`LicheeRV-Nano-Build/kvm/merge_nanokvm_app.sh` has **two** lists, a `need_file`
-pre-flight and an install pass, both of which must be edited; it only affects
-freshly flashed images. (3) The tunnel pattern, where the Go service copies its
-own seed at start and at server boot (`enableInitScript` in
-`server/service/extensions/tunnel/`); `S96picoclaw`, `S97newt` and `S97wstunnel`
-use this and appear in neither list above. It needs no C++ and no SDK change, so
-new work should prefer it.
-
-**`/etc/kvm` survives an OTA; `/kvmapp` does not.** `install.go` moves the old
-`/kvmapp` to `/root/old` and the staged tree into place, so anything written
-under `/kvmapp` is lost on update and the shipped `kvm/` defaults (fps, quality,
-resolution) reset every time. Extracted binaries belong in `/etc/kvm/bin`; seeds
-belong in `/kvmapp/tunnels` and are copied out at runtime.
-
-**Custom kernel vs stock**, checked directly against `upstream/NanoKVM`'s copy of
-`build/boards/sg200x/sg2002_licheervnano_sd/linux/sg2002_licheervnano_sd_defconfig`:
-
-| Symbol | `upstream/NanoKVM` | our `nanokvm-custom` |
-|---|---|---|
-| `CONFIG_TUN`, `CONFIG_VETH` | `=y` | `=y` |
-| `CONFIG_NF_NAT`, `CONFIG_NFT_MASQ`, `CONFIG_IP_NF_TARGET_MASQUERADE` | `=y` | `=y` |
-| `CONFIG_BRIDGE` | absent | `=y` (**fork addition**) |
-| `CONFIG_ZRAM`, `CONFIG_ZSMALLOC` | absent | `=y` (**fork addition**) |
-
-TUN and the whole NAT stack are upstream, so a stock unit very likely has them;
-the **bridge** and **zram** genuinely require our image. `CONFIG_NET_SCHED` is not
-set anywhere — no tc qdiscs at all. `CONFIG_IKCONFIG_PROC=y`, so on a real device
-`zcat /proc/config.gz` settles it per-unit, and
-`nanokvm-firmware/kernel-config-from-boot.sd.txt` settles it for the shipped
-binary.
-
-**The exit feature requires the custom kernel.** It needs `CONFIG_TUN`, policy
-routing (`IP_ADVANCED_ROUTER`, `IP_MULTIPLE_TABLES`), conntrack and NAT
-(`NF_CONNTRACK`, `NF_NAT`), the nft path (`NF_TABLES_IPV4`, `NFT_NAT`,
-`NFT_MASQ`, `NFT_REJECT`, and `NFT_COMPAT` for `-j TCPMSS` and `-j REJECT` under
-iptables-nft), the legacy iptables path (`IP_NF_FILTER`, `IP_NF_NAT`,
-`IP_NF_TARGET_MASQUERADE`, `IP_NF_TARGET_REJECT`, `NETFILTER_XT_TARGET_TCPMSS`,
-`NETFILTER_XT_MATCH_CONNTRACK`) and the v6 reject path (`IP6_NF_FILTER`,
-`IP6_NF_TARGET_REJECT`), all `=y` in `nanokvm-custom` for
-`sg2002_licheervnano_sd` and `_sd_minimal`. A stock kernel's policy-routing and
-`nft_compat` options are unverified, so the feature is supported only on our
-image; `docs/exit-live-test.md` 0.2 lists the symbols and the command that reads
-them back from `/proc/config.gz`.
-
-**No kernel module can ship in an OTA.** `scripts/package.sh` copies `kvmapp/.`
-and the only `.ko` in this repo is `kvmapp/system/ko/soph_mipi_rx.ko`; `S00kmod`
-insmods a fixed list by absolute path and `/mnt/system/ko` is flat with no
-`modules.dep`. Anything `=m` must come from the base image — which is exactly why
-`CONFIG_BRIDGE` was chosen `=y`.
-
-**Other runtime facts that bite.** The gadget NIC is never reliably `usb0` —
-resolve it from `configs/c.1/<net-fn>/ifname`. `S03usbdev` deliberately does not
-bind the UDC; the Go presentation manager binds once, last. Firewalling is
-`iptables`, not `nft`. IPv4 forwarding is actively zeroed by `S98tailscaled` at
-every start. `/tmp` is an 80 MB tmpfs shared with the exit logs, `udhcpd`
-leases and everything else, and `S95nanokvm` removes `/tmp/server` and copies
-the whole of `/kvmapp/server` into it at every boot and restart, so anything
-left beside `NanoKVM-Server`, `dl_lib` and `web` there (a staged
-`NanoKVM-Server.new`, a `web.prev` backup) is copied too; at 82 MB the copy
-fills `/tmp`, `udhcpd` cannot write leases and daemons whose stderr goes to
-`/tmp` abort. Stage deploy files under `/root` and keep backups there. A
-`/etc/init.d/S95nanokvm restart` issued over ssh leaves the new
-`NanoKVM-Server` with stdout and stderr on the ssh channel pipe; the server
-handles only INT, TERM and QUIT (`server/service/startup/interrupt.go`) and the
-Go runtime exits on SIGPIPE when a write to fd 1 or 2 hits a closed pipe, so the
-ssh session cannot return until the server ends and closing it kills the server
-at its next log line. Restart with `/etc/init.d/S95nanokvm restart >
-/root/<name>.out 2>&1 < /dev/null` (a file on eMMC, not `/tmp`). Per-package
-design notes live in `server/service/*/CLAUDE.md` and are load-bearing — read
-the package's own notes before changing it.
-
----
-
-## Sibling worktree branches
-
-All six are worktrees beside this repo, all six exist on `origin` at the same
-commits, and all six were merged with `upstream/main` on 2026-09-15 (each tip is
-a `Merge remote-tracking branch 'upstream/main'` commit). They are kept rebased
-on upstream by housekeeping, not by active development.
-
-- **`functionfs-phase6`** — FunctionFS gadget profiles and the hybrid USB
-  passthrough relay. On `main` as `server/service/functionfs/` and
-  `server/service/passthrough/`.
-- **`codex/media-browser`** — browser-side media streaming and the device picker.
-  On `main` under `web/src/pages/desktop/menu/devices/`.
-- **`codex/media-gadget`** — media gadget profiles and the media data plane. On
-  `main` under `server/service/media/` and `server/service/presentation/`, in a
-  later form.
-- **`codex/media-registry`** — tracking and serving media sources. On `main`
-  under `server/service/sources/`, where `store.go` was superseded by
-  `registry.go` + `service.go` + `types.go`.
-- **`codex/presentation-surface`** — the USB profile management and editing UI.
-  On `main` under `web/src/pages/desktop/menu/settings/presentation/` and
-  `server/service/presentation/`.
-- **`codex/webusb`** — WebUSB support; fully on `main` at
-  `server/service/webusb/` and `web/src/pages/desktop/menu/devices/webusb.ts`.
-
-Before treating any as live work, run `git cherry main <branch>`: a leading `-`
-on every line means `main` already carries an equivalent patch. `git branch
---merged` will not list them, because `main`'s copies were rebased or re-authored
-rather than merge-committed. Do not use three-dot `git diff main...<branch>` here
-— there are multiple merge bases and the result is misleading; use two-dot.
-
----
-
-## Weekly maintenance checklist
-
-1. `cd <workspace>/NanoKVM && git fetch upstream && git merge upstream/main`.
-2. For each of `third_party/{wstunnel,newt,usb-proxy,hev-socks5-tunnel}`:
-   `git fetch upstream && git merge upstream/main` on branch `NanoKVM`,
-   re-applying the newt strip if it conflicted, then `git push origin NanoKVM`.
-3. `git submodule update --init --recursive`, then `git add third_party/<name>`
-   for each that moved and commit with the upstream sha and the resolutions in
-   the message. Bump `NEWT_VERSION` if the newt fork's base tag moved.
-4. Rebuild the gitignored seeds: `make tunnels && make passthrough && make exit`
-   (add `DOCKER_TTY=` in a non-interactive shell).
-5. Container-build the server with `make app` (if it fails on
-   `/home/build/.cache` permissions, `make rebuild-image`) and type-check the
-   frontend on the host with `cd web && pnpm exec tsc --noEmit`.
-6. `cd <workspace>/LicheeRV-Nano-Build`, run the case-collision `comm -12` check,
-   then `git fetch upstream && git merge upstream/NanoKVM`. Never `git add -A`.
-7. Push everything: `git push origin main` here, `git push origin nanokvm-custom`
-   in the SDK, and the six sibling branches if they were re-merged.
-8. Re-read the "Temporary local patches" section of the root `CLAUDE.md` and
-   delete any entry upstream has fixed. Today: the virtual-keyboard CJS unwrap.
-
----
-
-## Known gotchas
-
-Only entries verified against the trees on disk.
-
-- **Builder image uid.** `nanokvm-builder-local-501-20` has `/home/build` owned by
-  uid 1000, so `make app` on a uid-501 host fails on the Go build cache.
-- **`make builder-image` reuses any image with the right name**, so one built
-  before a toolchain change silently lacks the new tool. `build-in-container.sh`
-  checks a fixed list up front — add new dependencies to it.
-- **Two near-identical 12.8 GB images exist**, `nanokvm-builder-local-501-20`
-  (app builds, gosu to your uid) and `nanokvm-kbuild-agenta` (that plus kernel
-  deps, ran as root). Neither the kbuild image nor its `/work` scratch volume is
-  reproducible from either repo.
-- **The kernel SDK must never be built on macOS**, and its 38 permanently
-  "modified" case-collision files hide real incoming changes — run the `comm -12`
-  check before every merge.
-- **`LicheeRV-Nano-Build/CLAUDE.md` documents an `ota` remote this clone does not
-  have** — only `origin` and `upstream` are configured. Do not assume it is there.
-- **Host Go builds are expected to fail** (`CGO_ENABLED=0` loses
-  `common.GetKvmVision`; `go test ./...` fails eight packages on darwin), and
-  `service/picoclaw` + `service/ws` can only ever be tested on a real NanoKVM.
-- **Seeds are gitignored and must be rebuilt after any submodule bump**, or
-  `require_fresh` refuses the package; `make package` on macOS is also not
-  byte-reproducible, so cut releases in CI.
-- **`hev-socks5-tunnel` needs `--recursive`** (it vendors lwip and hev-task-system
-  as submodules of its own). **`NEWT_VERSION` is manual.**
-- **The six sibling branches look unmerged but are not.** Use `git cherry` and
-  two-dot diffs.
-- **`S99*` init scripts are deleted on every app update.**
-- **`S80dnsmasq` ships but is installed by nothing** and exits 0 without
-  `/etc/dnsmasq.conf`; its only config generator in the tree is dead code writing
-  to the wrong path. Do not assume dnsmasq is a working path.
-- **The minimal image** (`/etc/nanokvm-minimal`, 112 MB rootfs) has no dnsmasq,
-  no nftables, no socat, no python3, and only legacy iptables. Anything designed
-  against the full buildroot package list may not exist there.
-- **Recovery needs physical access to the microSD.** There is no remote recovery
-  path if the kernel does not boot, and `/boot` (FAT, ~1.8 MiB free) is the hard
-  ceiling on kernel growth.
-- **The fork kernel's `f_uvc` answers no UVC class request itself.**
-  `LicheeRV-Nano-Build/linux_5.10/drivers/usb/gadget/function/f_uvc.c:241-265`
-  forwards every one to userspace as a V4L2 event and `:395-417` keeps
-  `bind_deactivated` clear, so the gadget is on the bus from the bind and a request
-  that finds no subscribed handle is dropped and wedges ep0 for every function. The
-  server subscribes at the bind to win that race; the kernel-side follow-up, a STALL
-  (`-EOPNOTSUPP`) from `uvc_function_setup` when no handle is subscribed, is not in
-  the fork yet and belongs in the next kernel merge.
+The custom SDK supplies bridge, zram, media/controller and exit-routing support.
+Check `/proc/config.gz` for deployed capabilities. Minimal images have a smaller
+utility/package set; commands available in the builder are not necessarily on the
+device. Physical microSD recovery is required if no kernel boots.

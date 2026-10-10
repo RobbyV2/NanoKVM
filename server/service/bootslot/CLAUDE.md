@@ -79,12 +79,9 @@ listener alone would make that failure permanent.
 
 ## What `/dev/watchdog` actually does
 
-The trial guard was designed around a claim read from source: that `dw_wdt` sets
-`WDIOF_MAGICCLOSE`, so a close without writing `V` leaves the kernel petting the device
-forever and the watchdog cannot notice the server dying. `scripts/kernelint.sh watchdog`
-runs that claim in a VM against `softdog` and against `stopless_wdt`, a stub shaped like
-`dw_wdt` with no reset control (its `stop()` only sets `WDOG_HW_RUNNING`, and it reports
-a `max_hw_heartbeat_ms`). The measured result is the opposite:
+`scripts/kernelint.sh watchdog` exercises `softdog` and `stopless_wdt`, a stub
+with the same stop semantics as `dw_wdt` without reset control. The required
+behavior is:
 
 | probe                                | softdog  | stopless_wdt |
 | ------------------------------------ | -------- | ------------ |
@@ -98,8 +95,15 @@ server dying. The "kernel pets it forever" behaviour is real but belongs to the 
 branch: after `V` is written, the core calls `stop()`, `dw_wdt` cannot stop, and the
 core's keepalive worker feeds the device indefinitely.
 
-Nothing in this repository opens `/dev/watchdog`, so today the enabled `dw_wdt` provides
-no protection at all and `S02abtrial` is the only trial deadline. That guard is still
-needed; only its stated justification was wrong. Anything built on the watchdog later
-must write `V` before every intentional restart, or an ordinary `S95nanokvm restart`
-becomes a reboot.
+No application service opens `/dev/watchdog`, so the enabled `dw_wdt` does not
+protect the server; `S02abtrial` supplies the trial deadline. A service that acquires
+the watchdog must write `V` before an intentional restart to avoid rebooting the
+device when it closes the descriptor.
+
+## Application and web deployment boundaries
+
+The running application serves web assets from `/tmp/server/web`; persistent web
+assets live at `/kvmapp/server/web`. Replacing those assets requires no A/B kernel
+trial. Keep deployment staging and rollback archives under `/root`, outside the
+server tree copied into the shared `/tmp` tmpfs. See `docs/REPOSITORIES.md` for the
+application deployment procedure. Preserve the custom kernel for UI-only changes.

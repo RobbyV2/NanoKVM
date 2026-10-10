@@ -22,3 +22,16 @@
 - Browser frames are untrusted. Keep payloads and queues bounded and reject undeclared formats.
 - The edges of a camera stream go to the kernel log (`uvctrace.go`, through `startup.Kmsg`, prefixed `NanoKVM-Server: uvc <slot>:`): every UVC event with its name and, for a control transfer, the request and selector; the STREAMON handled with the cost of `S_FMT`, `REQBUFS`, the mmaps, the `QBUF`s and `STREAMON`; the first frame the kernel finished sending; the STREAMOFF handled; and a stream this side took down, with the reason. Each line carries the kernel's own timestamp for the edge, how much later this side had handled it, and after a STREAMON the offset from it. The C side records the marks in `nk_mark`; one per edge and never one per frame, since a line per frame would cost the stream the very time it measures. `f_uvc` holds the host's alt 1 at its status stage until the `STREAMON` ioctl, so the "streamon handled" line is time the host spent waiting on this side.
 - Passthrough owns the same UDC. Suspend all outputs before surrender and reopen only after the presentation gadget binds.
+
+## Verify the browser-to-host camera path
+
+The browser produces MJPEG through `getUserMedia` and an encoder worker, then sends
+NKMF to `service/sources`. This manager validates and queues those frames for UVC.
+HDMI desktop codecs and WebUSB relays are separate paths.
+
+Read `GET /api/sources` for host demand, active geometry, binding state and output.
+The host must open the UVC camera for demand to become active. Correlate ingress
+with `dmesg` UVC frame completions and the host picture; ingress acknowledgments
+alone do not prove visible output. A source disconnect selects standards-compliant
+fallback while host demand persists. Browser errors and device fallback must be
+visible in the Devices panel.

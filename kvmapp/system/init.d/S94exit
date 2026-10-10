@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# S94exit: the downstream half of one exit-tunnel slot (D6, D8, D9 in
-# docs/superpowers/specs/2026-09-15-exit-tunnel-design.md).
+# S94exit: the downstream half of one exit-tunnel slot.
+# Owns the slot network interface, routing, NAT, DHCP options and DNS.
 #
 #   S94exit start  [slot]   converge the slot: idempotent, lock-serialised
 #   S94exit stop   [slot]   reverse everything start did, by identity

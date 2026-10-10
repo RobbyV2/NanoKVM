@@ -2,7 +2,6 @@
 
 Puts `eth0` and the USB gadget NIC into one Layer-2 bridge, `br0`, so the router sees the
 NanoKVM and the controlled host as two devices with two MACs and two DHCP leases.
-Design: `docs/superpowers/specs/2026-08-22-ethernet-bridge-design.md`.
 
 Enabling the bridge moves the address the caller is talking to. Every rule below exists
 because the failure mode of this package is a device that needs physical access.
@@ -238,3 +237,15 @@ address.
 rollback against real veth pairs and a real `br0` inside a network namespace, with only
 `S30eth` and `iptables` stubbed. It runs in CI on every push; see
 `service/presentation/CLAUDE.md` for the build tag and the tier split.
+
+## Media connection diagnostics
+
+HTTP 401 and WebSocket 4401 indicate authentication/session failure, not bridge
+forwarding failure. For simultaneous media and control disconnects, correlate
+browser socket errors with server PID/uptime, available memory, network counters
+and the active interface. Do not infer a link fault from an aborted `video.play()`;
+a browser capture teardown can produce that rejection locally.
+
+A browser permission failure such as Chromium's local-network access check occurs
+before the device accepts the socket. Verify the deployed origin and browser
+permissions before changing the bridge or USB network profile.

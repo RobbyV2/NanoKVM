@@ -50,7 +50,7 @@ NEXIT_BUILD_CMD := cd /home/build/NanoKVM/nexit && go mod download && mkdir -p /
 TUNNELS_DIR := /home/build/NanoKVM/build/tunnels
 CARGO_HOME_DIR := /home/build/NanoKVM/build/cargo
 WSTUNNEL_TARGET := riscv64gc-unknown-linux-musl
-# opt-level "z" for size; see docs/superpowers/specs/2026-08-21-tunnels-design.md
+# opt-level "z" for size; see docs/REPOSITORIES.md
 WSTUNNEL_CARGO_CONFIG := --config profile.release.opt-level=\"z\"
 # host-tools ld is binutils 2.35 and rejects the zifencei ISA attribute rustc
 # emits, so link with the toolchain's own rust-lld, resolved from the sysroot.

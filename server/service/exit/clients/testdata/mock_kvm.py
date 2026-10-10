@@ -2,7 +2,7 @@
 """mock_kvm.py: the NanoKVM side of nexit/1 for exercising the exit clients on a host.
 
 It is a WebSocket server implementing the kvm half of the protocol in
-docs/superpowers/specs/2026-09-15-exit-tunnel-design.md plus a SOCKS5 front
+server/service/exit/clients/README.md plus a SOCKS5 front
 door on loopback, so `curl --socks5-hostname 127.0.0.1:<port>` and a UDP
 ASSOCIATE client can be driven through client.py / client.pl / client.ps1
 without the Go server. Unlike hev, tools like curl send domain names; the mock

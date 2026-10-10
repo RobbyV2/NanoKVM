@@ -4,7 +4,7 @@
 // and the routing, NAT, DHCP options and DNS that make the USB gadget NIC a
 // transparent internet interface for the attached consumer.
 //
-// See docs/superpowers/specs/2026-09-15-exit-tunnel-design.md. Everything is
+// See server/service/exit/clients/README.md. Everything is
 // scoped by a Slot so a second tunnel is additive, even though only slot 0
 // exists today.
 package exit

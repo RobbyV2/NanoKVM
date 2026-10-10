@@ -1,8 +1,7 @@
 # sources
 
 Owns browser source sessions, declared media slots, binding leases and the shared live
-state feed. It does not open media devices or compile USB functions. Design:
-`docs/superpowers/specs/2026-08-22-media-sources-design.md`.
+state feed. It does not open media devices or compile USB functions. The registry and service in this package define its protocol.
 
 One mutex owns the source, sink and binding maps. Keep claims, resumes, slot replacement
 and event publication in that critical section, so observers never see a binding without
@@ -44,3 +43,21 @@ stream length and payload length. IDs are at most 64 bytes. MJPEG is at most 2 M
 The PCM envelope is at most 40 ms; the gadget accepts exact 20 ms mono S16LE 48 kHz
 packets. Authenticate the binding before ingress, copy payloads before enqueueing, and
 acknowledge only accepted frames.
+
+## Browser state and delivery
+
+`/api/sources/events` begins with a registry snapshot and then publishes ordered
+changes. The browser uses this single feed for sink state. REST responses and the
+source socket's hello snapshot are not ordered against it and must not overwrite
+newer demand or binding events. A reconnect receives another full event snapshot.
+
+Host demand, source ownership and local capture readiness are independent. Report
+`black`, `silence`, orphaned leases and stale event connections explicitly; an open
+browser track alone does not establish `output: source`. A media acknowledgment
+means the ingress request completed, not that the host displayed the frame. Frames
+sent during a host-idle grace period may be acknowledged without entering USB.
+
+The browser capture lifecycle is in `web/src/pages/desktop/menu/devices/`. Generation
+checks retire pending permission/play/bitmap work; capture identity checks prevent
+an old attempt from stopping its successor. Real failures of the current attempt
+must reach the UI. Source/lease tokens must stay out of diagnostic logs.

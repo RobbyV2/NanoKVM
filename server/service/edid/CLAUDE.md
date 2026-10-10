@@ -3,7 +3,6 @@
 Parses, validates, decodes and flashes the EDID the NanoKVM presents to the attached
 host. The flash itself is performed by the shipped riscv64 C tool at
 `/kvmapp/system/tool/nanokvm_update_edid`; this package drives it.
-Design: `docs/superpowers/specs/2026-08-22-edid-design.md`.
 
 ## The child gets a plain pipe carrying "y\n"
 
@@ -17,7 +16,7 @@ that one read. A pty would add line-discipline echo, CRLF translation, SIGHUP-on
 semantics and either cgo or a `creack/pty` dependency, to solve a problem the source says
 does not exist. Do not add one.
 
-Three ways to get the pipe wrong, all of which have been paid for once:
+The wrapper must handle these input cases:
 
 - Closed stdin or `/dev/null`. EOF is a decline, not consent. The tool prints
   `Input error. Exiting.` and exits 1 before touching the chip.
@@ -184,3 +183,11 @@ region back and compares it itself, so a write that prints `EDID data verified
 successfully` is a completed write, read and compare. It flashes a corpus blob, checks
 that line, and flashes the factory blob back. No monitor and no operator, and it does
 write to the chip.
+
+## Video path boundaries
+
+EDID governs the host's HDMI output into NanoKVM. It does not configure the UVC
+webcam presented to the host. Browser webcam failures belong to the source/media
+path. Corruption confined to one browser desktop codec belongs to the capture,
+transport or decoder path; compare the same encoded frames before considering an
+EDID write. The flash operation is not a generic video reset.

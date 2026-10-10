@@ -2,7 +2,6 @@
 
 Owns the USB gadget under `/sys/kernel/config/usb_gadget/g0`. Compiles a declarative
 `Profile` into an ordered `Plan` of configfs operations and applies it under one lock.
-Design: `docs/superpowers/specs/2026-08-22-presentation-manager-design.md`.
 
 ## The package is add-only, and that is not a style choice
 
@@ -47,14 +46,11 @@ fallback for a kernel that does not publish the attribute.
 
 ## The gadget is reconciled against the profile at startup
 
-`S03usbdev` rebuilds the stock three-HID gadget from scratch on every boot and knows
-nothing about the profile store, while `Migrate` returns early the moment an active
-profile exists. Between them, a layout the operator chose and an apply that rolled back
-leave the store promising one gadget and the kernel presenting another - permanently,
-silently, and with the server writing HID reports shaped for the promise into endpoints
-that belong to the other one. That is how a device ended up showing HID devices in
-Windows that controlled nothing: a stored `report_length: 9` report-ID composite written
-into what was really the stock eight-byte boot keyboard.
+`S03usbdev` rebuilds the stock three-HID gadget on boot and does not read the
+profile store. `Migrate` returns early when an active profile exists. The live
+layout can therefore differ from the stored profile after boot or rollback.
+Reports must match the live endpoints: a report-ID composite with `report_length: 9`
+cannot drive an eight-byte boot keyboard.
 
 `Manager.ReconcileGadget` runs from `GetManager` after `Migrate`, compares
 `compareLayout(activeProfile, liveFunctions(ops))` and reapplies the profile when they
@@ -75,14 +71,11 @@ it is what lets the function activate), and waits for a host that was configured
 began to come back (`confirmEnumeration`, on the state recorded in `startUDC`). A controller
 that is already bound when `Attach` runs is left as it is.
 
-The bind is last for a measured reason. A host that asks for a descriptor while the board is
-still coming up does not retry: after a cold boot Windows had the microphone, speaker and USB
-NIC at `CM_PROB_FAILED_START` with `STATUS_IO_TIMEOUT` while the camera and HID, started
-earlier, were healthy. The old start bound at the reconcile and cycled the pull-up at the end
-to present the finished device, which fixed that and cost a second enumeration 0.7 s after
-the first at every start; binding once at the end presents the finished device without it.
-Run-time paths are untouched: an apply, a LUN change, a PHY reset and a reclaim after
-passthrough all bind for themselves as they did.
+Binding before every function is ready can expose incomplete descriptors. Windows
+can leave affected functions at `CM_PROB_FAILED_START` with `STATUS_IO_TIMEOUT`
+without retrying. A single final bind presents the completed gadget and avoids a
+second enumeration. Runtime apply, LUN changes, PHY resets and passthrough reclaim
+each manage their own binding.
 
 **The routes follow the gadget, never the store.** `Manager.hidRoutes` builds
 `[]HIDRoute` from the live functions read back out of configfs, and consults the stored
@@ -138,15 +131,10 @@ that decides what the gadget should be. `ops.go` is the only place a syscall hap
 Keep both true: an `os.WriteFile("/sys/kernel/config/...")` anywhere else in the package
 removes the split.
 
-There is no privileged helper process today, and the reasoning is in the spec: the server
-runs as uid 0 out of BusyBox `rcS`, holds `/dev/hidg0-2` open for its process lifetime,
-and two admin endpoints already hand out a root shell, so a helper would guard a door in
-a wall with a hole in it. What is built now is the part that makes the split cheap later.
-`Plan` is `[]Op` of `{Kind, Path, Target, Data}` and marshals to JSON, so a future helper
-needs a transport and nothing else: the server hands over an already-compiled,
-already-validated plan and the helper executes it, never parsing a profile and never
-trusting user JSON. Path validation in `compile.go` is the check that helper would need
-anyway. Revisit when `service/vm/terminal.go` and `/api/vm/script/run` are gone.
+The server runs as uid 0 from BusyBox `rcS`, holds the HID devices open, and owns
+terminal/script endpoints with the same privileges. There is no separate privileged
+helper. `Plan` is a JSON-serializable `[]Op` of `{Kind, Path, Target, Data}`;
+`compile.go` validates all paths before `ops.go` executes the plan.
 
 ## Ordering rules the kernel enforces
 
@@ -443,64 +431,47 @@ still accepts it. `dummy_udc.0` rejects writes a recorder accepts, `f_hid` hands
 ordering contract is asserted from `service/functionfs` and `service/passthrough`, since
 that is where the two halves live.
 
-### Three things the kernel said that no fake had
+### Kernel reference counts and rebind rules
 
-`f_hid` takes its `opts->refcnt` at **link** time, not at bind time, and every
-`F_HID_OPT` store returns `-EBUSY` while that refcnt is held. `f_ncm`, `f_rndis`, `f_uvc`
-and `f_uac2` guard their option stores the same way; the `mass_storage` LUN attributes
-are the exception two sections up. `unlinkStale` keeps a link the incoming plan also
-carries, so the refcnt is never released, and `S03usbdev:99,114,129` links all three HID
-functions at boot, so this is the state every device is in when the server starts. The
-*shows* are not guarded, and the script writes exactly the values the built-in profiles
-carry, so `dropRedundantWrites` reads each write's attribute back through the gadget and
-drops the op when it already holds those bytes. That is what makes the first apply after
-boot possible at all, and it is why a second apply of the same profile emits no function
-writes.
+`f_hid` takes `opts->refcnt` at link time. Its option writes return `-EBUSY` while
+the reference is held; `f_ncm`, `f_rndis`, `f_uvc` and `f_uac2` guard their stores
+similarly. Attribute reads remain available. `dropRedundantWrites` reads through
+the gadget and removes writes whose bytes already match, allowing a repeated apply
+to retain unchanged functions and links.
 
-A write that genuinely differs cannot be dropped, and until `Reconcile` existed it was
-left in the plan for the kernel to refuse: applying any profile that changed an
-attribute failed with `-EBUSY`, the rollback failed for the same reason, and so did the
-hid-only rung below it, which left `c.1` holding three HID links and `functions/`
-holding everything the attempt had built. What releases the refcnt is dropping the
-`configs/c.1/<name>` symlink, and that is not the removal `R1.1` forbids:
-`hidg_alloc_inst` takes the `/dev/hidgN` minor from an `ida` at **mkdir** and
-`hidg_free_inst` returns it at **rmdir**, while `hidg_alloc` and `hidg_free` move the
-refcnt on **link** and **unlink**. `TestKernelTier2UnlinkKeepsHIDMinors` runs that cycle
-against the kernel and the minors do not move.
+For a changed attribute, `Reconcile(current Snapshot, plan Plan)` inserts an unlink
+before the first guarded write. The existing plan relinks that function afterward.
+Both `applyPlan` and `restore` reconcile, so rollback can write attributes too.
+`Compile` remains a pure plan for a fresh gadget. Mass-storage LUN attributes carry
+no reference-count guard; media links are removed by `unlinkStale`.
 
-So the unlink belongs in the plan, and `Reconcile(current Snapshot, plan Plan) Plan` in
-`compile.go` puts it there: it is pure, it takes the linkage that is actually up, and it
-inserts `unlink configs/c.1/<name>` in front of the first op the refcnt would refuse.
-`Compile` stays a plan for a virgin gadget and the twenty traces stay byte-identical.
-Every unlink it inserts is paired with the link the same plan already ends that function
-with, so a failure between the two is repaired by a rollback rung that links the same
-functions, and `applyPlan` and `restore` both run it so the whole ladder can write
-attributes. `mass_storage` is excluded because its link precedes its LUN attributes,
-which carry no refcnt check; a media function is excluded because `unlinkStale` has
-already removed it. A function whose attributes all came back redundant keeps its link,
-so a partial relink appends the reconciled functions to the config's `func_list` and the
-interface numbers move. Nothing on this side reads them, and every apply already unbinds
-and rebinds, so the host re-enumerates either way.
+Unlinking a HID configuration link preserves its `/dev/hidgN` minor. The minor is
+allocated at function-directory creation and released at directory removal; only
+the option reference moves on link/unlink. `TestKernelTier2UnlinkKeepsHIDMinors`
+checks this against the kernel. Partial relinking can reorder interface numbers,
+so consumers must discover live identity instead of relying on link order.
 
-`SetHidMode` stages the mode on disk because the init script is still the boot-time
-configurator and `system_init.cpp` restores its `kvmapp` copy on every update. The reboot
-next to it is justified in `service/hid/status.go` by the `-EBUSY` on `report_desc`, and
-that justification no longer holds; whether the reboot itself is still wanted is a
-question for that package, not this one.
+`SetHidMode` stages its boot mode on disk and reboots through `service/hid/status.go`.
+Presentation-manager profile changes use reconciliation to update live attributes.
+`system_init.cpp` restores the boot script's `kvmapp` copy during an update.
 
-`applyPlan` and `restore` unbind through `unbindIfBound`, because an empty `UDC` write is
-`unregister_gadget` and returns `ENODEV` unless the gadget is bound at that moment. Every
-rollback rung reaches its unbind with the transaction's own unbind already done, which is
-why a failed apply used to report `rollback to standard: unbind: write UDC: no such
-device` on top of the failure that started it. On a device `S03usbdev` binds before the
-server starts, so nothing but a rollback ever reached it.
+`applyPlan` and `restore` call `unbindIfBound`: writing empty `UDC` when already
+unbound returns `ENODEV`. Rollback must handle the unbound state left by an apply.
+`TestKernelTier2ApplyOverBootLinkedHID` and
+`TestKernelTier2ApplyBindsAnUnboundGadget` exercise these kernel rules; filesystem
+fakes and fresh-gadget golden traces cannot enforce them.
 
-The fakes in `apply_test.go` accept a write the kernel refuses, and the golden traces
-record a script that only ever runs against a fresh gadget, so neither tier of the old
-suite could see either defect. `TestKernelTier2ApplyOverBootLinkedHID` and
-`TestKernelTier2ApplyBindsAnUnboundGadget` are what hold them now: `bootLinkedHID` builds
-the linkage `S03usbdev` leaves and asserts the attributes read back through it, and both
-tests reproduce the kernel's own error text when either fix is reverted.
-`kernelint.BootstrapGadget` still links a net function rather than HID, not because HID
-would fail any more but because the harness is shared with `functionfs` and `passthrough`
-and a `hid.*` there costs a `/dev/hidgN` minor no test in those packages asserts on.
+`kernelint.BootstrapGadget` links a network function so the shared FunctionFS and
+passthrough harness does not consume HID minors outside those packages' assertions.
+
+## Media diagnostics and profile identity
+
+Read the active profile and live ConfigFS links; profile names do not define their
+contents. The browser's camera resolution cap modifies the active profile and
+re-enumerates USB, including its network function. Use that operation only to change
+the advertised host modes. A browser capture or decoding fix does not require a
+profile apply, UDC reset or stock firmware replacement.
+
+The host chooses camera demand; opening a browser track does not create a UVC
+STREAMON. `service/sources` publishes demand and output separately from ownership.
+See `service/media/CLAUDE.md` for frame delivery and UVC trace interpretation.
