@@ -8,6 +8,7 @@ import { client, MessageEvent } from '@/lib/websocket.ts';
 import { isKeyboardEnableAtom } from '@/jotai/keyboard.ts';
 import { picoclawTakeoverStateAtom } from '@/jotai/picoclaw.ts';
 
+import { isCompositionKey, releasedModifiers } from './input-state.ts';
 import { Recorder } from './recorder.tsx';
 import { useAltGr } from './useAltGr.ts';
 import { useLeaderKey } from './useLeaderKey.ts';
@@ -57,17 +58,29 @@ export const Keyboard = () => {
     document.addEventListener('compositionstart', handleCompositionStart);
     document.addEventListener('compositionend', handleCompositionEnd);
     window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     function handleKeyDown(event: KeyboardEvent) {
       if (!isKeyboardEnabled) return;
-      if (isComposing.current || event.isComposing) return;
+      if (isCompositionKey(isComposing.current, event)) return;
+      isComposing.current = false;
 
       event.preventDefault();
       event.stopPropagation();
 
       const code = normalizeKeyCode(event, os);
-      if (!code || pressedKeys.current.has(code)) return;
+      if (!code) return;
+
+      releaseStaleModifiers(event, code);
+
+      if (pressedKeys.current.has(code)) {
+        if (event.repeat) return;
+        // A fresh press of a key still recorded as held means its keyup was
+        // lost. Release it so the host sees a new keystroke.
+        pressedKeys.current.delete(code);
+        sendKeyEvent('keyup', code);
+      }
 
       // Handle leader key
       const leaderHandled = leaderKeyRef.current.handleKeyDown(code);
@@ -91,6 +104,8 @@ export const Keyboard = () => {
 
       const code = normalizeKeyCode(event, os);
       if (!code) return;
+
+      releaseStaleModifiers(event, code);
 
       // Handle leader key release
       const leaderHandled = leaderKeyRef.current.handleKeyUp(code);
@@ -121,13 +136,29 @@ export const Keyboard = () => {
       isComposing.current = false;
     }
 
+    // Leaving the page can interrupt a composition before compositionend is
+    // delivered, so focus changes end it as well as releasing held keys.
     function handleBlur() {
+      isComposing.current = false;
+      releaseKeys();
+    }
+
+    function handleFocus() {
+      isComposing.current = false;
       releaseKeys();
     }
 
     function handleVisibilityChange() {
+      isComposing.current = false;
       if (document.hidden) {
         releaseKeys();
+      }
+    }
+
+    function releaseStaleModifiers(event: KeyboardEvent, code: string) {
+      for (const modifier of releasedModifiers(pressedKeys.current, event, code)) {
+        pressedKeys.current.delete(modifier);
+        sendKeyEvent('keyup', modifier);
       }
     }
 
@@ -158,6 +189,7 @@ export const Keyboard = () => {
       document.removeEventListener('compositionstart', handleCompositionStart);
       document.removeEventListener('compositionend', handleCompositionEnd);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
 
       releaseKeys();
