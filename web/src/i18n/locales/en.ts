@@ -115,6 +115,11 @@ const en = {
         description:
           'H.264 Direct and H.264 WebRTC are being used at the same time. This may cause screen tearing or corrupted video. Please use only one H.264 mode.'
       },
+      directSoftwareDecoder: {
+        title: 'H.264 Direct is using software decoding',
+        description:
+          'This Firefox version can corrupt the bottom of hardware-decoded video. Software decoding keeps the full picture correct. Update to Firefox 157 or newer to use hardware decoding.'
+      },
       webrtcConnectionFailed: {
         title: 'WebRTC connection failed',
         description: 'Check the network connection or switch the video mode.'

@@ -31,7 +31,7 @@ func Connect(c *gin.Context) {
 	defer stopSessionWatcher()
 	client := newClient(ws)
 	if flowWindow, err := strconv.Atoi(c.Query("flow")); err == nil && flowWindow > 0 {
-		client.queue.enableFlowControl(flowWindow)
+		client.queue.EnableFlowControl(flowWindow)
 	}
 	defer func() {
 		streamer.removeClient(client)

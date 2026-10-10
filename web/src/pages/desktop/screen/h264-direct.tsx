@@ -1,18 +1,37 @@
 import { useEffect, useRef } from 'react';
+import { notification } from 'antd';
 import clsx from 'clsx';
 import { useAtomValue } from 'jotai';
+import { useTranslation } from 'react-i18next';
 
 import { getBaseUrl } from '@/lib/service.ts';
 import { mouseStyleAtom } from '@/jotai/mouse';
 
+import { directDecoderAcceleration } from './decoder-compatibility.ts';
 import DirectWorker from './direct.worker.ts?worker';
 import { ScreenViewport } from './viewport.tsx';
 
 export const H264Direct = () => {
+  const { t } = useTranslation();
   const mouseStyle = useAtomValue(mouseStyleAtom);
+  const [notificationApi, contextHolder] = notification.useNotification();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    if (directDecoderAcceleration(navigator.userAgent) !== 'prefer-software') {
+      return;
+    }
+
+    notificationApi.info({
+      key: 'direct-software-decoder',
+      message: t('screen.directSoftwareDecoder.title'),
+      description: t('screen.directSoftwareDecoder.description'),
+      duration: 10
+    });
+    return () => notificationApi.destroy('direct-software-decoder');
+  }, [notificationApi, t]);
 
   useEffect(() => {
     if (!window.VideoDecoder) {
@@ -48,12 +67,15 @@ export const H264Direct = () => {
   }, []);
 
   return (
-    <ScreenViewport>
-      <canvas
-        id="screen"
-        ref={canvasRef}
-        className={clsx('block touch-none select-none', mouseStyle)}
-      ></canvas>
-    </ScreenViewport>
+    <>
+      {contextHolder}
+      <ScreenViewport>
+        <canvas
+          id="screen"
+          ref={canvasRef}
+          className={clsx('block touch-none select-none', mouseStyle)}
+        ></canvas>
+      </ScreenViewport>
+    </>
   );
 };

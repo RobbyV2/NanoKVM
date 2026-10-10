@@ -1,5 +1,7 @@
 import Queue from 'yocto-queue';
 
+import { directDecoderAcceleration } from './decoder-compatibility.ts';
+
 let canvas: OffscreenCanvas | null = null;
 let ctx: OffscreenCanvasRenderingContext2D | null = null;
 let rendering: boolean = false;
@@ -270,7 +272,7 @@ function createDecoder(): VideoDecoder | null {
     };
     instance.configure({
       codec: 'avc1.42E02A',
-      hardwareAcceleration: 'prefer-hardware',
+      hardwareAcceleration: directDecoderAcceleration(self.navigator.userAgent),
       optimizeForLatency: true
     });
     return instance;

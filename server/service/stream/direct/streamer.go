@@ -2,6 +2,7 @@ package direct
 
 import (
 	"NanoKVM-Server/service/stream"
+	"NanoKVM-Server/service/stream/direct/internal/framequeue"
 	"NanoKVM-Server/service/vm"
 	"sync"
 	"sync/atomic"
@@ -102,19 +103,16 @@ func (s *Streamer) run() {
 			continue
 		}
 
-		if !hasCaptureDemand(clients) {
-			continue
-		}
-
 		stream.UpdateCaptureStatus(stream.CaptureModeDirect, frame.Result)
 		if frame.Result < 0 || len(frame.Data) == 0 {
 			continue
 		}
 
-		outbound := newOutboundFrame(frame.Result == 3, frame.Timestamp, frame.Data)
-		for _, client := range clients {
-			client.offer(outbound)
+		queues := make([]*framequeue.Queue, len(clients))
+		for i, client := range clients {
+			queues[i] = client.queue
 		}
+		framequeue.Broadcast(queues, frame.Result == 3, frame.Timestamp, frame.Data)
 	}
 }
 
