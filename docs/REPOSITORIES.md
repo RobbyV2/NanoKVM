@@ -119,7 +119,12 @@ Preserve the fork's presentation, bridge, media, assistant, exit and packaging
 behavior during upstream merges.
 
 Accounts carry a role and upstream's permission grants (`authn/permissions.go`);
-administrators hold every grant. Upstream routes use upstream's grants. Fork routes
+administrators hold every grant. Upstream routes use upstream's grants, except where
+a grant would reach further than its catalog risk says: enabling SSH needs `terminal`
+because it logs in as root, `tailscale` is rated `warn` because it can enroll the
+device into the grantee's tailnet, and a URL download by a non-administrator may
+reach public addresses only (`service/download/guard.go`). Keep these when merging
+upstream's routes and catalog. Fork routes
 whose feature has no grant in that catalog (presentation, passthrough, EDID, VNC,
 favicon, bridge, tunnels, exit, assistant, media slots, kernel slots and startup
 status) stay behind `RequireRole(authn.RoleAdmin)`, and their settings panels render

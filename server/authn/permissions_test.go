@@ -79,7 +79,7 @@ func TestOnlyFullControlGrantsWarn(t *testing.T) {
 			warned = append(warned, descriptor.Permission)
 		}
 	}
-	want := []Permission{PermTerminal, PermUpdate, PermMcp, PermAi}
+	want := []Permission{PermTerminal, PermUpdate, PermMcp, PermTailscale, PermAi}
 	if !slices.Equal(warned, want) {
 		t.Fatalf("warned grants = %v, want %v", warned, want)
 	}

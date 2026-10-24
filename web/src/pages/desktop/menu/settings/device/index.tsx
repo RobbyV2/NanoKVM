@@ -14,10 +14,12 @@ import { VirtualDevices } from './virtual-devices.tsx';
 
 export const Device = () => {
   const { t } = useTranslation();
-  const { account } = useAuth();
+  const { account, hasPermission } = useAuth();
   // The media slots reshape the USB presentation, which stays with the
   // administrator role.
   const isAdmin = account.role === 'admin';
+  // SSH logs in as root, so its switch needs the terminal grant.
+  const canTerminal = hasPermission('terminal');
 
   return (
     <>
@@ -25,7 +27,7 @@ export const Device = () => {
       <Divider className="opacity-50" />
 
       <div className="flex flex-col space-y-8">
-        <Ssh />
+        {canTerminal && <Ssh />}
         <Mdns />
         <Hdmi />
         <Divider className="opacity-50" />

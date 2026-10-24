@@ -101,9 +101,11 @@ func vmRouter(r *gin.Engine) {
 	admin.GET("/vm/edid/download", edidService.DownloadEdid) // the active bytes
 	admin.GET("/vm/edid/backup", edidService.DownloadBackup) // a named history entry
 
-	device.GET("/vm/ssh", service.GetSSHState)         // get SSH state
-	device.POST("/vm/ssh/enable", service.EnableSSH)   // enable SSH
-	device.POST("/vm/ssh/disable", service.DisableSSH) // disable SSH
+	// SSH logs in as root, so switching it on is the terminal's grant, not the
+	// device settings'.
+	terminal.GET("/vm/ssh", service.GetSSHState)         // get SSH state
+	terminal.POST("/vm/ssh/enable", service.EnableSSH)   // enable SSH
+	terminal.POST("/vm/ssh/disable", service.DisableSSH) // disable SSH
 
 	admin.GET("/vm/vnc", service.GetVNC)  // get VNC state
 	admin.POST("/vm/vnc", service.SetVNC) // enable/disable VNC

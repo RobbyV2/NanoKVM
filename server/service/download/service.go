@@ -1,6 +1,8 @@
 package download
 
 import (
+	"NanoKVM-Server/authn"
+	"NanoKVM-Server/middleware"
 	"NanoKVM-Server/proto"
 	"NanoKVM-Server/service/storage"
 	"NanoKVM-Server/service/storage/diskfs"
@@ -455,6 +457,14 @@ func (s *Service) DownloadImage(c *gin.Context) {
 		rsp.ErrRsp(c, -1, "invalid url")
 		return
 	}
+	client := http.DefaultClient
+	if principal, _ := middleware.CurrentPrincipal(c); principal.Role != authn.RoleAdmin {
+		if err := checkPublicHost(c.Request.Context(), u.Hostname()); err != nil {
+			rsp.ErrRsp(c, -1, err.Error())
+			return
+		}
+		client = publicOnlyClient()
+	}
 	filename := filepath.Base(u.Path)
 	if filename == "." || filename == "/" || filename == "" {
 		rsp.ErrRsp(c, -1, "invalid url")
@@ -483,7 +493,7 @@ func (s *Service) DownloadImage(c *gin.Context) {
 		defer releaseDataPartitionWrite()
 		defer cancel()
 
-		if err := s.downloadRemoteImage(ctx, req.File, expectedSHA256, filename, func(loaded, total int64) {
+		if err := s.downloadRemoteImage(ctx, client, req.File, expectedSHA256, filename, func(loaded, total int64) {
 			s.setDownloadProgress(done, loaded, total)
 		}); err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -526,6 +536,7 @@ func parseSHA256(value string) ([]byte, error) {
 
 func (s *Service) downloadRemoteImage(
 	ctx context.Context,
+	client *http.Client,
 	rawURL string,
 	expectedSHA256 []byte,
 	filename string,
@@ -536,7 +547,7 @@ func (s *Service) downloadRemoteImage(
 		return fmt.Errorf("create download request failed: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("download request failed: %w", err)
 	}

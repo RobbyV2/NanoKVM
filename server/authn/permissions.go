@@ -64,8 +64,9 @@ const (
 	// RiskInfo is a grant that stays within the feature it names.
 	RiskInfo Risk = "info"
 	// RiskWarn is a grant that amounts to full device control: a root shell,
-	// the AI loopback, an API key that drives input outside the web session, and
-	// a package install whose checksum the uploader supplies.
+	// the AI loopback, an API key that drives input outside the web session, a
+	// package install whose checksum the uploader supplies, and enrolling the
+	// device into a tailnet the grantee controls.
 	RiskWarn Risk = "warn"
 )
 
@@ -139,7 +140,7 @@ var permissionCatalog = []Descriptor{
 	{
 		Permission: PermTailscale,
 		Group:      GroupServices,
-		Risk:       RiskInfo,
+		Risk:       RiskWarn,
 		Implies:    []Permission{PermConsoleView},
 	},
 	{
