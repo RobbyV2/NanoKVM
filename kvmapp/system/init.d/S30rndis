@@ -47,12 +47,13 @@ gadget_nic() {
 	return 0
 }
 
-# The exit tunnel's marker (exit-tunnel design, D4). While a slot with the
-# gadget NIC is enabled the server writes it, and the lease then carries the
+# The exit tunnel's marker. The server writes it only while an exit is
+# attached to a slot that uses the gadget NIC, and the lease then carries the
 # NanoKVM's own address as router and DNS so the attached host routes through
 # the tunnel. Without it the lease is the stock one: no router, no DNS, and the
-# host keeps whatever other uplink it has.
-EXIT_GADGET_ROUTE=/etc/kvm/exit/gadget.route
+# host keeps whatever other uplink it has. It lives on tmpfs, so a boot never
+# hands out a gateway that nothing is behind.
+EXIT_GADGET_ROUTE=/var/run/exit.gadget.route
 
 # Kill every udhcpd serving the interfaces named by the glob in $1 ("usb*" for
 # all of them, one name for one). BusyBox udhcpd honours the pidfile directive

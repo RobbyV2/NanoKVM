@@ -1164,7 +1164,7 @@ const es = {
         enableConfirm: '¿Activar el túnel de salida?',
         disableConfirm: '¿Desactivar el túnel de salida?',
         reenumerate:
-          'El dispositivo USB se vuelve a enumerar para que el equipo destino reciba su nueva puerta de enlace y DNS. Teclado, ratón, cámara y disco virtual se desconectan unos dos segundos.',
+          'El equipo destino solo recibe este NanoKVM como puerta de enlace y DNS mientras hay un dispositivo de salida conectado. Cuando uno se conecta, o lleva 15 segundos desconectado, el dispositivo USB se vuelve a enumerar para que el destino los adopte o los descarte. Teclado, ratón, cámara y disco virtual se desconectan unos dos segundos.',
         okBtn: 'Sí',
         cancelBtn: 'No',
         copy: 'Copiar',

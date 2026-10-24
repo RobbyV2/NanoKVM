@@ -1158,7 +1158,7 @@ const id = {
         enableConfirm: 'Aktifkan tunnel keluar?',
         disableConfirm: 'Nonaktifkan tunnel keluar?',
         reenumerate:
-          'Gadget USB dienumerasi ulang agar target menerima gateway dan DNS barunya. Keyboard, mouse, kamera, dan disk virtual terputus sekitar dua detik.',
+          'Target hanya menerima NanoKVM ini sebagai gateway dan DNS selama perangkat exit terhubung. Saat perangkat terhubung, atau sudah 15 detik hilang, gadget USB dienumerasi ulang agar target memakai atau melepasnya. Keyboard, mouse, kamera, dan disk virtual terputus sekitar dua detik.',
         okBtn: 'Ya',
         cancelBtn: 'Tidak',
         copy: 'Salin',

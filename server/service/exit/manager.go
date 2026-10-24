@@ -119,6 +119,9 @@ type slotState struct {
 	// crash-loop notice, so only that notice is cleared once the counts hold.
 	spawns, spawnsSeen daemonSpawns
 	respawnMessage     bool
+	// gatewayMessage is set while message is a refused re-enumeration's
+	// "re-plug the USB cable" hint, so a later successful one clears it.
+	gatewayMessage bool
 
 	lastPeer     *proto.ExitPeer
 	peerSource   string
@@ -146,6 +149,9 @@ type Manager struct {
 	opMu       sync.Mutex
 	convergeMu sync.Mutex
 	slots      map[string]*slotState
+	// gw is the gadget lease's gateway state, which every slot shares since
+	// there is one gadget NIC. Guarded by mu.
+	gw gatewayState
 
 	initOnce sync.Once
 	stop     chan struct{}
@@ -159,6 +165,47 @@ var (
 
 // ErrUnknownSlot is returned for a slot id that has no config.
 var ErrUnknownSlot = errors.New("unknown exit slot")
+
+// The gadget lease names this NanoKVM as the consumer's router and resolver
+// only while an exit is attached; at any other time the consumer must keep
+// whatever uplink it has of its own. A gateway handed out with nothing behind
+// it is a black hole, and the gadget NIC's link speed makes most consumers
+// prefer it over their Wi-Fi.
+//
+// Taking the gateway back needs a re-enumeration. A Windows consumer adds the
+// router of every lease it is given but never removes one in band: a renewal
+// without the option drops the resolver and keeps the route, a link bounce
+// followed by a NAK and a fresh lease keeps it too, and a renewal naming
+// another router adds the new one beside the old. Only the NIC leaving the
+// bus clears it. Handing it out the same way makes every consumer pick it up
+// at once instead of at a renewal days away.
+type gatewayState struct {
+	// detachedAt is when the advertising slot's exit was first seen gone.
+	// The gateway is withdrawn once that has lasted gatewayHoldDown, so a
+	// client that reconnects at once costs no re-enumeration.
+	detachedAt time.Time
+	// relearn is the change the consumer has yet to be made to see, one of
+	// the relearn* hints, and slot the slot whose message carries a refusal.
+	relearn string
+	slot    string
+	// restartRNDIS is set while udhcpd has not been restarted with the
+	// marker's current options.
+	restartRNDIS bool
+	// attemptedAt paces re-enumerations a refusal left pending.
+	attemptedAt time.Time
+}
+
+const (
+	relearnPickUp = "pick up the new gateway"
+	relearnDrop   = "drop the old gateway"
+)
+
+// Variables so tests can shorten them.
+var (
+	gatewayHoldDown      = 15 * time.Second
+	gatewayPollInterval  = 2 * time.Second
+	gatewayRetryInterval = WatchdogInterval
+)
 
 // presentationNIC adapts presentation.Manager to NICResolver: its UDCBound
 // returns an error alongside the bool, and an unreadable gadget is unbound.
@@ -309,7 +356,6 @@ func (m *Manager) Init() {
 				// A transaction that never finished: converge to off (D18).
 				log.Warnf("exit: slot %s was left pending; disabling", slot.ID)
 				s.cfg.Enabled, s.cfg.Pending = false, false
-				_ = RemoveGadgetRoute(slot)
 				if err := m.persist(s.cfg, ""); err != nil {
 					log.Errorf("exit: slot %s: %s", slot.ID, err)
 				}
@@ -320,6 +366,22 @@ func (m *Manager) Init() {
 			m.mu.Lock()
 			m.slots[slot.ID] = s
 			m.mu.Unlock()
+		}
+
+		// Nothing can be attached to a process that is only starting, so a
+		// marker found now names a gateway with nothing behind it. udhcpd is
+		// restarted without it ahead of the first bind; a consumer that is
+		// already enumerated is re-enumerated once the gateway loop runs.
+		if owner, found := clearStaleGadgetRoutes(); found {
+			log.Warnf("exit: slot %q left the gadget lease naming this NanoKVM as gateway; withdrawing it", owner)
+			if err := m.down.RestartRNDIS(ctx); err != nil {
+				log.Warnf("exit: %s", err)
+			}
+			if m.deps.NIC == nil || m.deps.NIC.UDCBound() {
+				m.mu.Lock()
+				m.gw.relearn, m.gw.slot = relearnDrop, owner
+				m.mu.Unlock()
+			}
 		}
 
 		for _, s := range m.snapshot() {
@@ -344,6 +406,7 @@ func (m *Manager) Init() {
 			m.deps.Subscribe(m.onRebind)
 		}
 		go m.watchdog()
+		go m.gatewayLoop(gatewayPollInterval)
 	})
 }
 
@@ -387,6 +450,7 @@ func (m *Manager) setMessage(s *slotState, msg string) {
 	s.message = msg
 	s.configMessage = false
 	s.respawnMessage = false
+	s.gatewayMessage = false
 	m.mu.Unlock()
 }
 
@@ -756,10 +820,9 @@ func (m *Manager) Enable(ctx context.Context, slot Slot) error {
 		return rollback("start listeners", err)
 	}
 
-	// Commit.
-	if err := WriteGadgetRoute(slot); err != nil {
-		return rollback("write gadget.route", err)
-	}
+	// Commit. The lease is left alone: it gains the gateway when an exit
+	// attaches (reconcileGateway), not here, because nothing is behind the
+	// gateway until then.
 	cfg.Enabled, cfg.Pending = true, false
 	if err := m.persist(cfg, nic); err != nil {
 		return rollback("write config", err)
@@ -768,27 +831,14 @@ func (m *Manager) Enable(ctx context.Context, slot Slot) error {
 	s.cfg = cfg
 	s.message = ""
 	s.configMessage = false
+	s.gatewayMessage = false
 	m.mu.Unlock()
 
-	if err := m.down.RestartRNDIS(ctx); err != nil {
-		return rollback("S30rndis restart", err)
-	}
-	// One more converge so the DNAT rule sees the (possibly new) address.
-	if err := m.down.Start(ctx, slot); err != nil {
-		log.Warnf("exit: slot %s: %s", slot.ID, err)
-	}
-
-	// Re-lease the consumer, best effort (D5). The rebind fires the D25
-	// subscriber on its own; this closing converge covers a rebind that was
-	// refused, and takes convergeMu like every other converge so it never
-	// runs beside the watchdog's.
-	if m.deps.Rebind != nil {
-		if err := m.deps.Rebind.Rebind(ctx); err != nil {
-			m.setMessage(s, "re-plug the USB cable to pick up the new gateway: "+err.Error())
-		}
-	}
+	// The closing converge takes convergeMu like every other converge so it
+	// never runs beside the watchdog's.
 	m.convergeMu.Lock()
 	m.convergeSlot(ctx, s)
+	m.reconcileGateway(ctx)
 	m.convergeMu.Unlock()
 	return nil
 }
@@ -829,6 +879,7 @@ func (m *Manager) failConfig(s *slotState, err error) error {
 	s.message = err.Error()
 	s.configMessage = true
 	s.respawnMessage = false
+	s.gatewayMessage = false
 	m.mu.Unlock()
 	return err
 }
@@ -859,6 +910,14 @@ func (m *Manager) Disable(ctx context.Context, slot Slot) error {
 		return nil
 	}
 
+	// The consumer has to be re-enumerated only if it was handed this slot's
+	// gateway, or still holds one an earlier withdrawal could not clear.
+	owner, marked := GadgetRouteOwner()
+	m.mu.Lock()
+	advertised := (marked && owner == slot.ID) || m.gw.relearn != ""
+	m.gw.detachedAt = time.Time{}
+	m.mu.Unlock()
+
 	_ = RemoveGadgetRoute(slot)
 	cfg.Enabled, cfg.Pending = false, false
 	if err := m.persist(cfg, nic); err != nil {
@@ -882,10 +941,12 @@ func (m *Manager) Disable(ctx context.Context, slot Slot) error {
 	s.down = DownstreamStatus{}
 	s.dnsRedirected = 0
 	m.mu.Unlock()
-	if m.deps.Rebind != nil {
-		if err := m.deps.Rebind.Rebind(ctx); err != nil {
-			m.setMessage(s, "re-plug the USB cable to drop the old gateway: "+err.Error())
-		}
+	if advertised {
+		m.mu.Lock()
+		m.gw.relearn, m.gw.slot = relearnDrop, slot.ID
+		m.gw.restartRNDIS, m.gw.attemptedAt = false, time.Time{}
+		m.mu.Unlock()
+		m.relearnLease(ctx)
 	}
 	m.markDisconnected(s)
 	if firstErr != nil {
@@ -1058,23 +1119,7 @@ func (m *Manager) onRebind(ctx context.Context) {
 func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 	m.mu.Lock()
 	prevGW := s.gw
-	cfg := s.cfg
 	m.mu.Unlock()
-
-	// Re-assert the gadget.route marker (D4). A crash between Disable's marker
-	// removal and its config flip leaves enabled:true with no marker, so
-	// S30rndis would hand out a lease with no router and no DNS; recreate it
-	// idempotently and restart udhcpd so the lease options follow (MGR-9).
-	markerRestored := false
-	if cfg.Enabled && !cfg.Pending {
-		if owner, ok := GadgetRouteOwner(); !ok || owner != s.slot.ID {
-			if err := WriteGadgetRoute(s.slot); err != nil {
-				log.Warnf("exit: slot %s: write gadget.route: %s", s.slot.ID, err)
-			} else {
-				markerRestored = true
-			}
-		}
-	}
 
 	nic, gw := m.resolveNIC(ctx, s)
 	if err := m.down.Start(ctx, s.slot); err != nil {
@@ -1089,12 +1134,6 @@ func (m *Manager) convergeSlot(ctx context.Context, s *slotState) {
 			if err := m.down.Start(ctx, s.slot); err != nil {
 				log.Warnf("exit: slot %s converge: %s", s.slot.ID, err)
 			}
-		}
-	}
-
-	if markerRestored {
-		if err := m.down.RestartRNDIS(ctx); err != nil {
-			log.Warnf("exit: slot %s: %s", s.slot.ID, err)
 		}
 	}
 
@@ -1158,6 +1197,173 @@ func (m *Manager) Tick(ctx context.Context) {
 			m.markDisconnected(s)
 		}
 	}
+	m.reconcileGateway(ctx)
+}
+
+// gatewayLoop is the fast half of the watchdog. It follows only whether an
+// exit is attached, so the consumer gains or loses the gateway within seconds
+// of the exit coming or going rather than at the next watchdog tick.
+func (m *Manager) gatewayLoop(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-m.stop:
+			return
+		case <-ticker.C:
+			m.pollGateway(context.Background())
+		}
+	}
+}
+
+// pollGateway yields to a running transaction or converge, like Tick; the
+// next poll is two seconds away.
+func (m *Manager) pollGateway(ctx context.Context) {
+	if !m.opMu.TryLock() {
+		return
+	}
+	defer m.opMu.Unlock()
+	if !m.convergeMu.TryLock() {
+		return
+	}
+	defer m.convergeMu.Unlock()
+	m.reconcileGateway(ctx)
+}
+
+// reconcileGateway makes the gadget lease name this NanoKVM as gateway exactly
+// while an exit is attached to an enabled slot (see gatewayState), and makes
+// the consumer see each change. Callers hold opMu and convergeMu.
+func (m *Manager) reconcileGateway(ctx context.Context) {
+	owner, marked := GadgetRouteOwner()
+	var attached *slotState
+	ownerLive := false
+	for _, s := range m.snapshot() {
+		cfg := m.config(s)
+		live := cfg.Enabled && !cfg.Pending && cfg.NIC == NICGadget
+		if live && s.slot.ID == owner {
+			ownerLive = true
+		}
+		if attached == nil && live && m.connected(s) {
+			attached = s
+		}
+	}
+
+	now := m.deps.Now()
+	switch {
+	case attached != nil:
+		m.mu.Lock()
+		m.gw.detachedAt = time.Time{}
+		m.mu.Unlock()
+		if marked && owner == attached.slot.ID {
+			break
+		}
+		if err := WriteGadgetRoute(attached.slot); err != nil {
+			log.Warnf("exit: slot %s: write gateway marker: %s", attached.slot.ID, err)
+			return
+		}
+		log.Infof("exit: slot %s: exit attached; the gadget lease now names this NanoKVM as gateway", attached.slot.ID)
+		m.mu.Lock()
+		m.gw.relearn, m.gw.slot = relearnPickUp, attached.slot.ID
+		m.gw.restartRNDIS, m.gw.attemptedAt = true, time.Time{}
+		m.mu.Unlock()
+	case marked:
+		m.mu.Lock()
+		if m.gw.detachedAt.IsZero() {
+			m.gw.detachedAt = now
+		}
+		gone := now.Sub(m.gw.detachedAt)
+		m.mu.Unlock()
+		// A disabled or reconfigured owner has nothing to reconnect to.
+		if ownerLive && gone < gatewayHoldDown {
+			break
+		}
+		if err := os.Remove(GadgetRoutePath()); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Warnf("exit: slot %s: remove gateway marker: %s", owner, err)
+			return
+		}
+		log.Infof("exit: slot %s: no exit attached for %s; withdrawing the gadget lease's gateway", owner, gone.Round(time.Second))
+		m.mu.Lock()
+		m.gw.detachedAt = time.Time{}
+		m.gw.relearn, m.gw.slot = relearnDrop, owner
+		m.gw.restartRNDIS, m.gw.attemptedAt = true, time.Time{}
+		m.mu.Unlock()
+	default:
+		m.mu.Lock()
+		m.gw.detachedAt = time.Time{}
+		m.mu.Unlock()
+	}
+	m.relearnLease(ctx)
+}
+
+// relearnLease carries out a pending gateway change: udhcpd is restarted with
+// the marker's options, then the gadget re-enumerates so the consumer takes a
+// fresh lease (see gatewayState). A refused re-enumeration stays pending, is
+// retried every gatewayRetryInterval and is reported on the slot meanwhile.
+// Callers hold opMu, so the D25 subscriber skips this rebind and the converge
+// it needs runs here.
+func (m *Manager) relearnLease(ctx context.Context) {
+	m.mu.Lock()
+	why, slotID, restart := m.gw.relearn, m.gw.slot, m.gw.restartRNDIS
+	now := m.deps.Now()
+	if why == "" || (!m.gw.attemptedAt.IsZero() && now.Sub(m.gw.attemptedAt) < gatewayRetryInterval) {
+		m.mu.Unlock()
+		return
+	}
+	m.gw.restartRNDIS = false
+	m.gw.attemptedAt = now
+	m.mu.Unlock()
+
+	if restart {
+		if err := m.down.RestartRNDIS(ctx); err != nil {
+			log.Warnf("exit: restart udhcpd for the new lease options: %s", err)
+		}
+	}
+
+	var target *slotState
+	m.mu.Lock()
+	target = m.slots[slotID]
+	m.mu.Unlock()
+
+	var err error
+	switch {
+	case m.deps.NIC != nil && !m.deps.NIC.UDCBound():
+		// Nothing is on the bus: the next bind enumerates afresh anyway.
+	case m.deps.Rebind != nil:
+		err = m.deps.Rebind.Rebind(ctx)
+	}
+	if err != nil {
+		log.Warnf("exit: slot %s: re-enumerate the gadget to %s: %s", slotID, why, err)
+		if target != nil {
+			m.mu.Lock()
+			target.message = "re-plug the USB cable to " + why + ": " + err.Error()
+			target.configMessage = false
+			target.respawnMessage = false
+			target.gatewayMessage = true
+			m.mu.Unlock()
+		}
+		return
+	}
+
+	m.mu.Lock()
+	m.gw.relearn, m.gw.slot, m.gw.attemptedAt = "", "", time.Time{}
+	if target != nil && target.gatewayMessage {
+		target.message = ""
+		target.gatewayMessage = false
+	}
+	m.mu.Unlock()
+
+	enabled := false
+	for _, s := range m.snapshot() {
+		if m.config(s).Enabled {
+			enabled = true
+			m.convergeSlot(ctx, s)
+		}
+	}
+	if !enabled {
+		if err := m.down.StartRNDIS(ctx); err != nil {
+			log.Warnf("exit: %s", err)
+		}
+	}
 }
 
 // noteRespawns is the watchdog's crash-loop notice. A daemon whose spawn
@@ -1189,6 +1395,7 @@ func (m *Manager) noteRespawns(s *slotState) {
 		s.message = strings.Join(parts, ", ") + "; see the logs"
 		s.configMessage = false
 		s.respawnMessage = true
+		s.gatewayMessage = false
 		log.Warnf("exit: slot %s: %s", s.slot.ID, s.message)
 		return
 	}

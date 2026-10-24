@@ -1172,7 +1172,7 @@ const de = {
         enableConfirm: 'Exit-Tunnel aktivieren?',
         disableConfirm: 'Exit-Tunnel deaktivieren?',
         reenumerate:
-          'Das USB-Gadget meldet sich neu an, damit das Zielgerät Gateway und DNS übernimmt. Tastatur, Maus, Kamera und virtuelles Laufwerk fallen etwa zwei Sekunden aus.',
+          'Das Zielgerät erhält diesen NanoKVM nur als Gateway und DNS, solange ein Exit-Gerät verbunden ist. Verbindet sich eines oder ist es 15 Sekunden weg, meldet sich das USB-Gadget neu an, damit das Zielgerät sie übernimmt oder verwirft. Tastatur, Maus, Kamera und virtuelles Laufwerk fallen etwa zwei Sekunden aus.',
         okBtn: 'Ja',
         cancelBtn: 'Nein',
         copy: 'Kopieren',

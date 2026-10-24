@@ -1154,7 +1154,7 @@ const da = {
         enableConfirm: 'Aktivér exit-tunnelen?',
         disableConfirm: 'Deaktivér exit-tunnelen?',
         reenumerate:
-          'USB-gadgetten genoptælles, så målmaskinen får sin nye gateway og DNS. Tastatur, mus, kamera og virtuel disk falder ud i cirka to sekunder.',
+          'Målmaskinen får kun denne NanoKVM som gateway og DNS, mens en exit-enhed er forbundet. Når en forbinder, eller har været væk i 15 sekunder, genoptælles USB-gadgetten, så målmaskinen tager dem i brug eller dropper dem. Tastatur, mus, kamera og virtuel disk falder ud i cirka to sekunder.',
         okBtn: 'Ja',
         cancelBtn: 'Nej',
         copy: 'Kopiér',

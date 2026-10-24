@@ -85,6 +85,7 @@ echo "$pid" >> "$STUB_PIDS"
 		"/etc/profile":       filepath.Join(root, "etc/profile"),
 		"/etc/udhcpd.":       filepath.Join(root, "etc") + "/udhcpd.",
 		"/proc/":             h.proc + "/",
+		s30GatewayMarker:     filepath.Join(root, GadgetRouteMarker),
 	} {
 		body = strings.ReplaceAll(body, from, to)
 	}
@@ -260,5 +261,47 @@ func TestGadgetAddressingStartIsIdempotent(t *testing.T) {
 	}
 	if !alive(bystander) {
 		t.Fatalf("stop killed a bystander %d", bystander)
+	}
+}
+
+// s30GatewayMarker is the marker path S30rndis spells: the server's default
+// RunDir and GadgetRouteMarker, which the script cannot import.
+const s30GatewayMarker = "/var/run/" + GadgetRouteMarker
+
+// TestS30rndisGatewayFollowsTheMarker: the lease names the NanoKVM as router
+// and resolver exactly while the marker the server writes exists, and the
+// script reads it where the server writes it.
+func TestS30rndisGatewayFollowsTheMarker(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "..", "..", "kvmapp", "system", "init.d", S30Script))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), "EXIT_GADGET_ROUTE="+s30GatewayMarker+"\n") {
+		t.Fatalf("S30rndis does not read the marker at %s", s30GatewayMarker)
+	}
+
+	h := newS30(t)
+	conf := filepath.Join(h.root, "etc", "udhcpd.usb1.conf")
+	read := func() string {
+		t.Helper()
+		data, err := os.ReadFile(conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	h.run("start")
+	if got := read(); strings.Contains(got, "opt router") || strings.Contains(got, "opt dns") {
+		t.Fatalf("lease without the marker names a gateway:\n%s", got)
+	}
+
+	if err := os.WriteFile(filepath.Join(h.root, GadgetRouteMarker), []byte("0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h.run("restart")
+	got := read()
+	if !strings.Contains(got, "opt router 10.7.8.1\n") || !strings.Contains(got, "opt dns 10.7.8.1\n") {
+		t.Fatalf("lease with the marker lacks the gateway:\n%s", got)
 	}
 }

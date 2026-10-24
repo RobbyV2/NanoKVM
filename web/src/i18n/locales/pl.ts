@@ -1158,7 +1158,7 @@ const pl = {
         enableConfirm: 'Włączyć tunel wyjściowy?',
         disableConfirm: 'Wyłączyć tunel wyjściowy?',
         reenumerate:
-          'Gadżet USB zgłasza się ponownie, aby komputer docelowy przyjął nową bramę i DNS. Klawiatura, mysz, kamera i dysk wirtualny znikają na około dwie sekundy.',
+          'Komputer docelowy dostaje ten NanoKVM jako bramę i DNS tylko wtedy, gdy podłączone jest urządzenie wyjściowe. Gdy się połączy albo zniknie na 15 sekund, gadżet USB zgłasza się ponownie, aby komputer docelowy je przyjął lub porzucił. Klawiatura, mysz, kamera i dysk wirtualny znikają na około dwie sekundy.',
         okBtn: 'Tak',
         cancelBtn: 'Nie',
         copy: 'Kopiuj',

@@ -1172,7 +1172,7 @@ const fr = {
         enableConfirm: 'Activer le tunnel de sortie ?',
         disableConfirm: 'Désactiver le tunnel de sortie ?',
         reenumerate:
-          'Le périphérique USB se réénumère pour que la cible reçoive sa nouvelle passerelle et son DNS. Clavier, souris, caméra et disque virtuel sont coupés environ deux secondes.',
+          "La cible ne reçoit ce NanoKVM comme passerelle et DNS que tant qu'un appareil de sortie est connecté. Quand il se connecte, ou a disparu depuis 15 secondes, le périphérique USB se réénumère pour que la cible les prenne ou les abandonne. Clavier, souris, caméra et disque virtuel sont coupés environ deux secondes.",
         okBtn: 'Oui',
         cancelBtn: 'Non',
         copy: 'Copier',

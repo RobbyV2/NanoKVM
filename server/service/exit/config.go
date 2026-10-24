@@ -15,6 +15,8 @@ import (
 
 	"NanoKVM-Server/proto"
 	"NanoKVM-Server/utils"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Config is /etc/kvm/exit/<n>.json, mode 0600, written atomically. Everything
@@ -314,10 +316,32 @@ func SaveState(slot Slot, st State) error {
 	return utils.WriteFileAtomic(slot.StatePath(), append(data, '\n'), 0o600)
 }
 
-// WriteGadgetRoute writes the D4 marker naming the slot that owns the gadget
-// NIC's gateway; RemoveGadgetRoute removes it only when that slot owns it.
+// WriteGadgetRoute writes the marker naming the slot whose attached exit the
+// gadget lease points the consumer at; RemoveGadgetRoute removes it only when
+// that slot owns it.
 func WriteGadgetRoute(slot Slot) error {
 	return utils.WriteFileAtomic(GadgetRoutePath(), []byte(slot.ID+"\n"), 0o644)
+}
+
+// clearStaleGadgetRoutes removes the marker and its legacy flash copy and
+// returns the owner named by whichever existed. Init calls it: no exit can be
+// attached to a process that is only starting, so any marker it finds was
+// left by an earlier one.
+func clearStaleGadgetRoutes() (owner string, found bool) {
+	for _, path := range []string{GadgetRoutePath(), legacyGadgetRoutePath()} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		found = true
+		if id := strings.TrimSpace(string(data)); id != "" && owner == "" {
+			owner = id
+		}
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Warnf("exit: remove stale gateway marker %s: %s", path, err)
+		}
+	}
+	return owner, found
 }
 
 // GadgetRouteOwner returns the slot id named by the marker, ok false when the

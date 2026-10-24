@@ -1212,7 +1212,7 @@ const en = {
         enableConfirm: 'Enable the exit tunnel?',
         disableConfirm: 'Disable the exit tunnel?',
         reenumerate:
-          'The USB gadget re-enumerates so the target picks up its new gateway and DNS. Keyboard, mouse, camera and virtual disk drop for about two seconds.',
+          'The target is offered this NanoKVM as its gateway and DNS only while an exit device is connected. When one connects, or has been gone for 15 seconds, the USB gadget re-enumerates so the target picks them up or drops them. Keyboard, mouse, camera and virtual disk drop for about two seconds.',
         okBtn: 'Yes',
         cancelBtn: 'No',
         copy: 'Copy',

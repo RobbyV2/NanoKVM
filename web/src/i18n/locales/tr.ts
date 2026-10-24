@@ -1153,7 +1153,7 @@ const tr = {
         enableConfirm: 'Çıkış tüneli etkinleştirilsin mi?',
         disableConfirm: 'Çıkış tüneli devre dışı bırakılsın mı?',
         reenumerate:
-          'Hedefin yeni ağ geçidini ve DNS’i alması için USB aygıtı yeniden tanıtılır. Klavye, fare, kamera ve sanal disk yaklaşık iki saniye kesilir.',
+          'Hedef, bu NanoKVM’i yalnızca bir çıkış aygıtı bağlıyken ağ geçidi ve DNS olarak alır. Bir aygıt bağlandığında veya 15 saniyedir yoksa, hedefin bunları alması ya da bırakması için USB aygıtı yeniden tanıtılır. Klavye, fare, kamera ve sanal disk yaklaşık iki saniye kesilir.',
         okBtn: 'Evet',
         cancelBtn: 'Hayır',
         copy: 'Kopyala',

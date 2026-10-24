@@ -1168,7 +1168,7 @@ const nl = {
         enableConfirm: 'Exit-tunnel inschakelen?',
         disableConfirm: 'Exit-tunnel uitschakelen?',
         reenumerate:
-          'Het USB-gadget meldt zich opnieuw aan zodat het doelsysteem zijn nieuwe gateway en DNS overneemt. Toetsenbord, muis, camera en virtuele schijf vallen ongeveer twee seconden weg.',
+          'Het doelsysteem krijgt deze NanoKVM alleen als gateway en DNS zolang er een exit-apparaat verbonden is. Wanneer er een verbindt, of 15 seconden weg is, meldt het USB-gadget zich opnieuw aan zodat het doelsysteem ze overneemt of laat vallen. Toetsenbord, muis, camera en virtuele schijf vallen ongeveer twee seconden weg.',
         okBtn: 'Ja',
         cancelBtn: 'Nee',
         copy: 'Kopiëren',

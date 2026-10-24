@@ -1166,7 +1166,7 @@ const it = {
         enableConfirm: 'Attivare il tunnel di uscita?',
         disableConfirm: 'Disattivare il tunnel di uscita?',
         reenumerate:
-          'Il gadget USB si rienumera così la destinazione riceve il nuovo gateway e il DNS. Tastiera, mouse, camera e disco virtuale si staccano per circa due secondi.',
+          'La destinazione riceve questo NanoKVM come gateway e DNS solo mentre un dispositivo di uscita è connesso. Quando uno si connette, o manca da 15 secondi, il gadget USB si rienumera così la destinazione li adotta o li abbandona. Tastiera, mouse, camera e disco virtuale si staccano per circa due secondi.',
         okBtn: 'Sì',
         cancelBtn: 'No',
         copy: 'Copia',

@@ -1165,7 +1165,7 @@ const hu = {
         enableConfirm: 'Bekapcsolja a kilépő tunnelt?',
         disableConfirm: 'Kikapcsolja a kilépő tunnelt?',
         reenumerate:
-          'Az USB-eszköz újra bejelentkezik, hogy a célgép átvegye az új átjárót és DNS-t. A billentyűzet, az egér, a kamera és a virtuális lemez körülbelül két másodpercre kiesik.',
+          'A célgép csak addig kapja meg ezt a NanoKVM-et átjáróként és DNS-ként, amíg kimeneti eszköz csatlakozik. Amikor egy csatlakozik, vagy 15 másodperce eltűnt, az USB-eszköz újra bejelentkezik, hogy a célgép átvegye vagy elhagyja őket. A billentyűzet, az egér, a kamera és a virtuális lemez körülbelül két másodpercre kiesik.',
         okBtn: 'Igen',
         cancelBtn: 'Nem',
         copy: 'Másolás',

@@ -1148,7 +1148,7 @@ const vi = {
         enableConfirm: 'Bật đường hầm thoát?',
         disableConfirm: 'Tắt đường hầm thoát?',
         reenumerate:
-          'Thiết bị USB sẽ liệt kê lại để máy đích nhận gateway và DNS mới. Bàn phím, chuột, camera và ổ đĩa ảo bị ngắt khoảng hai giây.',
+          'Máy đích chỉ nhận NanoKVM này làm gateway và DNS khi có thiết bị exit đang kết nối. Khi một thiết bị kết nối, hoặc đã mất 15 giây, thiết bị USB sẽ liệt kê lại để máy đích nhận hoặc bỏ chúng. Bàn phím, chuột, camera và ổ đĩa ảo bị ngắt khoảng hai giây.',
         okBtn: 'Có',
         cancelBtn: 'Không',
         copy: 'Sao chép',

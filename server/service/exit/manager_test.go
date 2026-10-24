@@ -198,6 +198,9 @@ func newHarness(t *testing.T) *harness {
 	oldBudget := hevStartBudget
 	hevStartBudget = 150 * time.Millisecond
 	t.Cleanup(func() { hevStartBudget = oldBudget })
+	oldPoll := gatewayPollInterval
+	gatewayPollInterval = time.Hour
+	t.Cleanup(func() { gatewayPollInterval = oldPoll })
 
 	h := &harness{t: t, now: time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)}
 	h.runner = &fakeRunner{trace: &h.trace, fail: map[string]error{}, status: healthy}
@@ -346,18 +349,17 @@ func TestEnableStepOrder(t *testing.T) {
 		"door.start",
 		"dns.bind 10.1.2.1",
 		"probe.start",
-		"S30rndis restart",
-		"rebind",
 	)
-	// The marker and the flip come after the listeners are up and before the
-	// udhcpd restart that reads the marker.
+	// Nothing is attached yet, so the lease does not change: no gateway, no
+	// udhcpd restart and no re-enumeration.
+	h.mustNotContain("S30rndis restart")
+	h.mustNotContain("rebind")
+	if _, err := os.Stat(GadgetRoutePath()); !os.IsNotExist(err) {
+		t.Fatal("enable advertised a gateway with no exit attached")
+	}
 	cfg, _, _ := LoadConfig(slot)
 	if !cfg.Enabled || cfg.Pending {
 		t.Fatalf("config after enable = %+v", cfg)
-	}
-	data, err := os.ReadFile(GadgetRoutePath())
-	if err != nil || strings.TrimSpace(string(data)) != "0" {
-		t.Fatalf("marker = %q, %v", data, err)
 	}
 	env, _ := os.ReadFile(slot.EnvPath())
 	if !strings.Contains(string(env), "ENABLED=1\nPENDING=0\n") || !strings.Contains(string(env), "NIC=usb0\n") {
@@ -429,7 +431,6 @@ func TestEnableRollsBackOnEachFailingStep(t *testing.T) {
 		{"no address", func(h *harness) {
 			h.mgr.deps.NICInfo = func(string) (bool, netip.Prefix) { return true, netip.Prefix{} }
 		}, "no 10.x address"},
-		{"S30rndis", func(h *harness) { h.runner.fail["S30rndis restart"] = errors.New("boom") }, "S30rndis restart"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -475,16 +476,18 @@ func TestEnableRollsBackOnEachFailingStep(t *testing.T) {
 	}
 }
 
-func TestEnableSurvivesARebindRefusal(t *testing.T) {
+func TestEnableDoesNotReenumerate(t *testing.T) {
 	h := newHarness(t)
 	h.mgr.Init()
 	h.rebind.err = errors.New("usb presentation has an active transient mode")
+	h.reset()
 
 	if err := h.mgr.Enable(context.Background(), MustSlot("0")); err != nil {
-		t.Fatalf("a rebind refusal failed the enable: %v", err)
+		t.Fatalf("enable: %v", err)
 	}
+	h.mustNotContain("rebind")
 	status, _ := h.mgr.Status(MustSlot("0"))
-	if !status.Enabled || !strings.Contains(status.Message, "re-plug the USB cable") {
+	if !status.Enabled || status.Message != "" {
 		t.Fatalf("status = %+v", status)
 	}
 }
@@ -501,7 +504,10 @@ func TestDisableOrderAndConvergence(t *testing.T) {
 	if err := h.mgr.Disable(context.Background(), slot); err != nil {
 		t.Fatalf("disable: %v", err)
 	}
-	h.mustContain("S30rndis restart", "probe.stop", "dns.stop", "mux.closeall", "proxy.closeall", "door.stop", "S94exit stop 0", "rebind")
+	h.mustContain("S30rndis restart", "probe.stop", "dns.stop", "mux.closeall", "proxy.closeall", "door.stop", "S94exit stop 0")
+	// No exit was ever attached, so the consumer was never given the gateway
+	// and has nothing to drop.
+	h.mustNotContain("rebind")
 	if _, err := os.Stat(GadgetRoutePath()); !os.IsNotExist(err) {
 		t.Fatal("marker survived disable")
 	}
@@ -753,12 +759,16 @@ func TestTransactionsOutliveTheRequest(t *testing.T) {
 	if err := h.mgr.Enable(cancelled, slot); err != nil {
 		t.Fatalf("enable on a cancelled request context: %v", err)
 	}
-	h.mustContain("S94exit start 0", "door.start", "S30rndis restart", "rebind")
+	h.mustContain("S94exit start 0", "door.start", "probe.start")
 	cfg, _, _ := LoadConfig(slot)
 	if !cfg.Enabled {
 		t.Fatalf("config after enable = %+v", cfg)
 	}
 
+	// An attached exit gave the consumer the gateway, so the disable has to
+	// re-enumerate as well.
+	h.door.state = proto.ExitConnected
+	h.mgr.pollGateway(context.Background())
 	h.reset()
 	if err := h.mgr.Disable(cancelled, slot); err != nil {
 		t.Fatalf("disable on a cancelled request context: %v", err)
@@ -1106,54 +1116,198 @@ func TestSetConfigRefusalLeavesTheMessageAlone(t *testing.T) {
 		t.Fatalf("successful config kept message %q", status.Message)
 	}
 
-	// A refused rebind's hint belongs to the enable, not to the config, and
-	// outlives a config change.
-	if err := h.mgr.Disable(context.Background(), slot); err != nil {
-		t.Fatal(err)
-	}
+	// A refused re-enumeration's hint belongs to the gateway change, not to
+	// the config, and outlives a config change.
 	h.rebind.err = errors.New("udc loaned")
-	if err := h.mgr.Enable(context.Background(), slot); err != nil {
-		t.Fatal(err)
-	}
+	h.door.state = proto.ExitConnected
+	h.mgr.Tick(context.Background())
 	pin := true
 	if err := h.mgr.SetConfig(context.Background(), slot, proto.SetExitConfigReq{PinPeer: &pin}); err != nil {
 		t.Fatal(err)
 	}
 	status, _ = h.mgr.Status(slot)
-	if !strings.Contains(status.Message, "re-plug the USB cable") {
-		t.Fatalf("config change cleared the rebind hint: %q", status.Message)
+	if !strings.Contains(status.Message, "re-plug the USB cable to pick up the new gateway") {
+		t.Fatalf("config change cleared the re-enumeration hint: %q", status.Message)
 	}
 }
 
-// TestConvergeRestoresAMissingMarker: a crash mid-Disable can leave
-// enabled:true with the gadget.route marker gone; the watchdog recreates it
-// and restarts udhcpd so the consumer's lease regains the gateway (MGR-9). A
-// tick with the marker present touches nothing.
-func TestConvergeRestoresAMissingMarker(t *testing.T) {
+// TestGatewayFollowsTheExit: the lease names the NanoKVM as gateway only while
+// an exit is attached. Enabling the slot advertises nothing; an exit attaching
+// writes the marker, restarts udhcpd with it and re-enumerates the gadget so
+// the consumer takes the gateway at once. A detach shorter than the hold-down
+// changes nothing; a longer one withdraws the gateway and re-enumerates again,
+// which is the only thing that makes a Windows consumer drop it.
+func TestGatewayFollowsTheExit(t *testing.T) {
 	h := newHarness(t)
 	h.mgr.Init()
 	slot := MustSlot("0")
 	if err := h.mgr.Enable(context.Background(), slot); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(GadgetRoutePath()); err != nil {
-		t.Fatalf("marker not written by enable: %v", err)
+	marker := func() string {
+		t.Helper()
+		data, err := os.ReadFile(GadgetRoutePath())
+		if os.IsNotExist(err) {
+			return ""
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(string(data))
 	}
-	if err := os.Remove(GadgetRoutePath()); err != nil {
-		t.Fatal(err)
-	}
+
+	// Enabled, nothing attached: the watchdog never advertises.
 	h.reset()
 	h.mgr.Tick(context.Background())
-	data, err := os.ReadFile(GadgetRoutePath())
-	if err != nil || strings.TrimSpace(string(data)) != "0" {
-		t.Fatalf("marker not restored: %q %v", data, err)
+	if marker() != "" {
+		t.Fatal("watchdog advertised a gateway with no exit attached")
 	}
-	h.mustContain("S30rndis restart")
+	h.mustNotContain("S30rndis restart")
+	h.mustNotContain("rebind")
 
-	// The marker is present now; the next tick does not restart udhcpd for it.
+	// An exit attaches: marker, then udhcpd, then the re-enumeration, then
+	// the converge the rebind's own subscriber skipped.
+	h.door.state = proto.ExitConnected
 	h.reset()
+	h.mgr.pollGateway(context.Background())
+	if marker() != "0" {
+		t.Fatalf("marker = %q after an exit attached", marker())
+	}
+	h.mustContain("S30rndis restart", "rebind", "S94exit start 0")
+
+	// Steady state: nothing more happens.
+	h.reset()
+	h.mgr.pollGateway(context.Background())
 	h.mgr.Tick(context.Background())
 	h.mustNotContain("S30rndis restart")
+	h.mustNotContain("rebind")
+
+	// A detach shorter than the hold-down costs nothing.
+	h.door.state = proto.ExitDisconnected
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.now = h.now.Add(gatewayHoldDown - time.Second)
+	h.mgr.pollGateway(context.Background())
+	if marker() != "0" {
+		t.Fatal("gateway withdrawn inside the hold-down")
+	}
+	h.door.state = proto.ExitConnected
+	h.mgr.pollGateway(context.Background())
+	h.door.state = proto.ExitDisconnected
+	h.now = h.now.Add(2 * time.Second)
+	h.mgr.pollGateway(context.Background())
+	if marker() != "0" {
+		t.Fatal("a reconnect did not restart the hold-down")
+	}
+	h.mustNotContain("rebind")
+
+	// A detach that outlasts it withdraws the gateway and re-enumerates.
+	h.now = h.now.Add(gatewayHoldDown)
+	h.mgr.pollGateway(context.Background())
+	if marker() != "" {
+		t.Fatal("gateway still advertised after the hold-down")
+	}
+	h.mustContain("S30rndis restart", "rebind")
+
+	h.reset()
+	h.mgr.Tick(context.Background())
+	h.mustNotContain("rebind")
+}
+
+// TestGatewayRetriesARefusedReenumeration: a refusal leaves the change pending
+// and named on the slot, is retried no more often than gatewayRetryInterval
+// without restarting udhcpd again, and the hint goes once a retry succeeds.
+func TestGatewayRetriesARefusedReenumeration(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.rebind.err = errors.New("usb passthrough holds the UDC")
+	h.door.state = proto.ExitConnected
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.mustContain("S30rndis restart", "rebind")
+	status, _ := h.mgr.Status(slot)
+	if !strings.Contains(status.Message, "re-plug the USB cable to pick up the new gateway: usb passthrough holds the UDC") {
+		t.Fatalf("message = %q", status.Message)
+	}
+
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.mustNotContain("rebind")
+
+	h.rebind.err = nil
+	h.now = h.now.Add(gatewayRetryInterval)
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.mustContain("rebind")
+	h.mustNotContain("S30rndis restart")
+	status, _ = h.mgr.Status(slot)
+	if status.Message != "" {
+		t.Fatalf("message after a successful retry = %q", status.Message)
+	}
+}
+
+// TestDisableWithdrawsAnAdvertisedGateway: disabling a slot whose exit is
+// attached takes the gateway back at once, without waiting out the hold-down,
+// and re-enumerates after the downstream is down.
+func TestDisableWithdrawsAnAdvertisedGateway(t *testing.T) {
+	h := newHarness(t)
+	h.mgr.Init()
+	slot := MustSlot("0")
+	if err := h.mgr.Enable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	h.door.state = proto.ExitConnected
+	h.mgr.pollGateway(context.Background())
+	if _, err := os.Stat(GadgetRoutePath()); err != nil {
+		t.Fatalf("no gateway advertised: %v", err)
+	}
+	h.reset()
+	if err := h.mgr.Disable(context.Background(), slot); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(GadgetRoutePath()); !os.IsNotExist(err) {
+		t.Fatal("marker survived disable")
+	}
+	h.mustContain("S30rndis restart", "S94exit stop 0", "rebind", "S30rndis start")
+}
+
+// TestInitWithdrawsAStaleGateway: nothing is attached to a process that is
+// only starting, so a marker left by an earlier one, on tmpfs or at the flash
+// path older releases used, is removed, udhcpd restarted without it, and an
+// enumerated consumer re-enumerated.
+func TestInitWithdrawsAStaleGateway(t *testing.T) {
+	h := newHarness(t)
+	cfg, _ := DefaultConfig(MustSlot("0"))
+	cfg.Enabled = true
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteGadgetRoute(MustSlot("0")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacyGadgetRoutePath(), []byte("0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	h.mgr.Init()
+	for _, path := range []string{GadgetRoutePath(), legacyGadgetRoutePath()} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%s survived Init", path)
+		}
+	}
+	h.mustContain("S30rndis restart", "S94exit start 0")
+	h.mustNotContain("rebind")
+
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.mustContain("rebind", "S94exit start 0")
+	h.reset()
+	h.mgr.pollGateway(context.Background())
+	h.mustNotContain("rebind")
 }
 
 // TestLogsKeepDaemonVocabulary: the generic token-shaped redaction runs only

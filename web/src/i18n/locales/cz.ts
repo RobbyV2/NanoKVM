@@ -1150,7 +1150,7 @@ const cz = {
         enableConfirm: 'Zapnout výstupní tunel?',
         disableConfirm: 'Vypnout výstupní tunel?',
         reenumerate:
-          'USB gadget se znovu přihlásí, aby cílový počítač převzal novou bránu a DNS. Klávesnice, myš, kamera a virtuální disk vypadnou přibližně na dvě sekundy.',
+          'Cílový počítač dostává tento NanoKVM jako bránu a DNS jen tehdy, když je připojeno výstupní zařízení. Když se připojí, nebo je 15 sekund pryč, USB gadget se znovu přihlásí, aby je cílový počítač převzal nebo zahodil. Klávesnice, myš, kamera a virtuální disk vypadnou přibližně na dvě sekundy.',
         okBtn: 'Ano',
         cancelBtn: 'Ne',
         copy: 'Kopírovat',

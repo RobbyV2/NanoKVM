@@ -1156,7 +1156,7 @@ const ca = {
         enableConfirm: 'Activar el túnel de sortida?',
         disableConfirm: 'Desactivar el túnel de sortida?',
         reenumerate:
-          "El dispositiu USB es torna a enumerar perquè l'equip de destinació rebi la nova passarel·la i el DNS. Teclat, ratolí, càmera i disc virtual es desconnecten uns dos segons.",
+          "L'equip de destinació només rep aquest NanoKVM com a passarel·la i DNS mentre hi ha un dispositiu de sortida connectat. Quan se'n connecta un, o fa 15 segons que no hi és, el dispositiu USB es torna a enumerar perquè el destí els rebi o els deixi. Teclat, ratolí, càmera i disc virtual es desconnecten uns dos segons.",
         okBtn: 'Sí',
         cancelBtn: 'No',
         copy: 'Copia',

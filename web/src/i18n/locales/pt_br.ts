@@ -1160,7 +1160,7 @@ const pt_br = {
         enableConfirm: 'Ativar o túnel de saída?',
         disableConfirm: 'Desativar o túnel de saída?',
         reenumerate:
-          'O gadget USB é reenumerado para que o destino receba o novo gateway e DNS. Teclado, mouse, câmera e disco virtual caem por cerca de dois segundos.',
+          'O destino só recebe este NanoKVM como gateway e DNS enquanto um dispositivo de saída estiver conectado. Quando um se conecta, ou some por 15 segundos, o gadget USB é reenumerado para que o destino os adote ou os descarte. Teclado, mouse, câmera e disco virtual caem por cerca de dois segundos.',
         okBtn: 'Sim',
         cancelBtn: 'Não',
         copy: 'Copiar',

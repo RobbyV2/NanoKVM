@@ -1100,7 +1100,7 @@ const zh_tw = {
         enableConfirm: '啟用出口隧道？',
         disableConfirm: '停用出口隧道？',
         reenumerate:
-          'USB 裝置將重新列舉，讓目標機取得新的閘道和 DNS。鍵盤、滑鼠、攝影機和虛擬磁碟會中斷約兩秒。',
+          '僅在出口裝置連線期間，目標機才會取得本 NanoKVM 作為閘道和 DNS。出口裝置連線時，或斷線滿 15 秒時，USB 裝置將重新列舉，讓目標機取得或移除它們。鍵盤、滑鼠、攝影機和虛擬磁碟會中斷約兩秒。',
         okBtn: '確定',
         cancelBtn: '取消',
         copy: '複製',

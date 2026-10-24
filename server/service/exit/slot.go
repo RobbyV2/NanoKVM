@@ -18,7 +18,7 @@ import (
 
 // Filesystem roots, variables so tests can redirect them.
 var (
-	// ConfigDir holds <n>.json, <n>.state.json, <n>/ and gadget.route.
+	// ConfigDir holds <n>.json, <n>.state.json and <n>/.
 	ConfigDir = "/etc/kvm/exit"
 	// BinDir holds the extracted daemons, shared with the tunnel package.
 	BinDir = "/etc/kvm/bin"
@@ -28,7 +28,7 @@ var (
 	InitSeedDir = "/kvmapp/system/init.d"
 	// InitDir is where rcS runs them.
 	InitDir = "/etc/init.d"
-	// RunDir holds pidfiles and the per-slot lock.
+	// RunDir holds pidfiles, the per-slot lock and the gateway marker (tmpfs).
 	RunDir = "/var/run"
 	// LogDir holds the daemons' log tails (tmpfs).
 	LogDir = "/tmp"
@@ -43,9 +43,15 @@ const (
 	NexitBinary = "nexit"
 	S94Script   = "S94exit"
 	S30Script   = "S30rndis"
-	// GadgetRouteMarker, relative to ConfigDir, tells S30rndis to hand out the
-	// gateway and DNS options (D4). Content is the slot id that owns the NIC.
-	GadgetRouteMarker = "gadget.route"
+	// GadgetRouteMarker, relative to RunDir, tells S30rndis to hand out the
+	// gateway and DNS options. Content is the id of the slot whose exit is
+	// attached. It exists only while an exit is attached, and it lives on
+	// tmpfs so no reboot can find one left behind.
+	GadgetRouteMarker = "exit.gadget.route"
+	// legacyGadgetRouteMarker, relative to ConfigDir, is where releases that
+	// advertised the gateway for as long as a slot was enabled kept it, on
+	// flash. Nothing reads it any more; Init removes it.
+	legacyGadgetRouteMarker = "gadget.route"
 
 	// Base numbers every slot derives from (D9).
 	baseTable     = 100
@@ -144,5 +150,7 @@ func (s Slot) LogPath(daemon string) string {
 	return filepath.Join(LogDir, s.Name()+"-"+daemon+".log")
 }
 
-// GadgetRoutePath is the marker S30rndis reads (D4).
-func GadgetRoutePath() string { return filepath.Join(ConfigDir, GadgetRouteMarker) }
+// GadgetRoutePath is the marker S30rndis reads.
+func GadgetRoutePath() string { return filepath.Join(RunDir, GadgetRouteMarker) }
+
+func legacyGadgetRoutePath() string { return filepath.Join(ConfigDir, legacyGadgetRouteMarker) }
