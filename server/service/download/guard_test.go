@@ -27,6 +27,15 @@ func TestPublicAddressRefusesWhatOnlyTheDeviceReaches(t *testing.T) {
 		"224.0.0.1":         false,
 		"::ffff:127.0.0.1":  false,
 		"::ffff:93.184.1.1": true,
+		"0.1.2.3":           false,
+		"250.1.2.3":         false,
+		"::7f00:1":          false,
+		"64:ff9b::7f00:1":   false,
+		"64:ff9b::c0a8:801": false,
+		"64:ff9b::101:101":  true,
+		"64:ff9b:1::1":      false,
+		"2001:0:4136::1":    false,
+		"2002:7f00:1::1":    false,
 	} {
 		if got := publicAddress(netip.MustParseAddr(addr)); got != want {
 			t.Errorf("publicAddress(%s) = %v, want %v", addr, got, want)

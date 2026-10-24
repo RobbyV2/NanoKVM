@@ -20,12 +20,28 @@ import (
 var errInternalDestination = errors.New("downloads from local or private addresses need an administrator")
 
 var blockedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),     // "this network"
 	netip.MustParsePrefix("100.64.0.0/10"), // shared address space, tailnets
 	netip.MustParsePrefix("198.18.0.0/15"), // the exit tunnels' addresses
+	netip.MustParsePrefix("240.0.0.0/4"),   // reserved
+	// IPv6 forms that carry an IPv4 destination a translator or relay on the
+	// path would deliver to. The well-known NAT64 prefix is checked through
+	// its embedded address instead, so IPv6-only networks still reach public
+	// IPv4 hosts.
+	netip.MustParsePrefix("::/96"),          // IPv4-compatible
+	netip.MustParsePrefix("64:ff9b:1::/48"), // local-use NAT64
+	netip.MustParsePrefix("2001::/32"),      // Teredo
+	netip.MustParsePrefix("2002::/16"),      // 6to4
 }
+
+var wellKnownNAT64 = netip.MustParsePrefix("64:ff9b::/96")
 
 func publicAddress(addr netip.Addr) bool {
 	addr = addr.Unmap()
+	if wellKnownNAT64.Contains(addr) {
+		b := addr.As16()
+		return publicAddress(netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}))
+	}
 	if !addr.IsValid() || addr.IsUnspecified() || addr.IsLoopback() || addr.IsPrivate() ||
 		addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() ||
 		addr.IsInterfaceLocalMulticast() || addr.IsMulticast() {
