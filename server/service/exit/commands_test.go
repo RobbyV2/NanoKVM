@@ -144,7 +144,7 @@ func TestCommandsSnapshot(t *testing.T) {
 				}
 			}
 			for _, cmd := range rsp.Wstunnel {
-				if !strings.Contains(cmd.Command, "v10.7.1/wstunnel_10.7.1_") {
+				if !strings.Contains(cmd.Command, "v11.1.0/wstunnel_11.1.0_") {
 					t.Fatalf("wstunnel command is not pinned: %s", cmd.Command)
 				}
 				verify := strings.Contains(cmd.Command, "--tls-verify-certificate")
@@ -224,7 +224,7 @@ func TestCommandsSnapshot(t *testing.T) {
 				t.Fatalf("latest linux command does not fetch the linux asset and check it with sha256sum: %s", latest[2].Command)
 			}
 			for _, cmd := range latest {
-				if strings.Contains(cmd.Command, "v10.7.1/") {
+				if strings.Contains(cmd.Command, "v11.1.0/") {
 					t.Fatalf("latest %s command carries the pin: %s", cmd.Platform, cmd.Command)
 				}
 				for key, sum := range wstunnelSHA256 {

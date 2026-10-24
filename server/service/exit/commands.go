@@ -19,9 +19,9 @@ import (
 )
 
 // WstunnelVersion is the release pinned into every Mode B command (D16). The
-// hashes are the upstream release's checksums.txt for v10.7.1, copied here so
+// hashes are the upstream release's checksums.txt for v11.1.0, copied here so
 // the command the operator pastes verifies the download before running it.
-const WstunnelVersion = "10.7.1"
+const WstunnelVersion = "11.1.0"
 
 const wstunnelReleaseBase = "https://github.com/erebe/wstunnel/releases/download/v" + WstunnelVersion + "/"
 
@@ -35,12 +35,12 @@ const (
 )
 
 var wstunnelSHA256 = map[string]string{
-	"linux_amd64":   "fa842ed53fbb14b1c69cd98829f9895d7f8a6b0d562c57c1175851a52cea9ea2",
-	"linux_arm64":   "99f9506d01d1b4073254609600ec5056dab8dc58aec75c32f6eb0508335a8fd2",
-	"darwin_amd64":  "ac234c60d461532d81fb60e610787bbc2ce48bcd095f57eb8f86d1a3914e344c",
-	"darwin_arm64":  "2c1f427fd651a74c8844a0ed352c13d667da7e08056b790549917d6952ec69ac",
-	"windows_amd64": "deb3c8b8d9fecf5428f7e0caabbc13aeb3b1edbfba49e1724a7a065c027bd0f2",
-	"windows_arm64": "1d642b29aba0e05c5564adf1dfe2e4494cd10b62331490471bdf6d6548085c96",
+	"linux_amd64":   "512edf4e7bb64fc133522220123514868fae75b5bae4124b53e396787276aa23",
+	"linux_arm64":   "148895f957a68be39e2b65d28c5f2065b9c58c4a0cfd48c560b2b3267f398464",
+	"darwin_amd64":  "68bf470b58f6cb7d3dcd96deb42fb5676b8810ef7751a53f7d9e3f8178a1d085",
+	"darwin_arm64":  "87fc0d68563248729c8c45359e5a7501041990145850c43c23a96e51656c2880",
+	"windows_amd64": "b271d076fbba92fe3d8c9b7612bf17f4ac905d68614a6c40debd73107883d75e",
+	"windows_arm64": "041b36f0e59863c84e43c9e9409dd7ad166936ce4d538f89dbb5fdff4c618c6f",
 }
 
 // WstunnelAssetURL is the pinned download for one platform_arch key.

@@ -28,6 +28,11 @@ func RenderHevConfig(slot Slot, cfg Config) string {
 	fmt.Fprintf(&b, "  name: %s\n", slot.Tun())
 	fmt.Fprintf(&b, "  mtu: %d\n", cfg.MTU)
 	fmt.Fprintf(&b, "  ipv4: %s\n", slot.TunAddr())
+	// Jumbo segments skip TSO and are meant for local delivery only; every
+	// packet here is forwarded to the gadget NIC, which would have to
+	// fragment them.
+	fmt.Fprintf(&b, "  offload:\n")
+	fmt.Fprintf(&b, "    jumbo: false\n")
 	fmt.Fprintf(&b, "socks5:\n")
 	fmt.Fprintf(&b, "  port: %d\n", slot.SocksPort())
 	fmt.Fprintf(&b, "  address: 127.0.0.1\n")

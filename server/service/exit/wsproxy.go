@@ -24,7 +24,7 @@ import (
 var (
 	reverseProbeInterval = 500 * time.Millisecond
 	reverseProbeDial     = time.Second
-	relayGrace           = 750 * time.Millisecond
+	relayGrace           = 2 * time.Second
 	wstunnelServerAddr   = func(s Slot) string { return s.WstunnelAddr() }
 )
 
@@ -353,8 +353,10 @@ func (p *WSProxy) probeOnce(ctx context.Context) bool {
 // maybeClearLocked runs when a connection or pending request goes away. A
 // peer that never proved its listener is forgotten at once. A proven peer
 // whose last connection just ended is most likely between a relay and its
-// next upgrade request (one round trip away), so it keeps its state for
-// relayGrace; if nothing arrives by then it is gone. p.mu must be held.
+// next upgrade request (one round trip away, or a wstunnel client's 1 s retry
+// after the server timed a waiting reverse request out), so it keeps its
+// state for relayGrace; if nothing arrives by then it is gone. p.mu must be
+// held.
 func (p *WSProxy) maybeClearLocked() {
 	if len(p.conns) > 0 || len(p.pending) > 0 || p.peer == nil {
 		return

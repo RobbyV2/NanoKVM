@@ -29,7 +29,7 @@ func TestRenderHevConfigKeys(t *testing.T) {
 	if err := yaml.Unmarshal([]byte(out), &doc); err != nil {
 		t.Fatalf("hev.yml does not parse: %v\n%s", err, out)
 	}
-	wantTunnel := map[string]any{"name": "exit0", "mtu": 1280, "ipv4": "198.18.0.1"}
+	wantTunnel := map[string]any{"name": "exit0", "mtu": 1280, "ipv4": "198.18.0.1", "offload": nil}
 	wantSocks := map[string]any{"port": 10800, "address": "127.0.0.1", "udp": "udp"}
 	wantMisc := map[string]any{
 		"log-file": "/tmp/exit0-hev.log", "log-level": "warn", "connect-timeout": 12000,
@@ -44,10 +44,16 @@ func TestRenderHevConfigKeys(t *testing.T) {
 			t.Fatalf("%s has keys %v, want exactly %v", name, keys(got), keys(want))
 		}
 		for k, v := range want {
+			if v == nil {
+				continue
+			}
 			if got[k] != v {
 				t.Fatalf("%s.%s = %v (%T), want %v (%T)", name, k, got[k], got[k], v, v)
 			}
 		}
+	}
+	if offload, _ := doc.Tunnel["offload"].(map[string]any); len(offload) != 1 || offload["jumbo"] != false {
+		t.Fatalf("tunnel.offload = %v, want exactly jumbo: false", doc.Tunnel["offload"])
 	}
 	// pid-file must never appear: start-stop-daemon owns the pidfile (D8).
 	if strings.Contains(out, "pid-file") {

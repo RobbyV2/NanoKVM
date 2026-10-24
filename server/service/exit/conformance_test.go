@@ -233,7 +233,7 @@ func (l *lockedBuffer) String() string {
 // runs it under interpreter and waits for the session it opens.
 func (h *conformance) startClient(t *testing.T, name, interpreter string) *clientProc {
 	t.Helper()
-	body, ok := RenderClient(name, h.slot, h.cfg, h.origin, "")
+	body, ok := RenderClient(name, h.slot, h.cfg, h.origin, false)
 	if !ok {
 		t.Fatalf("%s is not embedded", name)
 	}
