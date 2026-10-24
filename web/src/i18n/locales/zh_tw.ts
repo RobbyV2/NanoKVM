@@ -1498,7 +1498,10 @@ const zh_tw = {
         saving: '儲存中',
         saved: '模型設定已儲存',
         saveFailed: '儲存模型設定失敗',
-        invalid: '模型標識、API Base URL 和 API Key 不能為空'
+        modelRequired: '請輸入模型識別碼，例如 openai/gpt-5.4',
+        modelIdentifierHint: '供應商，接著是模型 ID：openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: '本機的 Ollama、LM Studio 或 vLLM 伺服器不需要',
+        apiBaseHint: '留空即使用供應商的預設端點'
       },
       uninstall: {
         menuLabel: '解除安裝',

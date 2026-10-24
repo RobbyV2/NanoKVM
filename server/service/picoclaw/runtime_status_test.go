@@ -169,3 +169,24 @@ func TestSyncRuntimeConfigMetadataFromPicoclawTreatsMissingConfigAsUnconfigured(
 		t.Fatalf("missing config reported a parse error: %+v", status)
 	}
 }
+
+// A stopped runtime's status is refreshed by applyDisabledRuntimeIntentStatus.
+// Removing PicoClaw's configuration must not leave an earlier "configured"
+// result behind, or the panel offers a chat with no model instead of the form.
+func TestDisabledRuntimeStatusTreatsMissingConfigAsUnconfigured(t *testing.T) {
+	t.Setenv("PICOCLAW_HOME", t.TempDir())
+	service := &Service{
+		runtime: &RuntimeStore{status: RuntimeStatus{
+			Installed:       true,
+			ModelConfigured: true,
+			ModelName:       "stale-model",
+			Status:          "stopped",
+		}},
+	}
+
+	service.applyDisabledRuntimeIntentStatus()
+	status := service.runtime.Get()
+	if status.ModelConfigured || status.ModelName != "" {
+		t.Fatalf("missing config kept stale model metadata: %+v", status)
+	}
+}

@@ -1573,7 +1573,11 @@ const tr = {
         saving: 'Kaydediliyor',
         saved: 'Model yapılandırması kaydedildi',
         saveFailed: 'Model yapılandırması kaydedilemedi',
-        invalid: 'Model tanımlayıcı, API Base URL ve API anahtarı gereklidir'
+        modelRequired: 'Bir model tanımlayıcısı girin, örneğin openai/gpt-5.4',
+        modelIdentifierHint:
+          'Önce sağlayıcı, ardından model kimliği: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Yerel bir Ollama, LM Studio veya vLLM sunucusu için gerekmez',
+        apiBaseHint: 'Sağlayıcının varsayılan uç noktasını kullanmak için boş bırakın'
       },
       uninstall: {
         menuLabel: 'Kaldırma',

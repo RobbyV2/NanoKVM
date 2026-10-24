@@ -1574,7 +1574,10 @@ const ru = {
         saving: 'Сохранение',
         saved: 'Конфигурация модели сохранена.',
         saveFailed: 'Не удалось сохранить конфигурацию модели.',
-        invalid: 'Требуются идентификатор модели, API Base URL и API-ключ'
+        modelRequired: 'Введите идентификатор модели, например openai/gpt-5.4',
+        modelIdentifierHint: 'Провайдер, затем ID модели: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Не нужен для локального сервера Ollama, LM Studio или vLLM',
+        apiBaseHint: 'Оставьте пустым, чтобы использовать адрес провайдера по умолчанию'
       },
       uninstall: {
         menuLabel: 'Удалить',

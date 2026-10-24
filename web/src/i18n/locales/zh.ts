@@ -1495,7 +1495,10 @@ const zh = {
         saving: '正在保存模型配置',
         saved: '模型配置已保存',
         saveFailed: '保存模型配置失败',
-        invalid: '模型标识、API Base URL 和 API Key 不能为空'
+        modelRequired: '请输入模型标识，例如 openai/gpt-5.4',
+        modelIdentifierHint: '先写服务商，再写模型 ID：openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: '本地 Ollama、LM Studio 或 vLLM 服务无需填写',
+        apiBaseHint: '留空则使用服务商的默认地址'
       },
       uninstall: {
         menuLabel: '卸载',

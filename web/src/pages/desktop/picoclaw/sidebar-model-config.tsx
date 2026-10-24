@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Button, Input } from 'antd';
+import { Alert, Button, Input } from 'antd';
 import { useSetAtom } from 'jotai';
 import {
   BookOpenIcon,
@@ -14,11 +14,13 @@ import { useTranslation } from 'react-i18next';
 import { keyboardLockAtom } from '@/jotai/keyboard.ts';
 
 import { PICOCLAW_MODEL_CONFIG_KEYBOARD_LOCK_SOURCE } from './keyboard-lock.ts';
+import type { ModelConfigError, ModelConfigField } from './model-config.ts';
 
 type SidebarModelConfigProps = {
   apiBase: string;
   apiKey: string;
   disabled?: boolean;
+  error?: ModelConfigError | null;
   isSaving: boolean;
   modelIdentifier: string;
   modelName?: string;
@@ -34,6 +36,7 @@ export const SidebarModelConfig = ({
   apiBase,
   apiKey,
   disabled,
+  error,
   isSaving,
   modelIdentifier,
   modelName,
@@ -46,6 +49,7 @@ export const SidebarModelConfig = ({
 }: SidebarModelConfigProps) => {
   const { t } = useTranslation();
   const setKeyboardLock = useSetAtom(keyboardLockAtom);
+  const statusOf = (field: ModelConfigField) => (error?.field === field ? 'error' : undefined);
 
   useEffect(() => {
     setKeyboardLock({ source: PICOCLAW_MODEL_CONFIG_KEYBOARD_LOCK_SOURCE, locked: true });
@@ -100,9 +104,13 @@ export const SidebarModelConfig = ({
           <Input
             prefix={<CpuIcon size={13} className="text-neutral-500" />}
             placeholder={t('picoclaw.model.modelIdentifierPlaceholder')}
+            status={statusOf('model')}
             value={modelIdentifier}
             onChange={(e) => onModelIdentifierChange(e.target.value)}
           />
+          <div className="mt-1 text-[11px] leading-4 text-neutral-500">
+            {t('picoclaw.model.modelIdentifierHint')}
+          </div>
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-neutral-500">
@@ -111,9 +119,13 @@ export const SidebarModelConfig = ({
           <Input.Password
             prefix={<KeyRoundIcon size={13} className="text-neutral-500" />}
             placeholder={t('picoclaw.model.apiKeyPlaceholder')}
+            status={statusOf('api_key')}
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
           />
+          <div className="mt-1 text-[11px] leading-4 text-neutral-500">
+            {t('picoclaw.model.apiKeyHint')}
+          </div>
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-neutral-500">
@@ -122,11 +134,25 @@ export const SidebarModelConfig = ({
           <Input
             prefix={<LinkIcon size={13} className="text-neutral-500" />}
             placeholder={t('picoclaw.model.apiBasePlaceholder')}
+            status={statusOf('api_base')}
             value={apiBase}
             onChange={(e) => onApiBaseChange(e.target.value)}
           />
+          <div className="mt-1 text-[11px] leading-4 text-neutral-500">
+            {t('picoclaw.model.apiBaseHint')}
+          </div>
         </div>
       </div>
+
+      {error && (
+        <Alert
+          className="mt-5 break-words text-xs"
+          data-picoclaw-model-error="true"
+          message={error.message}
+          showIcon
+          type="error"
+        />
+      )}
 
       {/* Save */}
       <div className="mt-6 flex justify-end gap-2">

@@ -1580,7 +1580,10 @@ const id = {
         saving: 'Menyimpan',
         saved: 'Konfigurasi model disimpan',
         saveFailed: 'Gagal menyimpan konfigurasi model',
-        invalid: 'Pengidentifikasi model, API Base URL, dan kunci API wajib diisi'
+        modelRequired: 'Masukkan pengenal model, misalnya openai/gpt-5.4',
+        modelIdentifierHint: 'Penyedia, lalu ID model: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Tidak diperlukan untuk server Ollama, LM Studio, atau vLLM lokal',
+        apiBaseHint: 'Biarkan kosong untuk memakai endpoint bawaan penyedia'
       },
       uninstall: {
         menuLabel: 'Copot pemasangan',

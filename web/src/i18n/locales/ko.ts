@@ -1551,7 +1551,10 @@ const ko = {
         saving: '저장 중',
         saved: '모델 구성이 저장되었습니다',
         saveFailed: '모델 구성 저장에 실패했습니다',
-        invalid: '모델 식별자, API Base URL, API 키가 필요합니다'
+        modelRequired: '모델 식별자를 입력하세요. 예: openai/gpt-5.4',
+        modelIdentifierHint: '공급자 다음에 모델 ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: '로컬 Ollama, LM Studio 또는 vLLM 서버에는 필요하지 않습니다',
+        apiBaseHint: '비워 두면 공급자의 기본 엔드포인트를 사용합니다'
       },
       uninstall: {
         menuLabel: '제거',

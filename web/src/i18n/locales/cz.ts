@@ -1567,7 +1567,11 @@ const cz = {
         saving: 'Ukládání',
         saved: 'Konfigurace modelu uložena',
         saveFailed: 'Nepodařilo se uložit konfiguraci modelu',
-        invalid: 'Identifikátor modelu, API Base URL a klíč API jsou povinné'
+        modelRequired: 'Zadejte identifikátor modelu, například openai/gpt-5.4',
+        modelIdentifierHint:
+          'Poskytovatel a za ním ID modelu: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Pro místní server Ollama, LM Studio nebo vLLM není potřeba',
+        apiBaseHint: 'Ponechte prázdné pro výchozí koncový bod poskytovatele'
       },
       uninstall: {
         menuLabel: 'Odinstalovat',

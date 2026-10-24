@@ -1580,7 +1580,10 @@ const ja = {
         saving: '保存中',
         saved: 'モデル構成が保存されました',
         saveFailed: 'モデル構成の保存に失敗しました',
-        invalid: 'モデル識別子、API Base URL、API キーは必須です'
+        modelRequired: 'モデル識別子を入力してください（例: openai/gpt-5.4）',
+        modelIdentifierHint: 'プロバイダーの後にモデル ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'ローカルの Ollama、LM Studio、vLLM サーバーでは不要です',
+        apiBaseHint: '空欄にするとプロバイダーの既定のエンドポイントを使用します'
       },
       uninstall: {
         menuLabel: 'アンインストール',

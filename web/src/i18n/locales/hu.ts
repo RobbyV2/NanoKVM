@@ -1586,7 +1586,11 @@ const hu = {
         saving: 'Mentés',
         saved: 'A modell konfigurációja mentve',
         saveFailed: 'Nem sikerült menteni a modellkonfigurációt',
-        invalid: 'A modellazonosító, az API Base URL és az API-kulcs megadása kötelező'
+        modelRequired: 'Adjon meg egy modellazonosítót, például openai/gpt-5.4',
+        modelIdentifierHint:
+          'Szolgáltató, majd a modellazonosító: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Helyi Ollama, LM Studio vagy vLLM szerverhez nem szükséges',
+        apiBaseHint: 'Hagyja üresen a szolgáltató alapértelmezett végpontjának használatához'
       },
       uninstall: {
         menuLabel: 'Eltávolítás',

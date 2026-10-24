@@ -1576,7 +1576,11 @@ const nb = {
         saving: 'Lagrer',
         saved: 'Modellkonfigurasjon lagret',
         saveFailed: 'Kunne ikke lagre modellkonfigurasjonen',
-        invalid: 'Modellidentifikator, API Base URL og API-nøkkel kreves'
+        modelRequired: 'Angi en modellidentifikator, for eksempel openai/gpt-5.4',
+        modelIdentifierHint:
+          'Leverandør, deretter modell-ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Ikke nødvendig for en lokal Ollama-, LM Studio- eller vLLM-server',
+        apiBaseHint: 'La stå tomt for å bruke leverandørens standard endepunkt'
       },
       uninstall: {
         menuLabel: 'Avinstaller',

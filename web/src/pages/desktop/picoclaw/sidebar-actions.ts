@@ -31,6 +31,12 @@ import type {
 
 import { PICOCLAW_INPUT_KEYBOARD_LOCK_SOURCE, releasePicoclawInputFocus } from './keyboard-lock.ts';
 import { createErrorMessage, createStatusMessage, HIDDEN_OVERLAY } from './message-utils.ts';
+import {
+  modelConfigErrorFromException,
+  modelConfigErrorFromResponse,
+  toModelConfigRequest,
+  type ModelConfigError
+} from './model-config.ts';
 
 type RuntimeStatusSetter = Dispatch<SetStateAction<PicoclawRuntimeStatus | null>>;
 type AIControlStatusSetter = Dispatch<SetStateAction<AIControlStatus | null>>;
@@ -80,6 +86,7 @@ type PicoclawSidebarActionOptions = {
   setIsInstallRequestPending: Dispatch<SetStateAction<boolean>>;
   setInstallSnapshot: Dispatch<SetStateAction<PicoclawRuntimeInstallSnapshot | null>>;
   setIsSavingModelConfig: Dispatch<SetStateAction<boolean>>;
+  setModelConfigError: Dispatch<SetStateAction<ModelConfigError | null>>;
   setIsSwitchingAgent: Dispatch<SetStateAction<boolean>>;
   setIsUninstallRequestPending: Dispatch<SetStateAction<boolean>>;
   setIsReleasingControl: Dispatch<SetStateAction<boolean>>;
@@ -112,6 +119,7 @@ export function createPicoclawSidebarActions(options: PicoclawSidebarActionOptio
     setIsInstallRequestPending,
     setInstallSnapshot,
     setIsSavingModelConfig,
+    setModelConfigError,
     setIsSwitchingAgent,
     setIsUninstallRequestPending,
     setIsReleasingControl,
@@ -768,18 +776,17 @@ export function createPicoclawSidebarActions(options: PicoclawSidebarActionOptio
     }
   }
 
+  // Save failures are shown in the form itself, which stays open until the
+  // user saves successfully or cancels: the chat message list is not rendered
+  // while the form is, so an error appended there is never seen.
   async function handleSaveModelConfig() {
-    const apiBase = modelApiBase.trim();
-    const apiKey = modelApiKey.trim();
-    const model = modelIdentifier.trim();
-    if (!apiBase || !apiKey || !model) {
-      setMessages((current) => [
-        ...current,
-        createErrorMessage({
-          code: 'MODEL_CONFIG_INVALID',
-          message: t('picoclaw.model.invalid')
-        })
-      ]);
+    const request = toModelConfigRequest({
+      model: modelIdentifier,
+      apiBase: modelApiBase,
+      apiKey: modelApiKey
+    });
+    if (!request.model) {
+      setModelConfigError({ field: 'model', message: t('picoclaw.model.modelRequired') });
       return;
     }
 
@@ -787,13 +794,10 @@ export function createPicoclawSidebarActions(options: PicoclawSidebarActionOptio
       return;
     }
 
+    setModelConfigError(null);
     setIsSavingModelConfig(true);
     try {
-      const response = await setPicoclawModelConfig({
-        model,
-        api_base: apiBase,
-        api_key: apiKey
-      });
+      const response = await setPicoclawModelConfig(request);
       if (response.code === 0) {
         syncRuntimeStatus(response.data.status, 'model_config');
         setIsModelConfigOpen(false);
@@ -802,28 +806,11 @@ export function createPicoclawSidebarActions(options: PicoclawSidebarActionOptio
         return;
       }
 
-      const errorMessage =
-        (response as { message?: string; msg?: string }).message ||
-        (response as { message?: string; msg?: string }).msg ||
-        t('picoclaw.model.saveFailed');
-      setMessages((current) => [
-        ...current,
-        createErrorMessage({
-          code: 'MODEL_CONFIG_SAVE_FAILED',
-          message: errorMessage,
-          raw: response
-        })
-      ]);
+      setIsModelConfigOpen(true);
+      setModelConfigError(modelConfigErrorFromResponse(response, t('picoclaw.model.saveFailed')));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : t('picoclaw.model.saveFailed');
-      setMessages((current) => [
-        ...current,
-        createErrorMessage({
-          code: 'MODEL_CONFIG_SAVE_FAILED',
-          message: errorMessage,
-          raw: error
-        })
-      ]);
+      setIsModelConfigOpen(true);
+      setModelConfigError(modelConfigErrorFromException(error, t('picoclaw.model.saveFailed')));
     } finally {
       setIsSavingModelConfig(false);
       endMutation('model_save');

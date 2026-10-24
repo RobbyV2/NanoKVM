@@ -19,16 +19,14 @@ import {
   picoclawTransportStateAtom
 } from '@/jotai/picoclaw.ts';
 
+import type { ModelConfigError } from './model-config.ts';
 import {
   getPicoclawSidebarConnectionLabel,
   getPicoclawSidebarMode,
   getPicoclawSidebarStatusColor,
   isPicoclawRuntimeInstalling
 } from './runtime-view.ts';
-import {
-  createPicoclawSidebarActions,
-  type PicoclawMutation
-} from './sidebar-actions.ts';
+import { createPicoclawSidebarActions, type PicoclawMutation } from './sidebar-actions.ts';
 import {
   usePicoclawGatewayAutoConnect,
   usePicoclawGatewayEvents,
@@ -65,6 +63,7 @@ export const useSidebar = () => {
   const [isInstallRequestPending, setIsInstallRequestPending] = useState(false);
   const [isUninstallRequestPending, setIsUninstallRequestPending] = useState(false);
   const [isSavingModelConfig, setIsSavingModelConfig] = useState(false);
+  const [modelConfigError, setModelConfigError] = useState<ModelConfigError | null>(null);
   const [isSwitchingAgent, setIsSwitchingAgent] = useState(false);
   const [isSwitchingSession, setIsSwitchingSession] = useState(false);
   const [isTogglingRuntime, setIsTogglingRuntime] = useState(false);
@@ -131,6 +130,7 @@ export const useSidebar = () => {
     setIsInstallRequestPending,
     setInstallSnapshot,
     setIsSavingModelConfig,
+    setModelConfigError,
     setIsSwitchingAgent,
     setIsUninstallRequestPending,
     setIsReleasingControl,
@@ -231,17 +231,30 @@ export const useSidebar = () => {
     activeSessionId,
     aiControlStatus,
     connectionLabel,
-    handleCancelModelConfig: () => setIsModelConfigOpen(false),
+    handleCancelModelConfig: () => {
+      setModelConfigError(null);
+      setIsModelConfigOpen(false);
+    },
     handleAgentProfileChange: actions.handleAgentProfileChange,
     handleCloseHistory: sessionActions.handleCloseHistory,
     handleDeleteHistorySession: sessionActions.handleDeleteHistorySession,
-    handleModelApiBaseChange: setModelApiBase,
-    handleModelApiKeyChange: setModelApiKey,
-    handleModelIdentifierChange: setModelIdentifier,
+    handleModelApiBaseChange: (value: string) => {
+      setModelConfigError(null);
+      setModelApiBase(value);
+    },
+    handleModelApiKeyChange: (value: string) => {
+      setModelConfigError(null);
+      setModelApiKey(value);
+    },
+    handleModelIdentifierChange: (value: string) => {
+      setModelConfigError(null);
+      setModelIdentifier(value);
+    },
     handleNewConversation: sessionActions.handleNewConversation,
     handleReconnectGateway: sessionActions.handleReconnectGateway,
     handleOpenHistory: sessionActions.handleOpenHistory,
     handleOpenModelConfig: () => {
+      setModelConfigError(null);
       setIsHistoryOpen(false);
       setIsModelConfigOpen(true);
     },
@@ -268,6 +281,7 @@ export const useSidebar = () => {
     messages,
     modelApiBase,
     modelApiKey,
+    modelConfigError,
     modelIdentifier,
     isModelConfigOpen,
     runState,

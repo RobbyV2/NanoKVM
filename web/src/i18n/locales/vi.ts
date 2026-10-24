@@ -1566,7 +1566,11 @@ const vi = {
         saving: 'Đang lưu',
         saved: 'Đã lưu cấu hình mô hình',
         saveFailed: 'Không lưu được cấu hình mô hình',
-        invalid: 'Bắt buộc nhập mã định danh mô hình, API Base URL và khóa API'
+        modelRequired: 'Nhập mã định danh mô hình, ví dụ openai/gpt-5.4',
+        modelIdentifierHint:
+          'Nhà cung cấp, sau đó là ID mô hình: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Không cần cho máy chủ Ollama, LM Studio hoặc vLLM cục bộ',
+        apiBaseHint: 'Để trống để dùng endpoint mặc định của nhà cung cấp'
       },
       uninstall: {
         menuLabel: 'Gỡ cài đặt',

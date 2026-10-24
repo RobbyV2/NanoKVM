@@ -1591,7 +1591,10 @@ const nl = {
         saving: 'Opslaan',
         saved: 'Modelconfiguratie opgeslagen',
         saveFailed: 'Kan de modelconfiguratie niet opslaan',
-        invalid: 'Model-ID, API Base URL en API-sleutel zijn vereist'
+        modelRequired: 'Voer een model-ID in, bijvoorbeeld openai/gpt-5.4',
+        modelIdentifierHint: 'Provider, dan de model-ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Niet nodig voor een lokale Ollama-, LM Studio- of vLLM-server',
+        apiBaseHint: 'Laat leeg om het standaardeindpunt van de provider te gebruiken'
       },
       uninstall: {
         menuLabel: 'Verwijderen',

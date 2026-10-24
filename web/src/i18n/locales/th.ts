@@ -1544,7 +1544,11 @@ const th = {
         saving: 'กำลังบันทึก',
         saved: 'บันทึกการกำหนดค่าโมเดลแล้ว',
         saveFailed: 'ไม่สามารถบันทึกการกำหนดค่าโมเดลได้',
-        invalid: 'ต้องระบุรหัสโมเดล, API Base URL และคีย์ API'
+        modelRequired: 'ป้อนตัวระบุโมเดล เช่น openai/gpt-5.4',
+        modelIdentifierHint:
+          'ผู้ให้บริการ ตามด้วย ID โมเดล: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'ไม่จำเป็นสำหรับเซิร์ฟเวอร์ Ollama, LM Studio หรือ vLLM ภายในเครื่อง',
+        apiBaseHint: 'เว้นว่างไว้เพื่อใช้ปลายทางเริ่มต้นของผู้ให้บริการ'
       },
       uninstall: {
         menuLabel: 'ถอนการติดตั้ง',

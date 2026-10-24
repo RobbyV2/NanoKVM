@@ -69,7 +69,9 @@ jobs:
       # libgcc_s and libatomic on LD_LIBRARY_PATH. What stops them there is
       # libopencv_video.so.409: libkvm.so lists it in DT_NEEDED and it exists
       # neither in this repository nor in the builder image, only on the device
-      # rootfs. The one machine these tests can run on is a NanoKVM.
+      # rootfs. The one machine these tests can run on is a NanoKVM, and only
+      # with NanoKVM-Server stopped: loading libkvm.so starts the capture
+      # pipeline and takes the running server's HDMI capture down.
       #
       # The alternative is a stub libkvm.so that satisfies the linker, which
       # stops being honest the day someone writes a test that reaches the video

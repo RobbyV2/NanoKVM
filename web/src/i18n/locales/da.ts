@@ -1574,7 +1574,10 @@ const da = {
         saving: 'Gemmer',
         saved: 'Modelkonfiguration gemt',
         saveFailed: 'Kunne ikke gemme modelkonfigurationen',
-        invalid: 'Model-id, API Base URL og API-nøgle er påkrævet'
+        modelRequired: 'Angiv en modelidentifikator, for eksempel openai/gpt-5.4',
+        modelIdentifierHint: 'Udbyder og derefter model-ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Ikke nødvendig for en lokal Ollama-, LM Studio- eller vLLM-server',
+        apiBaseHint: 'Lad feltet stå tomt for at bruge udbyderens standardendepunkt'
       },
       uninstall: {
         menuLabel: 'Afinstaller',

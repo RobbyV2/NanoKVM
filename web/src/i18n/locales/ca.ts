@@ -1580,7 +1580,11 @@ const ca = {
         saving: 'Desa',
         saved: "S'ha desat la configuració del model",
         saveFailed: "No s'ha pogut desar la configuració del model",
-        invalid: "Cal indicar l'identificador del model, l'API Base URL i la clau API"
+        modelRequired: 'Introduïu un identificador de model, per exemple openai/gpt-5.4',
+        modelIdentifierHint:
+          'El proveïdor i després l’identificador del model: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'No cal per a un servidor local d’Ollama, LM Studio o vLLM',
+        apiBaseHint: 'Deixeu-ho buit per usar el punt d’accés predeterminat del proveïdor'
       },
       uninstall: {
         menuLabel: 'Desinstal·la',

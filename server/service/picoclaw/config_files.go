@@ -27,6 +27,7 @@ type picoclawConfigFile struct {
 	} `json:"gateway"`
 	ModelList []struct {
 		ModelName string   `json:"model_name"`
+		Provider  string   `json:"provider,omitempty"`
 		Model     string   `json:"model"`
 		APIBase   string   `json:"api_base"`
 		APIKey    string   `json:"api_key"`
@@ -170,10 +171,39 @@ func (d *picoclawConfigDocument) saveConfig() error {
 	if err != nil {
 		return fmt.Errorf("failed to encode updated picoclaw config: %w", err)
 	}
-	if err := os.WriteFile(d.configPath, updated, 0o600); err != nil {
+	if err := writePicoclawFileAtomic(d.configPath, updated); err != nil {
 		return fmt.Errorf("failed to write picoclaw config: %w", err)
 	}
 	return nil
+}
+
+// writePicoclawFileAtomic replaces path in one rename so PicoClaw, which reads
+// these files when it starts, never sees a partially written one.
+func writePicoclawFileAtomic(path string, data []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, path)
 }
 
 func (d *picoclawConfigDocument) saveSecurity() error {
@@ -186,28 +216,35 @@ func (d *picoclawConfigDocument) saveSecurity() error {
 	if err := encoder.Close(); err != nil {
 		return fmt.Errorf("failed to finalize picoclaw security config: %w", err)
 	}
-	if err := os.WriteFile(d.securityPath, buf.Bytes(), 0o600); err != nil {
+	if err := writePicoclawFileAtomic(d.securityPath, buf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write picoclaw security config: %w", err)
 	}
 	return nil
 }
 
+// picoclawSecurityConfig is PicoClaw's .security.yml. NanoKVM edits only model
+// keys and the pico channel token; the Other maps carry every other secret
+// (tool API keys, other channels' credentials) through a rewrite unchanged.
 type picoclawSecurityConfig struct {
 	ModelList   map[string]picoclawModelSecurityEntry   `yaml:"model_list,omitempty"`
 	ChannelList map[string]picoclawChannelSecurityEntry `yaml:"channel_list,omitempty"`
+	Other       map[string]any                          `yaml:",inline"`
 }
 
 type picoclawModelSecurityEntry struct {
-	APIKeys []string `yaml:"api_keys,omitempty"`
+	APIKeys []string       `yaml:"api_keys,omitempty"`
+	Other   map[string]any `yaml:",inline"`
 }
 
 type picoclawChannelSecurityEntry struct {
 	Token    string                           `yaml:"token,omitempty"`
 	Settings *picoclawChannelSecuritySettings `yaml:"settings,omitempty"`
+	Other    map[string]any                   `yaml:",inline"`
 }
 
 type picoclawChannelSecuritySettings struct {
-	Token string `yaml:"token,omitempty"`
+	Token string         `yaml:"token,omitempty"`
+	Other map[string]any `yaml:",inline"`
 }
 
 func (d *picoclawConfigDocument) resolvedPicoToken() string {

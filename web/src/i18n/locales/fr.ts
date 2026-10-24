@@ -1598,7 +1598,11 @@ const fr = {
         saving: 'Enregistrement',
         saved: 'Configuration du modèle enregistrée',
         saveFailed: "Échec de l'enregistrement de la configuration du modèle",
-        invalid: 'L’identifiant du modèle, l’API Base URL et la clé API sont requis'
+        modelRequired: 'Saisissez un identifiant de modèle, par exemple openai/gpt-5.4',
+        modelIdentifierHint:
+          "Le fournisseur, puis l'ID du modèle : openrouter/anthropic/claude-sonnet-4.6",
+        apiKeyHint: 'Inutile pour un serveur Ollama, LM Studio ou vLLM local',
+        apiBaseHint: 'Laissez vide pour utiliser le point de terminaison par défaut du fournisseur'
       },
       uninstall: {
         menuLabel: 'Désinstaller',

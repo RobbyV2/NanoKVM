@@ -1632,7 +1632,10 @@ const en = {
         saving: 'Saving',
         saved: 'Model configuration saved',
         saveFailed: 'Failed to save model configuration',
-        invalid: 'Model identifier, API base URL, and API key are required'
+        modelRequired: 'Enter a model identifier, for example openai/gpt-5.4',
+        modelIdentifierHint: 'Provider, then the model ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Not needed for a local Ollama, LM Studio or vLLM server',
+        apiBaseHint: "Leave empty to use the provider's default endpoint"
       },
       uninstall: {
         menuLabel: 'Uninstall',

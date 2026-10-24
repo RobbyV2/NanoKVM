@@ -419,6 +419,14 @@ func (s *Service) applyDisabledRuntimeIntentStatus() {
 			status.LastError = ""
 			return
 		}
+		if errors.Is(settingsErr, os.ErrNotExist) {
+			// Without a config.json there is no model, whatever an earlier
+			// probe recorded.
+			status.ModelConfigured = false
+			status.ModelName = ""
+			status.Status = "model_not_configured"
+			return
+		}
 		if settingsErr == nil {
 			status.ModelConfigured = settings.ModelConfigured
 			status.ModelName = settings.ModelName

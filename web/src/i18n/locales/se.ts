@@ -1574,7 +1574,10 @@ const se = {
         saving: 'Sparar',
         saved: 'Modellkonfiguration sparad',
         saveFailed: 'Det gick inte att spara modellkonfigurationen',
-        invalid: 'Modellidentifierare, API Base URL och API-nyckel krävs'
+        modelRequired: 'Ange en modellidentifierare, till exempel openai/gpt-5.4',
+        modelIdentifierHint: 'Leverantör, sedan modell-ID: openrouter/anthropic/claude-sonnet-4.6',
+        apiKeyHint: 'Behövs inte för en lokal Ollama-, LM Studio- eller vLLM-server',
+        apiBaseHint: 'Lämna tomt för att använda leverantörens standardslutpunkt'
       },
       uninstall: {
         menuLabel: 'Avinstallera',
