@@ -520,18 +520,18 @@ func (c *compiler) net(dir, name string, kind FunctionKind, n NetFunction) {
 
 // Ordering constraint 3: the LUN attributes carry no refcnt check, so
 // mass_storage is the one function whose link may precede its attributes, and
-// S03usbdev:135 relies on that. H7: ro and cdrom are written only when
-// /boot/usb.disk0.ro exists, leaving whatever storage/image.go last set.
+// S03usbdev:135 relies on that. ro and cdrom are written on every build, as
+// the script writes them, so a fresh disk never inherits a flag a mounted
+// image left. A linked disk keeps the medium service/storage gave it: see
+// keepsRuntimeMedium.
 func (c *compiler) storage(dir, name string, s StorageFunction) {
 	c.mkdir(dir)
 	c.link(configPrefix+"/"+name, dir)
 
 	lun := dir + "/" + lunDir
 	c.write(lun+"/removable", boolBit(s.Removable))
-	if s.ReadOnly {
-		c.write(lun+"/ro", "1")
-		c.write(lun+"/cdrom", "0")
-	}
+	c.write(lun+"/ro", boolBit(s.ReadOnly))
+	c.write(lun+"/cdrom", "0")
 	if s.InquiryString != "" {
 		c.write(lun+"/inquiry_string", s.InquiryString)
 	}

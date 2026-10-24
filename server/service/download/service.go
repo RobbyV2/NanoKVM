@@ -2,6 +2,8 @@ package download
 
 import (
 	"NanoKVM-Server/proto"
+	"NanoKVM-Server/service/storage"
+	"NanoKVM-Server/service/storage/diskfs"
 	"NanoKVM-Server/utils"
 	"bytes"
 	"context"
@@ -14,14 +16,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 type downloadStatus string
@@ -33,28 +34,90 @@ const (
 	downloadStatusSuccess        downloadStatus = "success"
 	downloadStatusFailed         downloadStatus = "failed"
 	downloadStatusChecksumFailed downloadStatus = "checksum_failed"
+
+	imageDirectory = "/data"
+
+	// transferTempPrefix marks the partial files of the uploads and downloads
+	// this service writes. The file manager hides them and refuses to delete
+	// them while a transfer runs (diskfs.IsTransferTemp), and a restart sweeps
+	// whatever a transfer left behind.
+	transferTempPrefix = diskfs.DownloadTempPrefix
+
+	// Keep /data from filling up completely: the exFAT metadata and the USB
+	// mass-storage export still need room while the image is written.
+	imageFreeReserve = 128 << 20
 )
 
 var (
 	errDownloadInProgress = errors.New("download in progress")
 	errSHA256Mismatch     = errors.New("sha256 mismatch")
-	validISOFilename      = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 )
 
+// maxUploadBytes caps a single upload even when the client lies about its
+// length, so a runaway request cannot fill the card before the free space
+// check has had its say.
+const maxUploadBytes = 8 << 30
+
 type Service struct {
-	downloadMutex      sync.Mutex
-	downloadCancel     context.CancelFunc
-	downloadDone       chan struct{}
-	downloadStatus     downloadStatus
-	downloadFile       string
-	downloadPercentage string
+	downloadMutex  sync.Mutex
+	downloadCancel context.CancelFunc
+	downloadDone   chan struct{}
+	downloadStatus downloadStatus
+	downloadFile   string
+	downloadLoaded int64
+	downloadTotal  int64
 }
 
 func NewService() *Service {
 	// A running transfer cannot survive a server restart, so any remaining lock
 	// file is stale at this point.
 	_ = os.Remove(transferSentinelPath)
+	go removeStaleTransfers()
+
 	return &Service{downloadStatus: downloadStatusIdle}
+}
+
+// removeStaleTransfers deletes the temporary files of uploads and downloads
+// that a restart interrupted. They are hidden and can be hundreds of
+// megabytes, and hidden from the file manager, so leaving them behind would
+// quietly fill the card. A file upload into the shared folder
+// writes its temporary next to its target, so the whole tree is walked, not
+// just the root.
+//
+// The walk covers the whole data partition, so it runs in the background, and
+// a transfer may start while it does: only names one of our transfers would
+// generate are collected, and each is removed only while no transfer runs. A
+// transfer started after the walk writes a fresh name the walk never saw.
+// While the target machine owns the partition it is read-only here, and the
+// sweep waits for the next start.
+func removeStaleTransfers() {
+	var stat unix.Statfs_t
+	if err := unix.Statfs(imageDirectory, &stat); err != nil || stat.Flags&unix.ST_RDONLY != 0 {
+		return
+	}
+
+	var stale []string
+	_ = filepath.Walk(imageDirectory, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if diskfs.IsTransferTemp(info.Name()) {
+			stale = append(stale, path)
+		}
+		return nil
+	})
+
+	for _, path := range stale {
+		if storage.TransferInProgress() {
+			log.Infof("leave stale transfer %s: a transfer is running", path)
+			continue
+		}
+		if err := os.Remove(path); err != nil {
+			log.Errorf("remove stale transfer %s failed: %s", path, err)
+		} else {
+			log.Infof("removed stale transfer %s", path)
+		}
+	}
 }
 
 func (s *Service) CancelDownloadImage(c *gin.Context) {
@@ -108,7 +171,8 @@ func (s *Service) beginDownload(file string, cancel context.CancelFunc) (chan st
 	s.downloadDone = done
 	s.downloadStatus = downloadStatusInProgress
 	s.downloadFile = file
-	s.downloadPercentage = ""
+	s.downloadLoaded = 0
+	s.downloadTotal = 0
 
 	return done, nil
 }
@@ -122,12 +186,13 @@ func (s *Service) setDownloadFile(done chan struct{}, file string) {
 	}
 }
 
-func (s *Service) setDownloadProgress(done chan struct{}, percentage string) {
+func (s *Service) setDownloadProgress(done chan struct{}, loaded, total int64) {
 	s.downloadMutex.Lock()
 	defer s.downloadMutex.Unlock()
 
 	if s.downloadDone == done {
-		s.downloadPercentage = percentage
+		s.downloadLoaded = loaded
+		s.downloadTotal = total
 	}
 }
 
@@ -142,7 +207,8 @@ func (s *Service) finishDownload(done chan struct{}, status downloadStatus) {
 	s.downloadDone = nil
 	s.downloadStatus = status
 	s.downloadFile = ""
-	s.downloadPercentage = ""
+	s.downloadLoaded = 0
+	s.downloadTotal = 0
 	_ = os.Remove(transferSentinelPath)
 	s.downloadMutex.Unlock()
 
@@ -164,24 +230,50 @@ func (s *Service) ImageEnabled(c *gin.Context) {
 	rsp.OkRspWithData(c, &proto.ImageEnabledRsp{Enabled: true})
 }
 
-func isISO9660(path string) (bool, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer f.Close()
-
-	// ISO-9660 magic "CD001" at offset 32769.
-	if _, err = f.Seek(0x8001, io.SeekStart); err != nil {
-		return false, err
+// ensureImageSpace rejects an upload that cannot fit into dir, keeping a small
+// reserve for filesystem metadata and for the USB mass-storage export.
+func ensureImageSpace(dir string, contentLength int64) error {
+	if contentLength <= 0 {
+		return nil
 	}
 
-	buf := make([]byte, 5)
-	if _, err = io.ReadFull(f, buf); err != nil {
-		return false, err
+	var stat unix.Statfs_t
+	if err := unix.Statfs(dir, &stat); err != nil {
+		return fmt.Errorf("cannot read free space of %s: %w", dir, err)
 	}
 
-	return string(buf) == "CD001", nil
+	available := uint64(stat.Bavail) * uint64(stat.Bsize)
+	payload := uint64(contentLength)
+	if payload > available || available-payload < imageFreeReserve {
+		return fmt.Errorf(
+			"not enough space in %s: need %d MiB including reserve, %d MiB available",
+			dir,
+			(payload+imageFreeReserve)>>20,
+			available>>20,
+		)
+	}
+
+	return nil
+}
+
+// imageSpaceLimit is how many bytes a download may write into dir: its
+// announced length, which ensureImageSpace has already checked, or else what
+// fits while keeping the reserve.
+func imageSpaceLimit(dir string, contentLength int64) (int64, error) {
+	if contentLength >= 0 {
+		return contentLength, nil
+	}
+
+	var stat unix.Statfs_t
+	if err := unix.Statfs(dir, &stat); err != nil {
+		return 0, fmt.Errorf("cannot read free space of %s: %w", dir, err)
+	}
+
+	available := uint64(stat.Bavail) * uint64(stat.Bsize)
+	if available <= imageFreeReserve {
+		return 0, fmt.Errorf("not enough space in %s: %d MiB available", dir, available>>20)
+	}
+	return int64(available - imageFreeReserve), nil
 }
 
 func (s *Service) StatusImage(c *gin.Context) {
@@ -190,13 +282,16 @@ func (s *Service) StatusImage(c *gin.Context) {
 	s.downloadMutex.Lock()
 	status := s.downloadStatus
 	file := s.downloadFile
-	percentage := s.downloadPercentage
+	loaded := s.downloadLoaded
+	total := s.downloadTotal
 	s.downloadMutex.Unlock()
 
 	rsp.OkRspWithData(c, &proto.StatusImageRsp{
 		Status:     string(status),
 		File:       file,
-		Percentage: percentage,
+		Percentage: utils.FormatPercentage(loaded, total),
+		Loaded:     loaded,
+		Total:      total,
 	})
 }
 
@@ -204,8 +299,27 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 	var rsp proto.Response
 
 	log.Debug("DownloadImageFile")
+
+	// Everything below lands on the data partition, which the target machine
+	// owns whenever the emulated disk is attached to it. Hold that ownership
+	// decision for the whole transfer: a mount must wait instead of remounting
+	// /data underneath an upload that is already streaming.
+	releaseDataPartitionWrite, err := storage.BeginDataPartitionWrite()
+	if err != nil {
+		rsp.ErrRsp(c, -1, err.Error())
+		return
+	}
+	defer releaseDataPartitionWrite()
+
 	expectedSHA256, err := parseSHA256(c.GetHeader("X-SHA256-Sum"))
 	if err != nil {
+		rsp.ErrRsp(c, -1, err.Error())
+		return
+	}
+
+	// Reject an upload that cannot fit before any of it is received.
+	if err := ensureImageSpace(imageDirectory, c.Request.ContentLength); err != nil {
+		log.Warnf("reject image upload: %s", err)
 		rsp.ErrRsp(c, -1, err.Error())
 		return
 	}
@@ -219,6 +333,11 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 	defer func() {
 		s.finishDownload(done, finalStatus)
 	}()
+
+	// The whole body is written to the data partition, so cap the request even
+	// when the client lies about its length. This has to happen before the
+	// multipart reader is created: it keeps reading from the body it was handed.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadBytes)
 
 	reader, err := c.Request.MultipartReader()
 	if err != nil {
@@ -243,17 +362,19 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 		}
 
 		filename := part.FileName()
-		if err := validateISOFilename(filename); err != nil {
+		if err := validateImageFilename(filename); err != nil {
 			_ = part.Close()
+			log.Warnf("reject uploaded image %q: %s", filename, err)
 			rsp.ErrRsp(c, -1, err.Error())
 			return
 		}
 		s.setDownloadFile(done, filename)
 
-		out, err := os.CreateTemp("/data", ".nanokvm-upload-*")
+		// The rejection paths below return without draining the request body: the
+		// client stops uploading as soon as the response arrives.
+		out, err := os.CreateTemp(imageDirectory, transferTempPrefix+"upload-*")
 		if err != nil {
-			_ = part.Close()
-			log.Error("cannot create temporary file")
+			log.Errorf("cannot create temporary file in %s: %s", imageDirectory, err)
 			rsp.ErrRsp(c, -1, "cannot create temporary file")
 			return
 		}
@@ -261,15 +382,18 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 		defer os.Remove(tempPath)
 
 		hasher := sha256.New()
-		lw := newLoggingWriter(io.MultiWriter(out, hasher), c.Request.ContentLength, func(percentage string) {
-			s.setDownloadProgress(done, percentage)
+		lw := utils.NewProgressWriter(io.MultiWriter(out, hasher), c.Request.ContentLength, func(loaded, total int64) {
+			s.setDownloadProgress(done, loaded, total)
 		})
+		// The name already said what this has to be: .iso or .img. The bytes
+		// are taken as they come; a file that turns out not to be an image
+		// fails when it is mounted, not while it is stored.
 		_, copyErr := io.Copy(lw, part)
-		lw.stopTicker()
+		lw.Stop()
 		partCloseErr := part.Close()
 		outCloseErr := out.Close()
 		if copyErr != nil || partCloseErr != nil || outCloseErr != nil {
-			log.Error("write failed")
+			log.Errorf("write uploaded image %q failed: %s", filename, errors.Join(copyErr, partCloseErr, outCloseErr))
 			rsp.ErrRsp(c, -1, "write failed")
 			return
 		}
@@ -280,15 +404,9 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 			return
 		}
 
-		valid, err := isISO9660(tempPath)
-		if err != nil || !valid {
-			rsp.ErrRsp(c, -1, "file is not a valid ISO image")
-			return
-		}
-
-		outPath := filepath.Join("/data", filename)
-		if err := os.Rename(tempPath, outPath); err != nil {
-			rsp.ErrRsp(c, -1, "cannot install uploaded image")
+		outPath := filepath.Join(imageDirectory, filename)
+		if err := storage.InstallImage(tempPath, outPath); err != nil {
+			rsp.ErrRsp(c, -1, err.Error())
 			return
 		}
 
@@ -304,20 +422,15 @@ func (s *Service) DownloadImageFile(c *gin.Context) {
 	rsp.ErrRsp(c, -1, "file is required")
 }
 
-func validateISOFilename(filename string) error {
-	if filename == "" {
-		return errors.New("no filename")
+// validateImageFilename accepts what the emulated disk can expose: ISO images
+// and raw disk images. The name never reaches the filesystem unchecked, and
+// the rules are the ones a FAT volume can hold, so a medium named the same way
+// is reachable from the file manager too.
+func validateImageFilename(filename string) error {
+	if !utils.IsMediaFile(filename) {
+		return errors.New("only .iso and .img files allowed")
 	}
-	if filepath.Base(filename) != filename || strings.Contains(filename, "..") {
-		return errors.New("invalid filename")
-	}
-	if !strings.HasSuffix(strings.ToLower(filename), ".iso") {
-		return errors.New("only .iso files allowed")
-	}
-	if !validISOFilename.MatchString(filename) {
-		return errors.New("invalid filename")
-	}
-	return nil
+	return utils.ValidateFileName(filename)
 }
 
 func (s *Service) DownloadImage(c *gin.Context) {
@@ -348,19 +461,30 @@ func (s *Service) DownloadImage(c *gin.Context) {
 		return
 	}
 
+	// The download runs after this handler returns, and its temporary file is
+	// on the same partition the raw medium exposes. Keep the partition reserved
+	// until the goroutine has installed or removed that file.
+	releaseDataPartitionWrite, err := storage.BeginDataPartitionWrite()
+	if err != nil {
+		rsp.ErrRsp(c, -1, err.Error())
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	done, err := s.beginDownload(req.File, cancel)
 	if err != nil {
+		releaseDataPartitionWrite()
 		cancel()
 		rsp.ErrRsp(c, -1, err.Error())
 		return
 	}
 
 	go func() {
+		defer releaseDataPartitionWrite()
 		defer cancel()
 
-		if err := s.downloadRemoteImage(ctx, req.File, expectedSHA256, filename, func(percentage string) {
-			s.setDownloadProgress(done, percentage)
+		if err := s.downloadRemoteImage(ctx, req.File, expectedSHA256, filename, func(loaded, total int64) {
+			s.setDownloadProgress(done, loaded, total)
 		}); err != nil {
 			if errors.Is(err, context.Canceled) {
 				log.Debug("Image download canceled")
@@ -405,7 +529,7 @@ func (s *Service) downloadRemoteImage(
 	rawURL string,
 	expectedSHA256 []byte,
 	filename string,
-	onProgress func(string),
+	onProgress func(loaded, total int64),
 ) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
@@ -422,7 +546,22 @@ func (s *Service) downloadRemoteImage(
 		return fmt.Errorf("download request returned status %d", resp.StatusCode)
 	}
 
-	tempFile, err := os.CreateTemp("/data", ".nanokvm-download-*")
+	// The response headers say how large the image is: refuse it now instead
+	// of filling the partition and failing at the end. An unknown length
+	// (chunked responses) skips the check and is caught by the write itself.
+	if err := ensureImageSpace(imageDirectory, resp.ContentLength); err != nil {
+		return err
+	}
+
+	// A response without a length is capped by the free space instead, so a
+	// server that never stops sending cannot fill the partition. One byte more
+	// than the cap is read to tell "exactly fits" from "does not fit".
+	limit, err := imageSpaceLimit(imageDirectory, resp.ContentLength)
+	if err != nil {
+		return err
+	}
+
+	tempFile, err := os.CreateTemp(imageDirectory, transferTempPrefix+"download-*")
 	if err != nil {
 		return fmt.Errorf("create temporary image failed: %w", err)
 	}
@@ -430,9 +569,9 @@ func (s *Service) downloadRemoteImage(
 	defer os.Remove(tempPath)
 
 	hasher := sha256.New()
-	lw := newLoggingWriter(io.MultiWriter(tempFile, hasher), resp.ContentLength, onProgress)
-	_, copyErr := io.Copy(lw, resp.Body)
-	lw.stopTicker()
+	lw := utils.NewProgressWriter(io.MultiWriter(tempFile, hasher), resp.ContentLength, onProgress)
+	written, copyErr := io.Copy(lw, io.LimitReader(resp.Body, limit+1))
+	lw.Stop()
 	closeErr := tempFile.Close()
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -443,6 +582,15 @@ func (s *Service) downloadRemoteImage(
 	if closeErr != nil {
 		return fmt.Errorf("close downloaded image failed: %w", closeErr)
 	}
+	if written > limit {
+		return fmt.Errorf("not enough space in %s for the downloaded image", imageDirectory)
+	}
+	// net/http already fails a body shorter than its Content-Length and cuts
+	// a longer one off, but an image that is not the size the server
+	// announced is not one to install either way.
+	if resp.ContentLength >= 0 && written != resp.ContentLength {
+		return fmt.Errorf("downloaded image is %d bytes, the server announced %d", written, resp.ContentLength)
+	}
 
 	if expectedSHA256 != nil && !bytes.Equal(hasher.Sum(nil), expectedSHA256) {
 		return errSHA256Mismatch
@@ -451,70 +599,10 @@ func (s *Service) downloadRemoteImage(
 		return ctx.Err()
 	}
 
-	destPath := filepath.Join("/data", filename)
-	if err := os.Rename(tempPath, destPath); err != nil {
-		return fmt.Errorf("install downloaded image failed: %w", err)
+	destPath := filepath.Join(imageDirectory, filename)
+	if err := storage.InstallImage(tempPath, destPath); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-type loggingWriter struct {
-	writer     io.Writer
-	total      atomic.Int64
-	totalSize  int64
-	ticker     *time.Ticker
-	done       chan struct{}
-	stopOnce   sync.Once
-	onProgress func(string)
-}
-
-func newLoggingWriter(writer io.Writer, totalSize int64, onProgress func(string)) *loggingWriter {
-	lw := &loggingWriter{
-		writer:     writer,
-		totalSize:  totalSize,
-		onProgress: onProgress,
-	}
-	lw.startTicker()
-	return lw
-}
-
-func (lw *loggingWriter) startTicker() {
-	lw.ticker = time.NewTicker(2500 * time.Millisecond)
-	lw.done = make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-lw.done:
-				return
-			case <-lw.ticker.C:
-				lw.updateProgress()
-			}
-		}
-	}()
-}
-
-func (lw *loggingWriter) stopTicker() {
-	if lw == nil {
-		return
-	}
-	lw.stopOnce.Do(func() {
-		lw.ticker.Stop()
-		close(lw.done)
-	})
-}
-
-func (lw *loggingWriter) updateProgress() {
-	if lw.totalSize <= 0 || lw.onProgress == nil {
-		return
-	}
-
-	percentage := float64(lw.total.Load()) / float64(lw.totalSize) * 100
-	lw.onProgress(fmt.Sprintf("%.2f%%", percentage))
-}
-
-func (lw *loggingWriter) Write(p []byte) (int, error) {
-	n, err := lw.writer.Write(p)
-	lw.total.Add(int64(n))
-	return n, err
 }

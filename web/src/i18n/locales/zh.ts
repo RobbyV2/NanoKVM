@@ -4,6 +4,7 @@ const zh = {
       desktop: '远程桌面',
       login: '登录',
       changePassword: '修改密码',
+      storage: '镜像挂载/文件共享',
       terminal: '终端',
       wifi: 'Wi-Fi'
     },
@@ -58,6 +59,16 @@ const zh = {
         verifyBtn: '验证'
       }
     },
+    desktop: {
+      readOnly: '只读',
+      readOnlyTip: '当前账户没有键鼠操作权限，无法向目标机发送键盘和鼠标事件，控制台仅显示画面。'
+    },
+    noConsole: {
+      title: '该账户没有控制台权限',
+      description: '该账户被授予了其他功能。可以打开下方可用页面，或联系管理员授予控制台权限。',
+      nothing: '该账户还没有任何功能权限，请联系管理员授予。'
+    },
+
     screen: {
       scale: '缩放',
       title: '屏幕',
@@ -208,25 +219,42 @@ const zh = {
         disable: '关闭 HID-Only 模式'
       }
     },
-    image: {
-      title: '镜像',
-      loading: '加载中',
-      empty: '无镜像文件',
-      mountMode: '挂载模式',
-      mountFailed: '挂载失败',
-      mountDesc: '在某些系统中，需要在远程主机中弹出虚拟硬盘后再挂载镜像。',
-      unmountFailed: '卸载失败',
-      unmountDesc: '在某些系统中，需要在远程主机中手动弹出后再卸载镜像。',
-      refresh: '刷新镜像列表',
-      attention: '注意',
-      deleteConfirm: '确定要删除该镜像吗？',
-      okBtn: '确定',
-      cancelBtn: '取消',
+    storage: {
+      title: '镜像挂载/文件共享',
+      empty: '还没有镜像。可以上传 ISO/IMG,也可以让被控机拷到这张盘上。',
+      notAttached: '未装载任何介质',
+      attached: '已装载:{{name}}',
+      eject: '弹出',
+      mount: '装载',
+      mountMode: '装载模式',
+      mountModeDisk: '磁盘模式',
+      mountModeCdrom: '光盘模式',
+      openManager: '打开文件管理器',
+      refresh: '刷新',
+      delete: '删除',
+      deleteTitle: '删除介质',
+      deleteConfirm: '确定删除 {{name}}?里面的文件会一起丢失。',
+      downloadImage: '下载镜像',
+      typePartition: '共享文件',
+      volumeLabel: '可移动磁盘',
+      groups: {
+        share: '文件共享',
+        images: '镜像'
+      },
+      failed: '操作失败',
+      hidOnly: 'HID-Only 模式:虚拟磁盘不可用',
+      disabled: '虚拟磁盘未启用(设置 - 设备)',
+      force: {
+        title: '强制收回介质?',
+        desc: '被控机还挂着这个介质。强制收回会让 USB 设备重新枚举,它还没写盘的数据可能丢失。',
+        menuHint: '被控机正在使用该介质,请到文件管理器页面强制收回。'
+      },
       tips: {
         title: '如何上传',
         usb1: '将 NanoKVM 通过 USB 连接到你的电脑；',
-        usb2: '确保已经挂载了虚拟硬盘（设置 - 虚拟硬盘）；',
+        usb2: '在本页面以大容量存储模式挂载共享文件；',
         usb3: '在电脑上打开虚拟硬盘，将镜像文件拷贝到虚拟硬盘的根目录下。',
+        usb4: '拷贝完成后弹出磁盘，镜像随后会出现在列表中。',
         scp1: '确保 NanoKVM 和你的电脑在同一个局域网内；',
         scp2: '在电脑上打开终端软件，使用 SCP 命令将镜像文件上传到 NanoKVM 的 /data 目录。',
         scp3: '示例：scp your-image-path root@your-nanokvm-ip:/data',
@@ -236,7 +264,64 @@ const zh = {
         tf3: '将 TF 卡插入读卡器并连接到你的电脑；',
         tf4: '从电脑上拷贝镜像文件到 TF 卡的 /data 目录下；',
         tf5: '将 TF 卡重新插入 NanoKVM。'
-      }
+      },
+      job: {
+        running: '正在处理 {{name}}'
+      },
+      enableDisk: {
+        title: '启用虚拟磁盘?',
+        desc: '装载介质需要虚拟磁盘,当前它是关闭的。现在启用?被控机的键鼠会短暂断开。',
+        menuHint: '虚拟磁盘未启用,请到 设置 - 设备 打开。',
+        askDevice: '虚拟磁盘当前已关闭，需要拥有“设备设置”权限的账户先将其开启。'
+      },
+      add: {
+        title: '添加介质',
+        upload: '上传 ISO / IMG',
+        fromUrl: '从 URL 下载',
+        url: '镜像地址',
+        urlRequired: '请输入镜像地址',
+        onlyImages: '只能挂载 .iso 和 .img 文件',
+        dropHint: '把 ISO / IMG 拖到这里，或点击选择文件',
+        cdromOnlyIso: '光盘模式只能挂载 ISO 光盘镜像',
+        uploadFailed: '上传失败',
+        downloadFailed: '下载失败',
+        uploading: '正在上传 {{name}}',
+        downloading: '正在下载 {{name}}',
+        done: '{{name}} 已就绪',
+        checksumFailed: '镜像与 SHA-256 校验值不符。',
+        blocked: '被控机正在使用这张盘',
+        copyHint: '也可以通过 SCP 把镜像放进数据分区，或在被控机上直接拷贝。'
+      },
+      files: {
+        selectMedium: '选择一个介质,查看里面的文件。',
+        reasonAttached: '该介质正装载给被控机使用。',
+        reasonAttachedHint: '请先弹出:被控机必须释放这块盘,里面的文件才能读取。',
+        reasonNotBrowsable: '这个介质里的文件系统无法在网页端打开。',
+        reasonNoLoop: '本机不支持挂载磁盘镜像(内核未启用 loop)。',
+        reasonISOImage: 'ISO 光盘镜像不支持在网页端浏览目录，镜像本身仍可正常挂载给被控机',
+        empty: '这个目录是空的',
+        noMatch: '没有匹配的文件',
+        free: '剩余 {{size}}',
+        search: '搜索当前目录',
+        sort: {
+          name: '名称',
+          size: '大小',
+          type: '类型',
+          asc: '升序',
+          desc: '降序'
+        },
+        upload: '上传文件到介质',
+        deleteFolderTitle: '删除文件夹',
+        deleteFolderConfirm: '删除文件夹 {{name}} 及其中的全部内容？此操作无法撤销。',
+        uploading: '正在上传…',
+        uploadFailed: '上传失败',
+        download: '下载',
+        delete: '删除',
+        deleteTitle: '删除文件',
+        deleteConfirm: '确定从介质中删除 {{name}}?'
+      },
+      yes: '确定',
+      no: '取消'
     },
     script: {
       title: '脚本',
@@ -278,19 +363,10 @@ const zh = {
       ok: '确定'
     },
     download: {
-      title: '下载镜像',
-      input: '请输入远程镜像 URL',
-      ok: '确定',
-      disabled: '/data 是只读分区，无法下载镜像',
-      uploadbox: '将文件拖放到此处或单击选择',
-      inputfile: '请输入镜像文件',
-      NoISO: '无 ISO',
+      disabled: '共享文件夹正被被控机使用，/data 当前只读：不能写入新镜像，已有文件仍可正常下载。',
       sha256: 'SHA-256（可选）',
       sha256Placeholder: '请输入 64 位 SHA-256 校验和',
       invalidSHA256: 'SHA-256 必须是 64 位十六进制字符串',
-      failed: '下载失败',
-      success: '下载成功',
-      checksumFailed: '下载失败：SHA-256 校验失败',
       cancel: '取消',
       cancelFailed: '取消下载失败'
     },
@@ -797,7 +873,13 @@ const zh = {
         reboot: '重新启动',
         rebootDesc: '您确定要重新启动 NanoKVM 吗？',
         okBtn: '是',
-        cancelBtn: '否'
+        cancelBtn: '否',
+        diskLocked: '挂载镜像期间已关闭（开启会取消镜像挂载）',
+        diskCancelMount:
+          '开启虚拟U盘会取消当前挂载的镜像，并中断正在进行的镜像下载或上传，是否继续？',
+        diskBreakDownload: '开启虚拟U盘会中断镜像下载功能，是否继续？',
+        attention: '注意',
+        updateFailed: '虚拟设备更新失败'
       },
       network: {
         title: '网络',
@@ -1234,7 +1316,62 @@ const zh = {
           passwordUpdated: '密码已更新',
           loadFailed: '加载用户失败',
           saveFailed: '保存用户失败',
-          deleteFailed: '删除用户失败'
+          deleteFailed: '删除用户失败',
+          editPermissions: '权限',
+          mcpLossTitle: '撤销 MCP 访问',
+          mcpLossDesc:
+            '{{name}} 将失去 MCP 访问权限。MCP API Key 由整台设备共用，已复制出去的 Key 在重新生成前仍然有效。重新生成会断开所有 MCP 客户端，直到它们换用新 Key。',
+          mcpLossRotate: '重新生成 MCP API Key',
+          mcpLossKeep:
+            '当前 Key 将继续有效，持有副本的人仍可控制键盘和鼠标。之后可在 MCP 设置中重新生成。',
+          mcpKeyRotated: 'MCP API Key 已重新生成，MCP 客户端需换用新 Key。'
+        },
+        permissions: {
+          title: '功能权限',
+          editTitle: '编辑权限',
+          save: '保存',
+          saved: '已保存',
+          close: '关闭',
+          groupConsole: '控制台',
+          groupTarget: '被控机',
+          groupLibrary: '介质库',
+          groupHost: '本设备',
+          groupServices: '服务',
+          consoleView: '观看画面',
+          consoleControl: '键鼠操作',
+          power: '电源与唤醒',
+          mediumAttach: '挂载与交换介质',
+          libraryRead: '浏览介质库',
+          libraryWrite: '管理介质库',
+          terminal: '终端与脚本',
+          device: '设备设置',
+          network: '网络设置',
+          update: '系统更新',
+          mcp: 'MCP 服务',
+          tailscale: 'Tailscale',
+          ai: 'AI 助手',
+          effectConsoleView: '显示被控机画面，并设置所有观看者共用的视频模式、分辨率、帧率和画质。',
+          effectConsoleControl: '向被控机发送键盘和鼠标事件。',
+          effectPower: '对被控机开机、关机、复位，并管理网络唤醒设备列表。',
+          effectMediumAttach: '把介质挂载到被控机或弹出，并通过共享分区与被控机交换文件。',
+          effectLibraryRead: '列出并下载镜像及镜像内的文件。',
+          effectLibraryWrite: '上传、新建、删除镜像，并修改镜像内的文件。',
+          effectTerminal: '在本设备上获得 root shell，无需经过 Web 会话。',
+          effectDevice:
+            '可启用 SSH（同样是 root）、重启设备、把原始数据分区交给被控机，并修改 OLED、HDMI、mDNS、内存与交换设置。',
+          effectNetwork: '修改 Wi-Fi、DNS 与 TLS，可能使本设备失联。',
+          effectUpdate: '安装固件与应用更新包。',
+          effectMcp:
+            '下发设备级 API Key，可在 Web 会话之外控制键鼠并获取截图；撤销此权限后，已复制的 Key 仍有效，除非重新生成（移除权限时会询问是否重新生成）。',
+          effectTailscale: '把本设备加入 VPN 组网。',
+          effectAi: '通过不受其他权限限制的本地接口操作设备，因此相当于完整的设备控制权。',
+          fullControlWarning: '下列权限等同于完整的设备控制权：',
+          emptyWarning: '该账户将不具备任何功能，只能登录。',
+          impliedBy: '由「{{name}}」自动包含',
+          grantCount_one: '{{count}} 项权限',
+          grantCount: '{{count}} 项权限',
+          adminAll: '管理员拥有全部权限',
+          catalogFailed: '权限列表加载失败，请关闭后重试。'
         }
       }
     },

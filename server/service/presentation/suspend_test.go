@@ -124,7 +124,7 @@ func TestSetLUNStandsTheMediaPipelineDownAndRebuildsIt(t *testing.T) {
 		t.Fatalf("after apply suspends = %d applied = %d, want 1 and 1", suspends, applied)
 	}
 
-	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}); err != nil {
+	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}, false); err != nil {
 		t.Fatalf("set lun: %v", err)
 	}
 	suspends, applied = observer.counts()

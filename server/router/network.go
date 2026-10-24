@@ -16,24 +16,25 @@ func networkRouter(r *gin.Engine) {
 	r.POST("/api/network/wifi", service.ConnectWifiNoAuth)    // connect Wi-Fi without auth (only available in ap mode)
 	r.POST("/api/network/wifi/verify", service.VerifyApLogin) // verify ap login
 
-	api := r.Group("/api").Use(middleware.CheckToken())
+	power := r.Group("/api").Use(middleware.CheckToken(), middleware.RequirePermission(authn.PermPower))
+	network := r.Group("/api").Use(middleware.CheckToken(), middleware.RequirePermission(authn.PermNetwork))
+	admin := r.Group("/api").Use(middleware.CheckToken(), middleware.RequireRole(authn.RoleAdmin))
 
-	api.POST("/network/wol", service.WakeOnLAN) // wake on lan
-	api.GET("/network/wol/mac", service.GetMac) // get mac list
+	power.POST("/network/wol", service.WakeOnLAN) // wake on lan
+	power.GET("/network/wol/mac", service.GetMac) // get mac list
 
-	admin := r.Group("/api").Use(
-		middleware.CheckToken(),
-		middleware.RequireRole(authn.RoleAdmin),
-	)
-	admin.DELETE("/network/wol/mac", service.DeleteMac)     // delete mac
-	admin.POST("/network/wol/mac/name", service.SetMacName) // set mac name
+	power.DELETE("/network/wol/mac", service.DeleteMac)     // delete mac
+	power.POST("/network/wol/mac/name", service.SetMacName) // set mac name
 
-	admin.GET("/network/wifi", service.GetWifi)                    // get Wi-Fi information
-	admin.POST("/network/wifi/connect", service.ConnectWifi)       // connect Wi-Fi
-	admin.POST("/network/wifi/disconnect", service.DisconnectWifi) // disconnect Wi-Fi
-	admin.GET("/network/dns", service.GetDNS)                      // get DNS configuration
-	admin.POST("/network/dns", service.SetDNS)                     // set DNS configuration
+	network.GET("/network/wifi", service.GetWifi)                    // get Wi-Fi information
+	network.POST("/network/wifi/connect", service.ConnectWifi)       // connect Wi-Fi
+	network.POST("/network/wifi/disconnect", service.DisconnectWifi) // disconnect Wi-Fi
+	network.GET("/network/dns", service.GetDNS)                      // get DNS configuration
+	network.POST("/network/dns", service.SetDNS)                     // set DNS configuration
 
+	// The bridge puts the gadget NIC and the uplink on one segment and can cut
+	// this device off its own network; the permission catalog has no grant for
+	// it, so it stays with the administrator role.
 	admin.GET("/network/bridge", bridgeService.GetBridge)            // bridge state, ports, armed marker, last apply
 	admin.POST("/network/bridge", bridgeService.SetBridge)           // enable or disable the bridge
 	admin.POST("/network/bridge/revert", bridgeService.RevertBridge) // force-restore the snapshot

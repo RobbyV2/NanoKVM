@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -530,7 +531,7 @@ func TestGadgetMutatorsSerialize(t *testing.T) {
 		func() error { return manager.Apply(ctx, ProfileHIDOnly) },
 		func() error { return manager.Rebind(ctx) },
 		func() error { return manager.ResetPHY(ctx) },
-		func() error { return manager.SetLUN(ctx, LUN{File: "/data/boot.iso", CDROM: true}) },
+		func() error { return manager.SetLUN(ctx, LUN{File: "/data/boot.iso", CDROM: true}, false) },
 	} {
 		group.Add(1)
 		go func() {
@@ -557,23 +558,28 @@ func TestSetLUNReleasesTheBackingFileBeforeTheFlags(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "unmount",
+			name: "eject",
+			want: []string{"file=\n", "ro=0", "cdrom=0", "inquiry_string=" + InquiryString},
+		},
+		{
+			name: "data partition",
+			lun:  LUN{File: DefaultDiskFile},
 			want: []string{"file=\n", "ro=0", "cdrom=0", "inquiry_string=" + InquiryString, "file=" + DefaultDiskFile},
 		},
 		{
-			name: "cdrom",
+			name: "cdrom is read-only",
 			lun:  LUN{File: "/data/boot.iso", CDROM: true},
 			want: []string{"file=\n", "ro=1", "cdrom=1", "inquiry_string=" + InquiryStringCDROM, "file=/data/boot.iso"},
 		},
 		{
-			name: "mass storage leaves ro and cdrom alone",
-			lun:  LUN{File: "/data/disk.img"},
-			want: []string{"inquiry_string=" + InquiryString, "file=/data/disk.img"},
+			name: "an image named after its file",
+			lun:  LUN{File: "/data/disk.img", ReadOnly: true, Product: "disk"},
+			want: []string{"file=\n", "ro=1", "cdrom=0", "inquiry_string=NanoKVM disk            0520", "file=/data/disk.img"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			manager, ops := newTestManager(t)
-			if err := manager.SetLUN(context.Background(), tc.lun); err != nil {
+			if err := manager.SetLUN(context.Background(), tc.lun, false); err != nil {
 				t.Fatalf("set lun: %v", err)
 			}
 
@@ -584,12 +590,223 @@ func TestSetLUNReleasesTheBackingFileBeforeTheFlags(t *testing.T) {
 				}
 			}
 			if strings.Join(writes, ",") != strings.Join(tc.want, ",") {
-				t.Fatalf("lun writes = %v, want %v", writes, tc.want)
+				t.Fatalf("lun writes = %q, want %q", writes, tc.want)
 			}
 			if bound := ops.Bound(); bound != dwc2Device {
 				t.Fatalf("bound = %q, want %q", bound, dwc2Device)
 			}
 		})
+	}
+}
+
+// The SCSI fields are byte widths. A name padded by runes would push the
+// revision out of the 28 bytes the kernel keeps.
+func TestInquiryStringPadsTheProductByBytes(t *testing.T) {
+	for product, want := range map[string]string{
+		"USB Mass Storage":           InquiryString,
+		"USB CD/DVD-ROM":             InquiryStringCDROM,
+		"Ubuntu 24.04 desktop amd64": "NanoKVM Ubuntu 24.04 des0520",
+		// Eighteen bytes of two-byte runes cut to sixteen.
+		strings.Repeat("\u00e9", 9): "NanoKVM " + strings.Repeat("\u00e9", 8) + "0520",
+		// Seventeen bytes whose cut would split a rune: fifteen kept, one pad.
+		"a" + strings.Repeat("\u00e9", 8): "NanoKVM a" + strings.Repeat("\u00e9", 7) + " 0520",
+	} {
+		got := inquiryString(product)
+		if got != want || len(got) != 28 {
+			t.Errorf("inquiryString(%q) = %q (%d bytes), want %q", product, got, len(got), want)
+		}
+	}
+}
+
+func TestSetLUNRefusesALockedMediumUnlessForced(t *testing.T) {
+	manager, ops := newTestManager(t)
+	ops.FailWriteOnce(lunAttr("file"), fmt.Errorf("write: %w", syscall.EBUSY))
+	if err := manager.SetLUN(context.Background(), LUN{}, false); !errors.Is(err, ErrMediumLocked) {
+		t.Fatalf("eject a locked medium = %v, want ErrMediumLocked", err)
+	}
+	for _, op := range ops.Trace() {
+		if op.Kind == OpUnbind || (op.Kind == OpWrite && op.Path != lunAttr("file")) {
+			t.Fatalf("a refused eject still ran %s %s", op.Kind, op.Path)
+		}
+	}
+
+	ops.FailWriteOnce(lunAttr("file"), fmt.Errorf("write: %w", syscall.EBUSY))
+	if err := manager.SetLUN(context.Background(), LUN{}, true); err != nil {
+		t.Fatalf("forced eject: %v", err)
+	}
+	var kinds []string
+	for _, op := range ops.Trace() {
+		kinds = append(kinds, fmt.Sprint(op.Kind)+" "+strings.TrimPrefix(op.Path, lunAttr("")))
+	}
+	unbind := slices.Index(kinds, fmt.Sprint(OpUnbind)+" "+udcAttr)
+	release := slices.Index(kinds, fmt.Sprint(OpWrite)+" file")
+	if unbind < 0 || release < unbind {
+		t.Fatalf("trace = %v, want the release retried after the unbind", kinds)
+	}
+	if bound := ops.Bound(); bound != dwc2Device {
+		t.Fatalf("bound = %q after a forced eject, want %q", bound, dwc2Device)
+	}
+}
+
+type recordingGuard struct {
+	mu      sync.Mutex
+	refuse  error
+	serves  []string
+	settled []bool
+}
+
+func (g *recordingGuard) ServePartition() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.serves = append(g.serves, "serve")
+	return g.refuse
+}
+
+func (g *recordingGuard) Settled(serves bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.settled = append(g.settled, serves)
+}
+
+func linkDisk(t *testing.T, ops *RecordOps, file, ro string) {
+	t.Helper()
+	dir := functionsDir + "/" + diskFunctionName
+	for attr, value := range map[string]string{"file": file, "ro": ro, "cdrom": "0\n", "removable": "1\n", "inquiry_string": InquiryString + "\n"} {
+		if err := ops.Seed(dir+"/"+lunDir+"/"+attr, []byte(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := ops.Symlink(dir, configPrefix+"/"+diskFunctionName); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Serving the data partition writable makes the host its writer, so the guard
+// is asked first and a refusal leaves the host the medium it had.
+func TestSetLUNAsksTheGuardBeforeServingThePartition(t *testing.T) {
+	manager, ops := newTestManager(t)
+	linkDisk(t, ops, "/data/boot.iso\n", "1\n")
+	guard := &recordingGuard{refuse: errors.New("/data is busy")}
+	manager.SetDiskGuard(guard)
+
+	if err := manager.SetLUN(context.Background(), LUN{File: DefaultDiskFile}, false); err == nil {
+		t.Fatal("serving the partition past a refusing guard succeeded")
+	}
+	if lun, _, _ := manager.LUN(); lun.File != "/data/boot.iso" {
+		t.Fatalf("a refused change left %+v, want the image still attached", lun)
+	}
+
+	guard.refuse = nil
+	if err := manager.SetLUN(context.Background(), LUN{File: DefaultDiskFile}, false); err != nil {
+		t.Fatalf("serve the partition: %v", err)
+	}
+	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}, false); err != nil {
+		t.Fatalf("attach an image: %v", err)
+	}
+	if len(guard.serves) != 2 {
+		t.Fatalf("guard asked %d times, want once per partition attach", len(guard.serves))
+	}
+	if want := []bool{false, true, false}; !slices.Equal(guard.settled, want) {
+		t.Fatalf("settled = %v, want %v", guard.settled, want)
+	}
+}
+
+// A profile change that keeps the disk linked says nothing about the medium,
+// so a mounted image survives it and no flag is written under an open file.
+func TestApplyKeepsTheMediumOfALinkedDisk(t *testing.T) {
+	manager, ops := newTestManager(t)
+	profile := standardProfile()
+	profile.Name, profile.BuiltIn = "with-disk", false
+	profile.Functions = append(profile.Functions, DiskFunction(""))
+	profile.Normalize()
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}, false); err != nil {
+		t.Fatalf("attach an image: %v", err)
+	}
+	guard := &recordingGuard{}
+	manager.SetDiskGuard(guard)
+
+	profile.Functions = slices.DeleteFunc(slices.Clone(profile.Functions), func(f Function) bool {
+		return f.Kind == FunctionNCM || f.Kind == FunctionRNDIS
+	})
+	before := len(ops.Trace())
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("reapply: %v", err)
+	}
+	for _, op := range ops.Trace()[before:] {
+		if op.Kind == OpWrite && isMediumAttr(op.Path) {
+			t.Fatalf("the reapply wrote %s = %q into a linked disk", op.Path, op.Data)
+		}
+	}
+	if lun, linked, err := manager.LUN(); err != nil || !linked || lun.File != "/data/boot.iso" || !lun.CDROM {
+		t.Fatalf("lun = %+v linked = %v err = %v, want the image still attached", lun, linked, err)
+	}
+	if len(guard.serves) != 0 {
+		t.Fatalf("the guard was asked to serve the partition %d times", len(guard.serves))
+	}
+}
+
+// A disk the apply creates is handed the partition, so the guard decides.
+func TestApplyAsksTheGuardBeforeAFreshDiskServesThePartition(t *testing.T) {
+	manager, _ := newTestManager(t)
+	if err := manager.Apply(context.Background(), ProfileStandard); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	guard := &recordingGuard{refuse: errors.New("/data is busy")}
+	manager.SetDiskGuard(guard)
+
+	profile := standardProfile()
+	profile.Name, profile.BuiltIn = "with-disk", false
+	profile.Functions = append(profile.Functions, DiskFunction(""))
+	profile.Normalize()
+	if err := manager.ApplyProfile(context.Background(), profile); err == nil {
+		t.Fatal("a fresh disk served the partition past a refusing guard")
+	}
+	if len(guard.serves) == 0 {
+		t.Fatal("the guard was never asked")
+	}
+	if _, linked, _ := manager.LUN(); linked {
+		t.Fatal("the refused disk is still linked after the rollback")
+	}
+
+	guard.refuse = nil
+	if err := manager.ApplyProfile(context.Background(), profile); err != nil {
+		t.Fatalf("apply with the guard's consent: %v", err)
+	}
+	if got := guard.settled[len(guard.settled)-1]; !got {
+		t.Fatal("settled reports the partition unserved after the disk was linked")
+	}
+}
+
+// A profile that names its own file re-points a linked disk the way SetLUN
+// does: released first, then the flags, then the file.
+func TestApplyReleasesALinkedDiskBeforeChangingItsFlags(t *testing.T) {
+	ops := NewRecordOps()
+	linkDisk(t, ops, "/data/boot.iso\n", "1\n")
+	if err := ops.Seed(lunAttr("cdrom"), []byte("1\n")); err != nil {
+		t.Fatal(err)
+	}
+	manager := &Manager{ops: ops}
+
+	profile := standardProfile()
+	profile.Functions = append(profile.Functions, DiskFunction("/data/disk.img"))
+	plan, err := Compile(profile, staticV1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := readSnapshot(ops, profile.Functions)
+	got := manager.dropRedundantWrites(before, plan)
+
+	var medium []string
+	for _, op := range got.Ops {
+		if op.Kind == OpWrite && isMediumAttr(op.Path) {
+			medium = append(medium, strings.TrimPrefix(op.Path, lunAttr(""))+"="+strings.TrimSpace(string(op.Data)))
+		}
+	}
+	if want := []string{"file=", "ro=0", "cdrom=0", "file=/data/disk.img"}; !slices.Equal(medium, want) {
+		t.Fatalf("medium writes = %q, want %q", medium, want)
 	}
 }
 
@@ -612,7 +829,7 @@ func TestSetLUNKeepsTheProfilesOwnInquiryString(t *testing.T) {
 
 	writes := 0
 	for _, lun := range []LUN{{File: "/data/boot.iso", CDROM: true}, {File: "/data/disk.img"}, {}} {
-		if err := manager.SetLUN(context.Background(), lun); err != nil {
+		if err := manager.SetLUN(context.Background(), lun, false); err != nil {
 			t.Fatalf("set lun %+v: %v", lun, err)
 		}
 	}
@@ -632,22 +849,21 @@ func TestSetLUNKeepsTheProfilesOwnInquiryString(t *testing.T) {
 
 func TestLUNReadsBackTheRuntimeState(t *testing.T) {
 	manager, ops := newTestManager(t)
-	for rel, data := range map[string]string{lunAttr("file"): DefaultDiskFile + "\n", lunAttr("cdrom"): "0\n"} {
-		if err := ops.Seed(rel, []byte(data)); err != nil {
-			t.Fatal(err)
-		}
+	if _, linked, err := manager.LUN(); err != nil || linked {
+		t.Fatalf("linked = %v err = %v without a disk function, want unlinked", linked, err)
 	}
 
-	lun, err := manager.LUN()
-	if err != nil || lun != (LUN{}) {
-		t.Fatalf("lun = %+v err = %v, want the unmounted zero value", lun, err)
+	linkDisk(t, ops, DefaultDiskFile+"\n", "0\n")
+	lun, linked, err := manager.LUN()
+	if err != nil || !linked || lun != (LUN{File: DefaultDiskFile}) {
+		t.Fatalf("lun = %+v linked = %v err = %v, want the writable partition", lun, linked, err)
 	}
 
-	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}); err != nil {
+	if err := manager.SetLUN(context.Background(), LUN{File: "/data/boot.iso", CDROM: true}, false); err != nil {
 		t.Fatalf("set lun: %v", err)
 	}
-	lun, err = manager.LUN()
-	if err != nil || lun != (LUN{File: "/data/boot.iso", CDROM: true}) {
+	lun, _, err = manager.LUN()
+	if err != nil || lun != (LUN{File: "/data/boot.iso", ReadOnly: true, CDROM: true}) {
 		t.Fatalf("lun = %+v err = %v, want the mounted cdrom", lun, err)
 	}
 }

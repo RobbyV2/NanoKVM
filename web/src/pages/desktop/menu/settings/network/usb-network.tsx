@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/auth.ts';
 import { Segmented, Switch } from 'antd';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +19,9 @@ const protocols: NetworkProtocol[] = ['ncm', 'rndis'];
 // with no adapter, so both are inert while the switch is off.
 export const UsbNetwork = () => {
   const { t } = useTranslation();
+  const { account } = useAuth();
+  // The bridge has no grant of its own and stays with the administrator role.
+  const isAdmin = account.role === 'admin';
 
   const [isHidOnlyMode, setIsHidOnlyMode] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
@@ -144,7 +148,7 @@ export const UsbNetwork = () => {
           />
         </div>
 
-        <Bridge disabled={isOff} />
+        {isAdmin && <Bridge disabled={isOff} />}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Splitter } from 'antd';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAuth } from '@/contexts/auth.ts';
+import { Splitter, Tag, Tooltip } from 'antd';
+import { useAtom, useSetAtom } from 'jotai';
+import { LockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
@@ -21,6 +23,7 @@ import {
 } from '@/jotai/screen.ts';
 import { OverlayBoundary, PanelBoundary } from '@/components/error-boundary.tsx';
 import { Head } from '@/components/head.tsx';
+import { NoConsoleAccess } from '@/pages/no-console-access.tsx';
 
 import { Assistant } from './assistant';
 import { CaptureStatusOverlay, useCaptureStatus } from './capture-status';
@@ -54,8 +57,11 @@ function getVideoMode() {
   return ['direct', 'h264', 'mjpeg'].includes(cookieVideoMode) ? cookieVideoMode : defaultVideoMode;
 }
 
-export const Desktop = () => {
+const Console = () => {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  const canControl = hasPermission('console.control');
+  const canAi = hasPermission('ai');
   const isBigScreen = useMediaQuery({ minWidth: 850 });
   const [activeVideoMode] = useState(getVideoMode);
   const [picoclawSidebarWidth, setPicoclawSidebarWidth] = useState(420);
@@ -69,7 +75,22 @@ export const Desktop = () => {
   const setManualRegions = useSetAtom(manualRegionsAtom);
   const setSelectedManualRegion = useSetAtom(selectedManualRegionAtom);
   const setSelectedOriginalResolution = useSetAtom(selectedOriginalResolutionAtom);
-  const isPicoclawChatOpen = useAtomValue(picoclawChatOpenAtom);
+  const [isPicoclawChatOpen, setPicoclawChatOpen] = useAtom(picoclawChatOpenAtom);
+
+  // Losing the ai grant closes the chat: its socket is dropped with the
+  // grant, so leaving the sidebar open would only show send failures.
+  useEffect(() => {
+    if (!canAi && isPicoclawChatOpen) {
+      setPicoclawChatOpen(false);
+    }
+  }, [canAi, isPicoclawChatOpen, setPicoclawChatOpen]);
+
+  // Declared before the connection effect so the gate is in place before the
+  // console socket can send anything. Kept separate from it because a
+  // permission change must not tear the connection down on its own.
+  useEffect(() => {
+    client.setViewOnly(!canControl);
+  }, [canControl]);
 
   useEffect(() => {
     client.connect();
@@ -165,7 +186,9 @@ export const Desktop = () => {
     let cleared = false;
     let validationTimer: ReturnType<typeof setTimeout> | null = null;
     function validateMediaSize() {
-      if (cleared) {
+      // Dropping a stale input region is an input-mapping write, so it needs
+      // console.control. A watcher must not fire one on every resolution change.
+      if (!canControl || cleared) {
         return;
       }
 
@@ -212,6 +235,7 @@ export const Desktop = () => {
       target.removeEventListener('resize', validateMediaSize);
     };
   }, [
+    canControl,
     controlRegionMode,
     inputRegion,
     resolution,
@@ -257,6 +281,24 @@ export const Desktop = () => {
                   <OverlayBoundary name="capture-status">
                     <CaptureStatusOverlay status={captureStatus} />
                   </OverlayBoundary>
+                  {!canControl && (
+                    <Tooltip title={t('desktop.readOnlyTip')}>
+                      {/* A label over the video: the tag keeps the app's chip shape, the
+                          inline style survives being drawn on top of the stream */}
+                      <Tag
+                        className="absolute left-2 top-2 z-10"
+                        style={{
+                          margin: 0,
+                          border: 'none',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          backdropFilter: 'blur(4px)'
+                        }}
+                        icon={<LockIcon size={12} />}
+                      >
+                        {t('desktop.readOnly')}
+                      </Tag>
+                    </Tooltip>
+                  )}
                 </div>
               </Splitter.Panel>
               <Splitter.Panel
@@ -282,8 +324,8 @@ export const Desktop = () => {
             <InputRegionOverlay />
           </OverlayBoundary>
           <OverlayBoundary name="input">
-            <Mouse />
-            <Keyboard />
+            {canControl && <Mouse />}
+            {canControl && <Keyboard />}
           </OverlayBoundary>
           <OverlayBoundary name="assistant">
             <Assistant />
@@ -299,9 +341,15 @@ export const Desktop = () => {
         </div>
       ) : null}
 
-      <OverlayBoundary name="virtual-keyboard">
-        <VirtualKeyboard />
-      </OverlayBoundary>
+      <OverlayBoundary name="virtual-keyboard">{canControl && <VirtualKeyboard />}</OverlayBoundary>
     </div>
   );
+};
+
+// The console is the landing page, not a requirement: an account granted only
+// the media library or only the terminal gets sent to what it can actually use
+// instead of opening a screen whose every request would be refused.
+export const Desktop = () => {
+  const { hasPermission } = useAuth();
+  return hasPermission('console.view') ? <Console /> : <NoConsoleAccess />;
 };

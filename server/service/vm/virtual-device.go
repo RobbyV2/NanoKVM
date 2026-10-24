@@ -10,6 +10,7 @@ import (
 	"NanoKVM-Server/proto"
 	"NanoKVM-Server/service/hid"
 	"NanoKVM-Server/service/presentation"
+	"NanoKVM-Server/service/storage"
 )
 
 const (
@@ -76,6 +77,37 @@ func (s *Service) UpdateVirtualDevice(c *gin.Context) {
 		return
 	}
 
+	// A caller that says which state it wants gets that state; a caller that
+	// does not is toggling, the way this endpoint has always worked. Asking for
+	// the state that already holds changes nothing, so an "enable" never
+	// switches a running device off.
+	current := deviceOn(snapshot, req.Device)
+	on := !current
+	if req.Enable != nil {
+		on = *req.Enable
+	}
+	if protocol != "" {
+		on = true
+	}
+	if protocol == "" && on == current {
+		rsp.OkRspWithData(c, &proto.UpdateVirtualDeviceRsp{On: current})
+		return
+	}
+
+	// Adding the disk hands the target machine the raw data partition and
+	// removing it takes away whatever medium was attached, so either one waits
+	// for the media API and is refused while the file manager holds an image
+	// or a write is landing on the partition. The partition guard makes /data
+	// read-only before the new disk serves it.
+	if req.Device == deviceDisk {
+		unlock, err := storage.LockVirtualDiskTransition()
+		if err != nil {
+			rsp.ErrRsp(c, -3, err.Error())
+			return
+		}
+		defer unlock()
+	}
+
 	profile, err := editableProfile(snapshot.Active)
 	if err != nil {
 		log.Errorf("update virtual device %s failed: %s", req.Device, err)
@@ -86,7 +118,7 @@ func (s *Service) UpdateVirtualDevice(c *gin.Context) {
 	if protocol != "" {
 		setNetwork(&profile, protocol)
 	} else {
-		toggle(&profile, req.Device, !deviceOn(snapshot, req.Device))
+		toggle(&profile, req.Device, on)
 	}
 	if err := manager.ApplyProfile(c.Request.Context(), profile); err != nil {
 		log.Errorf("update virtual device %s failed: %s", req.Device, err)

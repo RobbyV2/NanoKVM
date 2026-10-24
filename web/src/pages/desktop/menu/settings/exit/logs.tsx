@@ -4,7 +4,6 @@ import { RefreshCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/extensions/exit.ts';
-import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
 import type { ExitMode, ExitLogs as Logs } from './types.ts';
 
@@ -23,7 +22,7 @@ const Tail = ({ title, lines }: { title: string; lines: string[] }) => {
       {lines.length === 0 ? (
         <span className="text-xs text-neutral-500">{t('settings.exit.logs.empty')}</span>
       ) : (
-        <ScrollArea className="h-[160px] rounded bg-neutral-800/60 p-2">
+        <div className="h-[160px] overflow-y-auto rounded bg-neutral-800/60 p-2">
           <div className="flex flex-col font-mono text-xs text-neutral-300">
             {lines.map((line, index) => (
               <span key={index} className="whitespace-pre-wrap break-all">
@@ -31,7 +30,7 @@ const Tail = ({ title, lines }: { title: string; lines: string[] }) => {
               </span>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
   );

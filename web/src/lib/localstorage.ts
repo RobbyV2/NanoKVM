@@ -242,7 +242,13 @@ export function getMenuDisabledItems(): string[] {
     }
     return parsed as string[];
   });
-  return items || [];
+  if (!items) return [];
+
+  // The image and download entries were merged into one storage entry, so a
+  // hidden icon stays hidden instead of reappearing.
+  return Array.from(
+    new Set(items.map((item) => (item === 'image' || item === 'download' ? 'storage' : item)))
+  );
 }
 
 export function getMenuDisplayMode(): string {

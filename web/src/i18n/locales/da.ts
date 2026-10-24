@@ -5,24 +5,22 @@ const da = {
       login: 'Log ind',
       changePassword: 'Skift adgangskode',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Diskbilleder og fildeling'
     },
     auth: {
       login: 'Log ind',
       placeholderUsername: 'Indtast brugernavn',
       placeholderPassword: 'indtast adgangskode',
-      placeholderCurrentPassword: 'Nuværende adgangskode',
       placeholderPassword2: 'indtast adgangskode igen',
       noEmptyUsername: 'brugernavn kan ikke være tom',
       noEmptyPassword: 'adgangskode kan ikke være tom',
-      passwordLength: 'Adgangskoden skal være mellem 8 og 72 tegn',
       noAccount:
         'Kunne ikke hente brugeroplysninger. Prøv at opdater siden eller nulstil adgangskoden',
       invalidUser: 'ugyldigt brugernavn eller adgangskode',
       locked: 'For mange logins, prøv venligst igen senere',
       globalLocked: 'System under beskyttelse, prøv venligst igen senere',
       error: 'uventet fejl',
-      invalidCurrentPassword: 'Den nuværende adgangskode er forkert',
       changePassword: 'Skift adgangskode',
       changePasswordDesc: 'For sikkerheden af din enhed, bedes du ændre web-login adgangskoden.',
       differentPassword: 'Adgangskoder er ikke ens',
@@ -42,7 +40,10 @@ const da = {
         change2: 'Adgangskode til weblogin',
         change3: 'Systemets root-adgangskode (SSH-loginadgangskode)',
         change4: 'For at nulstille adgangskoderne skal du holde BOOT-knappen på NanoKVM nede.'
-      }
+      },
+      placeholderCurrentPassword: 'Nuværende adgangskode',
+      passwordLength: 'Adgangskoden skal være mellem 8 og 72 tegn',
+      invalidCurrentPassword: 'Den nuværende adgangskode er forkert'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -60,6 +61,17 @@ const da = {
         passPlaceholder: 'AP adgangskode',
         verifyBtn: 'Bekræft'
       }
+    },
+    desktop: {
+      readOnly: 'Kun visning',
+      readOnlyTip:
+        'Denne konto kan ikke sende tastatur- eller musinput til målmaskinen, så konsollen viser kun skærmen.'
+    },
+    noConsole: {
+      title: 'Denne konto har ingen konsoladgang',
+      description:
+        'Den har fået andre rettigheder. Åbn en af de sider, den kan bruge, eller bed en administrator om konsoladgang.',
+      nothing: 'Denne konto har endnu ingen rettigheder. Bed en administrator om at give nogle.'
     },
     screen: {
       scale: 'Skala',
@@ -216,27 +228,44 @@ const da = {
         disable: 'Deaktiver HID-kun tilstand'
       }
     },
-    image: {
-      title: 'Diskbilleder',
-      loading: 'Kontrollerer...',
-      empty: 'Ingen fundet',
+    storage: {
+      title: 'Diskbilleder og fildeling',
+      empty:
+        'Der er endnu ingen diskbilleder. Upload en ISO eller IMG, eller kopier en over på disken fra målcomputeren.',
+      notAttached: 'Intet monteret',
+      attached: 'Monteret: {{name}}',
+      eject: 'Skub ud',
+      mount: 'Montér',
       mountMode: 'Monteringstilstand',
-      mountFailed: 'Montering af diskbillede mislykkedes',
-      mountDesc:
-        'På nogle systemer kan det være nødvendigt at skubbe den virtuelle disk ud på fjerncomputeren før du kan montere diskbilledet.',
-      unmountFailed: 'Afmontering mislykkedes',
-      unmountDesc:
-        'På nogle systemer skal du manuelt skubbe ud fra fjernværten, før du afmonterer billedet.',
-      refresh: 'Opdater billedlisten',
-      attention: 'Opmærksomhed påkrævet',
-      deleteConfirm: 'Er du sikker på, at du vil slette dette billede?',
-      okBtn: 'Ja',
-      cancelBtn: 'Annuller',
+      mountModeDisk: 'Masselager',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Åbn filhåndtering',
+      refresh: 'Opdater',
+      delete: 'Slet',
+      deleteTitle: 'Slet medie',
+      deleteConfirm: 'Vil du slette {{name}}? Filerne i den går tabt.',
+      downloadImage: 'Download diskbilledet',
+      typePartition: 'Delte filer',
+      volumeLabel: 'Flytbar disk',
+      groups: {
+        share: 'Fildeling',
+        images: 'Diskbilleder'
+      },
+      failed: 'Handlingen mislykkedes',
+      hidOnly: 'Kun HID-tilstand: den virtuelle disk er ikke tilgængelig',
+      disabled: 'Den virtuelle disk er slået fra (Indstillinger - Enhed)',
+      force: {
+        title: 'Tag mediet tilbage med magt?',
+        desc: 'Målcomputeren bruger stadig dette medie. At tage det tilbage opregner USB-enheden igen og kan miste alt, hvad den endnu ikke har skrevet til disken.',
+        menuHint:
+          'Målcomputeren bruger dette medie. Åbn filhåndteringen for at tage det tilbage med magt.'
+      },
       tips: {
         title: 'Sådan uploader du',
         usb1: 'Forbind din NanoKVM til din computer via USB.',
-        usb2: 'Sørg for, at den virtuelle disk er monteret (Indstillinger -> Virtuel disk).',
+        usb2: 'Montér de delte filer i masselagringstilstand på denne side.',
         usb3: 'Åben den virtuelle disk på din computer og kopier diskbilledet til roden af den virtuelle disk.',
+        usb4: 'Skub disken ud, når kopieringen er færdig: billedet vises derefter på listen.',
         scp1: 'Kontroller at din NanoKVM og din computer er på samme lokale netværk.',
         scp2: 'Åben en terminal på din computer og brug SCP-kommandoen for at uploade diskbilledet til /data mappen på din NanoKVM.',
         scp3: 'Eksempel: scp sti-til-dit-diskbillede root@din-nanokvm-ip:/data',
@@ -246,7 +275,69 @@ const da = {
         tf3: 'Indsæt microSD-kortet i en kortlæser og tilslut den til en computer.',
         tf4: 'Kopier diskbilledet til /data mappen på microSD-kortet.',
         tf5: 'Skub microSD-kortet ud og indsæt microSD-kortet i din NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Arbejder på {{name}}'
+      },
+      enableDisk: {
+        title: 'Slå den virtuelle disk til?',
+        desc: 'For at montere et medie kræves den virtuelle disk, som er slået fra lige nu. Slå den til? Målcomputerens tastatur og mus afbrydes et øjeblik.',
+        menuHint: 'Den virtuelle disk er slået fra. Slå den til under Indstillinger - Enhed.',
+        askDevice:
+          'Den virtuelle disk er slået fra. En konto med enhedstilladelse skal aktivere den først.'
+      },
+      add: {
+        title: 'Tilføj medie',
+        upload: 'Upload en ISO eller IMG',
+        fromUrl: 'Download fra en URL',
+        url: 'URL til diskbilledet',
+        urlRequired: 'Indtast en URL',
+        onlyImages: 'Kun .iso- og .img-filer kan monteres',
+        dropHint: 'Træk en ISO eller IMG hertil, eller klik for at vælge en fil',
+        cdromOnlyIso: 'En CD-ROM kan kun indeholde et ISO 9660-diskbillede',
+        uploadFailed: 'Upload mislykkedes',
+        downloadFailed: 'Download mislykkedes',
+        uploading: 'Uploader {{name}}',
+        downloading: 'Downloader {{name}}',
+        done: '{{name}} er klar',
+        checksumFailed: 'Billedet stemmer ikke overens med SHA-256-kontrolsummen.',
+        blocked: 'Målcomputeren bruger disken',
+        copyHint:
+          'Du kan også kopiere et diskbillede til datapartitionen via SCP eller fra målcomputeren.'
+      },
+      files: {
+        selectMedium: 'Vælg et medie for at se filerne på det.',
+        reasonAttached: 'Dette medie er koblet til målcomputeren.',
+        reasonAttachedHint:
+          'Skub det ud først: målcomputeren skal frigive disken, før dens filer kan læses.',
+        reasonNotBrowsable:
+          'Dette medie indeholder et filsystem, som filhåndteringen ikke kan åbne.',
+        reasonNoLoop: 'Denne enhed kan ikke montere diskbilleder (ingen loop-understøttelse).',
+        reasonISOImage:
+          'Et ISO 9660-diskbillede kan ikke gennemses her. Det kan stadig monteres på målcomputeren.',
+        empty: 'Denne mappe er tom',
+        noMatch: 'Ingen filer matcher søgningen.',
+        free: '{{size}} ledige',
+        search: 'Søg i denne mappe',
+        sort: {
+          name: 'Navn',
+          size: 'Størrelse',
+          type: 'Type',
+          asc: 'Stigende',
+          desc: 'Faldende'
+        },
+        upload: 'Upload en fil til mediet',
+        deleteFolderTitle: 'Slet mappe',
+        deleteFolderConfirm: 'Slet mappen {{name}} og alt dens indhold? Dette kan ikke fortrydes.',
+        uploading: 'Uploader…',
+        uploadFailed: 'Upload mislykkedes',
+        download: 'Download',
+        delete: 'Slet',
+        deleteTitle: 'Slet fil',
+        deleteConfirm: 'Vil du slette {{name}} fra mediet?'
+      },
+      yes: 'Ja',
+      no: 'Nej'
     },
     script: {
       title: 'Script',
@@ -288,19 +379,11 @@ const da = {
       ok: 'OK'
     },
     download: {
-      title: 'Billedhenter',
-      input: 'Indtast venligst et fjernbillede URL',
-      ok: 'OK',
-      disabled: '/data partitionen er RO, så vi kan ikke downloade billedet',
-      uploadbox: 'Slip filen her, eller klik for at vælge',
-      inputfile: 'Indtast venligst billedfilen',
-      NoISO: 'Ingen ISO',
+      disabled:
+        'Datapartitionen er skrivebeskyttet, mens målcomputeren bruger den: nye diskbilleder kan ikke skrives, men eksisterende filer kan stadig downloades.',
       sha256: 'SHA-256 (valgfri)',
       sha256Placeholder: 'Indtast en SHA-256-kontrolsum på 64 tegn',
       invalidSHA256: 'SHA-256 skal være en hexadecimal streng på 64 tegn',
-      failed: 'Download mislykkedes',
-      success: 'Download gennemført',
-      checksumFailed: 'Download mislykkedes: SHA-256-verifikation mislykkedes',
       cancel: 'Annuller',
       cancelFailed: 'Kunne ikke annullere download'
     },
@@ -836,7 +919,13 @@ const da = {
         reboot: 'Genstart',
         rebootDesc: 'Er du sikker på, at du vil genstarte NanoKVM?',
         okBtn: 'Ja',
-        cancelBtn: 'Annuller'
+        cancelBtn: 'Annuller',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Opmærksomhed påkrævet',
+        updateFailed: 'Kunne ikke opdatere den virtuelle enhed'
       },
       network: {
         title: 'Netværk',
@@ -1273,17 +1362,17 @@ const da = {
       account: {
         title: 'Konto',
         webAccount: 'Navn på webkonto',
-        role: 'Rolle',
-        roles: {
-          admin: 'Administrator',
-          user: 'Bruger'
-        },
         password: 'Adgangskode',
         updateBtn: 'Update',
         logoutBtn: 'Log ud',
         logoutDesc: 'Er du sikker på, at du vil logge ud?',
         okBtn: 'Ja',
         cancelBtn: 'Annuller',
+        role: 'Rolle',
+        roles: {
+          admin: 'Administrator',
+          user: 'Bruger'
+        },
         users: {
           title: 'Brugere',
           create: 'Opret bruger',
@@ -1292,13 +1381,72 @@ const da = {
           deviceOwner: 'Enhedens ejer',
           resetPassword: 'Nulstil adgangskode',
           delete: 'Slet',
-          deleteConfirm: 'Slet denne bruger og tilbagekald alle vedkommendes sessioner?',
+          deleteConfirm: 'Vil du slette denne bruger og tilbagekalde alle dens sessioner?',
           created: 'Bruger oprettet',
           deleted: 'Bruger slettet',
           passwordUpdated: 'Adgangskode opdateret',
           loadFailed: 'Kunne ikke indlæse brugere',
           saveFailed: 'Kunne ikke gemme brugeren',
-          deleteFailed: 'Kunne ikke slette brugeren'
+          deleteFailed: 'Kunne ikke slette brugeren',
+          editPermissions: 'Tilladelser',
+          mcpLossTitle: 'Fjern MCP-adgang',
+          mcpLossDesc:
+            '{{name}} mister MCP-adgang. MCP-API-nøglen deles af hele enheden, så en kopi virker, indtil nøglen gendannes. Gendannelse afbryder alle MCP-klienter, indtil de får den nye nøgle.',
+          mcpLossRotate: 'Gendan MCP-API-nøglen',
+          mcpLossKeep:
+            'Den nuværende nøgle forbliver gyldig, og den, der har en kopi, kan stadig styre tastatur og mus. Du kan gendanne den senere i MCP-indstillingerne.',
+          mcpKeyRotated: 'MCP-API-nøglen er gendannet. MCP-klienter skal bruge den nye nøgle.'
+        },
+        permissions: {
+          title: 'Rettigheder',
+          editTitle: 'Rediger rettigheder',
+          save: 'Gem',
+          saved: 'Gemt',
+          close: 'Luk',
+          groupConsole: 'Konsol',
+          groupTarget: 'Målmaskine',
+          groupLibrary: 'Mediebibliotek',
+          groupHost: 'Denne enhed',
+          groupServices: 'Tjenester',
+          consoleView: 'Se skærmen',
+          consoleControl: 'Tastatur og mus',
+          power: 'Strøm og vækning',
+          mediumAttach: 'Tilslut et medie',
+          libraryRead: 'Gennemse biblioteket',
+          libraryWrite: 'Administrer biblioteket',
+          terminal: 'Terminal og scripts',
+          device: 'Enhedsindstillinger',
+          network: 'Netværksindstillinger',
+          update: 'Systemopdatering',
+          mcp: 'MCP-tjeneste',
+          tailscale: 'Tailscale',
+          ai: 'AI-assistent',
+          effectConsoleView:
+            'Viser målmaskinens skærm og angiver videotilstand, opløsning, billedhastighed og kvalitet, som alle seere deler.',
+          effectConsoleControl: 'Sender tastatur- og musinput til målmaskinen.',
+          effectPower:
+            'Tænder, slukker og genstarter målmaskinen og administrerer listen over Wake-on-LAN-enheder.',
+          effectMediumAttach:
+            'Monterer og afmonterer medier på målmaskinen og udveksler filer med den via den delte partition.',
+          effectLibraryRead: 'Viser og henter images og filerne i dem.',
+          effectLibraryWrite: 'Uploader, opretter og sletter images og ændrer filerne i dem.',
+          effectTerminal: 'Giver et root-shell på denne enhed uden om websessionen.',
+          effectDevice:
+            'Gør det muligt at slå SSH til (også root), genstarte enheden, give den rå datapartition til målmaskinen og ændre OLED, HDMI, mDNS, hukommelse og swap.',
+          effectNetwork: 'Ændrer Wi-Fi, DNS og TLS, hvilket kan tage denne enhed af netværket.',
+          effectUpdate: 'Installerer firmware og programpakker.',
+          effectMcp:
+            'Udsteder en API-nøgle for hele enheden, der styrer tastatur, mus og skærmbilleder uden for websessionen; en kopi virker stadig, efter rettigheden er fjernet, medmindre nøglen gendannes, hvilket tilbydes, når rettigheden fjernes.',
+          effectTailscale: 'Forbinder denne enhed til et VPN-mesh.',
+          effectAi:
+            'Styrer enheden via en lokal grænseflade, som de øvrige rettigheder ikke begrænser, så det svarer til fuld kontrol over enheden.',
+          fullControlWarning: 'Disse rettigheder svarer til fuld kontrol over enheden:',
+          emptyWarning: 'Denne konto har ingen funktioner og kan kun logge ind.',
+          impliedBy: 'Inkluderet af {{name}}',
+          grantCount_one: '{{count}} rettighed',
+          grantCount: '{{count}} rettigheder',
+          adminAll: 'Administratorer har alle rettigheder',
+          catalogFailed: 'Rettighedslisten kunne ikke indlæses. Luk dialogen, og prøv igen.'
         }
       }
     },

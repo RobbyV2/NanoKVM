@@ -5,24 +5,22 @@ const cz = {
       login: 'Přihlášení',
       changePassword: 'Změna hesla',
       terminal: 'Terminál',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Obrázky a sdílení souborů'
     },
     auth: {
       login: 'Přihlášení',
       placeholderUsername: 'Zadejte prosím uživatelské jméno',
       placeholderPassword: 'Zadejte prosím heslo',
-      placeholderCurrentPassword: 'Současné heslo',
       placeholderPassword2: 'Zadejte prosím heslo znovu',
       noEmptyUsername: 'Uživatelské jméno nesmí být prázdné',
       noEmptyPassword: 'Heslo nesmí být prázdné',
-      passwordLength: 'Heslo musí mít 8 až 72 znaků',
       noAccount:
         'Nepodařilo se získat informace o uživateli, prosím obnovte stránku nebo resetujte heslo',
       invalidUser: 'Neplatné uživatelské jméno nebo heslo',
       locked: 'Příliš mnoho přihlášení, zkuste to znovu později',
       globalLocked: 'Systém je chráněn, zkuste to znovu později',
       error: 'Neočekávaná chyba',
-      invalidCurrentPassword: 'Současné heslo je nesprávné',
       changePassword: 'Změnit heslo',
       changePasswordDesc:
         'Pro bezpečnost vašeho zařízení prosím změňte heslo pro přihlášení na webu.',
@@ -43,7 +41,10 @@ const cz = {
         change2: 'Heslo pro webové přihlášení',
         change3: 'Heslo systémového uživatele root (heslo pro přihlášení SSH)',
         change4: 'Chcete-li hesla resetovat, podržte tlačítko BOOT na NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Současné heslo',
+      passwordLength: 'Heslo musí mít 8 až 72 znaků',
+      invalidCurrentPassword: 'Současné heslo není správné'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -61,6 +62,17 @@ const cz = {
         passPlaceholder: 'AP heslo',
         verifyBtn: 'Ověřte'
       }
+    },
+    desktop: {
+      readOnly: 'Pouze prohlížení',
+      readOnlyTip:
+        'Tento účet nemůže odesílat vstup z klávesnice a myši do cílového počítače, proto konzole pouze zobrazuje obrazovku.'
+    },
+    noConsole: {
+      title: 'Tento účet nemá přístup ke konzoli',
+      description:
+        'Byla mu udělena jiná oprávnění. Otevřete některou ze stránek, které může používat, nebo požádejte administrátora o přístup ke konzoli.',
+      nothing: 'Tento účet zatím nemá žádná oprávnění. Požádejte administrátora o jejich udělení.'
     },
     screen: {
       scale: 'Měřítko',
@@ -217,27 +229,44 @@ const cz = {
         disable: 'Zakázat režim HID-Only'
       }
     },
-    image: {
-      title: 'Obrázky',
-      loading: 'Načítání...',
-      empty: 'Nic nenalezeno',
+    storage: {
+      title: 'Obrázky a sdílení souborů',
+      empty:
+        'Zatím žádné obrazy. Nahrajte ISO nebo IMG, nebo zkopírujte obraz na disk ze vzdáleného počítače.',
+      notAttached: 'Nic není připojeno',
+      attached: 'Připojeno: {{name}}',
+      eject: 'Vysunout',
+      mount: 'Připojit',
       mountMode: 'Režim připojení',
-      mountFailed: 'Připojení se nezdařilo',
-      mountDesc:
-        'V některých systémech je nutné před připojením obrazu vysunout virtuální disk na vzdáleném hostiteli.',
-      unmountFailed: 'Odpojení se nezdařilo',
-      unmountDesc:
-        'Na některých systémech se musíte před odpojením obrazu ručně vysunout ze vzdáleného hostitele.',
-      refresh: 'Obnovte seznam obrázků',
-      attention: 'Pozor',
-      deleteConfirm: 'Opravdu chcete smazat tento obrázek?',
-      okBtn: 'Ano',
-      cancelBtn: 'Ne',
+      mountModeDisk: 'Hromadné úložiště',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Otevřít správce souborů',
+      refresh: 'Obnovit',
+      delete: 'Smazat',
+      deleteTitle: 'Smazat médium',
+      deleteConfirm: 'Smazat {{name}}? Soubory v něm budou ztraceny.',
+      downloadImage: 'Stáhnout obraz',
+      typePartition: 'Sdílené soubory',
+      volumeLabel: 'Vyměnitelný disk',
+      groups: {
+        share: 'Sdílení souborů',
+        images: 'Obrázky'
+      },
+      failed: 'Operace se nezdařila',
+      hidOnly: 'Režim pouze HID: virtuální disk není k dispozici',
+      disabled: 'Virtuální disk je vypnutý (Nastavení - Zařízení)',
+      force: {
+        title: 'Vzít médium zpět násilím?',
+        desc: 'Vzdálený počítač toto médium stále používá. Vzetí zpět znovu vyjmenuje zařízení USB a může ztratit vše, co ještě nezapsal na disk.',
+        menuHint:
+          'Vzdálený počítač toto médium používá. Otevřete správce souborů a vezměte ho zpět násilím.'
+      },
       tips: {
         title: 'Jak nahrát',
         usb1: 'Připojte NanoKVM k vašemu počítači přes USB.',
-        usb2: 'Ujistěte se, že je virtuální disk připojen (Nastavení - Virtuální disk).',
+        usb2: 'Na této stránce připojte sdílené soubory v režimu velkokapacitního úložiště.',
         usb3: 'Otevřete virtuální disk na vašem počítači a zkopírujte soubor s obrazem do kořenového adresáře virtuálního disku.',
+        usb4: 'Po dokončení kopírování disk vysuňte: obraz se pak objeví v seznamu.',
         scp1: 'Ujistěte se, že jsou NanoKVM a váš počítač ve stejné místní síti.',
         scp2: 'Otevřete terminál na vašem počítači a použijte příkaz SCP pro nahrání souboru s obrazem do adresáře /data na zařízení NanoKVM.',
         scp3: 'Příklad: scp cesta-k-vašemu-obrazu root@ip-nanokvm:/data',
@@ -247,7 +276,69 @@ const cz = {
         tf3: 'Vložte SD kartu do čtečky karet a připojte ji k vašemu počítači.',
         tf4: 'Zkopírujte soubor s obrazem do adresáře /data na SD kartě.',
         tf5: 'Vložte SD kartu zpět do NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Zpracovává se {{name}}'
+      },
+      enableDisk: {
+        title: 'Zapnout virtuální disk?',
+        desc: 'K připojení média je potřeba virtuální disk, který je nyní vypnutý. Zapnout ho? Klávesnice a myš vzdáleného počítače se na okamžik odpojí.',
+        menuHint: 'Virtuální disk je vypnutý. Zapněte ho v Nastavení - Zařízení.',
+        askDevice:
+          'Virtuální disk je vypnutý. Nejprve jej musí zapnout účet s oprávněním pro zařízení.'
+      },
+      add: {
+        title: 'Přidat médium',
+        upload: 'Nahrát ISO nebo IMG',
+        fromUrl: 'Stáhnout z adresy URL',
+        url: 'Adresa URL obrazu',
+        urlRequired: 'Zadejte adresu URL',
+        onlyImages: 'Připojit lze pouze soubory .iso a .img',
+        dropHint: 'Přetáhněte sem ISO nebo IMG, nebo klikněte pro výběr souboru',
+        cdromOnlyIso: 'CD-ROM může obsahovat pouze obraz ISO 9660',
+        uploadFailed: 'Nahrání se nezdařilo',
+        downloadFailed: 'Stažení se nezdařilo',
+        uploading: 'Nahrávání {{name}}',
+        downloading: 'Stahování {{name}}',
+        done: '{{name}} je připraven',
+        checksumFailed: 'Obraz neodpovídá kontrolnímu součtu SHA-256.',
+        blocked: 'Vzdálený počítač disk používá',
+        copyHint:
+          'Obraz můžete také zkopírovat do datového oddílu přes SCP nebo ze vzdáleného počítače.'
+      },
+      files: {
+        selectMedium: 'Vyberte médium a prohlédněte si soubory v něm.',
+        reasonAttached: 'Toto médium je připojeno ke vzdálenému počítači.',
+        reasonAttachedHint:
+          'Nejprve ho vysuňte: vzdálený počítač musí disk uvolnit, než bude možné jeho soubory přečíst.',
+        reasonNotBrowsable:
+          'Toto médium obsahuje souborový systém, který správce nedokáže otevřít.',
+        reasonNoLoop: 'Toto zařízení nedokáže připojit obrazy disků (chybí podpora loop).',
+        reasonISOImage:
+          'Obraz ISO 9660 zde nelze procházet. Lze ho ale připojit ke vzdálenému počítači.',
+        empty: 'Tato složka je prázdná',
+        noMatch: 'Vyhledávání neodpovídá žádný soubor.',
+        free: '{{size}} volných',
+        search: 'Hledat v této složce',
+        sort: {
+          name: 'Název',
+          size: 'Velikost',
+          type: 'Typ',
+          asc: 'Vzestupně',
+          desc: 'Sestupně'
+        },
+        upload: 'Nahrát soubor do média',
+        deleteFolderTitle: 'Smazat složku',
+        deleteFolderConfirm: 'Smazat složku {{name}} a celý její obsah? Tuto akci nelze vrátit.',
+        uploading: 'Nahrávání…',
+        uploadFailed: 'Nahrání se nezdařilo',
+        download: 'Stáhnout',
+        delete: 'Smazat',
+        deleteTitle: 'Smazat soubor',
+        deleteConfirm: 'Smazat {{name}} z média?'
+      },
+      yes: 'Ano',
+      no: 'Ne'
     },
     script: {
       title: 'Skript',
@@ -289,19 +380,11 @@ const cz = {
       ok: 'OK'
     },
     download: {
-      title: 'Stahovač obrazů',
-      input: 'Zadejte prosím vzdálený obrázek URL',
-      ok: 'OK',
-      disabled: 'Oddíl /data je RO, takže obrázek nelze stáhnout',
-      uploadbox: 'Přetáhněte soubor sem nebo kliknutím vyberte',
-      inputfile: 'Zadejte soubor obrázku',
-      NoISO: 'Žádné ISO',
+      disabled:
+        'Datový oddíl je po dobu používání vzdáleným počítačem pouze pro čtení: nové obrazy nelze zapsat, stávající soubory lze stále stáhnout.',
       sha256: 'SHA-256 (volitelné)',
       sha256Placeholder: 'Zadejte 64znakový kontrolní součet SHA-256',
       invalidSHA256: 'SHA-256 musí být 64znakový hexadecimální řetězec',
-      failed: 'Stažení se nezdařilo',
-      success: 'Stažení proběhlo úspěšně',
-      checksumFailed: 'Stažení se nezdařilo: ověření SHA-256 selhalo',
       cancel: 'Zrušit',
       cancelFailed: 'Stažení se nepodařilo zrušit'
     },
@@ -836,7 +919,13 @@ const cz = {
         reboot: 'Restartujte',
         rebootDesc: 'Opravdu chcete restartovat NanoKVM?',
         okBtn: 'Ano',
-        cancelBtn: 'Ne'
+        cancelBtn: 'Ne',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Pozor',
+        updateFailed: 'Aktualizace virtuálního zařízení se nezdařila'
       },
       network: {
         title: 'Síť',
@@ -1266,22 +1355,22 @@ const cz = {
       account: {
         title: 'Účet',
         webAccount: 'Název webového účtu',
-        role: 'Role',
-        roles: {
-          admin: 'Správce',
-          user: 'Uživatel'
-        },
         password: 'Heslo',
         updateBtn: 'Update',
         logoutBtn: 'Odhlásit',
         logoutDesc: 'Opravdu se chcete odhlásit?',
         okBtn: 'Ano',
         cancelBtn: 'Ne',
+        role: 'Role',
+        roles: {
+          admin: 'Administrátor',
+          user: 'Uživatel'
+        },
         users: {
           title: 'Uživatelé',
           create: 'Vytvořit uživatele',
-          enabled: 'Povoleno',
-          disabled: 'Zakázáno',
+          enabled: 'Zapnuto',
+          disabled: 'Vypnuto',
           deviceOwner: 'Vlastník zařízení',
           resetPassword: 'Obnovit heslo',
           delete: 'Smazat',
@@ -1289,9 +1378,68 @@ const cz = {
           created: 'Uživatel vytvořen',
           deleted: 'Uživatel smazán',
           passwordUpdated: 'Heslo aktualizováno',
-          loadFailed: 'Nepodařilo se načíst uživatele',
-          saveFailed: 'Nepodařilo se uložit uživatele',
-          deleteFailed: 'Nepodařilo se smazat uživatele'
+          loadFailed: 'Uživatele se nepodařilo načíst',
+          saveFailed: 'Uživatele se nepodařilo uložit',
+          deleteFailed: 'Uživatele se nepodařilo smazat',
+          editPermissions: 'Oprávnění',
+          mcpLossTitle: 'Odebrat přístup MCP',
+          mcpLossDesc:
+            '{{name}} ztratí přístup MCP. API klíč MCP sdílí celé zařízení, takže jeho kopie funguje, dokud klíč znovu nevygenerujete. Nové vygenerování odpojí všechny MCP klienty, dokud nedostanou nový klíč.',
+          mcpLossRotate: 'Znovu vygenerovat API klíč MCP',
+          mcpLossKeep:
+            'Současný klíč zůstane platný a kdo má jeho kopii, může dál ovládat klávesnici a myš. Později jej můžete znovu vygenerovat v nastavení MCP.',
+          mcpKeyRotated: 'API klíč MCP byl znovu vygenerován. MCP klienti potřebují nový klíč.'
+        },
+        permissions: {
+          title: 'Oprávnění',
+          editTitle: 'Upravit oprávnění',
+          save: 'Uložit',
+          saved: 'Uloženo',
+          close: 'Zavřít',
+          groupConsole: 'Konzole',
+          groupTarget: 'Cílový počítač',
+          groupLibrary: 'Knihovna médií',
+          groupHost: 'Toto zařízení',
+          groupServices: 'Služby',
+          consoleView: 'Sledovat obrazovku',
+          consoleControl: 'Klávesnice a myš',
+          power: 'Napájení a probuzení',
+          mediumAttach: 'Připojit médium',
+          libraryRead: 'Procházet knihovnu',
+          libraryWrite: 'Spravovat knihovnu',
+          terminal: 'Terminál a skripty',
+          device: 'Nastavení zařízení',
+          network: 'Nastavení sítě',
+          update: 'Aktualizace systému',
+          mcp: 'Služba MCP',
+          tailscale: 'Tailscale',
+          ai: 'AI asistent',
+          effectConsoleView:
+            'Zobrazuje obrazovku cílového počítače a nastavuje režim videa, rozlišení, snímkovou frekvenci a kvalitu, které sdílí všichni diváci.',
+          effectConsoleControl: 'Posílá vstup z klávesnice a myši cílovému počítači.',
+          effectPower:
+            'Zapíná, vypíná a restartuje cílový počítač a spravuje seznam zařízení Wake-on-LAN.',
+          effectMediumAttach:
+            'Připojuje a odpojuje média na cílovém počítači a vyměňuje s ním soubory přes sdílený oddíl.',
+          effectLibraryRead: 'Vypisuje a stahuje obrazy a soubory v nich uložené.',
+          effectLibraryWrite: 'Nahrává, vytváří a maže obrazy a mění soubory v nich uložené.',
+          effectTerminal: 'Poskytuje root shell na tomto zařízení, bez webového sezení mezi tím.',
+          effectDevice:
+            'Umožňuje zapnout SSH (také root), restartovat zařízení, předat surový datový oddíl cílovému počítači a měnit nastavení OLED, HDMI, mDNS, paměti a swapu.',
+          effectNetwork: 'Mění Wi-Fi, DNS a TLS, což může toto zařízení odpojit od sítě.',
+          effectUpdate: 'Instaluje firmware a balíčky aplikací.',
+          effectMcp:
+            'Vydává API klíč platný pro celé zařízení, který ovládá klávesnici, myš a snímky obrazovky mimo webové sezení; kopie funguje i po odebrání oprávnění, pokud klíč znovu nevygenerujete, což se nabízí při odebrání oprávnění.',
+          effectTailscale: 'Připojuje toto zařízení do VPN sítě.',
+          effectAi:
+            'Ovládá zařízení přes lokální rozhraní, které ostatní oprávnění neomezují, takže jde prakticky o plnou kontrolu nad zařízením.',
+          fullControlWarning: 'Tato oprávnění představují plnou kontrolu nad zařízením:',
+          emptyWarning: 'Tento účet nebude mít žádné funkce a bude se moci jen přihlásit.',
+          impliedBy: 'Zahrnuto díky {{name}}',
+          grantCount_one: '{{count}} oprávnění',
+          grantCount: '{{count}} oprávnění',
+          adminAll: 'Administrátoři mají všechna oprávnění',
+          catalogFailed: 'Seznam oprávnění se nepodařilo načíst. Zavřete dialog a zkuste to znovu.'
         }
       }
     },

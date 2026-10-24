@@ -5,24 +5,22 @@ const de = {
       login: 'Anmelden',
       changePassword: 'Passwort ändern',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Abbilder & Dateifreigabe'
     },
     auth: {
       login: 'Anmelden',
       placeholderUsername: 'Benutzername',
       placeholderPassword: 'Passwort',
-      placeholderCurrentPassword: 'Aktuelles Passwort',
       placeholderPassword2: 'Bitte Passwort erneut eingeben',
       noEmptyUsername: 'Benutzername benötigt',
       noEmptyPassword: 'Passwort benötigt',
-      passwordLength: 'Das Passwort muss zwischen 8 und 72 Zeichen lang sein',
       noAccount:
         'Abfragen der Benutzerdaten fehlgeschlagen, bitte die Seite neu laden oder Passwort zurücksetzen',
       invalidUser: 'Falscher Benutzername oder falsches Passwort',
       locked: 'Zu viele Anmeldungen, bitte versuchen Sie es später noch einmal',
       globalLocked: 'System wird geschützt, bitte versuchen Sie es später erneut',
       error: 'Unerwarteter Fehler',
-      invalidCurrentPassword: 'Das aktuelle Passwort ist falsch',
       changePassword: 'Passwort ändern',
       changePasswordDesc: 'Für die Sicherheit Ihres Geräts ändern Sie bitte das Passwort!',
       differentPassword: 'Passwörter stimmen nicht überein',
@@ -43,7 +41,10 @@ const de = {
         change3: 'System root Passwort (SSH Anmelde-Passwort)',
         change4:
           'Um die Passwörter zurückzusetzen, drücken und halten Sie den BOOT Knopf auf dem NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Aktuelles Passwort',
+      passwordLength: 'Das Passwort muss zwischen 8 und 72 Zeichen lang sein',
+      invalidCurrentPassword: 'Das aktuelle Passwort ist falsch'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -62,6 +63,18 @@ const de = {
         passPlaceholder: 'AP Passwort',
         verifyBtn: 'Überprüfen'
       }
+    },
+    desktop: {
+      readOnly: 'Nur Ansehen',
+      readOnlyTip:
+        'Dieses Konto kann keine Tastatur- oder Mauseingaben an den Zielrechner senden, daher zeigt die Konsole nur das Bild.'
+    },
+    noConsole: {
+      title: 'Dieses Konto hat keinen Konsolenzugriff',
+      description:
+        'Ihm wurden andere Fähigkeiten erteilt. Öffnen Sie eine der Seiten, die es nutzen darf, oder bitten Sie einen Administrator um Konsolenzugriff.',
+      nothing:
+        'Dieses Konto hat noch keine Berechtigungen. Bitten Sie einen Administrator, welche zu erteilen.'
     },
     screen: {
       scale: 'Skala',
@@ -221,27 +234,44 @@ const de = {
         disable: 'HID-Only Modus deaktivieren'
       }
     },
-    image: {
-      title: 'Bilder',
-      loading: 'Lädt...',
-      empty: 'Nichts gefunden',
+    storage: {
+      title: 'Abbilder & Dateifreigabe',
+      empty:
+        'Noch keine Abbilder. Laden Sie eine ISO oder IMG hoch oder kopieren Sie eine vom Zielrechner auf die Festplatte.',
+      notAttached: 'Nichts eingebunden',
+      attached: 'Eingebunden: {{name}}',
+      eject: 'Auswerfen',
+      mount: 'Einbinden',
       mountMode: 'Mount-Modus',
-      mountFailed: 'Einbinden fehlgeschlagen',
-      mountDesc:
-        'In einigen Systemen ist es notwendig, die virtuelle Festplatte auf dem entfernten Host auszuwerfen, bevor das Image eingebunden werden kann.',
-      unmountFailed: 'Das Aufheben der Bereitstellung ist fehlgeschlagen',
-      unmountDesc:
-        'Auf einigen Systemen müssen Sie das Image manuell vom Remote-Host auswerfen, bevor Sie die Bereitstellung aufheben.',
-      refresh: 'Bilder aktualisieren',
-      attention: 'Achtung',
-      deleteConfirm: 'Sind Sie sicher, dass Sie dieses Bild löschen möchten?',
-      okBtn: 'Ja',
-      cancelBtn: 'Nein',
+      mountModeDisk: 'Massenspeicher',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Dateimanager öffnen',
+      refresh: 'Aktualisieren',
+      delete: 'Löschen',
+      deleteTitle: 'Medium löschen',
+      deleteConfirm: '{{name}} löschen? Die darin enthaltenen Dateien gehen verloren.',
+      downloadImage: 'Abbild herunterladen',
+      typePartition: 'Freigegebene Dateien',
+      volumeLabel: 'Wechseldatenträger',
+      groups: {
+        share: 'Dateifreigabe',
+        images: 'Abbilder'
+      },
+      failed: 'Vorgang fehlgeschlagen',
+      hidOnly: 'HID-Modus: Das virtuelle Laufwerk ist nicht verfügbar',
+      disabled: 'Das virtuelle Laufwerk ist deaktiviert (Einstellungen - Gerät)',
+      force: {
+        title: 'Medium mit Gewalt zurückholen?',
+        desc: 'Der Zielrechner verwendet dieses Medium noch. Beim Zurückholen wird das USB-Gerät neu aufgelistet, und alles, was noch nicht auf den Datenträger geschrieben wurde, kann verloren gehen.',
+        menuHint:
+          'Der Zielrechner verwendet dieses Medium. Öffnen Sie den Dateimanager, um es mit Gewalt zurückzuholen.'
+      },
       tips: {
         title: 'So laden Sie Dateien hoch',
         usb1: 'Verbinden Sie den NanoKVM über USB mit Ihrem Computer.',
-        usb2: 'Stellen Sie sicher, dass die virtuelle Festplatte eingebunden ist (Einstellungen – Virtuelle Festplatte).',
+        usb2: 'Binden Sie auf dieser Seite die freigegebenen Dateien im Massenspeicher-Modus ein.',
         usb3: 'Öffnen Sie die virtuelle Festplatte auf Ihrem Computer und kopieren Sie die Image-Datei in das Stammverzeichnis der virtuellen Festplatte.',
+        usb4: 'Werfen Sie das Laufwerk nach dem Kopieren aus: Danach erscheint das Image in der Liste.',
         scp1: 'Stellen Sie sicher, dass sich der NanoKVM und Ihr Computer im selben lokalen Netzwerk befinden.',
         scp2: 'Öffnen Sie ein Terminal auf Ihrem Computer und verwenden Sie den SCP-Befehl, um die Image-Datei in das Verzeichnis /data auf dem NanoKVM hochzuladen.',
         scp3: 'Beispiel: scp your-image-path root@your-nanokvm-ip:/data',
@@ -251,14 +281,79 @@ const de = {
         tf3: 'Stecken Sie die TF-Karte in einen Kartenleser und verbinden Sie diesen mit Ihrem Computer.',
         tf4: 'Kopieren Sie die Image-Datei in das Verzeichnis /data auf der TF-Karte.',
         tf5: 'Setzen Sie die TF-Karte wieder in den NanoKVM ein.'
-      }
+      },
+      job: {
+        running: '{{name}} wird bearbeitet'
+      },
+      enableDisk: {
+        title: 'Virtuelles Laufwerk aktivieren?',
+        desc: 'Zum Einbinden eines Mediums wird das virtuelle Laufwerk benötigt, das derzeit ausgeschaltet ist. Jetzt aktivieren? Tastatur und Maus des Zielrechners werden kurz getrennt.',
+        menuHint:
+          'Das virtuelle Laufwerk ist deaktiviert. Aktivieren Sie es unter Einstellungen - Gerät.',
+        askDevice:
+          'Das virtuelle Laufwerk ist ausgeschaltet. Ein Konto mit der Geräte-Berechtigung muss es zuerst einschalten.'
+      },
+      add: {
+        title: 'Medium hinzufügen',
+        upload: 'ISO oder IMG hochladen',
+        fromUrl: 'Von einer URL herunterladen',
+        url: 'Abbild-URL',
+        urlRequired: 'Bitte geben Sie eine URL ein',
+        onlyImages: 'Nur .iso- und .img-Dateien können eingebunden werden',
+        dropHint: 'Ziehen Sie eine ISO oder IMG hierher oder klicken Sie, um eine Datei zu wählen',
+        cdromOnlyIso: 'Ein CD-ROM kann nur ein ISO-9660-Abbild enthalten',
+        uploadFailed: 'Hochladen fehlgeschlagen',
+        downloadFailed: 'Herunterladen fehlgeschlagen',
+        uploading: '{{name}} wird hochgeladen',
+        downloading: '{{name}} wird heruntergeladen',
+        done: '{{name}} ist bereit',
+        checksumFailed: 'Das Image stimmt nicht mit der SHA-256-Prüfsumme überein.',
+        blocked: 'Der Zielrechner verwendet die Festplatte',
+        copyHint:
+          'Sie können ein Abbild auch per SCP auf die Datenpartition kopieren oder vom Zielrechner aus.'
+      },
+      files: {
+        selectMedium: 'Wählen Sie ein Medium, um die darin enthaltenen Dateien zu durchsuchen.',
+        reasonAttached: 'Dieses Medium ist mit dem Zielrechner verbunden.',
+        reasonAttachedHint:
+          'Werfen Sie es zuerst aus: Der Zielrechner muss die Festplatte freigeben, bevor ihre Dateien gelesen werden können.',
+        reasonNotBrowsable:
+          'Dieses Medium enthält ein Dateisystem, das der Dateimanager nicht öffnen kann.',
+        reasonNoLoop:
+          'Dieses Gerät kann keine Datenträgerabbilder einbinden (keine Loop-Unterstützung).',
+        reasonISOImage:
+          'Ein ISO-9660-Abbild lässt sich hier nicht durchsuchen. Es kann weiterhin am Zielrechner eingebunden werden.',
+        empty: 'Dieser Ordner ist leer',
+        noMatch: 'Keine Datei entspricht der Suche.',
+        free: '{{size}} frei',
+        search: 'Diesen Ordner durchsuchen',
+        sort: {
+          name: 'Name',
+          size: 'Größe',
+          type: 'Typ',
+          asc: 'Aufsteigend',
+          desc: 'Absteigend'
+        },
+        upload: 'Eine Datei auf das Medium hochladen',
+        deleteFolderTitle: 'Ordner löschen',
+        deleteFolderConfirm:
+          'Den Ordner {{name}} mit seinem gesamten Inhalt löschen? Dies kann nicht rückgängig gemacht werden.',
+        uploading: 'Wird hochgeladen…',
+        uploadFailed: 'Hochladen fehlgeschlagen',
+        download: 'Herunterladen',
+        delete: 'Löschen',
+        deleteTitle: 'Datei löschen',
+        deleteConfirm: '{{name}} vom Medium löschen?'
+      },
+      yes: 'Ja',
+      no: 'Nein'
     },
     script: {
       title: 'Skripte',
       upload: 'Hochladen',
       run: 'Ausführen',
       runBackground: 'Im Hintergrund ausführen',
-      runFailed: '',
+      runFailed: 'Ausführung fehlgeschlagen',
       attention: 'Achtung',
       delDesc: 'Möchten Sie diese Datei wirklich löschen?',
       confirm: 'Ja',
@@ -293,20 +388,11 @@ const de = {
       ok: 'Ok'
     },
     download: {
-      title: 'Systemabbild Downloader',
-      input: 'Bitte geben Sie die URL für das Remote-Systemabbild ein',
-      ok: 'Ok',
       disabled:
-        '/data Partition ist nur-lesbar, daher kann das Systemabbild nicht heruntergeladen werden',
-      uploadbox: 'Datei hier ablegen oder klicken zum Auswählen',
-      inputfile: 'Bitte geben Sie die Datei für das Systemabbild an',
-      NoISO: 'Keine ISO',
+        'Die Datenpartition ist schreibgeschützt, solange der Zielrechner sie verwendet: Neue Abbilder lassen sich nicht ablegen, vorhandene Dateien aber weiterhin herunterladen.',
       sha256: 'SHA-256 (optional)',
       sha256Placeholder: 'Geben Sie eine 64-stellige SHA-256-Prüfsumme ein',
       invalidSHA256: 'SHA-256 muss eine 64-stellige Hexadezimalzeichenfolge sein',
-      failed: 'Download fehlgeschlagen',
-      success: 'Download erfolgreich',
-      checksumFailed: 'Download fehlgeschlagen: SHA-256-Prüfung fehlgeschlagen',
       cancel: 'Abbrechen',
       cancelFailed: 'Download konnte nicht abgebrochen werden'
     },
@@ -848,7 +934,14 @@ const de = {
         reboot: 'Neustarten',
         rebootDesc: 'Sind Sie sicher dass Sie NanoKVM neustarten möchten?',
         okBtn: 'Ja',
-        cancelBtn: 'Nein'
+        cancelBtn: 'Nein',
+        diskLocked: 'Aus, solange ein Image eingebunden ist (Einschalten bricht die Einbindung ab)',
+        diskCancelMount:
+          'Das Aktivieren des virtuellen Laufwerks bricht das eingebundene Image ab und unterbricht einen laufenden Image-Download oder -Upload. Fortfahren?',
+        diskBreakDownload:
+          'Das Aktivieren des virtuellen Laufwerks unterbricht den Image-Download. Fortfahren?',
+        attention: 'Achtung',
+        updateFailed: 'Aktualisieren des virtuellen Geräts fehlgeschlagen'
       },
       network: {
         title: 'Netzwerk',
@@ -1289,32 +1382,95 @@ const de = {
       account: {
         title: 'Konto',
         webAccount: 'Web Konto Name',
-        role: 'Rolle',
-        roles: {
-          admin: 'Administrator',
-          user: 'Benutzer'
-        },
         password: 'Passwort',
         updateBtn: 'Ändern',
         logoutBtn: 'Abmelden',
         logoutDesc: 'Möchten Sie sich wirklich abmelden?',
         okBtn: 'Ja',
         cancelBtn: 'Nein',
+        role: 'Rolle',
+        roles: {
+          admin: 'Administrator',
+          user: 'Benutzer'
+        },
         users: {
           title: 'Benutzer',
-          create: 'Benutzer anlegen',
+          create: 'Benutzer erstellen',
           enabled: 'Aktiviert',
           disabled: 'Deaktiviert',
-          deviceOwner: 'Gerätebesitzer',
+          deviceOwner: 'Geräteeigentümer',
           resetPassword: 'Passwort zurücksetzen',
           delete: 'Löschen',
-          deleteConfirm: 'Diesen Benutzer löschen und alle seine Sitzungen beenden?',
-          created: 'Benutzer angelegt',
+          deleteConfirm: 'Diesen Benutzer löschen und alle seine Sitzungen widerrufen?',
+          created: 'Benutzer erstellt',
           deleted: 'Benutzer gelöscht',
           passwordUpdated: 'Passwort aktualisiert',
           loadFailed: 'Benutzer konnten nicht geladen werden',
           saveFailed: 'Benutzer konnte nicht gespeichert werden',
-          deleteFailed: 'Benutzer konnte nicht gelöscht werden'
+          deleteFailed: 'Benutzer konnte nicht gelöscht werden',
+          editPermissions: 'Berechtigungen',
+          mcpLossTitle: 'MCP-Zugriff entziehen',
+          mcpLossDesc:
+            '{{name}} verliert den MCP-Zugriff. Der MCP-API-Schlüssel gilt für das ganze Gerät, eine Kopie bleibt daher gültig, bis der Schlüssel neu erzeugt wird. Das Neuerzeugen trennt alle MCP-Clients, bis sie den neuen Schlüssel erhalten.',
+          mcpLossRotate: 'MCP-API-Schlüssel neu erzeugen',
+          mcpLossKeep:
+            'Der aktuelle Schlüssel bleibt gültig, und wer eine Kopie hat, kann weiterhin Tastatur und Maus steuern. Sie können ihn später in den MCP-Einstellungen neu erzeugen.',
+          mcpKeyRotated: 'MCP-API-Schlüssel neu erzeugt. MCP-Clients benötigen den neuen Schlüssel.'
+        },
+        permissions: {
+          title: 'Berechtigungen',
+          editTitle: 'Berechtigungen bearbeiten',
+          save: 'Speichern',
+          saved: 'Gespeichert',
+          close: 'Schließen',
+          groupConsole: 'Konsole',
+          groupTarget: 'Zielrechner',
+          groupLibrary: 'Medienbibliothek',
+          groupHost: 'Dieses Gerät',
+          groupServices: 'Dienste',
+          consoleView: 'Bildschirm ansehen',
+          consoleControl: 'Tastatur und Maus',
+          power: 'Energie und Aufwecken',
+          mediumAttach: 'Medium einbinden',
+          libraryRead: 'Medienbibliothek durchsuchen',
+          libraryWrite: 'Medienbibliothek verwalten',
+          terminal: 'Terminal und Skripte',
+          device: 'Geräteeinstellungen',
+          network: 'Netzwerkeinstellungen',
+          update: 'Systemaktualisierung',
+          mcp: 'MCP-Dienst',
+          tailscale: 'Tailscale',
+          ai: 'KI-Assistent',
+          effectConsoleView:
+            'Zeigt den Zielbildschirm und legt Videomodus, Auflösung, Bildrate und Qualität fest, die alle Betrachter gemeinsam nutzen.',
+          effectConsoleControl: 'Sendet Tastatur- und Mauseingaben an den Zielrechner.',
+          effectPower:
+            'Schaltet den Zielrechner ein, aus und startet ihn neu und verwaltet die Wake-on-LAN-Geräteliste.',
+          effectMediumAttach:
+            'Bindet Medien am Zielrechner ein und aus und tauscht Dateien über die geteilte Partition mit ihm aus.',
+          effectLibraryRead: 'Listet und lädt Abbilder und die darin enthaltenen Dateien herunter.',
+          effectLibraryWrite:
+            'Lädt Abbilder hoch, erstellt und löscht sie und ändert die darin enthaltenen Dateien.',
+          effectTerminal:
+            'Gewährt eine Root-Shell auf diesem Gerät, ohne den Umweg über die Websitzung.',
+          effectDevice:
+            'Ermöglicht SSH (ebenfalls root), startet das Gerät neu, übergibt die rohe Datenpartition an den Zielrechner und ändert OLED, HDMI, mDNS, Arbeitsspeicher und Swap.',
+          effectNetwork: 'Ändert WLAN, DNS und TLS, was dieses Gerät vom Netz trennen kann.',
+          effectUpdate: 'Installiert Firmware und Anwendungspakete.',
+          effectMcp:
+            'Stellt einen geräteweiten API-Schlüssel aus, der Tastatur, Maus und Screenshots außerhalb der Websitzung steuert; eine Kopie bleibt nach dem Entzug gültig, sofern der Schlüssel nicht neu erzeugt wird – dies wird beim Entfernen der Berechtigung angeboten.',
+          effectTailscale: 'Bildet dieses Gerät in ein VPN-Mesh ein.',
+          effectAi:
+            'Steuert das Gerät über eine lokale Schnittstelle, die die übrigen Berechtigungen nicht einschränken; das entspricht praktisch der vollständigen Gerätekontrolle.',
+          fullControlWarning:
+            'Diese Berechtigungen laufen auf die vollständige Gerätekontrolle hinaus:',
+          emptyWarning: 'Dieses Konto hat keinerlei Funktionen und kann sich nur anmelden.',
+          impliedBy: 'Enthalten durch {{name}}',
+          grantCount_one: '{{count}} Berechtigung',
+          grantCount: '{{count}} Berechtigungen',
+          adminAll: 'Administratoren besitzen alle Berechtigungen',
+          catalogFailed:
+            'Die Berechtigungsliste konnte nicht geladen werden. Schließen Sie diesen Dialog und versuchen Sie es erneut.'
         }
       }
     },

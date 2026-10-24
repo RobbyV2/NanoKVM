@@ -11,27 +11,8 @@ improvements we want to own — they are stopgaps. When upstream ships its own f
 drop ours and take upstream's, so we do not carry a permanent divergence that has
 to be re-resolved on every merge.
 
-### Virtual keyboard: CommonJS default-import unwrap
-
-- **File:** `web/src/pages/desktop/virtual-keyboard/index.tsx`
-- **Our commit:** `2a00b82` "unwrap the keyboard cjs default"
-- **Upstream commit that broke it:** `761b02e` *feat(web): upgrade build tooling to
-  Vite 8 (#853)*
-
-`react-simple-keyboard` ships a UMD CommonJS build. Through Vite 7, the import site
-received interop that unwrapped the module's `__esModule` default, so
-`import Keyboard from 'react-simple-keyboard'` was the component. Vite 8 stopped
-injecting that interop, so the default import now arrives as the raw
-`module.exports` object (`{ KeyboardReact, default }`). Rendering that object throws
-React error #130 ("expected a class/function but got: object"), and because the
-error escapes to react-router's error boundary it takes the entire desktop route
-down, not just the keyboard.
-
-Our patch renames the default import and unwraps `.default` when it is present, so
-it is correct under either interop. **Delete it and restore the plain
-`import Keyboard from 'react-simple-keyboard'` as soon as upstream resolves the
-Vite 8 interop problem**, either by fixing the import themselves or by moving to a
-Vite release that restores the behaviour.
+Record each such patch here with its file, our commit, the upstream change that
+made it necessary and the upstream fix that retires it. None are currently carried.
 
 ## Workspace and builds
 

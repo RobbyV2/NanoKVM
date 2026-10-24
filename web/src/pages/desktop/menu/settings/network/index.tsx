@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/auth.ts';
 import { Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +9,10 @@ import { Wifi } from './wifi.tsx';
 
 export const Network = () => {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  // The USB network adapter is an emulated device, so its switch follows the
+  // device grant like the virtual disk's; Wi-Fi, DNS and TLS are this tab's own.
+  const canDevice = hasPermission('device');
 
   return (
     <>
@@ -23,9 +28,12 @@ export const Network = () => {
 
       <DNS />
 
-      <Divider className="opacity-50" style={{ margin: '32px 0' }} />
-
-      <UsbNetwork />
+      {canDevice && (
+        <>
+          <Divider className="opacity-50" style={{ margin: '32px 0' }} />
+          <UsbNetwork />
+        </>
+      )}
     </>
   );
 };

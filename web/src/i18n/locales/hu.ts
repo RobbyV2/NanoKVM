@@ -5,24 +5,22 @@ const hu = {
       login: 'Bejelentkezés',
       changePassword: 'Jelszó megváltoztatása',
       terminal: 'Terminál',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Képek és fájlmegosztás'
     },
     auth: {
       login: 'Bejelentkezés',
       placeholderUsername: 'Adja meg a felhasználónevet',
       placeholderPassword: 'Adja meg a jelszót',
-      placeholderCurrentPassword: 'Jelenlegi jelszó',
       placeholderPassword2: 'Adja meg újra a jelszót',
       noEmptyUsername: 'A felhasználónév nem lehet üres',
       noEmptyPassword: 'A jelszó nem lehet üres',
-      passwordLength: 'A jelszónak 8 és 72 karakter között kell lennie',
       noAccount:
         'Nem sikerült megszerezni a felhasználói információkat, frissítse az oldalt vagy állítsa vissza a jelszót',
       invalidUser: 'Érvénytelen felhasználónév vagy jelszó',
       locked: 'Túl sok bejelentkezés, kérjük, próbálja újra később',
       globalLocked: 'A rendszer védelem alatt áll, próbálkozzon újra később',
       error: 'Váratlan hiba',
-      invalidCurrentPassword: 'A jelenlegi jelszó helytelen',
       changePassword: 'Jelszó megváltoztatása',
       changePasswordDesc:
         'Az eszköz biztonsága érdekében módosítsa a webes bejelentkezési jelszót.',
@@ -43,7 +41,10 @@ const hu = {
         change2: 'Webes bejelentkezési jelszó',
         change3: 'Rendszer root jelszava (SSH bejelentkezési jelszó)',
         change4: 'A jelszavak visszaállításához tartsa lenyomva a BOOT gombot a NanoKVM-en.'
-      }
+      },
+      placeholderCurrentPassword: 'Jelenlegi jelszó',
+      passwordLength: 'A jelszónak 8 és 72 karakter között kell lennie',
+      invalidCurrentPassword: 'A jelenlegi jelszó helytelen'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -61,6 +62,17 @@ const hu = {
         passPlaceholder: 'AP jelszót',
         verifyBtn: 'Ellenőrizze'
       }
+    },
+    desktop: {
+      readOnly: 'Csak megtekintés',
+      readOnlyTip:
+        'Ez a fiók nem tud billentyűzet- vagy egérbemenetet küldeni a célgépnek, ezért a konzol csak a képernyőt jeleníti meg.'
+    },
+    noConsole: {
+      title: 'Ennek a fióknak nincs konzolhozzáférése',
+      description:
+        'Más képességeket kapott. Nyissa meg az egyik használható oldalt, vagy kérjen konzolhozzáférést egy adminisztrátortól.',
+      nothing: 'Ennek a fióknak még nincs engedélye. Kérjen engedélyeket egy adminisztrátortól.'
     },
     screen: {
       scale: 'Skála',
@@ -219,27 +231,44 @@ const hu = {
         disable: 'A HID-Csak mód letiltása'
       }
     },
-    image: {
-      title: 'Képek',
-      loading: 'Betöltés...',
-      empty: 'Nem található semmi',
+    storage: {
+      title: 'Képek és fájlmegosztás',
+      empty:
+        'Még nincsenek képek. Töltsön fel egy ISO vagy IMG fájlt, vagy másoljon egyet a lemezre a célgépről.',
+      notAttached: 'Nincs csatlakoztatva semmi',
+      attached: 'Csatlakoztatva: {{name}}',
+      eject: 'Kiadás',
+      mount: 'Csatlakoztatás',
       mountMode: 'Felszerelési mód',
-      mountFailed: 'Csatlakoztatás sikertelen',
-      mountDesc:
-        'Egyes rendszerekben szükséges lehet a virtuális lemez eltávolítása a távoli gépen, mielőtt a képet csatlakoztatja.',
-      unmountFailed: 'A leválasztás nem sikerült',
-      unmountDesc:
-        'Egyes rendszereken manuálisan kell kiadnia a távoli gazdagépről a kép leválasztása előtt.',
-      refresh: 'Frissítse a képlistát',
-      attention: 'Figyelem',
-      deleteConfirm: 'Biztosan törli ezt a képet?',
-      okBtn: 'Igen',
-      cancelBtn: 'Nem',
+      mountModeDisk: 'Háttértár',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Fájlkezelő megnyitása',
+      refresh: 'Frissítés',
+      delete: 'Törlés',
+      deleteTitle: 'Adathordozó törlése',
+      deleteConfirm: 'Törli a következőt: {{name}}? A benne lévő fájlok elvesznek.',
+      downloadImage: 'A kép letöltése',
+      typePartition: 'Megosztott fájlok',
+      volumeLabel: 'Cserélhető lemez',
+      groups: {
+        share: 'Fájlmegosztás',
+        images: 'Képek'
+      },
+      failed: 'A művelet nem sikerült',
+      hidOnly: 'Csak HID mód: a virtuális lemez nem érhető el',
+      disabled: 'A virtuális lemez ki van kapcsolva (Beállítások - Eszköz)',
+      force: {
+        title: 'Visszaveszi az adathordozót erővel?',
+        desc: 'A célgép még használja ezt az adathordozót. A visszavétel újra felsorolja az USB-eszközt, és elveszhet minden, amit még nem írt a lemezre.',
+        menuHint:
+          'A célgép használja ezt az adathordozót. Nyissa meg a fájlkezelőt az erővel történő visszavételhez.'
+      },
       tips: {
         title: 'Hogyan tölts fel képeket',
         usb1: 'Csatlakoztassa a NanoKVM-t a számítógépéhez USB-n keresztül.',
-        usb2: 'Győződjön meg róla, hogy a virtuális lemez csatlakoztatva van (Beállítások - Virtuális lemez).',
+        usb2: 'Ezen az oldalon csatolja a megosztott fájlokat háttértár módban.',
         usb3: 'Nyissa meg a virtuális lemezt a számítógépén, és másolja a kép fájlt a virtuális lemez gyökérkönyvtárába.',
+        usb4: 'A másolás végeztével adja ki a lemezt: a lemezkép ezután megjelenik a listában.',
         scp1: 'Győződjön meg róla, hogy a NanoKVM és a számítógépe ugyanazon a helyi hálózaton van.',
         scp2: 'Nyisson meg egy terminált a számítógépén, és használja az SCP parancsot a kép fájl feltöltésére a /data könyvtárba a NanoKVM-en.',
         scp3: 'Példa: scp your-image-path root@your-nanokvm-ip:/data',
@@ -249,7 +278,71 @@ const hu = {
         tf3: 'Helyezze a TF kártyát egy kártyaolvasóba, és csatlakoztassa a számítógépéhez.',
         tf4: 'Másolja a képfájlt a TF kártya /data könyvtárába.',
         tf5: 'Helyezze vissza a TF kártyát a NanoKVM-be.'
-      }
+      },
+      job: {
+        running: '{{name}} feldolgozása'
+      },
+      enableDisk: {
+        title: 'Bekapcsolja a virtuális lemezt?',
+        desc: 'Az adathordozó csatlakoztatásához a virtuális lemez kell, amely jelenleg ki van kapcsolva. Bekapcsolja? A célgép billentyűzete és egere egy pillanatra leválik.',
+        menuHint:
+          'A virtuális lemez ki van kapcsolva. Kapcsolja be a Beállítások - Eszköz menüben.',
+        askDevice:
+          'A virtuális lemez ki van kapcsolva. Előbb egy eszköz-engedéllyel rendelkező fióknak kell bekapcsolnia.'
+      },
+      add: {
+        title: 'Adathordozó hozzáadása',
+        upload: 'ISO vagy IMG feltöltése',
+        fromUrl: 'Letöltés URL-ről',
+        url: 'A kép URL-címe',
+        urlRequired: 'Adjon meg egy URL-t',
+        onlyImages: 'Csak .iso és .img fájlok csatlakoztathatók',
+        dropHint: 'Húzzon ide egy ISO vagy IMG fájlt, vagy kattintson a kiválasztáshoz',
+        cdromOnlyIso: 'CD-ROM csak ISO 9660 képet tartalmazhat',
+        uploadFailed: 'A feltöltés nem sikerült',
+        downloadFailed: 'A letöltés nem sikerült',
+        uploading: '{{name}} feltöltése',
+        downloading: '{{name}} letöltése',
+        done: '{{name}} elkészült',
+        checksumFailed: 'A lemezkép nem egyezik a SHA-256 ellenőrzőösszeggel.',
+        blocked: 'A célgép használja a lemezt',
+        copyHint:
+          'A képet SCP-vel is a data partícióra másolhatja, vagy a célgépről is átmásolhatja.'
+      },
+      files: {
+        selectMedium: 'Válasszon adathordozót a rajta lévő fájlok megtekintéséhez.',
+        reasonAttached: 'Ez az adathordozó a célgéphez van csatlakoztatva.',
+        reasonAttachedHint:
+          'Először adja ki: a célgépnek fel kell szabadítania a lemezt, mielőtt a fájlok olvashatók lennének.',
+        reasonNotBrowsable:
+          'Ez az adathordozó olyan fájlrendszert tartalmaz, amelyet a fájlkezelő nem tud megnyitni.',
+        reasonNoLoop: 'Ez az eszköz nem tud lemezképeket csatlakoztatni (nincs loop támogatás).',
+        reasonISOImage:
+          'Az ISO 9660 képek itt nem böngészhetők. A célgépre továbbra is csatlakoztathatók.',
+        empty: 'Ez a mappa üres',
+        noMatch: 'Nincs a keresésnek megfelelő fájl.',
+        free: '{{size}} szabad',
+        search: 'Keresés ebben a mappában',
+        sort: {
+          name: 'Név',
+          size: 'Méret',
+          type: 'Típus',
+          asc: 'Növekvő',
+          desc: 'Csökkenő'
+        },
+        upload: 'Fájl feltöltése az adathordozóra',
+        deleteFolderTitle: 'Mappa törlése',
+        deleteFolderConfirm:
+          'Törli a(z) {{name}} mappát és a teljes tartalmát? Ez nem vonható vissza.',
+        uploading: 'Feltöltés…',
+        uploadFailed: 'A feltöltés nem sikerült',
+        download: 'Letöltés',
+        delete: 'Törlés',
+        deleteTitle: 'Fájl törlése',
+        deleteConfirm: 'Törli a következőt: {{name}} az adathordozóról?'
+      },
+      yes: 'Igen',
+      no: 'Nem'
     },
     script: {
       title: 'Szkriptek',
@@ -291,19 +384,11 @@ const hu = {
       ok: 'Ok'
     },
     download: {
-      title: 'Képletöltő',
-      input: 'Adjon meg egy távoli képet URL',
-      ok: 'Ok',
-      disabled: '/data partíció RO, ezért nem tudjuk letölteni a képet',
-      uploadbox: 'Dobja ide a fájlt, vagy kattintson a kiválasztáshoz',
-      inputfile: 'Kérjük, írja be a képfájlt',
-      NoISO: 'Nincs ISO',
+      disabled:
+        'A data partíció írásvédett, amíg a célgép használja: új kép nem írható rá, a meglévő fájlok viszont letölthetők.',
       sha256: 'SHA-256 (opcionális)',
       sha256Placeholder: 'Adjon meg egy 64 karakteres SHA-256 ellenőrzőösszeget',
       invalidSHA256: 'A SHA-256 értékének 64 karakteres hexadecimális karakterláncnak kell lennie',
-      failed: 'Sikertelen letöltés',
-      success: 'Sikeres letöltés',
-      checksumFailed: 'Sikertelen letöltés: a SHA-256 ellenőrzése sikertelen',
       cancel: 'Mégse',
       cancelFailed: 'A letöltés megszakítása sikertelen'
     },
@@ -846,7 +931,13 @@ const hu = {
         reboot: 'Újraindítás',
         rebootDesc: 'Biztos, hogy újra akarja indítani a NanoKVM-t?',
         okBtn: 'Igen',
-        cancelBtn: 'Nem'
+        cancelBtn: 'Nem',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Figyelem',
+        updateFailed: 'A virtuális eszköz frissítése nem sikerült'
       },
       network: {
         title: 'Hálózat',
@@ -1280,32 +1371,93 @@ const hu = {
       account: {
         title: 'Fiók',
         webAccount: 'Webes fiók neve',
-        role: 'Szerepkör',
-        roles: {
-          admin: 'Rendszergazda',
-          user: 'Felhasználó'
-        },
         password: 'Jelszó',
         updateBtn: 'Update',
         logoutBtn: 'Kijelentkezés',
         logoutDesc: 'Biztos, hogy ki szeretne jelentkezni?',
         okBtn: 'Igen',
         cancelBtn: 'Nem',
+        role: 'Szerepkör',
+        roles: {
+          admin: 'Adminisztrátor',
+          user: 'Felhasználó'
+        },
         users: {
           title: 'Felhasználók',
           create: 'Felhasználó létrehozása',
           enabled: 'Engedélyezve',
           disabled: 'Letiltva',
-          deviceOwner: 'Az eszköz tulajdonosa',
+          deviceOwner: 'Eszköz tulajdonosa',
           resetPassword: 'Jelszó visszaállítása',
           delete: 'Törlés',
           deleteConfirm: 'Törli ezt a felhasználót és visszavonja az összes munkamenetét?',
           created: 'Felhasználó létrehozva',
           deleted: 'Felhasználó törölve',
           passwordUpdated: 'Jelszó frissítve',
-          loadFailed: 'Nem sikerült betölteni a felhasználókat',
-          saveFailed: 'Nem sikerült menteni a felhasználót',
-          deleteFailed: 'Nem sikerült törölni a felhasználót'
+          loadFailed: 'A felhasználókat nem sikerült betölteni',
+          saveFailed: 'A felhasználót nem sikerült menteni',
+          deleteFailed: 'A felhasználót nem sikerült törölni',
+          editPermissions: 'Engedélyek',
+          mcpLossTitle: 'MCP-hozzáférés visszavonása',
+          mcpLossDesc:
+            '{{name}} elveszíti az MCP-hozzáférést. Az MCP API-kulcsot az egész eszköz közösen használja, így egy másolata az újragenerálásig működik. Az újragenerálás minden MCP-klienst lecsatlakoztat, amíg meg nem kapják az új kulcsot.',
+          mcpLossRotate: 'MCP API-kulcs újragenerálása',
+          mcpLossKeep:
+            'A jelenlegi kulcs érvényes marad, és akinél másolat van, továbbra is vezérelheti a billentyűzetet és az egeret. Később az MCP-beállításokban újragenerálhatja.',
+          mcpKeyRotated: 'MCP API-kulcs újragenerálva. Az MCP-klienseknek az új kulcs kell.'
+        },
+        permissions: {
+          title: 'Engedélyek',
+          editTitle: 'Engedélyek szerkesztése',
+          save: 'Mentés',
+          saved: 'Mentve',
+          close: 'Bezárás',
+          groupConsole: 'Konzol',
+          groupTarget: 'Célgép',
+          groupLibrary: 'Médiatár',
+          groupHost: 'Ez az eszköz',
+          groupServices: 'Szolgáltatások',
+          consoleView: 'Képernyő megtekintése',
+          consoleControl: 'Billentyűzet és egér',
+          power: 'Tápellátás és ébresztés',
+          mediumAttach: 'Médium csatolása',
+          libraryRead: 'Médiatár böngészése',
+          libraryWrite: 'Médiatár kezelése',
+          terminal: 'Terminál és szkriptek',
+          device: 'Eszközbeállítások',
+          network: 'Hálózati beállítások',
+          update: 'Rendszerfrissítés',
+          mcp: 'MCP szolgáltatás',
+          tailscale: 'Tailscale',
+          ai: 'AI-asszisztens',
+          effectConsoleView:
+            'Megjeleníti a célgép képernyőjét, és beállítja a minden néző által közösen használt videómódot, felbontást, képsebességet és minőséget.',
+          effectConsoleControl: 'Billentyűzet- és egérbevitelt küld a célgépnek.',
+          effectPower:
+            'Be- és kikapcsolja, valamint újraindítja a célgépet, és kezeli a Wake-on-LAN eszközlistát.',
+          effectMediumAttach:
+            'Csatolja és kiadja a médiumokat a célgépen, és a megosztott partíción keresztül fájlokat cserél vele.',
+          effectLibraryRead: 'Listázza és letölti a lemezképeket és a bennük lévő fájlokat.',
+          effectLibraryWrite:
+            'Feltölt, létrehoz és töröl lemezképeket, valamint módosítja a bennük lévő fájlokat.',
+          effectTerminal: 'Root shellt ad ezen az eszközön, a webes munkamenet megkerülésével.',
+          effectDevice:
+            'Lehetővé teszi az SSH bekapcsolását (ez is root), az eszköz újraindítását, a nyers adatpartíció átadását a célgépnek, valamint az OLED, HDMI, mDNS, memória és swap beállításainak módosítását.',
+          effectNetwork:
+            'Módosítja a Wi-Fi, DNS és TLS beállításokat, ami leválaszthatja ezt az eszközt a hálózatról.',
+          effectUpdate: 'Firmware-t és alkalmazáscsomagokat telepít.',
+          effectMcp:
+            'Eszközszintű API-kulcsot ad ki, amely a webes munkameneten kívül vezérli a billentyűzetet, az egeret és a képernyőképeket; egy másolat az engedély visszavonása után is működik, hacsak nem generálják újra a kulcsot, amit az engedély eltávolításakor felajánlunk.',
+          effectTailscale: 'Csatlakoztatja ezt az eszközt egy VPN-hálózathoz.',
+          effectAi:
+            'Olyan helyi felületen keresztül vezérli az eszközt, amelyet a többi engedély nem korlátoz, így gyakorlatilag teljes eszközvezérlést jelent.',
+          fullControlWarning: 'Ezek az engedélyek teljes eszközvezérlést jelentenek:',
+          emptyWarning: 'Ennek a fióknak nem lesz semmilyen funkciója, csak bejelentkezni tud.',
+          impliedBy: 'A(z) {{name}} tartalmazza',
+          grantCount_one: '{{count}} engedély',
+          grantCount: '{{count}} engedély',
+          adminAll: 'Az adminisztrátorok minden engedéllyel rendelkeznek',
+          catalogFailed: 'Az engedélylista nem tölthető be. Zárja be az ablakot, és próbálja újra.'
         }
       }
     },

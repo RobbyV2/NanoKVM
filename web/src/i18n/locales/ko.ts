@@ -5,24 +5,22 @@ const ko = {
       login: '로그인',
       changePassword: '비밀번호 변경',
       terminal: '터미널',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: '이미지 및 파일 공유'
     },
     auth: {
       login: '로그인',
       placeholderUsername: '사용자 이름을 입력하세요.',
       placeholderPassword: '비밀번호를 입력하세요.',
-      placeholderCurrentPassword: '현재 비밀번호',
       placeholderPassword2: '비밀번호를 다시 입력하세요.',
       noEmptyUsername: '사용자 이름은 비어있을 수 없습니다.',
       noEmptyPassword: '비밀번호는 비어있을 수 없습니다.',
-      passwordLength: '비밀번호는 8자 이상 72자 이하여야 합니다',
       noAccount:
         '사용자 정보를 불러오는 데 실패했습니다. 페이지를 새로고침하거나 비밀번호를 초기화하세요.',
       invalidUser: '사용자 이름이나 비밀번호가 틀렸습니다.',
       locked: '로그인 횟수가 너무 많습니다. 나중에 다시 시도해 주세요.',
       globalLocked: '시스템이 보호 중입니다. 나중에 다시 시도해 주세요.',
       error: '알 수 없는 오류',
-      invalidCurrentPassword: '현재 비밀번호가 올바르지 않습니다',
       changePassword: '비밀번호 변경',
       changePasswordDesc: '보안을 위해 웹 로그인 비밀번호를 변경하세요.',
       differentPassword: '비밀번호가 서로 일치하지 않습니다.',
@@ -41,7 +39,10 @@ const ko = {
         change2: '웹 로그인 비밀번호',
         change3: '시스템 루트 비밀번호 (SSH 로그인 비밀번호)',
         change4: '비밀번호를 재설정하려면 NanoKVM의 BOOT 버튼을 길게 누르세요.'
-      }
+      },
+      placeholderCurrentPassword: '현재 비밀번호',
+      passwordLength: '비밀번호는 8~72자여야 합니다',
+      invalidCurrentPassword: '현재 비밀번호가 올바르지 않습니다'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -59,6 +60,17 @@ const ko = {
         passPlaceholder: 'AP 비밀번호',
         verifyBtn: '확인'
       }
+    },
+    desktop: {
+      readOnly: '보기 전용',
+      readOnlyTip:
+        '이 계정은 대상 컴퓨터로 키보드나 마우스 입력을 보낼 수 없으므로 콘솔은 화면만 표시합니다.'
+    },
+    noConsole: {
+      title: '이 계정에는 콘솔 권한이 없습니다',
+      description:
+        '다른 기능이 부여되어 있습니다. 사용할 수 있는 페이지를 열거나 관리자에게 콘솔 권한을 요청하세요.',
+      nothing: '이 계정에는 아직 권한이 없습니다. 관리자에게 부여를 요청하세요.'
     },
     screen: {
       scale: '규모',
@@ -212,27 +224,44 @@ const ko = {
         disable: 'HID 전용 모드 비활성화'
       }
     },
-    image: {
-      title: '이미지',
-      loading: '불러오는 중...',
-      empty: '아무것도 없습니다.',
+    storage: {
+      title: '이미지 및 파일 공유',
+      empty:
+        '아직 이미지가 없습니다. ISO 또는 IMG를 업로드하거나 대상 컴퓨터에서 디스크로 복사하세요.',
+      notAttached: '마운트된 항목 없음',
+      attached: '마운트됨: {{name}}',
+      eject: '꺼내기',
+      mount: '마운트',
       mountMode: '마운트 모드',
-      mountFailed: '마운트 실패',
-      mountDesc:
-        '일부 시스템에서는 이미지를 마운트하기 전에 원격 호스트에서 가상 디스크를 제거해야 합니다.',
-      unmountFailed: '언마운트 실패',
-      unmountDesc:
-        '일부 시스템에서는 이미지를 언마운트하기 전에 원격 호스트에서 수동으로 제거하여야 합니다.',
-      refresh: '이미지 목록 새로고침',
-      attention: '주의',
-      deleteConfirm: '이 이미지를 제거하시겠습니까?',
-      okBtn: '네',
-      cancelBtn: '아니오',
+      mountModeDisk: '대용량 저장소',
+      mountModeCdrom: 'CD-ROM',
+      openManager: '파일 관리자 열기',
+      refresh: '새로 고침',
+      delete: '삭제',
+      deleteTitle: '미디어 삭제',
+      deleteConfirm: '{{name}}을(를) 삭제할까요? 안에 있는 파일이 사라집니다.',
+      downloadImage: '이미지 다운로드',
+      typePartition: '공유 파일',
+      volumeLabel: '이동식 디스크',
+      groups: {
+        share: '파일 공유',
+        images: '이미지'
+      },
+      failed: '작업 실패',
+      hidOnly: 'HID 전용 모드: 가상 디스크를 사용할 수 없습니다',
+      disabled: '가상 디스크가 꺼져 있습니다 (설정 - 장치)',
+      force: {
+        title: '미디어를 강제로 되찾을까요?',
+        desc: '대상 컴퓨터가 아직 이 미디어를 사용하고 있습니다. 되찾으면 USB 장치가 다시 열거되고 아직 디스크에 기록하지 않은 내용이 사라질 수 있습니다.',
+        menuHint:
+          '대상 컴퓨터가 이 미디어를 사용하고 있습니다. 파일 관리자를 열어 강제로 되찾으세요.'
+      },
       tips: {
         title: '업로드 방법',
         usb1: 'USB를 통해 NanoKVM을 컴퓨터에 연결하세요.',
-        usb2: '가상 디스크가 마운트되었는지 확인하세요. (설정 - 가상 디스크).',
+        usb2: '이 페이지에서 공유 파일을 대용량 저장 장치 모드로 마운트합니다.',
         usb3: '컴퓨터에서 가상 디스크를 열고 이미지 파일을 가상 디스크의 루트 디렉토리로 복사하세요.',
+        usb4: '복사가 끝나면 디스크를 꺼냅니다. 그러면 이미지가 목록에 나타납니다.',
         scp1: 'NanoKVM과 컴퓨터가 동일한 로컬 네트워크에 있는지 확인하세요.',
         scp2: '컴퓨터에서 터미널을 열고 SCP 명령을 사용하여 이미지 파일을 NanoKVM의 /data 디렉터리에 업로드하세요.',
         scp3: '예시: scp [이미지 파일 경로] root@[NanoKVM IP 주소]:/data',
@@ -242,7 +271,67 @@ const ko = {
         tf3: 'TF 카드를 카드 리더기에 삽입하고 컴퓨터에 연결하세요.',
         tf4: '이미지 파일을 TF 카드의 /data 디렉터리에 복사하세요.',
         tf5: 'TF 카드를 NanoKVM에 삽입하세요.'
-      }
+      },
+      job: {
+        running: '{{name}} 처리 중'
+      },
+      enableDisk: {
+        title: '가상 디스크를 켤까요?',
+        desc: '미디어를 마운트하려면 현재 꺼져 있는 가상 디스크가 필요합니다. 지금 켤까요? 대상 컴퓨터의 키보드와 마우스가 잠시 연결 해제됩니다.',
+        menuHint: '가상 디스크가 꺼져 있습니다. 설정 - 장치에서 켜세요.',
+        askDevice: '가상 디스크가 꺼져 있습니다. 장치 권한이 있는 계정에서 먼저 켜야 합니다.'
+      },
+      add: {
+        title: '미디어 추가',
+        upload: 'ISO 또는 IMG 업로드',
+        fromUrl: 'URL에서 다운로드',
+        url: '이미지 URL',
+        urlRequired: 'URL을 입력하세요',
+        onlyImages: '.iso 및 .img 파일만 마운트할 수 있습니다',
+        dropHint: 'ISO 또는 IMG를 여기로 끌어오거나 클릭하여 파일을 선택하세요',
+        cdromOnlyIso: 'CD-ROM에는 ISO 9660 이미지만 넣을 수 있습니다',
+        uploadFailed: '업로드 실패',
+        downloadFailed: '다운로드 실패',
+        uploading: '{{name}} 업로드 중',
+        downloading: '{{name}} 다운로드 중',
+        done: '{{name}} 준비 완료',
+        checksumFailed: '이미지가 SHA-256 체크섬과 일치하지 않습니다.',
+        blocked: '대상 컴퓨터가 디스크를 사용 중입니다',
+        copyHint:
+          'SCP로 데이터 파티션에 이미지를 복사하거나 대상 컴퓨터에서 직접 복사할 수도 있습니다.'
+      },
+      files: {
+        selectMedium: '미디어를 선택하면 안에 있는 파일을 볼 수 있습니다.',
+        reasonAttached: '이 미디어는 대상 컴퓨터에 연결되어 있습니다.',
+        reasonAttachedHint: '먼저 꺼내세요. 대상 컴퓨터가 디스크를 놓아야 파일을 읽을 수 있습니다.',
+        reasonNotBrowsable: '이 미디어에는 파일 관리자가 열 수 없는 파일 시스템이 있습니다.',
+        reasonNoLoop: '이 장치는 디스크 이미지를 마운트할 수 없습니다(loop 미지원).',
+        reasonISOImage:
+          'ISO 9660 이미지의 내용은 여기에서 볼 수 없습니다. 대상 컴퓨터에는 그대로 마운트할 수 있습니다.',
+        empty: '이 폴더는 비어 있습니다',
+        noMatch: '검색과 일치하는 파일이 없습니다.',
+        free: '{{size}} 남음',
+        search: '이 폴더에서 검색',
+        sort: {
+          name: '이름',
+          size: '크기',
+          type: '종류',
+          asc: '오름차순',
+          desc: '내림차순'
+        },
+        upload: '미디어에 파일 업로드',
+        deleteFolderTitle: '폴더 삭제',
+        deleteFolderConfirm:
+          '폴더 {{name}}와(과) 그 안의 모든 내용을 삭제할까요? 되돌릴 수 없습니다.',
+        uploading: '업로드 중…',
+        uploadFailed: '업로드 실패',
+        download: '다운로드',
+        delete: '삭제',
+        deleteTitle: '파일 삭제',
+        deleteConfirm: '미디어에서 {{name}}을(를) 삭제할까요?'
+      },
+      yes: '예',
+      no: '아니요'
     },
     script: {
       title: '스크립트',
@@ -284,19 +373,11 @@ const ko = {
       ok: '확인'
     },
     download: {
-      title: '이미지 다운로드',
-      input: '원격 이미지 URL을 입력하세요.',
-      ok: '확인',
-      disabled: '/data 파티션이 읽기 전용(RO) 상태이므로 이미지를 다운로드할 수 없습니다.',
-      uploadbox: '여기에 파일을 놓거나 클릭하여 선택하세요.',
-      inputfile: '이미지 파일을 입력해주세요',
-      NoISO: 'ISO 없음',
+      disabled:
+        '대상 컴퓨터가 사용하는 동안 데이터 파티션은 읽기 전용입니다. 새 이미지는 쓸 수 없지만 기존 파일은 내려받을 수 있습니다.',
       sha256: 'SHA-256 (선택 사항)',
       sha256Placeholder: '64자 SHA-256 체크섬을 입력하세요',
       invalidSHA256: 'SHA-256은 64자의 16진수 문자열이어야 합니다',
-      failed: '다운로드 실패',
-      success: '다운로드 성공',
-      checksumFailed: '다운로드 실패: SHA-256 검증 실패',
       cancel: '취소',
       cancelFailed: '다운로드 취소 실패'
     },
@@ -826,7 +907,13 @@ const ko = {
         reboot: '재부팅',
         rebootDesc: 'NanoKVM을 재부팅하시겠습니까?',
         okBtn: '네',
-        cancelBtn: '아니오'
+        cancelBtn: '아니오',
+        diskLocked: '이미지가 마운트된 동안 꺼짐 (켜면 마운트가 해제됩니다)',
+        diskCancelMount:
+          '가상 디스크를 켜면 마운트된 이미지가 해제되고 진행 중인 이미지 다운로드/업로드도 중단됩니다. 계속하시겠습니까?',
+        diskBreakDownload: '가상 디스크를 켜면 이미지 다운로드가 중단됩니다. 계속하시겠습니까?',
+        attention: '주의',
+        updateFailed: '가상 장치를 업데이트하지 못했습니다'
       },
       network: {
         title: '네트워크',
@@ -1252,32 +1339,91 @@ const ko = {
       account: {
         title: '계정',
         webAccount: '웹 계정',
-        role: '역할',
-        roles: {
-          admin: '관리자',
-          user: '사용자'
-        },
         password: '비밀번호',
         updateBtn: '업데이트',
         logoutBtn: '로그아웃',
         logoutDesc: '정말로 로그아웃 하시겠습니까?',
         okBtn: '네',
         cancelBtn: '아니오',
+        role: '역할',
+        roles: {
+          admin: '관리자',
+          user: '사용자'
+        },
         users: {
           title: '사용자',
           create: '사용자 만들기',
-          enabled: '사용함',
+          enabled: '사용',
           disabled: '사용 안 함',
           deviceOwner: '장치 소유자',
           resetPassword: '비밀번호 재설정',
           delete: '삭제',
           deleteConfirm: '이 사용자를 삭제하고 모든 세션을 취소할까요?',
-          created: '사용자를 만들었습니다',
-          deleted: '사용자를 삭제했습니다',
-          passwordUpdated: '비밀번호를 변경했습니다',
+          created: '사용자 생성됨',
+          deleted: '사용자 삭제됨',
+          passwordUpdated: '비밀번호 업데이트됨',
           loadFailed: '사용자를 불러오지 못했습니다',
           saveFailed: '사용자를 저장하지 못했습니다',
-          deleteFailed: '사용자를 삭제하지 못했습니다'
+          deleteFailed: '사용자를 삭제하지 못했습니다',
+          editPermissions: '권한',
+          mcpLossTitle: 'MCP 접근 취소',
+          mcpLossDesc:
+            '{{name}} 계정이 MCP 접근 권한을 잃습니다. MCP API 키는 장치 전체가 공유하므로 복사된 키는 재생성할 때까지 계속 유효합니다. 재생성하면 새 키를 받을 때까지 모든 MCP 클라이언트의 연결이 끊어집니다.',
+          mcpLossRotate: 'MCP API 키 재생성',
+          mcpLossKeep:
+            '현재 키는 계속 유효하며, 사본을 가진 사람은 여전히 키보드와 마우스를 제어할 수 있습니다. 나중에 MCP 설정에서 재생성할 수 있습니다.',
+          mcpKeyRotated: 'MCP API 키를 재생성했습니다. MCP 클라이언트에 새 키가 필요합니다.'
+        },
+        permissions: {
+          title: '권한',
+          editTitle: '권한 편집',
+          save: '저장',
+          saved: '저장됨',
+          close: '닫기',
+          groupConsole: '콘솔',
+          groupTarget: '대상 머신',
+          groupLibrary: '미디어 라이브러리',
+          groupHost: '이 장치',
+          groupServices: '서비스',
+          consoleView: '화면 보기',
+          consoleControl: '키보드 및 마우스',
+          power: '전원 및 깨우기',
+          mediumAttach: '미디어 연결',
+          libraryRead: '라이브러리 탐색',
+          libraryWrite: '라이브러리 관리',
+          terminal: '터미널 및 스크립트',
+          device: '장치 설정',
+          network: '네트워크 설정',
+          update: '시스템 업데이트',
+          mcp: 'MCP 서비스',
+          tailscale: 'Tailscale',
+          ai: 'AI 어시스턴트',
+          effectConsoleView:
+            '대상 화면을 표시하고 모든 시청자가 공유하는 비디오 모드, 해상도, 프레임 속도, 화질을 설정합니다.',
+          effectConsoleControl: '키보드와 마우스 입력을 대상 머신으로 보냅니다.',
+          effectPower:
+            '대상 머신의 전원을 켜고 끄고 재설정하며, Wake-on-LAN 장치 목록을 관리합니다.',
+          effectMediumAttach:
+            '미디어를 대상 머신에 마운트하거나 분리하고, 공유 파티션을 통해 파일을 주고받습니다.',
+          effectLibraryRead: '이미지와 그 안의 파일을 나열하고 내려받습니다.',
+          effectLibraryWrite: '이미지를 업로드, 생성, 삭제하고 이미지 안의 파일을 변경합니다.',
+          effectTerminal: '웹 세션을 거치지 않고 이 장치에서 root 셸을 제공합니다.',
+          effectDevice:
+            'SSH 활성화(역시 root), 장치 재부팅, 원시 데이터 파티션을 대상 머신에 제공, OLED·HDMI·mDNS·메모리·스왑 설정 변경이 가능합니다.',
+          effectNetwork: 'Wi-Fi, DNS, TLS를 변경하며, 이 장치가 네트워크에서 끊길 수 있습니다.',
+          effectUpdate: '펌웨어와 응용 프로그램 패키지를 설치합니다.',
+          effectMcp:
+            '장치 전체에 유효한 API 키를 발급하여 웹 세션 밖에서 키보드, 마우스, 스크린샷을 제어합니다. 이 권한을 취소해도 복사된 키는 재생성하지 않는 한 유효합니다(권한을 제거할 때 재생성 여부를 묻습니다).',
+          effectTailscale: '이 장치를 VPN 메시에 연결합니다.',
+          effectAi:
+            '다른 권한의 제한을 받지 않는 로컬 인터페이스로 장치를 제어하므로 사실상 완전한 장치 제어 권한입니다.',
+          fullControlWarning: '이 권한들은 장치에 대한 완전한 제어 권한에 해당합니다:',
+          emptyWarning: '이 계정은 어떤 기능도 없이 로그인만 할 수 있습니다.',
+          impliedBy: '{{name}}에 포함됨',
+          grantCount_one: '권한 {{count}}개',
+          grantCount: '권한 {{count}}개',
+          adminAll: '관리자는 모든 권한을 가집니다',
+          catalogFailed: '권한 목록을 불러오지 못했습니다. 창을 닫고 다시 시도하세요.'
         }
       }
     },

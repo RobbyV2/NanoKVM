@@ -5,24 +5,22 @@ const ca = {
       login: 'Inici de sessió',
       changePassword: 'Canviar contrasenya',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Imatges i compartició de fitxers'
     },
     auth: {
       login: 'Inici de sessió',
       placeholderUsername: "Nom d'usuari",
       placeholderPassword: 'Contrasenya',
-      placeholderCurrentPassword: 'Contrasenya actual',
       placeholderPassword2: 'Torna a introduir la contrasenya',
       noEmptyUsername: "Cal introduir el nom d'usuari",
       noEmptyPassword: 'Cal introduir la contrasenya',
-      passwordLength: 'La contrasenya ha de tenir entre 8 i 72 caràcters',
       noAccount:
         "No s'ha pogut obtenir la informació de l'usuari, actualitza la pàgina web o restableix la contrasenya",
       invalidUser: "Nom d'usuari o contrasenya invàlids",
       locked: 'Massa inicis de sessió, si us plau, torna-ho a provar més tard',
       globalLocked: 'Sistema sota protecció, torneu-ho a provar més tard',
       error: 'Error inesperat',
-      invalidCurrentPassword: 'La contrasenya actual no és correcta',
       changePassword: 'Canviar la contrasenya',
       changePasswordDesc: 'Per a la seguretat del dispositiu, canvia la contrasenya!',
       differentPassword: 'Les contrasenyes no coincideixen',
@@ -42,7 +40,10 @@ const ca = {
         change2: "Contrasenya d'inici de sessió web",
         change3: 'Contrasenya root del sistema (inici de sessió SSH)',
         change4: 'Per restablir les contrasenyes, mantingues premut el botó BOOT del NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Contrasenya actual',
+      passwordLength: 'La contrasenya ha de tenir entre 8 i 72 caràcters',
+      invalidCurrentPassword: 'La contrasenya actual no és correcta'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -60,6 +61,17 @@ const ca = {
         passPlaceholder: 'AP contrasenya',
         verifyBtn: 'Verificar'
       }
+    },
+    desktop: {
+      readOnly: 'Només lectura',
+      readOnlyTip:
+        'Aquest compte no pot enviar entrada de teclat ni de ratolí a la màquina objectiu, de manera que la consola només mostra la pantalla.'
+    },
+    noConsole: {
+      title: 'Aquest compte no té accés a la consola',
+      description:
+        'Se li han concedit altres capacitats. Obriu una de les pàgines que pot usar o demaneu a un administrador accés a la consola.',
+      nothing: 'Aquest compte encara no té permisos. Demaneu a un administrador que n’atorgui.'
     },
     screen: {
       scale: 'Escala',
@@ -216,26 +228,44 @@ const ca = {
         disable: 'Desactiva mode només HID'
       }
     },
-    image: {
-      title: 'Imatges',
-      loading: 'Carregant...',
-      empty: "No s'ha trobat res",
+    storage: {
+      title: 'Imatges i compartició de fitxers',
+      empty:
+        "Encara no hi ha imatges. Puja una ISO o una IMG, o copia'n una al disc des de l'ordinador remot.",
+      notAttached: 'Cap dispositiu muntat',
+      attached: 'Muntat: {{name}}',
+      eject: 'Expulsa',
+      mount: 'Munta',
       mountMode: 'Mode de muntatge',
-      mountFailed: 'Error en muntar',
-      mountDesc: 'En alguns sistemes cal expulsar el disc virtual abans de muntar la imatge.',
-      unmountFailed: "No s'ha pogut desmuntar",
-      unmountDesc:
-        "En alguns sistemes, cal expulsar manualment de l'amfitrió remot abans de desmuntar la imatge.",
-      refresh: 'Actualitza la llista',
-      attention: 'Atenció',
-      deleteConfirm: 'Esteu segur que voleu suprimir aquesta imatge?',
-      okBtn: 'Sí',
-      cancelBtn: 'No',
+      mountModeDisk: 'Emmagatzematge massiu',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Obre el gestor de fitxers',
+      refresh: 'Actualitza',
+      delete: 'Elimina',
+      deleteTitle: 'Elimina el suport',
+      deleteConfirm: 'Voleu eliminar {{name}}? Els fitxers que conté es perdran.',
+      downloadImage: 'Baixa la imatge',
+      typePartition: 'Fitxers compartits',
+      volumeLabel: 'Disc extraïble',
+      groups: {
+        share: 'Compartició de fitxers',
+        images: 'Imatges'
+      },
+      failed: "L'operació ha fallat",
+      hidOnly: 'Mode només HID: el disc virtual no està disponible',
+      disabled: 'El disc virtual està desactivat (Configuració - Dispositiu)',
+      force: {
+        title: 'Voleu recuperar el suport per la força?',
+        desc: "L'ordinador remot encara fa servir aquest suport. Recuperar-lo torna a enumerar el dispositiu USB i pot perdre tot el que encara no ha escrit al disc.",
+        menuHint:
+          "L'ordinador remot fa servir aquest suport. Obriu el gestor de fitxers per recuperar-lo per la força."
+      },
       tips: {
         title: 'Com pujar imatges',
         usb1: 'Connecta el NanoKVM al teu ordinador via USB.',
-        usb2: "Assegura't que el disc virtual està muntat (Configuració - Disc Virtual).",
+        usb2: "En aquesta pàgina, munta els fitxers compartits en mode d'emmagatzematge massiu.",
         usb3: "Obre el disc virtual i copia la imatge a l'arrel.",
+        usb4: 'Expulsa el disc quan acabi la còpia: la imatge apareixerà llavors a la llista.',
         scp1: 'Comprova que el NanoKVM i el teu ordinador estan a la mateixa xarxa.',
         scp2: 'Obre un terminal i usa SCP per pujar la imatge al directori /data del NanoKVM.',
         scp3: 'Exemple: scp ruta-de-la-imatge root@ip-del-nanokvm:/data',
@@ -245,7 +275,69 @@ const ca = {
         tf3: "Introdueix la targeta en un lector i connecta'l a l'ordinador.",
         tf4: 'Copia la imatge al directori /data de la targeta.',
         tf5: 'Reintrodueix la targeta al NanoKVM.'
-      }
+      },
+      job: {
+        running: "S'està processant {{name}}"
+      },
+      enableDisk: {
+        title: 'Voleu activar el disc virtual?',
+        desc: "Per muntar un suport cal el disc virtual, que ara està desactivat. Voleu activar-lo? El teclat i el ratolí de l'ordinador remot es desconnectaran un moment.",
+        menuHint: 'El disc virtual està desactivat. Activeu-lo a Configuració - Dispositiu.',
+        askDevice:
+          "El disc virtual està desactivat. Cal que un compte amb el permís de dispositiu l'activi primer."
+      },
+      add: {
+        title: 'Afegeix un suport',
+        upload: 'Puja una ISO o IMG',
+        fromUrl: "Baixa des d'una URL",
+        url: 'URL de la imatge',
+        urlRequired: 'Introduïu una URL',
+        onlyImages: 'Només es poden muntar fitxers .iso i .img',
+        dropHint: 'Arrossegueu una ISO o IMG aquí, o feu clic per triar un fitxer',
+        cdromOnlyIso: 'Un CD-ROM només pot contenir una imatge ISO 9660',
+        uploadFailed: 'La pujada ha fallat',
+        downloadFailed: 'La baixada ha fallat',
+        uploading: "S'està pujant {{name}}",
+        downloading: "S'està baixant {{name}}",
+        done: '{{name}} està llest',
+        checksumFailed: 'La imatge no coincideix amb la suma de verificació SHA-256.',
+        blocked: "L'ordinador remot fa servir el disc",
+        copyHint:
+          "També podeu copiar una imatge a la partició de dades per SCP, o des de l'ordinador remot."
+      },
+      files: {
+        selectMedium: 'Seleccioneu un suport per veure els fitxers que conté.',
+        reasonAttached: "Aquest suport està connectat a l'ordinador remot.",
+        reasonAttachedHint:
+          "Expulseu-lo primer: l'ordinador remot ha d'alliberar el disc abans que se'n puguin llegir els fitxers.",
+        reasonNotBrowsable: 'Aquest suport conté un sistema de fitxers que el gestor no pot obrir.',
+        reasonNoLoop: 'Aquest dispositiu no pot muntar imatges de disc (sense suport de loop).',
+        reasonISOImage:
+          "Una imatge ISO 9660 no es pot navegar aquí. Es pot muntar igualment a l'ordinador remot.",
+        empty: 'Aquesta carpeta és buida',
+        noMatch: 'Cap fitxer coincideix amb la cerca.',
+        free: '{{size}} lliures',
+        search: 'Cerca en aquesta carpeta',
+        sort: {
+          name: 'Nom',
+          size: 'Mida',
+          type: 'Tipus',
+          asc: 'Ascendent',
+          desc: 'Descendent'
+        },
+        upload: 'Puja un fitxer al suport',
+        deleteFolderTitle: 'Suprimeix la carpeta',
+        deleteFolderConfirm:
+          'Voleu suprimir la carpeta {{name}} i tot el que conté? Aquesta acció no es pot desfer.',
+        uploading: "S'està pujant…",
+        uploadFailed: 'La pujada ha fallat',
+        download: 'Baixa',
+        delete: 'Elimina',
+        deleteTitle: 'Elimina el fitxer',
+        deleteConfirm: 'Voleu eliminar {{name}} del suport?'
+      },
+      yes: 'Sí',
+      no: 'No'
     },
     script: {
       title: 'Scripts',
@@ -287,19 +379,11 @@ const ca = {
       ok: "D'acord"
     },
     download: {
-      title: "Descarregador d'imatges",
-      input: 'Introdueix la URL de la imatge',
-      ok: "D'acord",
-      disabled: 'La partició /data és només lectura. No es pot descarregar la imatge.',
-      uploadbox: 'Deixeu anar el fitxer aquí o feu clic per seleccionar-lo',
-      inputfile: "Introduïu el fitxer d'imatge",
-      NoISO: 'Cap ISO',
+      disabled:
+        "La partició de dades és només de lectura mentre l'ordinador remot la fa servir: no s'hi poden escriure imatges noves, però els fitxers existents es poden baixar.",
       sha256: 'SHA-256 (opcional)',
       sha256Placeholder: 'Introduïu una suma de verificació SHA-256 de 64 caràcters',
       invalidSHA256: 'SHA-256 ha de ser una cadena hexadecimal de 64 caràcters',
-      failed: 'Descàrrega fallida',
-      success: 'Descàrrega correcta',
-      checksumFailed: 'Descàrrega fallida: ha fallat la verificació SHA-256',
       cancel: 'Cancel·la',
       cancelFailed: 'No sha pogut cancel·lar la descàrrega'
     },
@@ -839,7 +923,14 @@ const ca = {
         reboot: 'Reinicia',
         rebootDesc: 'Segur que vols reiniciar el NanoKVM?',
         okBtn: 'Sí',
-        cancelBtn: 'No'
+        cancelBtn: 'No',
+        diskLocked: 'Desactivat mentre hi ha una imatge muntada (activar-lo cancel·la el muntatge)',
+        diskCancelMount:
+          "Activar el disc virtual cancel·la la imatge muntada i interromp una descàrrega o pujada d'imatge en curs. Voleu continuar?",
+        diskBreakDownload:
+          "Activar el disc virtual interromp la descàrrega d'imatges. Voleu continuar?",
+        attention: 'Atenció',
+        updateFailed: "No s'ha pogut actualitzar el dispositiu virtual"
       },
       network: {
         title: 'Xarxa',
@@ -1274,17 +1365,17 @@ const ca = {
       account: {
         title: 'Compte',
         webAccount: 'Nom del compte web',
-        role: 'Rol',
-        roles: {
-          admin: 'Administrador',
-          user: 'Usuari'
-        },
         password: 'Contrasenya',
         updateBtn: 'Canvia',
         logoutBtn: 'Tanca sessió',
         logoutDesc: 'Segur que vols tancar sessió?',
         okBtn: 'Sí',
         cancelBtn: 'No',
+        role: 'Rol',
+        roles: {
+          admin: 'Administrador',
+          user: 'Usuari'
+        },
         users: {
           title: 'Usuaris',
           create: 'Crea un usuari',
@@ -1297,9 +1388,71 @@ const ca = {
           created: 'Usuari creat',
           deleted: 'Usuari eliminat',
           passwordUpdated: 'Contrasenya actualitzada',
-          loadFailed: 'No s’han pogut carregar els usuaris',
-          saveFailed: 'No s’ha pogut desar l’usuari',
-          deleteFailed: 'No s’ha pogut eliminar l’usuari'
+          loadFailed: "No s'han pogut carregar els usuaris",
+          saveFailed: "No s'ha pogut desar l'usuari",
+          deleteFailed: "No s'ha pogut eliminar l'usuari",
+          editPermissions: 'Permisos',
+          mcpLossTitle: 'Retirar l’accés MCP',
+          mcpLossDesc:
+            '{{name}} perdrà l’accés MCP. La clau API de MCP la comparteix tot el dispositiu, així que una còpia continua funcionant fins que es regeneri. Regenerar-la desconnecta tots els clients MCP fins que rebin la clau nova.',
+          mcpLossRotate: 'Regenera la clau API de MCP',
+          mcpLossKeep:
+            'La clau actual continua sent vàlida i qui en tingui una còpia encara pot controlar el teclat i el ratolí. La podeu regenerar més tard a la configuració de MCP.',
+          mcpKeyRotated: 'Clau API de MCP regenerada. Els clients MCP necessiten la clau nova.'
+        },
+        permissions: {
+          title: 'Permisos',
+          editTitle: 'Edita els permisos',
+          save: 'Desa',
+          saved: 'Desat',
+          close: 'Tanca',
+          groupConsole: 'Consola',
+          groupTarget: 'Màquina de destí',
+          groupLibrary: 'Biblioteca de mitjans',
+          groupHost: 'Aquest dispositiu',
+          groupServices: 'Serveis',
+          consoleView: 'Veure la pantalla',
+          consoleControl: 'Teclat i ratolí',
+          power: 'Engegada i despertar',
+          mediumAttach: 'Connecta un mitjà',
+          libraryRead: 'Navega per la biblioteca',
+          libraryWrite: 'Gestiona la biblioteca',
+          terminal: 'Terminal i scripts',
+          device: 'Configuració del dispositiu',
+          network: 'Configuració de xarxa',
+          update: 'Actualització del sistema',
+          mcp: 'Servei MCP',
+          tailscale: 'Tailscale',
+          ai: 'Assistent d’IA',
+          effectConsoleView:
+            'Mostra la pantalla de destí i defineix el mode de vídeo, la resolució, els fps i la qualitat que comparteixen tots els espectadors.',
+          effectConsoleControl: 'Envia entrada de teclat i ratolí a la màquina de destí.',
+          effectPower:
+            'Engega, apaga i reinicia la màquina de destí, i gestiona la llista de dispositius de Wake-on-LAN.',
+          effectMediumAttach:
+            'Munta i expulsa mitjans a la màquina de destí, i hi intercanvia fitxers mitjançant la partició compartida.',
+          effectLibraryRead: 'Llista i baixa les imatges i els fitxers que contenen.',
+          effectLibraryWrite: 'Puja, crea i elimina imatges, i modifica els fitxers que contenen.',
+          effectTerminal:
+            'Dona un shell de root en aquest dispositiu, sense passar per la sessió web.',
+          effectDevice:
+            'Permet activar SSH (també root), reiniciar el dispositiu, lliurar la partició de dades en brut a la màquina de destí i canviar OLED, HDMI, mDNS, memòria i swap.',
+          effectNetwork:
+            'Canvia Wi-Fi, DNS i TLS, cosa que pot deixar aquest dispositiu sense xarxa.',
+          effectUpdate: 'Instal·la firmware i paquets d’aplicació.',
+          effectMcp:
+            'Emet una clau API de tot el dispositiu que controla teclat, ratolí i captures fora de la sessió web; una còpia continua funcionant després de revocar el permís si no es regenera la clau, cosa que s’ofereix en retirar el permís.',
+          effectTailscale: 'Uneix aquest dispositiu a una malla VPN.',
+          effectAi:
+            'Controla el dispositiu mitjançant una interfície local que els altres permisos no limiten, així que equival al control total del dispositiu.',
+          fullControlWarning: 'Aquests permisos equivalen al control total del dispositiu:',
+          emptyWarning: 'Aquest compte no tindrà cap funció i només podrà iniciar sessió.',
+          impliedBy: 'Inclòs per {{name}}',
+          grantCount_one: '{{count}} permís',
+          grantCount: '{{count}} permisos',
+          adminAll: 'Els administradors tenen tots els permisos',
+          catalogFailed:
+            'No s’ha pogut carregar la llista de permisos. Tanqueu aquest diàleg i torneu-ho a provar.'
         }
       }
     },

@@ -3,7 +3,8 @@ import { AppleOutlined, WindowsOutlined } from '@ant-design/icons';
 import clsx from 'clsx';
 import { useAtom } from 'jotai';
 import { XIcon } from 'lucide-react';
-import KeyboardImport, { KeyboardButtonTheme } from 'react-simple-keyboard';
+import { KeyboardReact as Keyboard } from 'react-simple-keyboard';
+import type { KeyboardButtonTheme } from 'react-simple-keyboard';
 import { Drawer } from 'vaul';
 
 import 'react-simple-keyboard/build/css/index.css';
@@ -25,16 +26,6 @@ import {
   modifierKeys,
   specialKeyMap
 } from './virtual-keys.ts';
-
-// react-simple-keyboard ships a UMD CommonJS build. Up to Vite 7 the dev server
-// and the bundler unwrapped its `__esModule` default at the import site, so the
-// default import was the component. Vite 8 (upstream #853) stopped doing that,
-// and the default import arrives as the raw `module.exports`
-// ({ KeyboardReact, default }) instead. Rendering that object throws React error
-// #130 and takes the whole desktop route down through the router error boundary.
-// Unwrap it here so the keyboard renders under either interop.
-const Keyboard = ((KeyboardImport as unknown as { default?: typeof KeyboardImport }).default ??
-  KeyboardImport) as typeof KeyboardImport;
 
 export const VirtualKeyboard = () => {
   const isBigScreen = useMediaQuery({ minWidth: 850 });

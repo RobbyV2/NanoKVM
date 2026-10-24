@@ -5,24 +5,22 @@ const pl = {
       login: 'Logowanie',
       changePassword: 'Zmień Hasło',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Obrazy i udostępnianie plików'
     },
     auth: {
       login: 'Logowanie',
       placeholderUsername: 'Wprowadź nazwę użykownika',
       placeholderPassword: 'wprowadź hasło',
-      placeholderCurrentPassword: 'Bieżące hasło',
       placeholderPassword2: 'wprowadź hasło ponownie',
       noEmptyUsername: 'nazwa użykownika nie może być pusta',
       noEmptyPassword: 'hasło nie może być puste',
-      passwordLength: 'Hasło musi mieć od 8 do 72 znaków',
       noAccount:
         'Nie udało się uzyskać informacji o użytkowniku, odśwież stronę lub zresetuj hasło',
       invalidUser: 'Błędne hasło lub nazwa użykownika',
       locked: 'Zbyt wiele loginów, spróbuj ponownie później',
       globalLocked: 'System chroniony, spróbuj ponownie później',
       error: 'niespodziewany błąd',
-      invalidCurrentPassword: 'Bieżące hasło jest nieprawidłowe',
       changePassword: 'Zmień Hasło',
       changePasswordDesc:
         'Dla bezpieczeństwa Twojego urządzenia, proszę zmień hasło do logowania w sieci.',
@@ -43,7 +41,10 @@ const pl = {
         change2: 'Hasło logowania web',
         change3: 'Hasło roota systemu (hasło logowania SSH)',
         change4: 'Aby zresetować hasła, naciśnij i przytrzymaj przycisk BOOT na NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Bieżące hasło',
+      passwordLength: 'Hasło musi mieć od 8 do 72 znaków',
+      invalidCurrentPassword: 'Bieżące hasło jest nieprawidłowe'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -61,6 +62,17 @@ const pl = {
         passPlaceholder: 'AP hasło',
         verifyBtn: 'Sprawdź'
       }
+    },
+    desktop: {
+      readOnly: 'Tylko podgląd',
+      readOnlyTip:
+        'To konto nie może wysyłać danych z klawiatury ani myszy do maszyny docelowej, dlatego konsola tylko wyświetla ekran.'
+    },
+    noConsole: {
+      title: 'To konto nie ma dostępu do konsoli',
+      description:
+        'Przyznano mu inne możliwości. Otwórz jedną ze stron, z których może korzystać, albo poproś administratora o dostęp do konsoli.',
+      nothing: 'To konto nie ma jeszcze żadnych uprawnień. Poproś administratora o ich przyznanie.'
     },
     screen: {
       scale: 'Skala',
@@ -218,27 +230,43 @@ const pl = {
         disable: 'Wyłącz tryb HID-Tylko'
       }
     },
-    image: {
-      title: 'Obrazy',
-      loading: 'Ładowanie...',
-      empty: 'Nic nie znaleziono',
+    storage: {
+      title: 'Obrazy i udostępnianie plików',
+      empty:
+        'Nie ma jeszcze obrazów. Prześlij plik ISO lub IMG albo skopiuj go na dysk ze zdalnego komputera.',
+      notAttached: 'Nic nie jest zamontowane',
+      attached: 'Zamontowano: {{name}}',
+      eject: 'Wysuń',
+      mount: 'Zamontuj',
       mountMode: 'Tryb montowania',
-      mountFailed: 'Nie udało się zamontować obrazu',
-      mountDesc:
-        'W niektórych systemach wymagane jest wyjęcie dysku wirtualnego na zdalnym hoście przed zamontowaniem obrazu.',
-      unmountFailed: 'Odmontowanie nie powiodło się',
-      unmountDesc:
-        'W niektórych systemach należy ręcznie wysunąć obraz ze zdalnego hosta przed odmontowaniem obrazu.',
-      refresh: 'Odśwież listę obrazów',
-      attention: 'Uwaga',
-      deleteConfirm: 'Czy na pewno chcesz usunąć to zdjęcie?',
-      okBtn: 'Tak',
-      cancelBtn: 'Nie',
+      mountModeDisk: 'Pamięć masowa',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Otwórz menedżer plików',
+      refresh: 'Odśwież',
+      delete: 'Usuń',
+      deleteTitle: 'Usuń nośnik',
+      deleteConfirm: 'Usunąć {{name}}? Znajdujące się w nim pliki zostaną utracone.',
+      downloadImage: 'Pobierz obraz',
+      typePartition: 'Udostępnione pliki',
+      volumeLabel: 'Dysk wymienny',
+      groups: {
+        share: 'Udostępnianie plików',
+        images: 'Obrazy'
+      },
+      failed: 'Operacja nie powiodła się',
+      hidOnly: 'Tryb tylko HID: dysk wirtualny jest niedostępny',
+      disabled: 'Dysk wirtualny jest wyłączony (Ustawienia - Urządzenie)',
+      force: {
+        title: 'Odebrać nośnik siłą?',
+        desc: 'Zdalny komputer nadal używa tego nośnika. Odebranie go ponownie wyliczy urządzenie USB i może utracić wszystko, czego jeszcze nie zapisało na dysku.',
+        menuHint: 'Zdalny komputer używa tego nośnika. Otwórz menedżer plików, aby odebrać go siłą.'
+      },
       tips: {
         title: 'Jak przesłać obrazy',
         usb1: 'Podłącz urządzenie NanoKVM do komputera przez USB.',
-        usb2: 'Upewnij się, że dysk wirtualny jest zamontowany (Ustawienia - Dysk wirtualny).',
+        usb2: 'Na tej stronie zamontuj udostępnione pliki w trybie pamięci masowej.',
         usb3: 'Otwórz dysk wirtualny na swoim komputerze i skopiuj plik obrazu do katalogu głównego dysku wirtualnego.',
+        usb4: 'Po zakończeniu kopiowania wysuń dysk: obraz pojawi się wtedy na liście.',
         scp1: 'Upewnij się że NanoKVM i twój komputer są na tej samej sieci lokalnej.',
         scp2: 'Otwórz terminal na komputerze i użyj komendę SCP aby przesłać obraz do katalogu /data na NanoKVM.',
         scp3: 'Przykład: scp lokalizacja-zrodlowego-obrazu root@ip-twojego-nanokvm:/data',
@@ -248,7 +276,69 @@ const pl = {
         tf3: 'Włóż kartę SD do czytnika kart i podłącz do twojego komputera.',
         tf4: 'Kopjuj obraz do katalogu /data na karcie SD.',
         tf5: 'Włóż kartę SD do NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Przetwarzanie {{name}}'
+      },
+      enableDisk: {
+        title: 'Włączyć dysk wirtualny?',
+        desc: 'Do zamontowania nośnika potrzebny jest dysk wirtualny, który jest teraz wyłączony. Włączyć go? Klawiatura i mysz zdalnego komputera rozłączą się na chwilę.',
+        menuHint: 'Dysk wirtualny jest wyłączony. Włącz go w Ustawienia - Urządzenie.',
+        askDevice:
+          'Dysk wirtualny jest wyłączony. Najpierw musi go włączyć konto z uprawnieniem do urządzenia.'
+      },
+      add: {
+        title: 'Dodaj nośnik',
+        upload: 'Prześlij plik ISO lub IMG',
+        fromUrl: 'Pobierz z adresu URL',
+        url: 'Adres URL obrazu',
+        urlRequired: 'Podaj adres URL',
+        onlyImages: 'Można montować tylko pliki .iso i .img',
+        dropHint: 'Przeciągnij tutaj plik ISO lub IMG albo kliknij, aby go wybrać',
+        cdromOnlyIso: 'CD-ROM może zawierać wyłącznie obraz ISO 9660',
+        uploadFailed: 'Przesyłanie nie powiodło się',
+        downloadFailed: 'Pobieranie nie powiodło się',
+        uploading: 'Przesyłanie {{name}}',
+        downloading: 'Pobieranie {{name}}',
+        done: '{{name}} jest gotowy',
+        checksumFailed: 'Obraz nie zgadza się z sumą kontrolną SHA-256.',
+        blocked: 'Zdalny komputer używa dysku',
+        copyHint:
+          'Obraz możesz też skopiować do partycji danych przez SCP albo ze zdalnego komputera.'
+      },
+      files: {
+        selectMedium: 'Wybierz nośnik, aby przeglądać znajdujące się na nim pliki.',
+        reasonAttached: 'Ten nośnik jest podłączony do zdalnego komputera.',
+        reasonAttachedHint:
+          'Najpierw go wysuń: zdalny komputer musi zwolnić dysk, zanim będzie można odczytać jego pliki.',
+        reasonNotBrowsable: 'Ten nośnik zawiera system plików, którego menedżer nie może otworzyć.',
+        reasonNoLoop: 'To urządzenie nie może montować obrazów dysków (brak obsługi loop).',
+        reasonISOImage:
+          'Obrazu ISO 9660 nie można tu przeglądać. Nadal można go zamontować na zdalnym komputerze.',
+        empty: 'Ten folder jest pusty',
+        noMatch: 'Żaden plik nie pasuje do wyszukiwania.',
+        free: '{{size}} wolne',
+        search: 'Szukaj w tym folderze',
+        sort: {
+          name: 'Nazwa',
+          size: 'Rozmiar',
+          type: 'Typ',
+          asc: 'Rosnąco',
+          desc: 'Malejąco'
+        },
+        upload: 'Prześlij plik na nośnik',
+        deleteFolderTitle: 'Usuń folder',
+        deleteFolderConfirm:
+          'Usunąć folder {{name}} wraz z całą zawartością? Tej operacji nie można cofnąć.',
+        uploading: 'Przesyłanie…',
+        uploadFailed: 'Przesyłanie nie powiodło się',
+        download: 'Pobierz',
+        delete: 'Usuń',
+        deleteTitle: 'Usuń plik',
+        deleteConfirm: 'Usunąć {{name}} z nośnika?'
+      },
+      yes: 'Tak',
+      no: 'Nie'
     },
     script: {
       title: 'Skrypty',
@@ -290,19 +380,11 @@ const pl = {
       ok: 'Ok'
     },
     download: {
-      title: 'Narzędzie do pobierania obrazów',
-      input: 'Proszę wprowadzić zdalny obraz URL',
-      ok: 'Ok',
-      disabled: '/data partycja to RO, więc nie możemy pobrać obrazu',
-      uploadbox: 'Upuść plik tutaj lub kliknij, aby wybrać',
-      inputfile: 'Proszę wprowadzić plik obrazu',
-      NoISO: 'Brak ISO',
+      disabled:
+        'Partycja danych jest tylko do odczytu, dopóki używa jej zdalny komputer: nie można zapisać nowych obrazów, ale istniejące pliki nadal można pobierać.',
       sha256: 'SHA-256 (opcjonalnie)',
       sha256Placeholder: 'Wprowadź 64-znakową sumę kontrolną SHA-256',
       invalidSHA256: 'SHA-256 musi być 64-znakowym ciągiem szesnastkowym',
-      failed: 'Pobieranie nie powiodło się',
-      success: 'Pobieranie zakończone pomyślnie',
-      checksumFailed: 'Pobieranie nie powiodło się: weryfikacja SHA-256 nie powiodła się',
       cancel: 'Anuluj',
       cancelFailed: 'Nie udało się anulować pobierania'
     },
@@ -842,7 +924,13 @@ const pl = {
         reboot: 'Uruchom ponownie',
         rebootDesc: 'Czy na pewno chcesz ponownie uruchomić NanoKVM?',
         okBtn: 'Tak',
-        cancelBtn: 'Nie'
+        cancelBtn: 'Nie',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Uwaga',
+        updateFailed: 'Nie udało się zaktualizować urządzenia wirtualnego'
       },
       network: {
         title: 'Sieć',
@@ -1279,17 +1367,17 @@ const pl = {
       account: {
         title: 'Konto',
         webAccount: 'Nazwa konta web',
-        role: 'Rola',
-        roles: {
-          admin: 'Administrator',
-          user: 'Użytkownik'
-        },
         password: 'Hasło',
         updateBtn: 'Update',
         logoutBtn: 'Wyloguj',
         logoutDesc: 'Czy na pewno chcesz się wylogować?',
         okBtn: 'Tak',
         cancelBtn: 'Nie',
+        role: 'Rola',
+        roles: {
+          admin: 'Administrator',
+          user: 'Użytkownik'
+        },
         users: {
           title: 'Użytkownicy',
           create: 'Utwórz użytkownika',
@@ -1299,12 +1387,74 @@ const pl = {
           resetPassword: 'Zresetuj hasło',
           delete: 'Usuń',
           deleteConfirm: 'Usunąć tego użytkownika i unieważnić wszystkie jego sesje?',
-          created: 'Użytkownik utworzony',
-          deleted: 'Użytkownik usunięty',
-          passwordUpdated: 'Hasło zaktualizowane',
+          created: 'Utworzono użytkownika',
+          deleted: 'Usunięto użytkownika',
+          passwordUpdated: 'Zaktualizowano hasło',
           loadFailed: 'Nie udało się wczytać użytkowników',
           saveFailed: 'Nie udało się zapisać użytkownika',
-          deleteFailed: 'Nie udało się usunąć użytkownika'
+          deleteFailed: 'Nie udało się usunąć użytkownika',
+          editPermissions: 'Uprawnienia',
+          mcpLossTitle: 'Odbierz dostęp MCP',
+          mcpLossDesc:
+            '{{name}} utraci dostęp MCP. Klucz API MCP jest wspólny dla całego urządzenia, więc jego kopia działa, dopóki klucz nie zostanie wygenerowany ponownie. Ponowne wygenerowanie rozłącza wszystkich klientów MCP, dopóki nie otrzymają nowego klucza.',
+          mcpLossRotate: 'Wygeneruj ponownie klucz API MCP',
+          mcpLossKeep:
+            'Obecny klucz pozostaje ważny, a każdy, kto ma kopię, nadal może sterować klawiaturą i myszą. Możesz go wygenerować ponownie później w ustawieniach MCP.',
+          mcpKeyRotated:
+            'Klucz API MCP wygenerowany ponownie. Klienci MCP potrzebują nowego klucza.'
+        },
+        permissions: {
+          title: 'Uprawnienia',
+          editTitle: 'Edytuj uprawnienia',
+          save: 'Zapisz',
+          saved: 'Zapisano',
+          close: 'Zamknij',
+          groupConsole: 'Konsola',
+          groupTarget: 'Maszyna docelowa',
+          groupLibrary: 'Biblioteka nośników',
+          groupHost: 'To urządzenie',
+          groupServices: 'Usługi',
+          consoleView: 'Podgląd ekranu',
+          consoleControl: 'Klawiatura i mysz',
+          power: 'Zasilanie i wybudzanie',
+          mediumAttach: 'Podłącz nośnik',
+          libraryRead: 'Przeglądaj bibliotekę',
+          libraryWrite: 'Zarządzaj biblioteką',
+          terminal: 'Terminal i skrypty',
+          device: 'Ustawienia urządzenia',
+          network: 'Ustawienia sieci',
+          update: 'Aktualizacja systemu',
+          mcp: 'Usługa MCP',
+          tailscale: 'Tailscale',
+          ai: 'Asystent AI',
+          effectConsoleView:
+            'Pokazuje ekran maszyny docelowej i ustawia tryb wideo, rozdzielczość, liczbę klatek i jakość wspólne dla wszystkich widzów.',
+          effectConsoleControl: 'Wysyła wejście z klawiatury i myszy do maszyny docelowej.',
+          effectPower:
+            'Włącza, wyłącza i resetuje maszynę docelową oraz zarządza listą urządzeń Wake-on-LAN.',
+          effectMediumAttach:
+            'Montuje i odłącza nośniki na maszynie docelowej oraz wymienia z nią pliki przez współdzieloną partycję.',
+          effectLibraryRead: 'Wyświetla i pobiera obrazy oraz pliki w nich zawarte.',
+          effectLibraryWrite: 'Wysyła, tworzy i usuwa obrazy oraz zmienia pliki w nich zawarte.',
+          effectTerminal: 'Daje powłokę root na tym urządzeniu, z pominięciem sesji webowej.',
+          effectDevice:
+            'Umożliwia włączenie SSH (również root), restart urządzenia, udostępnienie surowej partycji danych maszynie docelowej oraz zmianę ustawień OLED, HDMI, mDNS, pamięci i swap.',
+          effectNetwork: 'Zmienia Wi-Fi, DNS i TLS, co może odciąć to urządzenie od sieci.',
+          effectUpdate: 'Instaluje firmware i pakiety aplikacji.',
+          effectMcp:
+            'Wydaje klucz API obejmujący całe urządzenie, który steruje klawiaturą, myszą i zrzutami ekranu poza sesją webową; kopia działa po odebraniu uprawnienia, chyba że klucz zostanie wygenerowany ponownie, co jest proponowane przy usuwaniu uprawnienia.',
+          effectTailscale: 'Dołącza to urządzenie do sieci VPN typu mesh.',
+          effectAi:
+            'Steruje urządzeniem przez lokalny interfejs, którego pozostałe uprawnienia nie ograniczają, więc oznacza to pełną kontrolę nad urządzeniem.',
+          fullControlWarning: 'Te uprawnienia oznaczają pełną kontrolę nad urządzeniem:',
+          emptyWarning:
+            'To konto nie będzie miało żadnych funkcji i będzie mogło się tylko zalogować.',
+          impliedBy: 'Zawarte przez {{name}}',
+          grantCount_one: '{{count}} uprawnienie',
+          grantCount: '{{count}} uprawnień',
+          adminAll: 'Administratorzy mają wszystkie uprawnienia',
+          catalogFailed:
+            'Nie udało się wczytać listy uprawnień. Zamknij to okno i spróbuj ponownie.'
         }
       }
     },

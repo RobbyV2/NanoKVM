@@ -4,6 +4,7 @@ const en = {
       desktop: 'Remote Desktop',
       login: 'Login',
       changePassword: 'Change Password',
+      storage: 'Images & File sharing',
       terminal: 'Terminal',
       wifi: 'Wi-Fi'
     },
@@ -60,6 +61,18 @@ const en = {
         verifyBtn: 'Verify'
       }
     },
+    desktop: {
+      readOnly: 'View Only',
+      readOnlyTip:
+        'This account cannot send keyboard or mouse input to the target machine, so the console only shows the screen.'
+    },
+    noConsole: {
+      title: 'This account has no console access',
+      description:
+        'It was granted other capabilities. Open one of the pages it can use, or ask an administrator for console access.',
+      nothing: 'This account has no feature permissions yet. Ask an administrator to grant some.'
+    },
+
     screen: {
       scale: 'Scale',
       title: 'Screen',
@@ -219,27 +232,44 @@ const en = {
         disable: 'Disable HID-Only mode'
       }
     },
-    image: {
-      title: 'Images',
-      loading: 'Loading...',
-      empty: 'Nothing Found',
+    storage: {
+      title: 'Images & File sharing',
+      empty:
+        'No images yet. Upload an ISO or IMG, or copy one onto the disk from the target machine.',
+      notAttached: 'Nothing mounted',
+      attached: 'Mounted: {{name}}',
+      eject: 'Eject',
+      mount: 'Mount',
       mountMode: 'Mount mode',
-      mountFailed: 'Mount failed',
-      mountDesc:
-        'On some systems, you need to eject the virtual disk from the remote host before mounting the image.',
-      unmountFailed: 'Unmount failed',
-      unmountDesc:
-        'On some systems, you need to manually eject from the remote host before unmounting the image.',
-      refresh: 'Refresh the image list',
-      attention: 'Attention',
-      deleteConfirm: 'Are you sure you want to delete this image?',
-      okBtn: 'Yes',
-      cancelBtn: 'No',
+      mountModeDisk: 'Mass storage',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Open file manager',
+      refresh: 'Refresh',
+      delete: 'Delete',
+      deleteTitle: 'Delete medium',
+      deleteConfirm: 'Delete {{name}}? The files inside it are lost.',
+      downloadImage: 'Download the image',
+      typePartition: 'Shared files',
+      volumeLabel: 'Removable disk',
+      groups: {
+        share: 'File sharing',
+        images: 'Images'
+      },
+      failed: 'Operation failed',
+      hidOnly: 'HID-only mode: the virtual disk is unavailable',
+      disabled: 'The virtual disk is disabled (Settings - Device)',
+      force: {
+        title: 'Take the medium back by force?',
+        desc: 'The target machine is still using this medium. Taking it back re-enumerates the USB device and can lose whatever it has not written to disk yet.',
+        menuHint:
+          'The target machine is using this medium. Open the file manager to take it back by force.'
+      },
       tips: {
         title: 'How to upload',
         usb1: 'Connect the NanoKVM to your computer via USB.',
-        usb2: 'Ensure that the virtual disk is mounted (Settings - Virtual Disk).',
+        usb2: 'On this page, mount the shared files in mass storage mode.',
         usb3: 'Open the virtual disk on your computer and copy the image file to the root directory of the virtual disk.',
+        usb4: 'Eject the disk when the copy is done: the image then shows up in the list.',
         scp1: 'Make sure the NanoKVM and your computer are on the same local network.',
         scp2: 'Open a terminal on your computer and use the SCP command to upload the image file to the /data directory on the NanoKVM.',
         scp3: 'Example: scp your-image-path root@your-nanokvm-ip:/data',
@@ -249,7 +279,69 @@ const en = {
         tf3: 'Insert the TF card into a card reader and connect it to your computer.',
         tf4: 'Copy the image file to the /data directory on the TF card.',
         tf5: 'Insert the TF card into the NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Working on {{name}}'
+      },
+      enableDisk: {
+        title: 'Enable the virtual disk?',
+        desc: 'Mounting a medium needs the virtual disk, which is currently switched off. Enable it now? The keyboard and mouse of the target machine will disconnect for a moment.',
+        menuHint: 'The virtual disk is disabled. Enable it in Settings - Device.',
+        askDevice:
+          'The virtual disk is disabled. An account with the device permission has to enable it first.'
+      },
+      add: {
+        title: 'Add media',
+        upload: 'Upload an ISO or IMG',
+        fromUrl: 'Download from a URL',
+        url: 'Image URL',
+        urlRequired: 'Please enter a URL',
+        onlyImages: 'Only .iso and .img files can be mounted',
+        dropHint: 'Drag an ISO or IMG here, or click to choose a file',
+        cdromOnlyIso: 'A CD-ROM can only carry an ISO 9660 image',
+        uploadFailed: 'Upload failed',
+        downloadFailed: 'Download failed',
+        uploading: 'Uploading {{name}}',
+        downloading: 'Downloading {{name}}',
+        done: '{{name}} is ready',
+        checksumFailed: 'The image does not match the SHA-256 checksum.',
+        blocked: 'The target machine is using the disk',
+        copyHint:
+          'You can also copy an image into the data partition over SCP, or from the target machine.'
+      },
+      files: {
+        selectMedium: 'Select a medium to browse the files inside it.',
+        reasonAttached: 'This medium is attached to the target machine.',
+        reasonAttachedHint:
+          'Eject it first: the target machine has to release the disk before its files can be read.',
+        reasonNotBrowsable: 'This medium holds a filesystem the file manager cannot open.',
+        reasonNoLoop: 'This device cannot mount disk images (no loop support).',
+        reasonISOImage:
+          'An ISO 9660 image cannot be browsed here. It can still be mounted to the target machine.',
+        empty: 'This folder is empty',
+        noMatch: 'No files match the search.',
+        free: '{{size}} free',
+        search: 'Search this folder',
+        sort: {
+          name: 'Name',
+          size: 'Size',
+          type: 'Type',
+          asc: 'Ascending',
+          desc: 'Descending'
+        },
+        upload: 'Upload a file into the medium',
+        deleteFolderTitle: 'Delete folder',
+        deleteFolderConfirm:
+          'Delete the folder {{name}} and everything inside it? This cannot be undone.',
+        uploading: 'Uploading…',
+        uploadFailed: 'Upload failed',
+        download: 'Download',
+        delete: 'Delete',
+        deleteTitle: 'Delete file',
+        deleteConfirm: 'Delete {{name}} from the medium?'
+      },
+      yes: 'Yes',
+      no: 'No'
     },
     script: {
       title: 'Scripts',
@@ -291,19 +383,11 @@ const en = {
       ok: 'Ok'
     },
     download: {
-      title: 'Image Downloader',
-      input: 'Please enter a remote image URL',
-      ok: 'Ok',
-      disabled: '/data partition is RO, so we cannot download the image',
-      uploadbox: 'Drop file here or click to select',
-      inputfile: 'Please enter the image File',
-      NoISO: 'No ISO',
+      disabled:
+        'The data partition is read-only while the target machine uses it: new images cannot be written, existing files can still be downloaded.',
       sha256: 'SHA-256 (optional)',
       sha256Placeholder: 'Enter a 64-character SHA-256 checksum',
       invalidSHA256: 'SHA-256 must be a 64-character hexadecimal string',
-      failed: 'Download failed',
-      success: 'Download successful',
-      checksumFailed: 'Download failed: SHA-256 verification failed',
       cancel: 'Cancel',
       cancelFailed: 'Failed to cancel download'
     },
@@ -894,7 +978,13 @@ const en = {
         reboot: 'Reboot',
         rebootDesc: 'Are you sure you want to reboot NanoKVM?',
         okBtn: 'Yes',
-        cancelBtn: 'No'
+        cancelBtn: 'No',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Attention',
+        updateFailed: 'Failed to update the virtual device'
       },
       network: {
         title: 'Network',
@@ -1353,7 +1443,68 @@ const en = {
           passwordUpdated: 'Password updated',
           loadFailed: 'Failed to load users',
           saveFailed: 'Failed to save user',
-          deleteFailed: 'Failed to delete user'
+          deleteFailed: 'Failed to delete user',
+          editPermissions: 'Permissions',
+          mcpLossTitle: 'Revoke MCP access',
+          mcpLossDesc:
+            '{{name}} will lose MCP access. The MCP API key is shared by the whole device, so a copy of it keeps working until the key is regenerated. Regenerating it disconnects every MCP client until it is given the new key.',
+          mcpLossRotate: 'Regenerate the MCP API key',
+          mcpLossKeep:
+            'The current key stays valid, and whoever has a copy can still control the keyboard and mouse. You can regenerate it later in the MCP settings.',
+          mcpKeyRotated: 'MCP API key regenerated. MCP clients need the new key.'
+        },
+        permissions: {
+          title: 'Permissions',
+          editTitle: 'Edit Permissions',
+          save: 'Save',
+          saved: 'Saved',
+          close: 'Close',
+          groupConsole: 'Console',
+          groupTarget: 'Target machine',
+          groupLibrary: 'Media library',
+          groupHost: 'This device',
+          groupServices: 'Services',
+          consoleView: 'Watch the screen',
+          consoleControl: 'Keyboard & mouse',
+          power: 'Power & wake',
+          mediumAttach: 'Attach a medium',
+          libraryRead: 'Browse the media library',
+          libraryWrite: 'Manage the media library',
+          terminal: 'Terminal & scripts',
+          device: 'Device settings',
+          network: 'Network settings',
+          update: 'System update',
+          mcp: 'MCP service',
+          tailscale: 'Tailscale',
+          ai: 'AI assistant',
+          effectConsoleView:
+            'Shows the target screen, and sets the video mode, resolution, frame rate and quality that every viewer shares.',
+          effectConsoleControl: 'Sends keyboard and mouse input to the target machine.',
+          effectPower:
+            'Powers on, powers off and resets the target machine, and manages the Wake-on-LAN device list.',
+          effectMediumAttach:
+            'Mounts and ejects media on the target machine, and exchanges files with it through the shared partition.',
+          effectLibraryRead: 'Lists and downloads the images and the files inside them.',
+          effectLibraryWrite:
+            'Uploads, creates and deletes images, and changes the files inside them.',
+          effectTerminal: 'Gives a root shell on this device, without the web session in between.',
+          effectDevice:
+            'Enables SSH (also root), reboots the device, hands the raw data partition to the target machine, and changes the OLED, HDMI, mDNS, memory and swap settings.',
+          effectNetwork: 'Changes Wi-Fi, DNS and TLS, which can take this device off the network.',
+          effectUpdate: 'Installs firmware and application packages.',
+          effectMcp:
+            'Issues a device-wide API key that drives the keyboard, mouse and screenshots outside the web session; a copied key keeps working after this grant is revoked unless the key is regenerated, which is offered when the grant is removed.',
+          effectTailscale: 'Joins this device to a VPN mesh.',
+          effectAi:
+            'Drives the device through a local interface that the other grants do not restrict, so this is effectively full device control.',
+          fullControlWarning: 'These grants amount to full device control:',
+          emptyWarning: 'This account will have no features at all and can only sign in.',
+          impliedBy: 'Included by {{name}}',
+          grantCount_one: '{{count}} grant',
+          grantCount: '{{count}} grants',
+          adminAll: 'Administrators hold every permission',
+          catalogFailed:
+            'The permission catalog could not be loaded. Close this dialog and try again.'
         }
       }
     },

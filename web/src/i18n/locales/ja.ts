@@ -5,24 +5,22 @@ const ja = {
       login: 'ログイン',
       changePassword: 'パスワード変更',
       terminal: 'ターミナル',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'イメージとファイル共有'
     },
     auth: {
       login: 'ログイン',
       placeholderUsername: 'ユーザー名を入力してください',
       placeholderPassword: 'パスワードを入力してください',
-      placeholderCurrentPassword: '現在のパスワード',
       placeholderPassword2: 'パスワードをもう一度入力してください',
       noEmptyUsername: 'ユーザー名は空にできません',
       noEmptyPassword: 'パスワードは空にできません',
-      passwordLength: 'パスワードは 8 文字以上 72 文字以下である必要があります',
       noAccount:
         'ユーザー情報の取得に失敗しました。ページを更新してもう一度お試しいただくか、パスワードをリセットしてください。',
       invalidUser: 'ユーザー名またはパスワードが正しくありません',
       locked: 'ログインが多すぎます。後でもう一度お試しください。',
       globalLocked: 'システムは保護されています。後でもう一度試してください。',
       error: '不明なエラー',
-      invalidCurrentPassword: '現在のパスワードが正しくありません',
       changePassword: 'パスワード変更',
       changePasswordDesc: 'デバイスのセキュリティのために、パスワードを変更してください！',
       differentPassword: 'パスワードが一致しません',
@@ -42,7 +40,10 @@ const ja = {
         change3: 'システム root パスワード（SSH ログインパスワード）',
         change4:
           'パスワードを忘れた場合は、NanoKVM の BOOT ボタンを長押ししてパスワードをリセットする必要があります。'
-      }
+      },
+      placeholderCurrentPassword: '現在のパスワード',
+      passwordLength: 'パスワードは 8〜72 文字である必要があります',
+      invalidCurrentPassword: '現在のパスワードが正しくありません'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -60,6 +61,17 @@ const ja = {
         passPlaceholder: 'AP パスワード',
         verifyBtn: '確認する'
       }
+    },
+    desktop: {
+      readOnly: '閲覧のみ',
+      readOnlyTip:
+        'このアカウントは対象マシンへキーボードやマウスの入力を行えないため、コンソールは画面の表示のみになります。'
+    },
+    noConsole: {
+      title: 'このアカウントにはコンソール権限がありません',
+      description:
+        '他の機能が付与されています。利用できるページを開くか、管理者にコンソール権限を依頼してください。',
+      nothing: 'このアカウントにはまだ権限がありません。管理者に付与を依頼してください。'
     },
     screen: {
       scale: '倍率',
@@ -217,27 +229,44 @@ const ja = {
         disable: 'HID-Only モードを無効化'
       }
     },
-    image: {
-      title: 'イメージ',
-      loading: '読み込み中',
-      empty: 'イメージファイルがありません',
+    storage: {
+      title: 'イメージとファイル共有',
+      empty:
+        'イメージはまだありません。ISO または IMG をアップロードするか、ターゲットマシンからディスクにコピーしてください。',
+      notAttached: '何もマウントされていません',
+      attached: 'マウント中: {{name}}',
+      eject: '取り出す',
+      mount: 'マウント',
       mountMode: 'マウントモード',
-      mountFailed: 'マウントに失敗しました',
-      mountDesc:
-        '一部のシステムでは、イメージをマウントする前にリモートホストで仮想ディスクをアンマウントする必要があります。',
-      unmountFailed: 'アンマウントに失敗しました',
-      unmountDesc:
-        '一部のシステムでは、イメージをアンマウントする前にリモートホストから手動で取り出す必要があります。',
-      refresh: 'イメージリストを更新',
-      attention: '注意',
-      deleteConfirm: 'このイメージを削除してもよろしいですか？',
-      okBtn: 'はい',
-      cancelBtn: 'いいえ',
+      mountModeDisk: 'マスストレージ',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'ファイルマネージャーを開く',
+      refresh: '更新',
+      delete: '削除',
+      deleteTitle: 'メディアを削除',
+      deleteConfirm: '{{name}} を削除しますか？中のファイルは失われます。',
+      downloadImage: 'イメージをダウンロード',
+      typePartition: '共有ファイル',
+      volumeLabel: 'リムーバブルディスク',
+      groups: {
+        share: 'ファイル共有',
+        images: 'イメージ'
+      },
+      failed: '操作に失敗しました',
+      hidOnly: 'HID のみのモード: 仮想ディスクは利用できません',
+      disabled: '仮想ディスクは無効です (設定 - デバイス)',
+      force: {
+        title: 'メディアを強制的に取り戻しますか？',
+        desc: 'ターゲットマシンがまだこのメディアを使用しています。取り戻すと USB デバイスが再列挙され、まだディスクに書き込まれていない内容が失われる可能性があります。',
+        menuHint:
+          'ターゲットマシンがこのメディアを使用しています。ファイルマネージャーを開いて強制的に取り戻してください。'
+      },
       tips: {
         title: 'アップロード方法',
         usb1: 'NanoKVM を USB 経由でコンピュータに接続します；',
-        usb2: '仮想ディスクがマウントされていることを確認します（設定 - 仮想ディスク）；',
+        usb2: 'このページで共有ファイルをマスストレージモードでマウントします。',
         usb3: 'コンピュータ上で仮想ディスクを開き、イメージファイルを仮想ディスクのルートディレクトリにコピーします。',
+        usb4: 'コピーが終わったらディスクを取り出します。イメージがリストに表示されます。',
         scp1: 'NanoKVM とコンピュータが同じローカルエリアネットワークに接続されていることを確認します；',
         scp2: 'コンピュータでターミナルを開き、SCP コマンドを使用してイメージファイルを NanoKVM の /data ディレクトリにアップロードします。',
         scp3: '例：scp your-image-path root@your-nanokvm-ip:/data',
@@ -247,7 +276,70 @@ const ja = {
         tf3: 'TF カードをカードリーダーに挿入してコンピュータに接続します；',
         tf4: 'コンピューターから TF カードの /data ディレクトリにイメージファイルをコピーします；',
         tf5: 'TF カードを NanoKVM に挿入します。'
-      }
+      },
+      job: {
+        running: '{{name}} を処理中'
+      },
+      enableDisk: {
+        title: '仮想ディスクを有効にしますか？',
+        desc: 'メディアをマウントするには仮想ディスクが必要ですが、現在は無効です。今すぐ有効にしますか？ターゲットマシンのキーボードとマウスが一時的に切断されます。',
+        menuHint: '仮想ディスクは無効です。設定 - デバイスで有効にしてください。',
+        askDevice:
+          '仮想ディスクは無効になっています。デバイス権限を持つアカウントで先に有効にしてください。'
+      },
+      add: {
+        title: 'メディアを追加',
+        upload: 'ISO または IMG をアップロード',
+        fromUrl: 'URL からダウンロード',
+        url: 'イメージの URL',
+        urlRequired: 'URL を入力してください',
+        onlyImages: 'マウントできるのは .iso と .img ファイルのみです',
+        dropHint: 'ISO または IMG をここにドロップするか、クリックしてファイルを選択',
+        cdromOnlyIso: 'CD-ROM には ISO 9660 イメージしか載せられません',
+        uploadFailed: 'アップロードに失敗しました',
+        downloadFailed: 'ダウンロードに失敗しました',
+        uploading: '{{name}} をアップロード中',
+        downloading: '{{name}} をダウンロード中',
+        done: '{{name}} の準備ができました',
+        checksumFailed: 'イメージが SHA-256 チェックサムと一致しません。',
+        blocked: 'ターゲットマシンがディスクを使用しています',
+        copyHint:
+          'イメージは SCP でデータパーティションにコピーするか、ターゲットマシンから直接コピーすることもできます。'
+      },
+      files: {
+        selectMedium: 'メディアを選択すると中のファイルを閲覧できます。',
+        reasonAttached: 'このメディアはターゲットマシンに接続されています。',
+        reasonAttachedHint:
+          '先に取り出してください。ターゲットマシンがディスクを解放するまでファイルは読み取れません。',
+        reasonNotBrowsable:
+          'このメディアにはファイルマネージャーで開けないファイルシステムが含まれています。',
+        reasonNoLoop: 'このデバイスはディスクイメージをマウントできません (loop サポートなし)。',
+        reasonISOImage:
+          'ISO 9660 イメージの中身はここでは閲覧できません。ターゲットマシンへのマウントは可能です。',
+        empty: 'このフォルダは空です',
+        noMatch: '検索に一致するファイルはありません。',
+        free: '空き {{size}}',
+        search: 'このフォルダを検索',
+        sort: {
+          name: '名前',
+          size: 'サイズ',
+          type: '種類',
+          asc: '昇順',
+          desc: '降順'
+        },
+        upload: 'メディアにファイルをアップロード',
+        deleteFolderTitle: 'フォルダーを削除',
+        deleteFolderConfirm:
+          'フォルダー {{name}} とその中身をすべて削除しますか？この操作は元に戻せません。',
+        uploading: 'アップロード中…',
+        uploadFailed: 'アップロードに失敗しました',
+        download: 'ダウンロード',
+        delete: '削除',
+        deleteTitle: 'ファイルを削除',
+        deleteConfirm: '{{name}} をメディアから削除しますか？'
+      },
+      yes: 'はい',
+      no: 'いいえ'
     },
     script: {
       title: 'スクリプト',
@@ -289,20 +381,11 @@ const ja = {
       ok: 'OK'
     },
     download: {
-      title: 'イメージダウンローダー',
-      input: 'リモートイメージの URL を入力してください',
-      ok: 'OK',
       disabled:
-        '/data パーティションは読み取り専用であり、イメージのダウンロードには使用できません',
-      uploadbox: 'ここにファイルをドロップするか、クリックして選択してください',
-      inputfile: '画像ファイルを入力してください',
-      NoISO: 'ISO なし',
+        'ターゲットマシンが使用している間、データパーティションは読み取り専用です。新しいイメージは書き込めませんが、既存のファイルはダウンロードできます。',
       sha256: 'SHA-256（任意）',
       sha256Placeholder: '64 文字の SHA-256 チェックサムを入力してください',
       invalidSHA256: 'SHA-256 は 64 文字の 16 進数文字列である必要があります',
-      failed: 'ダウンロードに失敗しました',
-      success: 'ダウンロードに成功しました',
-      checksumFailed: 'ダウンロードに失敗しました：SHA-256 検証に失敗しました',
       cancel: 'キャンセル',
       cancelFailed: 'ダウンロードのキャンセルに失敗しました'
     },
@@ -838,7 +921,14 @@ const ja = {
         reboot: '再起動',
         rebootDesc: 'NanoKVM を再起動してもよろしいですか?',
         okBtn: 'はい',
-        cancelBtn: 'いいえ'
+        cancelBtn: 'いいえ',
+        diskLocked: 'イメージのマウント中はオフです（オンにするとマウントが解除されます）',
+        diskCancelMount:
+          '仮想ディスクを有効にすると、マウント中のイメージは解除され、進行中のイメージのダウンロード/アップロードも中断されます。続行しますか？',
+        diskBreakDownload:
+          '仮想ディスクを有効にすると、イメージのダウンロードが中断されます。続行しますか？',
+        attention: '注意',
+        updateFailed: '仮想デバイスの更新に失敗しました'
       },
       network: {
         title: 'ネットワーク',
@@ -1275,17 +1365,17 @@ const ja = {
       account: {
         title: 'アカウント',
         webAccount: 'ウェブアカウント名',
-        role: 'ロール',
-        roles: {
-          admin: '管理者',
-          user: 'ユーザー'
-        },
         password: 'パスワード',
         updateBtn: '変更',
         logoutBtn: 'ログアウト',
         logoutDesc: 'ログアウトしてもよろしいですか？',
         okBtn: 'はい',
         cancelBtn: 'いいえ',
+        role: '役割',
+        roles: {
+          admin: '管理者',
+          user: 'ユーザー'
+        },
         users: {
           title: 'ユーザー',
           create: 'ユーザーを作成',
@@ -1294,13 +1384,74 @@ const ja = {
           deviceOwner: 'デバイスの所有者',
           resetPassword: 'パスワードをリセット',
           delete: '削除',
-          deleteConfirm: 'このユーザーを削除し、そのセッションをすべて無効にしますか？',
+          deleteConfirm: 'このユーザーを削除し、すべてのセッションを取り消しますか？',
           created: 'ユーザーを作成しました',
           deleted: 'ユーザーを削除しました',
           passwordUpdated: 'パスワードを更新しました',
-          loadFailed: 'ユーザーの取得に失敗しました',
-          saveFailed: 'ユーザーの保存に失敗しました',
-          deleteFailed: 'ユーザーの削除に失敗しました'
+          loadFailed: 'ユーザーを読み込めませんでした',
+          saveFailed: 'ユーザーを保存できませんでした',
+          deleteFailed: 'ユーザーを削除できませんでした',
+          editPermissions: '権限',
+          mcpLossTitle: 'MCP アクセスを取り消す',
+          mcpLossDesc:
+            '{{name}} は MCP へのアクセス権を失います。MCP API キーはデバイス全体で共有されるため、コピーされたキーは再生成するまで有効です。再生成すると、新しいキーを設定するまですべての MCP クライアントが切断されます。',
+          mcpLossRotate: 'MCP API キーを再生成する',
+          mcpLossKeep:
+            '現在のキーは引き続き有効で、コピーを持つ人はキーボードとマウスを操作できます。後で MCP 設定から再生成できます。',
+          mcpKeyRotated: 'MCP API キーを再生成しました。MCP クライアントには新しいキーが必要です。'
+        },
+        permissions: {
+          title: '権限',
+          editTitle: '権限を編集',
+          save: '保存',
+          saved: '保存しました',
+          close: '閉じる',
+          groupConsole: 'コンソール',
+          groupTarget: 'ターゲットマシン',
+          groupLibrary: 'メディアライブラリ',
+          groupHost: 'このデバイス',
+          groupServices: 'サービス',
+          consoleView: '画面を表示',
+          consoleControl: 'キーボードとマウス',
+          power: '電源とウェイク',
+          mediumAttach: 'メディアを接続',
+          libraryRead: 'ライブラリを閲覧',
+          libraryWrite: 'ライブラリを管理',
+          terminal: 'ターミナルとスクリプト',
+          device: 'デバイス設定',
+          network: 'ネットワーク設定',
+          update: 'システムアップデート',
+          mcp: 'MCP サービス',
+          tailscale: 'Tailscale',
+          ai: 'AI アシスタント',
+          effectConsoleView:
+            'ターゲットの画面を表示し、すべての視聴者が共有するビデオモード、解像度、フレームレート、画質を設定します。',
+          effectConsoleControl: 'キーボードとマウスの入力をターゲットマシンに送信します。',
+          effectPower:
+            'ターゲットマシンの電源投入、電源切断、リセットを行い、Wake-on-LAN のデバイス一覧を管理します。',
+          effectMediumAttach:
+            'メディアをターゲットマシンにマウント・取り出し、共有パーティション経由でファイルを交換します。',
+          effectLibraryRead: 'イメージとその中のファイルを一覧表示・ダウンロードします。',
+          effectLibraryWrite:
+            'イメージのアップロード・作成・削除と、イメージ内のファイルの変更を行います。',
+          effectTerminal: 'Web セッションを介さずに、このデバイスで root シェルを提供します。',
+          effectDevice:
+            'SSH の有効化（これも root 相当）、デバイスの再起動、生のデータパーティションをターゲットマシンへ公開、OLED・HDMI・mDNS・メモリ・スワップの設定変更ができます。',
+          effectNetwork:
+            'Wi-Fi、DNS、TLS を変更します。このデバイスがネットワークから切断される可能性があります。',
+          effectUpdate: 'ファームウェアとアプリケーションパッケージをインストールします。',
+          effectMcp:
+            'デバイス全体で有効な API キーを発行し、Web セッション外からキーボード・マウス・スクリーンショットを操作できます。この権限を取り消しても、コピーされたキーは再生成しない限り有効です（権限の削除時に再生成するか確認します）。',
+          effectTailscale: 'このデバイスを VPN メッシュに参加させます。',
+          effectAi:
+            '他の権限に制限されないローカルインターフェース経由でデバイスを操作するため、実質的にデバイスの完全な制御権になります。',
+          fullControlWarning: 'これらの権限はデバイスの完全な制御権に相当します:',
+          emptyWarning: 'このアカウントは機能を一切持たず、ログインのみ可能になります。',
+          impliedBy: '{{name}} に含まれます',
+          grantCount_one: '{{count}} 件の権限',
+          grantCount: '{{count}} 件の権限',
+          adminAll: '管理者はすべての権限を持ちます',
+          catalogFailed: '権限一覧を読み込めませんでした。ダイアログを閉じて再試行してください。'
         }
       }
     },

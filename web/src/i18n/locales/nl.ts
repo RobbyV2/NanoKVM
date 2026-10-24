@@ -5,24 +5,22 @@ const nl = {
       login: 'Inloggen',
       changePassword: 'Wachtwoord wijzigen',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Afbeeldingen en bestandsdeling'
     },
     auth: {
       login: 'Inloggen',
       placeholderUsername: 'Voer gebruikersnaam in',
       placeholderPassword: 'Voer wachtwoord in',
-      placeholderCurrentPassword: 'Huidig wachtwoord',
       placeholderPassword2: 'Voer wachtwoord nogmaals in',
       noEmptyUsername: 'Gebruikersnaam mag niet leeg zijn',
       noEmptyPassword: 'Wachtwoord mag niet leeg zijn',
-      passwordLength: 'Het wachtwoord moet tussen 8 en 72 tekens lang zijn',
       noAccount:
         'Ophalen van gebruikersinformatie mislukt, vernieuw de webpagina of reset het wachtwoord',
       invalidUser: 'Ongeldige gebruikersnaam of wachtwoord',
       locked: 'Te veel aanmeldingen, probeer het later opnieuw',
       globalLocked: 'Systeem wordt beveiligd. Probeer het later opnieuw',
       error: 'Onverwachte fout',
-      invalidCurrentPassword: 'Het huidige wachtwoord is onjuist',
       changePassword: 'Wachtwoord wijzigen',
       changePasswordDesc:
         'Voor de veiligheid van uw apparaat, wijzig alstublieft het webaanmeldingswachtwoord.',
@@ -44,7 +42,10 @@ const nl = {
         change3: 'Systeem root-wachtwoord (SSH-inlogwachtwoord)',
         change4:
           'Om de wachtwoorden opnieuw in te stellen, houdt u de BOOT-knop op de NanoKVM ingedrukt.'
-      }
+      },
+      placeholderCurrentPassword: 'Huidig wachtwoord',
+      passwordLength: 'Het wachtwoord moet tussen 8 en 72 tekens lang zijn',
+      invalidCurrentPassword: 'Het huidige wachtwoord is onjuist'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -62,6 +63,17 @@ const nl = {
         passPlaceholder: 'AP wachtwoord',
         verifyBtn: 'Verifieer'
       }
+    },
+    desktop: {
+      readOnly: 'Alleen bekijken',
+      readOnlyTip:
+        'Dit account kan geen toetsenbord- of muisinvoer naar de doelmachine sturen, daarom toont de console alleen het scherm.'
+    },
+    noConsole: {
+      title: 'Dit account heeft geen toegang tot de console',
+      description:
+        'Er zijn andere mogelijkheden toegekend. Open een van de pagina’s die het mag gebruiken, of vraag een beheerder om toegang tot de console.',
+      nothing: 'Dit account heeft nog geen rechten. Vraag een beheerder om er een toe te kennen.'
     },
     screen: {
       scale: 'Schaal',
@@ -220,27 +232,44 @@ const nl = {
         disable: 'Schakel de modus HID-Alleen uit'
       }
     },
-    image: {
-      title: 'Afbeeldingen',
-      loading: 'Laden...',
-      empty: 'Niets gevonden',
+    storage: {
+      title: 'Afbeeldingen en bestandsdeling',
+      empty:
+        'Nog geen afbeeldingen. Upload een ISO of IMG, of kopieer er een naar de schijf vanaf de doelcomputer.',
+      notAttached: 'Niets gekoppeld',
+      attached: 'Gekoppeld: {{name}}',
+      eject: 'Uitwerpen',
+      mount: 'Koppelen',
       mountMode: 'Montagemodus',
-      mountFailed: 'Koppelen mislukt',
-      mountDesc:
-        'In sommige systemen is het noodzakelijk om de virtuele schijf op de externe host uit te werpen voordat het image wordt gekoppeld.',
-      unmountFailed: 'Ontkoppelen mislukt',
-      unmountDesc:
-        'Op sommige systemen moet u de image handmatig uitwerpen van de externe host voordat u de image ontkoppelt.',
-      refresh: 'Vernieuw de afbeeldingenlijst',
-      attention: 'Let op',
-      deleteConfirm: 'Weet u zeker dat u deze afbeelding wilt verwijderen?',
-      okBtn: 'Ja',
-      cancelBtn: 'Nee',
+      mountModeDisk: 'Massopslag',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Bestandsbeheer openen',
+      refresh: 'Vernieuwen',
+      delete: 'Verwijderen',
+      deleteTitle: 'Medium verwijderen',
+      deleteConfirm: '{{name}} verwijderen? De bestanden erin gaan verloren.',
+      downloadImage: 'De afbeelding downloaden',
+      typePartition: 'Gedeelde bestanden',
+      volumeLabel: 'Verwisselbare schijf',
+      groups: {
+        share: 'Bestandsdeling',
+        images: 'Afbeeldingen'
+      },
+      failed: 'De bewerking is mislukt',
+      hidOnly: 'Alleen HID-modus: de virtuele schijf is niet beschikbaar',
+      disabled: 'De virtuele schijf is uitgeschakeld (Instellingen - Apparaat)',
+      force: {
+        title: 'Het medium met geweld terughalen?',
+        desc: 'De doelcomputer gebruikt dit medium nog. Het terughalen laat het USB-apparaat opnieuw opsommen en kan alles verliezen wat nog niet naar de schijf is geschreven.',
+        menuHint:
+          'De doelcomputer gebruikt dit medium. Open het bestandsbeheer om het met geweld terug te halen.'
+      },
       tips: {
         title: 'Hoe te uploaden',
         usb1: 'Verbind de NanoKVM met uw computer via USB.',
-        usb2: 'Zorg ervoor dat de virtuele schijf is gekoppeld (Instellingen - Virtuele schijf).',
+        usb2: 'Koppel op deze pagina de gedeelde bestanden in massaopslagmodus.',
         usb3: 'Open de virtuele schijf op uw computer en kopieer het imagebestand naar de hoofdmap van de virtuele schijf.',
+        usb4: 'Werp de schijf uit als het kopiëren klaar is: de image verschijnt dan in de lijst.',
         scp1: 'Zorg ervoor dat de NanoKVM en uw computer zich in hetzelfde lokale netwerk bevinden.',
         scp2: 'Open een terminal op uw computer en gebruik het SCP-commando om het imagebestand te uploaden naar de /data directory op de NanoKVM.',
         scp3: 'Voorbeeld: scp uw-image-pad root@uw-nanokvm-ip:/data',
@@ -250,7 +279,71 @@ const nl = {
         tf3: 'Plaats de TF-kaart in een kaartlezer en verbind deze met uw computer.',
         tf4: 'Kopieer het imagebestand naar de /data directory op de TF-kaart.',
         tf5: 'Plaats de TF-kaart terug in de NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Bezig met {{name}}'
+      },
+      enableDisk: {
+        title: 'De virtuele schijf inschakelen?',
+        desc: 'Voor het koppelen van een medium is de virtuele schijf nodig, die nu uitgeschakeld is. Nu inschakelen? Het toetsenbord en de muis van de doelcomputer worden even losgekoppeld.',
+        menuHint:
+          'De virtuele schijf is uitgeschakeld. Schakel die in bij Instellingen - Apparaat.',
+        askDevice:
+          'De virtuele schijf staat uit. Een account met de apparaatrechten moet deze eerst aanzetten.'
+      },
+      add: {
+        title: 'Medium toevoegen',
+        upload: 'Een ISO of IMG uploaden',
+        fromUrl: 'Vanaf een URL downloaden',
+        url: 'URL van de afbeelding',
+        urlRequired: 'Voer een URL in',
+        onlyImages: 'Alleen .iso- en .img-bestanden kunnen worden gekoppeld',
+        dropHint: 'Sleep een ISO of IMG hierheen, of klik om een bestand te kiezen',
+        cdromOnlyIso: 'Een CD-ROM kan alleen een ISO 9660-image bevatten',
+        uploadFailed: 'Uploaden mislukt',
+        downloadFailed: 'Downloaden mislukt',
+        uploading: '{{name}} wordt geüpload',
+        downloading: '{{name}} wordt gedownload',
+        done: '{{name}} is klaar',
+        checksumFailed: 'De image komt niet overeen met de SHA-256-controlesom.',
+        blocked: 'De doelcomputer gebruikt de schijf',
+        copyHint:
+          'Je kunt een image ook via SCP naar de datapartitie kopiëren, of vanaf de doelcomputer.'
+      },
+      files: {
+        selectMedium: 'Kies een medium om de bestanden erin te bekijken.',
+        reasonAttached: 'Dit medium is aan de doelcomputer gekoppeld.',
+        reasonAttachedHint:
+          'Werp het eerst uit: de doelcomputer moet de schijf vrijgeven voordat de bestanden gelezen kunnen worden.',
+        reasonNotBrowsable:
+          'Dit medium bevat een bestandssysteem dat het bestandsbeheer niet kan openen.',
+        reasonNoLoop: 'Dit apparaat kan geen schijfimages koppelen (geen loop-ondersteuning).',
+        reasonISOImage:
+          'Een ISO 9660-image kan hier niet worden doorzocht. Die kan wel gewoon aan de doelcomputer worden gekoppeld.',
+        empty: 'Deze map is leeg',
+        noMatch: 'Geen bestanden gevonden voor deze zoekopdracht.',
+        free: '{{size}} vrij',
+        search: 'In deze map zoeken',
+        sort: {
+          name: 'Naam',
+          size: 'Grootte',
+          type: 'Type',
+          asc: 'Oplopend',
+          desc: 'Aflopend'
+        },
+        upload: 'Een bestand naar het medium uploaden',
+        deleteFolderTitle: 'Map verwijderen',
+        deleteFolderConfirm:
+          'De map {{name}} en alles erin verwijderen? Dit kan niet ongedaan worden gemaakt.',
+        uploading: 'Uploaden…',
+        uploadFailed: 'Uploaden mislukt',
+        download: 'Downloaden',
+        delete: 'Verwijderen',
+        deleteTitle: 'Bestand verwijderen',
+        deleteConfirm: '{{name}} van het medium verwijderen?'
+      },
+      yes: 'Ja',
+      no: 'Nee'
     },
     script: {
       title: 'Script',
@@ -292,19 +385,11 @@ const nl = {
       ok: 'Ok'
     },
     download: {
-      title: 'Afbeeldingdownloader',
-      input: 'Voer een externe afbeelding in URL',
-      ok: 'Ok',
-      disabled: '/data partitie is RO, dus we kunnen de afbeelding niet downloaden',
-      uploadbox: 'Zet het bestand hier neer of klik om te selecteren',
-      inputfile: 'Voer het afbeeldingsbestand in',
-      NoISO: 'Geen ISO',
+      disabled:
+        'De datapartitie is alleen-lezen zolang de doelcomputer hem gebruikt: nieuwe images kunnen niet worden geschreven, bestaande bestanden zijn nog wel te downloaden.',
       sha256: 'SHA-256 (optioneel)',
       sha256Placeholder: 'Voer een SHA-256-controlesom van 64 tekens in',
       invalidSHA256: 'SHA-256 moet een hexadecimale tekenreeks van 64 tekens zijn',
-      failed: 'Download mislukt',
-      success: 'Download geslaagd',
-      checksumFailed: 'Download mislukt: SHA-256-verificatie mislukt',
       cancel: 'Annuleren',
       cancelFailed: 'Download annuleren mislukt'
     },
@@ -846,7 +931,14 @@ const nl = {
         reboot: 'Opnieuw opstarten',
         rebootDesc: 'Weet u zeker dat u NanoKVM opnieuw wilt opstarten?',
         okBtn: 'Ja',
-        cancelBtn: 'Nee'
+        cancelBtn: 'Nee',
+        diskLocked: 'Uit zolang een image is gekoppeld (aanzetten breekt het koppelen af)',
+        diskCancelMount:
+          'Het inschakelen van de virtuele schijf breekt de gekoppelde image af en onderbreekt een lopende image-download of -upload. Doorgaan?',
+        diskBreakDownload:
+          'Het inschakelen van de virtuele schijf onderbreekt de image-download. Doorgaan?',
+        attention: 'Let op',
+        updateFailed: 'Bijwerken van het virtuele apparaat mislukt'
       },
       network: {
         title: 'Netwerk',
@@ -1284,32 +1376,94 @@ const nl = {
       account: {
         title: 'Account',
         webAccount: 'Web Account Naam',
-        role: 'Rol',
-        roles: {
-          admin: 'Beheerder',
-          user: 'Gebruiker'
-        },
         password: 'Wachtwoord',
         updateBtn: 'Update',
         logoutBtn: 'Afmelden',
         logoutDesc: 'Weet u zeker dat u wilt uitloggen?',
         okBtn: 'Ja',
         cancelBtn: 'Nee',
+        role: 'Rol',
+        roles: {
+          admin: 'Beheerder',
+          user: 'Gebruiker'
+        },
         users: {
           title: 'Gebruikers',
           create: 'Gebruiker aanmaken',
           enabled: 'Ingeschakeld',
           disabled: 'Uitgeschakeld',
-          deviceOwner: 'Eigenaar van het apparaat',
+          deviceOwner: 'Apparaateigenaar',
           resetPassword: 'Wachtwoord opnieuw instellen',
           delete: 'Verwijderen',
           deleteConfirm: 'Deze gebruiker verwijderen en al zijn sessies intrekken?',
           created: 'Gebruiker aangemaakt',
           deleted: 'Gebruiker verwijderd',
           passwordUpdated: 'Wachtwoord bijgewerkt',
-          loadFailed: 'Gebruikers laden mislukt',
-          saveFailed: 'Gebruiker opslaan mislukt',
-          deleteFailed: 'Gebruiker verwijderen mislukt'
+          loadFailed: 'Gebruikers konden niet worden geladen',
+          saveFailed: 'Gebruiker kon niet worden opgeslagen',
+          deleteFailed: 'Gebruiker kon niet worden verwijderd',
+          editPermissions: 'Rechten',
+          mcpLossTitle: 'MCP-toegang intrekken',
+          mcpLossDesc:
+            '{{name}} verliest MCP-toegang. De MCP-API-sleutel wordt door het hele apparaat gedeeld, dus een kopie blijft werken tot de sleutel opnieuw wordt gegenereerd. Opnieuw genereren verbreekt alle MCP-clients tot ze de nieuwe sleutel krijgen.',
+          mcpLossRotate: 'MCP-API-sleutel opnieuw genereren',
+          mcpLossKeep:
+            'De huidige sleutel blijft geldig en wie een kopie heeft, kan nog steeds toetsenbord en muis bedienen. U kunt hem later opnieuw genereren in de MCP-instellingen.',
+          mcpKeyRotated:
+            'MCP-API-sleutel opnieuw gegenereerd. MCP-clients hebben de nieuwe sleutel nodig.'
+        },
+        permissions: {
+          title: 'Rechten',
+          editTitle: 'Rechten bewerken',
+          save: 'Opslaan',
+          saved: 'Opgeslagen',
+          close: 'Sluiten',
+          groupConsole: 'Console',
+          groupTarget: 'Doelmachine',
+          groupLibrary: 'Mediabibliotheek',
+          groupHost: 'Dit apparaat',
+          groupServices: 'Diensten',
+          consoleView: 'Scherm bekijken',
+          consoleControl: 'Toetsenbord en muis',
+          power: 'Voeding en wekken',
+          mediumAttach: 'Medium koppelen',
+          libraryRead: 'Mediabibliotheek doorbladeren',
+          libraryWrite: 'Mediabibliotheek beheren',
+          terminal: 'Terminal en scripts',
+          device: 'Apparaatinstellingen',
+          network: 'Netwerkinstellingen',
+          update: 'Systeemupdate',
+          mcp: 'MCP-dienst',
+          tailscale: 'Tailscale',
+          ai: 'AI-assistent',
+          effectConsoleView:
+            'Toont het scherm van de doelmachine en stelt de videomodus, resolutie, framesnelheid en kwaliteit in die alle kijkers delen.',
+          effectConsoleControl: 'Stuurt toetsenbord- en muisinvoer naar de doelmachine.',
+          effectPower:
+            'Zet de doelmachine aan, uit en herstart hem, en beheert de lijst met Wake-on-LAN-apparaten.',
+          effectMediumAttach:
+            'Koppelt en ontkoppelt media op de doelmachine en wisselt bestanden met hem uit via de gedeelde partitie.',
+          effectLibraryRead: 'Toont en downloadt de images en de bestanden erin.',
+          effectLibraryWrite: 'Uploadt, maakt en verwijdert images, en wijzigt de bestanden erin.',
+          effectTerminal: 'Geeft een root-shell op dit apparaat, zonder de websessie ertussen.',
+          effectDevice:
+            'Maakt SSH mogelijk (ook root), herstart het apparaat, geeft de ruwe datapartitie aan de doelmachine en wijzigt OLED, HDMI, mDNS, geheugen en swap.',
+          effectNetwork:
+            'Wijzigt wifi, DNS en TLS, waardoor dit apparaat van het netwerk kan verdwijnen.',
+          effectUpdate: 'Installeert firmware en applicatiepakketten.',
+          effectMcp:
+            'Geeft een apparaatbrede API-sleutel uit die toetsenbord, muis en schermafbeeldingen buiten de websessie bestuurt; een kopie blijft na intrekking werken tenzij de sleutel opnieuw wordt gegenereerd, wat wordt aangeboden bij het verwijderen van de toestemming.',
+          effectTailscale: 'Voegt dit apparaat toe aan een VPN-mesh.',
+          effectAi:
+            'Bestuurt het apparaat via een lokale interface die de andere rechten niet beperken, dus dit staat gelijk aan volledige apparaatcontrole.',
+          fullControlWarning: 'Deze rechten komen neer op volledige apparaatcontrole:',
+          emptyWarning: 'Dit account heeft dan geen enkele functie en kan alleen inloggen.',
+          impliedBy: 'Inbegrepen via {{name}}',
+          grantCount_one: '{{count}} recht',
+          grantCount: '{{count}} rechten',
+          adminAll: 'Beheerders hebben alle rechten',
+          catalogFailed:
+            'De rechtenlijst kon niet worden geladen. Sluit dit venster en probeer het opnieuw.'
         }
       }
     },

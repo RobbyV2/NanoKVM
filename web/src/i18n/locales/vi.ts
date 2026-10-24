@@ -5,24 +5,22 @@ const vi = {
       login: 'Đăng nhập',
       changePassword: 'Đổi mật khẩu',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Hình ảnh và chia sẻ tệp'
     },
     auth: {
       login: 'Đăng nhập',
       placeholderUsername: 'Vui lòng nhập tên người dùng',
       placeholderPassword: 'vui lòng nhập mật khẩu',
-      placeholderCurrentPassword: 'Mật khẩu hiện tại',
       placeholderPassword2: 'vui lòng nhập lại mật khẩu',
       noEmptyUsername: 'tên người dùng không được để trống',
       noEmptyPassword: 'mật khẩu không được để trống',
-      passwordLength: 'Mật khẩu phải dài từ 8 đến 72 ký tự',
       noAccount:
         'Không thể lấy thông tin người dùng, vui lòng làm mới trang web hoặc đặt lại mật khẩu',
       invalidUser: 'tên người dùng hoặc mật khẩu không hợp lệ',
       locked: 'Đăng nhập quá nhiều, vui lòng thử lại sau',
       globalLocked: 'Hệ thống đang được bảo vệ, vui lòng thử lại sau',
       error: 'lỗi không mong đợi',
-      invalidCurrentPassword: 'Mật khẩu hiện tại không đúng',
       changePassword: 'Đổi mật khẩu',
       changePasswordDesc: 'Để bảo mật thiết bị của bạn, vui lòng thay đổi mật khẩu đăng nhập web.',
       differentPassword: 'mật khẩu không khớp',
@@ -42,7 +40,10 @@ const vi = {
         change2: 'Mật khẩu đăng nhập web',
         change3: 'Mật khẩu root hệ thống (mật khẩu đăng nhập SSH)',
         change4: 'Để đặt lại mật khẩu, hãy nhấn và giữ nút BOOT trên NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Mật khẩu hiện tại',
+      passwordLength: 'Mật khẩu phải từ 8 đến 72 ký tự',
+      invalidCurrentPassword: 'Mật khẩu hiện tại không đúng'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -60,6 +61,17 @@ const vi = {
         passPlaceholder: 'AP mật khẩu',
         verifyBtn: 'Xác minh'
       }
+    },
+    desktop: {
+      readOnly: 'Chỉ xem',
+      readOnlyTip:
+        'Tài khoản này không thể gửi dữ liệu bàn phím hoặc chuột tới máy đích, vì vậy console chỉ hiển thị màn hình.'
+    },
+    noConsole: {
+      title: 'Tài khoản này không có quyền console',
+      description:
+        'Tài khoản đã được cấp các khả năng khác. Hãy mở một trong các trang có thể dùng, hoặc đề nghị quản trị viên cấp quyền console.',
+      nothing: 'Tài khoản này chưa có quyền nào. Hãy đề nghị quản trị viên cấp quyền.'
     },
     screen: {
       scale: 'Quy mô',
@@ -216,26 +228,43 @@ const vi = {
         disable: 'Tắt chế độ HID-Chỉ'
       }
     },
-    image: {
-      title: 'Hình ảnh',
-      loading: 'Đang tải...',
-      empty: 'Không tìm thấy',
+    storage: {
+      title: 'Hình ảnh và chia sẻ tệp',
+      empty:
+        'Chưa có hình ảnh nào. Hãy tải lên tệp ISO hoặc IMG, hoặc sao chép một tệp vào đĩa từ máy đích.',
+      notAttached: 'Chưa gắn kết gì',
+      attached: 'Đã gắn kết: {{name}}',
+      eject: 'Đẩy ra',
+      mount: 'Gắn kết',
       mountMode: 'Chế độ gắn kết',
-      mountFailed: 'Mount thất bại',
-      mountDesc: 'Trong một số hệ thống, cần phải eject đĩa ảo trên máy remote trước khi mount.',
-      unmountFailed: 'Tháo lắp không thành công',
-      unmountDesc:
-        'Trên một số hệ thống, bạn cần đẩy hình ảnh ra khỏi máy chủ từ xa theo cách thủ công trước khi ngắt kết nối hình ảnh.',
-      refresh: 'Làm mới danh sách hình ảnh',
-      attention: 'Chú ý',
-      deleteConfirm: 'Bạn có chắc chắn muốn xóa hình ảnh này không?',
-      okBtn: 'Có',
-      cancelBtn: 'Không',
+      mountModeDisk: 'Lưu trữ hàng loạt',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Mở trình quản lý tệp',
+      refresh: 'Làm mới',
+      delete: 'Xóa',
+      deleteTitle: 'Xóa phương tiện',
+      deleteConfirm: 'Xóa {{name}}? Các tệp bên trong sẽ bị mất.',
+      downloadImage: 'Tải hình ảnh xuống',
+      typePartition: 'Tệp chia sẻ',
+      volumeLabel: 'Đĩa di động',
+      groups: {
+        share: 'Chia sẻ tệp',
+        images: 'Hình ảnh'
+      },
+      failed: 'Thao tác không thành công',
+      hidOnly: 'Chế độ chỉ HID: đĩa ảo không khả dụng',
+      disabled: 'Đĩa ảo đang tắt (Cài đặt - Thiết bị)',
+      force: {
+        title: 'Cưỡng chế lấy lại phương tiện?',
+        desc: 'Máy đích vẫn đang dùng phương tiện này. Lấy lại sẽ liệt kê lại thiết bị USB và có thể mất những gì nó chưa ghi vào đĩa.',
+        menuHint: 'Máy đích đang dùng phương tiện này. Mở trình quản lý tệp để cưỡng chế lấy lại.'
+      },
       tips: {
         title: 'Cách tải lên',
         usb1: 'Kết nối NanoKVM với máy tính của bạn qua USB.',
-        usb2: 'Đảm bảo rằng đĩa ảo đã được gắn kết (Cài đặt - Đĩa ảo).',
+        usb2: 'Trên trang này, gắn các tệp chia sẻ ở chế độ lưu trữ dung lượng lớn.',
         usb3: 'Mở đĩa ảo trên máy tính của bạn và sao chép vào thư mục gốc của đĩa ảo.',
+        usb4: 'Đẩy đĩa ra khi sao chép xong: ảnh đĩa sẽ xuất hiện trong danh sách.',
         scp1: 'Đảm bảo NanoKVM và máy tính của bạn đang trên cùng một mạng nội bộ.',
         scp2: 'Mở terminal trên máy tính và sử dụng lệnh SCP để tải đĩa ảo lên thư mục /data trên NanoKVM.',
         scp3: 'Ví dụ: scp đường-dẫn-image root@ip-của-nanokvm:/data',
@@ -245,7 +274,67 @@ const vi = {
         tf3: 'Chèn thẻ TF vào đầu đọc thẻ và kết nối với máy tính của bạn.',
         tf4: 'Sao chép tệp hình ảnh vào thư mục /data trên thẻ TF.',
         tf5: 'Chèn thẻ TF vào NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Đang xử lý {{name}}'
+      },
+      enableDisk: {
+        title: 'Bật đĩa ảo?',
+        desc: 'Việc gắn kết phương tiện cần đĩa ảo, hiện đang tắt. Bật ngay bây giờ? Bàn phím và chuột của máy đích sẽ ngắt kết nối trong giây lát.',
+        menuHint: 'Đĩa ảo đang tắt. Hãy bật trong Cài đặt - Thiết bị.',
+        askDevice: 'Đĩa ảo đang tắt. Tài khoản có quyền thiết bị cần bật nó trước.'
+      },
+      add: {
+        title: 'Thêm phương tiện',
+        upload: 'Tải lên tệp ISO hoặc IMG',
+        fromUrl: 'Tải xuống từ URL',
+        url: 'URL hình ảnh',
+        urlRequired: 'Vui lòng nhập URL',
+        onlyImages: 'Chỉ có thể gắn kết tệp .iso và .img',
+        dropHint: 'Kéo tệp ISO hoặc IMG vào đây, hoặc bấm để chọn tệp',
+        cdromOnlyIso: 'CD-ROM chỉ có thể chứa ảnh ISO 9660',
+        uploadFailed: 'Tải lên không thành công',
+        downloadFailed: 'Tải xuống không thành công',
+        uploading: 'Đang tải lên {{name}}',
+        downloading: 'Đang tải xuống {{name}}',
+        done: '{{name}} đã sẵn sàng',
+        checksumFailed: 'Ảnh đĩa không khớp với mã kiểm tra SHA-256.',
+        blocked: 'Máy đích đang dùng đĩa',
+        copyHint: 'Bạn cũng có thể sao chép ảnh vào phân vùng dữ liệu qua SCP, hoặc từ máy đích.'
+      },
+      files: {
+        selectMedium: 'Chọn một phương tiện để xem các tệp bên trong.',
+        reasonAttached: 'Phương tiện này đang gắn với máy đích.',
+        reasonAttachedHint:
+          'Hãy đẩy ra trước: máy đích phải nhả đĩa trước khi có thể đọc các tệp của nó.',
+        reasonNotBrowsable: 'Phương tiện này chứa hệ thống tệp mà trình quản lý không mở được.',
+        reasonNoLoop: 'Thiết bị này không gắn kết được ảnh đĩa (không có hỗ trợ loop).',
+        reasonISOImage:
+          'Không thể duyệt nội dung ảnh ISO 9660 tại đây. Ảnh vẫn có thể được gắn kết vào máy đích.',
+        empty: 'Thư mục này trống',
+        noMatch: 'Không có tệp nào khớp với tìm kiếm.',
+        free: '{{size}} trống',
+        search: 'Tìm trong thư mục này',
+        sort: {
+          name: 'Tên',
+          size: 'Kích thước',
+          type: 'Loại',
+          asc: 'Tăng dần',
+          desc: 'Giảm dần'
+        },
+        upload: 'Tải một tệp lên phương tiện',
+        deleteFolderTitle: 'Xóa thư mục',
+        deleteFolderConfirm:
+          'Xóa thư mục {{name}} và toàn bộ nội dung bên trong? Không thể hoàn tác thao tác này.',
+        uploading: 'Đang tải lên…',
+        uploadFailed: 'Tải lên không thành công',
+        download: 'Tải xuống',
+        delete: 'Xóa',
+        deleteTitle: 'Xóa tệp',
+        deleteConfirm: 'Xóa {{name}} khỏi phương tiện?'
+      },
+      yes: 'Có',
+      no: 'Không'
     },
     script: {
       title: 'Script',
@@ -287,19 +376,11 @@ const vi = {
       ok: 'OK'
     },
     download: {
-      title: 'Trình tải xuống hình ảnh',
-      input: 'Vui lòng nhập hình ảnh từ xa URL',
-      ok: 'OK',
-      disabled: '/data phân vùng là RO nên không tải được image',
-      uploadbox: 'Thả file vào đây hoặc bấm vào để chọn',
-      inputfile: 'Vui lòng nhập File hình ảnh',
-      NoISO: 'Không có ISO',
+      disabled:
+        'Phân vùng dữ liệu ở chế độ chỉ đọc khi máy đích đang dùng: không ghi được ảnh mới, nhưng vẫn tải xuống được các tệp hiện có.',
       sha256: 'SHA-256 (tùy chọn)',
       sha256Placeholder: 'Nhập mã kiểm tra SHA-256 gồm 64 ký tự',
       invalidSHA256: 'SHA-256 phải là chuỗi thập lục phân gồm 64 ký tự',
-      failed: 'Tải xuống thất bại',
-      success: 'Tải xuống thành công',
-      checksumFailed: 'Tải xuống thất bại: xác minh SHA-256 không thành công',
       cancel: 'Hủy',
       cancelFailed: 'Không thể hủy tải xuống'
     },
@@ -833,7 +914,13 @@ const vi = {
         reboot: 'Khởi động lại',
         rebootDesc: 'Bạn có chắc chắn muốn khởi động lại NanoKVM không?',
         okBtn: 'Có',
-        cancelBtn: 'Không'
+        cancelBtn: 'Không',
+        diskLocked: 'Off while an image is mounted (turning it on cancels the mount)',
+        diskCancelMount:
+          'Enabling the virtual disk cancels the mounted image and interrupts a running image download or upload. Continue?',
+        diskBreakDownload: 'Enabling the virtual disk interrupts the image download. Continue?',
+        attention: 'Chú ý',
+        updateFailed: 'Không cập nhật được thiết bị ảo'
       },
       network: {
         title: 'Mạng',
@@ -1266,17 +1353,17 @@ const vi = {
       account: {
         title: 'Tài khoản',
         webAccount: 'Tên tài khoản web',
-        role: 'Vai trò',
-        roles: {
-          admin: 'Quản trị viên',
-          user: 'Người dùng'
-        },
         password: 'Mật khẩu',
         updateBtn: 'Update',
         logoutBtn: 'Đăng xuất',
         logoutDesc: 'Bạn có chắc chắn muốn đăng xuất không?',
         okBtn: 'Có',
         cancelBtn: 'Không',
+        role: 'Vai trò',
+        roles: {
+          admin: 'Quản trị viên',
+          user: 'Người dùng'
+        },
         users: {
           title: 'Người dùng',
           create: 'Tạo người dùng',
@@ -1289,9 +1376,68 @@ const vi = {
           created: 'Đã tạo người dùng',
           deleted: 'Đã xóa người dùng',
           passwordUpdated: 'Đã cập nhật mật khẩu',
-          loadFailed: 'Không tải được danh sách người dùng',
+          loadFailed: 'Không tải được người dùng',
           saveFailed: 'Không lưu được người dùng',
-          deleteFailed: 'Không xóa được người dùng'
+          deleteFailed: 'Không xóa được người dùng',
+          editPermissions: 'Quyền',
+          mcpLossTitle: 'Thu hồi quyền truy cập MCP',
+          mcpLossDesc:
+            '{{name}} sẽ mất quyền truy cập MCP. Khóa API MCP được dùng chung cho toàn thiết bị, nên bản sao vẫn hoạt động cho đến khi khóa được tạo lại. Tạo lại sẽ ngắt kết nối mọi máy khách MCP cho đến khi chúng nhận khóa mới.',
+          mcpLossRotate: 'Tạo lại khóa API MCP',
+          mcpLossKeep:
+            'Khóa hiện tại vẫn hợp lệ, và ai có bản sao vẫn có thể điều khiển bàn phím và chuột. Bạn có thể tạo lại sau trong cài đặt MCP.',
+          mcpKeyRotated: 'Đã tạo lại khóa API MCP. Máy khách MCP cần khóa mới.'
+        },
+        permissions: {
+          title: 'Quyền',
+          editTitle: 'Sửa quyền',
+          save: 'Lưu',
+          saved: 'Đã lưu',
+          close: 'Đóng',
+          groupConsole: 'Console',
+          groupTarget: 'Máy đích',
+          groupLibrary: 'Thư viện phương tiện',
+          groupHost: 'Thiết bị này',
+          groupServices: 'Dịch vụ',
+          consoleView: 'Xem màn hình',
+          consoleControl: 'Bàn phím và chuột',
+          power: 'Nguồn và đánh thức',
+          mediumAttach: 'Gắn phương tiện',
+          libraryRead: 'Duyệt thư viện',
+          libraryWrite: 'Quản lý thư viện',
+          terminal: 'Terminal và tập lệnh',
+          device: 'Cài đặt thiết bị',
+          network: 'Cài đặt mạng',
+          update: 'Cập nhật hệ thống',
+          mcp: 'Dịch vụ MCP',
+          tailscale: 'Tailscale',
+          ai: 'Trợ lý AI',
+          effectConsoleView:
+            'Hiển thị màn hình của máy đích và đặt chế độ video, độ phân giải, tốc độ khung hình và chất lượng mà mọi người xem dùng chung.',
+          effectConsoleControl: 'Gửi dữ liệu bàn phím và chuột tới máy đích.',
+          effectPower:
+            'Bật, tắt và khởi động lại máy đích, đồng thời quản lý danh sách thiết bị Wake-on-LAN.',
+          effectMediumAttach:
+            'Gắn và tháo phương tiện trên máy đích, và trao đổi tệp với máy đó qua phân vùng chia sẻ.',
+          effectLibraryRead: 'Liệt kê và tải xuống các ảnh và tệp bên trong.',
+          effectLibraryWrite: 'Tải lên, tạo và xóa ảnh, và thay đổi các tệp bên trong.',
+          effectTerminal: 'Cung cấp shell root trên thiết bị này mà không qua phiên web.',
+          effectDevice:
+            'Cho phép bật SSH (cũng là root), khởi động lại thiết bị, đưa phân vùng dữ liệu thô cho máy đích và thay đổi cài đặt OLED, HDMI, mDNS, bộ nhớ và swap.',
+          effectNetwork: 'Thay đổi Wi-Fi, DNS và TLS, có thể khiến thiết bị này mất kết nối mạng.',
+          effectUpdate: 'Cài đặt firmware và gói ứng dụng.',
+          effectMcp:
+            'Cấp một khóa API áp dụng cho toàn thiết bị, điều khiển bàn phím, chuột và ảnh chụp màn hình ngoài phiên web; bản sao khóa vẫn hoạt động sau khi thu hồi quyền trừ khi khóa được tạo lại, việc này sẽ được đề xuất khi gỡ quyền.',
+          effectTailscale: 'Kết nối thiết bị này vào một mạng VPN.',
+          effectAi:
+            'Điều khiển thiết bị qua giao diện cục bộ mà các quyền khác không giới hạn, nên tương đương toàn quyền điều khiển thiết bị.',
+          fullControlWarning: 'Các quyền này tương đương toàn quyền điều khiển thiết bị:',
+          emptyWarning: 'Tài khoản này sẽ không có chức năng nào và chỉ có thể đăng nhập.',
+          impliedBy: 'Được {{name}} bao gồm',
+          grantCount_one: '{{count}} quyền',
+          grantCount: '{{count}} quyền',
+          adminAll: 'Quản trị viên có mọi quyền',
+          catalogFailed: 'Không tải được danh sách quyền. Hãy đóng hộp thoại và thử lại.'
         }
       }
     },

@@ -5,24 +5,22 @@ const tr = {
       login: 'Giriş',
       changePassword: 'Şifreyi değiştir',
       terminal: 'Uçbirim',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Disk imajları ve dosya paylaşımı'
     },
     auth: {
       login: 'Giriş',
       placeholderUsername: 'Kullanıcı Adı',
       placeholderPassword: 'Şifre',
-      placeholderCurrentPassword: 'Mevcut şifre',
       placeholderPassword2: 'Şifrenizi tekrar deneyiniz',
       noEmptyUsername: 'Kullanıcı adı gereklidir',
       noEmptyPassword: 'Şifre gereklidir',
-      passwordLength: 'Şifre 8 ile 72 karakter arasında olmalıdır',
       noAccount:
         'Kullanıcı verileri alınırken hata yaşandı, lütfen sayfayı yenileyiniz ya da şifrenizi sıfırlayınız',
       invalidUser: 'Yanlış kullanıcı adı ya da şifre',
       locked: 'Çok fazla giriş yapıldı, lütfen daha sonra tekrar deneyin',
       globalLocked: 'Sistem koruma altında, lütfen daha sonra tekrar deneyin',
       error: 'Beklenmedik bir hata',
-      invalidCurrentPassword: 'Mevcut şifre yanlış',
       changePassword: 'Şifrenizi değiştiriniz',
       changePasswordDesc: 'Güvenlik sebebiyle lütfen şifrenizi değiştiriniz!',
       differentPassword: 'Şifreler eşleşmemektedir',
@@ -43,7 +41,10 @@ const tr = {
         change3: 'Sistem yöneticisi şifresi (Güvenli Kabuk Bağlantısı (SSH) giriş şifresi)',
         change4:
           'Şifreleri sıfırlamak için NanoKVM üzerinde bulunan BOOT tuşuna 10 saniye boyunca basılı tutun.'
-      }
+      },
+      placeholderCurrentPassword: 'Geçerli şifre',
+      passwordLength: 'Şifre 8 ile 72 karakter arasında olmalıdır',
+      invalidCurrentPassword: 'Geçerli şifre yanlış'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -61,6 +62,17 @@ const tr = {
         passPlaceholder: 'AP şifre',
         verifyBtn: 'Doğrula'
       }
+    },
+    desktop: {
+      readOnly: 'Yalnızca izleme',
+      readOnlyTip:
+        'Bu hesap hedef makineye klavye veya fare girişi gönderemez; bu nedenle konsol yalnızca ekranı gösterir.'
+    },
+    noConsole: {
+      title: 'Bu hesabın konsol erişimi yok',
+      description:
+        'Hesaba başka yetkiler verilmiş. Kullanabileceği sayfalardan birini açın veya bir yöneticiden konsol erişimi isteyin.',
+      nothing: 'Bu hesabın henüz hiçbir izni yok. Bir yöneticiden izin vermesini isteyin.'
     },
     screen: {
       scale: 'Ölçek',
@@ -216,27 +228,44 @@ const tr = {
         disable: 'Yalnızca HID modunu devre dışı bırak'
       }
     },
-    image: {
-      title: 'Disk İmajları',
-      loading: 'Yükleniyor...',
-      empty: 'Hiçbir şey bulunamadı',
+    storage: {
+      title: 'Disk imajları ve dosya paylaşımı',
+      empty:
+        'Henüz imaj yok. Bir ISO veya IMG yükleyin ya da hedef makineden diske bir tane kopyalayın.',
+      notAttached: 'Hiçbir şey bağlı değil',
+      attached: 'Bağlı: {{name}}',
+      eject: 'Çıkar',
+      mount: 'Bağla',
       mountMode: 'Montaj modu',
-      mountFailed: 'Bağlantı başarısız oldu',
-      mountDesc:
-        'Bazı sistemlerde, disk imajını bağlamadan önce uzak ana bilgisayardaki sanal diski çıkarmak gerekir.',
-      unmountFailed: 'Bağlantıyı kesme işlemi başarısız oldu',
-      unmountDesc:
-        'Bazı sistemlerde, görüntünün bağlantısını kesmeden önce uzak ana bilgisayardan manuel olarak çıkarmanız gerekir.',
-      refresh: 'Disk imajı listesini yenile',
-      attention: 'Dikkat',
-      deleteConfirm: 'Bu resmi silmek istediğinizden emin misiniz?',
-      okBtn: 'Evet',
-      cancelBtn: 'Hayır',
+      mountModeDisk: 'Yığın depolama',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Dosya yöneticisini aç',
+      refresh: 'Yenile',
+      delete: 'Sil',
+      deleteTitle: 'Ortamı sil',
+      deleteConfirm: '{{name}} silinsin mi? İçindeki dosyalar kaybolur.',
+      downloadImage: 'İmajı indir',
+      typePartition: 'Paylaşılan dosyalar',
+      volumeLabel: 'Çıkarılabilir disk',
+      groups: {
+        share: 'Dosya paylaşımı',
+        images: 'İmajlar'
+      },
+      failed: 'İşlem başarısız oldu',
+      hidOnly: 'Yalnızca HID modu: sanal disk kullanılamıyor',
+      disabled: 'Sanal disk devre dışı (Ayarlar - Aygıt)',
+      force: {
+        title: 'Ortam zorla geri alınsın mı?',
+        desc: 'Hedef makine bu ortamı hâlâ kullanıyor. Geri almak USB aygıtını yeniden numaralandırır ve diske henüz yazmadığı her şeyi kaybedebilir.',
+        menuHint:
+          'Hedef makine bu ortamı kullanıyor. Zorla geri almak için dosya yöneticisini açın.'
+      },
       tips: {
         title: 'Nasıl yüklenir',
         usb1: "NanoKVM'i bilgisayarınıza USB ile bağlayın.",
-        usb2: 'Sanal diskin bağlı olduğundan emin olun (Ayarlar - Sanal Disk).',
+        usb2: 'Bu sayfada paylaşılan dosyaları yığın depolama modunda bağlayın.',
         usb3: 'Sanal diski bilgisayarınızda açın ve disk imajı dosyanızı sanal diskin kök dizinine kopyalayın.',
+        usb4: 'Kopyalama bitince diski çıkarın: imaj ardından listede görünür.',
         scp1: 'NanoKVM ve bilgisayarınızın aynı yerel ağda bulunduğundan emin olun.',
         scp2: "Bilgisayarınızda uçbirimi açın ve disk imajı dosyanını SCP komudunu kullanarak NanoKVM'in /data dizinine yükleyin.",
         scp3: 'Örnek: scp senin-disk-imajı-dizinin root@senin-nanokvm-ip:/data',
@@ -246,7 +275,68 @@ const tr = {
         tf3: 'micro SD kartı kart okuyucusuna takın ve bilgisayarınıza bağlayın.',
         tf4: 'Disk imajı dosyanını micro SD kartın /data dizinine kopyalayın.',
         tf5: "micro SD kartı NanoKVM'e geri yerleştirin."
-      }
+      },
+      job: {
+        running: '{{name}} işleniyor'
+      },
+      enableDisk: {
+        title: 'Sanal disk etkinleştirilsin mi?',
+        desc: 'Bir ortamı bağlamak için şu anda kapalı olan sanal disk gerekir. Şimdi etkinleştirilsin mi? Hedef makinenin klavyesi ve faresinin bağlantısı bir an kesilir.',
+        menuHint: 'Sanal disk devre dışı. Ayarlar - Aygıt bölümünden etkinleştirin.',
+        askDevice:
+          'Sanal disk kapalı. Önce cihaz iznine sahip bir hesabın etkinleştirmesi gerekiyor.'
+      },
+      add: {
+        title: 'Ortam ekle',
+        upload: 'ISO veya IMG yükle',
+        fromUrl: "URL'den indir",
+        url: "İmaj URL'si",
+        urlRequired: 'Lütfen bir URL girin',
+        onlyImages: 'Yalnızca .iso ve .img dosyaları bağlanabilir',
+        dropHint: 'ISO veya IMG dosyasını buraya sürükleyin ya da seçmek için tıklayın',
+        cdromOnlyIso: 'Bir CD-ROM yalnızca ISO 9660 imajı taşıyabilir',
+        uploadFailed: 'Yükleme başarısız oldu',
+        downloadFailed: 'İndirme başarısız oldu',
+        uploading: '{{name}} yükleniyor',
+        downloading: '{{name}} indiriliyor',
+        done: '{{name}} hazır',
+        checksumFailed: 'İmaj, SHA-256 sağlama toplamıyla eşleşmiyor.',
+        blocked: 'Hedef makine diski kullanıyor',
+        copyHint: 'İmajı SCP ile veri bölümüne ya da hedef makineden doğrudan kopyalayabilirsiniz.'
+      },
+      files: {
+        selectMedium: 'Dosyalarını görmek için bir ortam seçin.',
+        reasonAttached: 'Bu ortam hedef makineye bağlı.',
+        reasonAttachedHint:
+          'Önce çıkarın: dosyalarının okunabilmesi için hedef makinenin diski bırakması gerekir.',
+        reasonNotBrowsable: 'Bu ortam, dosya yöneticisinin açamadığı bir dosya sistemi içeriyor.',
+        reasonNoLoop: 'Bu aygıt disk imajlarını bağlayamıyor (loop desteği yok).',
+        reasonISOImage:
+          'ISO 9660 imajının içeriği burada görüntülenemez. İmaj hedef makineye yine bağlanabilir.',
+        empty: 'Bu klasör boş',
+        noMatch: 'Aramanızla eşleşen dosya yok.',
+        free: '{{size}} boş',
+        search: 'Bu klasörde ara',
+        sort: {
+          name: 'Ad',
+          size: 'Boyut',
+          type: 'Tür',
+          asc: 'Artan',
+          desc: 'Azalan'
+        },
+        upload: 'Ortama dosya yükle',
+        deleteFolderTitle: 'Klasörü sil',
+        deleteFolderConfirm:
+          '{{name}} klasörü ve içindeki her şey silinsin mi? Bu işlem geri alınamaz.',
+        uploading: 'Yükleniyor…',
+        uploadFailed: 'Yükleme başarısız oldu',
+        download: 'İndir',
+        delete: 'Sil',
+        deleteTitle: 'Dosyayı sil',
+        deleteConfirm: '{{name}} ortamdan silinsin mi?'
+      },
+      yes: 'Evet',
+      no: 'Hayır'
     },
     script: {
       title: 'Betikler',
@@ -288,19 +378,11 @@ const tr = {
       ok: 'Tamam'
     },
     download: {
-      title: 'Disk İmajı İndirici',
-      input: 'Uzak imaj URL’sini girin',
-      ok: 'Tamam',
-      disabled: '/data bölüntüsü salt okunur modda, disk imajı indirilemiyor.',
-      uploadbox: 'Dosyayı buraya bırakın veya seçmek için tıklayın',
-      inputfile: 'Lütfen resim dosyasını giriniz',
-      NoISO: 'ISO yok',
+      disabled:
+        'Veri bölümü, hedef makine kullandığı sürece salt okunurdur: yeni imaj yazılamaz, mevcut dosyalar indirilebilir.',
       sha256: 'SHA-256 (isteğe bağlı)',
       sha256Placeholder: '64 karakterlik SHA-256 sağlama toplamını girin',
       invalidSHA256: 'SHA-256, 64 karakterlik bir onaltılık dize olmalıdır',
-      failed: 'İndirme başarısız',
-      success: 'İndirme başarılı',
-      checksumFailed: 'İndirme başarısız: SHA-256 doğrulaması başarısız',
       cancel: 'İptal',
       cancelFailed: 'İndirme iptal edilemedi'
     },
@@ -839,7 +921,13 @@ const tr = {
         reboot: 'Yeniden Başlat',
         rebootDesc: "NanoKVM'i yeniden başlatmak istediğinizden emin misiniz?",
         okBtn: 'Evet',
-        cancelBtn: 'Hayır'
+        cancelBtn: 'Hayır',
+        diskLocked: 'Bir imaj bağlıyken kapalı (açmak bağlamayı iptal eder)',
+        diskCancelMount:
+          'Sanal diski açmak, bağlı imajı iptal eder ve sürmekte olan imaj indirme veya yüklemeyi keser. Devam edilsin mi?',
+        diskBreakDownload: 'Sanal diski açmak imaj indirmeyi keser. Devam edilsin mi?',
+        attention: 'Dikkat',
+        updateFailed: 'Sanal cihaz güncellenemedi'
       },
       network: {
         title: 'Ağ',
@@ -1271,17 +1359,17 @@ const tr = {
       account: {
         title: 'Hesap',
         webAccount: 'Web Hesap Adı',
-        role: 'Rol',
-        roles: {
-          admin: 'Yönetici',
-          user: 'Kullanıcı'
-        },
         password: 'Şifre',
         updateBtn: 'Değiştir',
         logoutBtn: 'Çıkış  yap',
         logoutDesc: 'Çıkış yapmak istediğinizden emin misiniz?',
         okBtn: 'Evet',
         cancelBtn: 'Hayır',
+        role: 'Rol',
+        roles: {
+          admin: 'Yönetici',
+          user: 'Kullanıcı'
+        },
         users: {
           title: 'Kullanıcılar',
           create: 'Kullanıcı oluştur',
@@ -1296,7 +1384,68 @@ const tr = {
           passwordUpdated: 'Şifre güncellendi',
           loadFailed: 'Kullanıcılar yüklenemedi',
           saveFailed: 'Kullanıcı kaydedilemedi',
-          deleteFailed: 'Kullanıcı silinemedi'
+          deleteFailed: 'Kullanıcı silinemedi',
+          editPermissions: 'İzinler',
+          mcpLossTitle: 'MCP erişimini kaldır',
+          mcpLossDesc:
+            '{{name}} MCP erişimini kaybedecek. MCP API anahtarı tüm cihazda ortaktır; bu yüzden bir kopyası anahtar yeniden üretilene kadar çalışır. Yeniden üretmek, yeni anahtarı alana kadar tüm MCP istemcilerinin bağlantısını keser.',
+          mcpLossRotate: 'MCP API anahtarını yeniden üret',
+          mcpLossKeep:
+            'Mevcut anahtar geçerli kalır ve kopyası olan herkes klavye ve fareyi kontrol etmeye devam edebilir. Daha sonra MCP ayarlarından yeniden üretebilirsiniz.',
+          mcpKeyRotated:
+            'MCP API anahtarı yeniden üretildi. MCP istemcilerinin yeni anahtara ihtiyacı var.'
+        },
+        permissions: {
+          title: 'İzinler',
+          editTitle: 'İzinleri düzenle',
+          save: 'Kaydet',
+          saved: 'Kaydedildi',
+          close: 'Kapat',
+          groupConsole: 'Konsol',
+          groupTarget: 'Hedef makine',
+          groupLibrary: 'Medya kitaplığı',
+          groupHost: 'Bu cihaz',
+          groupServices: 'Hizmetler',
+          consoleView: 'Ekranı izle',
+          consoleControl: 'Klavye ve fare',
+          power: 'Güç ve uyandırma',
+          mediumAttach: 'Medya bağla',
+          libraryRead: 'Kitaplığa göz at',
+          libraryWrite: 'Kitaplığı yönet',
+          terminal: 'Terminal ve betikler',
+          device: 'Cihaz ayarları',
+          network: 'Ağ ayarları',
+          update: 'Sistem güncellemesi',
+          mcp: 'MCP hizmeti',
+          tailscale: 'Tailscale',
+          ai: 'Yapay zekâ asistanı',
+          effectConsoleView:
+            'Hedef ekranı gösterir ve tüm izleyicilerin paylaştığı video modunu, çözünürlüğü, kare hızını ve kaliteyi ayarlar.',
+          effectConsoleControl: 'Klavye ve fare girdisini hedef makineye gönderir.',
+          effectPower:
+            'Hedef makineyi açar, kapatır ve yeniden başlatır; Wake-on-LAN cihaz listesini yönetir.',
+          effectMediumAttach:
+            'Hedef makinede medya bağlar ve çıkarır, paylaşılan bölüm üzerinden dosya alışverişi yapar.',
+          effectLibraryRead: 'İmajları ve içlerindeki dosyaları listeler ve indirir.',
+          effectLibraryWrite:
+            'İmaj yükler, oluşturur ve siler; imajların içindeki dosyaları değiştirir.',
+          effectTerminal: 'Web oturumuna girmeden bu cihazda root kabuğu verir.',
+          effectDevice:
+            'SSH’yi etkinleştirir (o da root), cihazı yeniden başlatır, ham veri bölümünü hedef makineye verir; OLED, HDMI, mDNS, bellek ve takas ayarlarını değiştirir.',
+          effectNetwork: 'Wi-Fi, DNS ve TLS ayarlarını değiştirir; bu cihaz ağdan düşebilir.',
+          effectUpdate: 'Ürün yazılımı ve uygulama paketleri kurar.',
+          effectMcp:
+            'Cihaz genelinde geçerli bir API anahtarı verir; bu anahtar web oturumu dışında klavye, fare ve ekran görüntüsünü yönetir. İzin kaldırıldıktan sonra kopyalanmış anahtar, yeniden üretilmedikçe çalışır; izin kaldırılırken yeniden üretme önerilir.',
+          effectTailscale: 'Bu cihazı bir VPN ağına bağlar.',
+          effectAi:
+            'Cihazı, diğer izinlerin sınırlamadığı yerel bir arayüz üzerinden yönetir; bu nedenle cihaz üzerinde tam denetim anlamına gelir.',
+          fullControlWarning: 'Bu izinler cihaz üzerinde tam denetim anlamına gelir:',
+          emptyWarning: 'Bu hesabın hiçbir özelliği olmayacak ve yalnızca oturum açabilecek.',
+          impliedBy: '{{name}} tarafından içerilir',
+          grantCount_one: '{{count}} izin',
+          grantCount: '{{count}} izin',
+          adminAll: 'Yöneticiler tüm izinlere sahiptir',
+          catalogFailed: 'İzin listesi yüklenemedi. Bu pencereyi kapatıp yeniden deneyin.'
         }
       }
     },

@@ -100,6 +100,7 @@ type Manager struct {
 	wireMu  sync.Mutex
 	hid     HIDQuiescer
 	media   GadgetObserver
+	disk    DiskGuard
 	rebound []func(context.Context)
 
 	mu sync.Mutex
@@ -857,53 +858,6 @@ func (m *Manager) hybridProfile(function FunctionFS) (Profile, error) {
 	return base, base.Validate()
 }
 
-// The LUN is runtime state rather than profile state: a reapply rewrites
-// removable and inquiry_string but leaves ro, cdrom and file as they were set
-// here (H7).
-type LUN struct {
-	File  string `json:"file"`
-	CDROM bool   `json:"cdrom"`
-}
-
-func (l LUN) inquiry() string {
-	if l.CDROM {
-		return InquiryStringCDROM
-	}
-	return InquiryString
-}
-
-func (l LUN) backingFile() string {
-	if l.File == "" {
-		return DefaultDiskFile
-	}
-	return l.File
-}
-
-func (m *Manager) LUN() (LUN, error) {
-	if err := m.ready(); err != nil {
-		return LUN{}, err
-	}
-	return m.readLUN()
-}
-
-// A LUN change ends in a rebind, and a rebind takes the camera's video node
-// away with it: f_uvc unregisters its device on unbind and registers a new one
-// on bind, the descriptor the media manager holds stays on the old one, and the
-// new function keeps the whole gadget deactivated until something opens the new
-// node. Left alone, mounting an image cost the operator HID, the NIC and the
-// very disk being mounted until the next profile apply. So the media pipeline
-// is stood down before and rebuilt after, exactly as Rebind does; the refresh
-// runs on the refusal paths too, since a suspend is undone by nothing else.
-func (m *Manager) SetLUN(ctx context.Context, lun LUN) error {
-	if err := m.ready(); err != nil {
-		return err
-	}
-	_ = m.suspend(false)
-	err := m.withGadgetLock(func() error { return m.setLUN(ctx, lun) })
-	m.refreshObserver(context.Background())
-	return err
-}
-
 // Raw-gadget runs on the same UDC and udc->driver is a single pointer, so
 // passthrough can only start once this gadget is unbound. HID is closed and
 // stays closed: f_hid deletes /dev/hidgN in hidg_unbind, so there is nothing to
@@ -1070,6 +1024,10 @@ func (m *Manager) withGadgetLock(fn func() error) error {
 	if err := m.loanHeld(); err != nil {
 		return err
 	}
+	// Every mutator that can change what the disk serves runs in here, so the
+	// data partition's other owner learns the outcome before the lock is let go
+	// and no second mutation can slip between the change and its answer.
+	defer m.settleDisk()
 	return m.withHIDQuiesced(fn)
 }
 

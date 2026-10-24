@@ -5,24 +5,22 @@ const pt_br = {
       login: 'Login',
       changePassword: 'Mudar Senha',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Imagens e compartilhamento de arquivos'
     },
     auth: {
       login: 'Login',
       placeholderUsername: 'Nome de usuário',
       placeholderPassword: 'Senha',
-      placeholderCurrentPassword: 'Senha atual',
       placeholderPassword2: 'Por favor, digite a senha novamente',
       noEmptyUsername: 'Nome de usuário é obrigatório',
       noEmptyPassword: 'Senha é obrigatória',
-      passwordLength: 'A senha deve ter entre 8 e 72 caracteres',
       noAccount:
         'Falha ao obter informações do usuário, por favor atualize a página ou redefina a senha',
       invalidUser: 'Nome de usuário ou senha inválidos',
       locked: 'Muitos logins, tente novamente mais tarde',
       globalLocked: 'Sistema sob proteção, tente novamente mais tarde',
       error: 'Erro inesperado',
-      invalidCurrentPassword: 'A senha atual está incorreta',
       changePassword: 'Mudar Senha',
       changePasswordDesc: 'Para a segurança do seu dispositivo, por favor, mude a senha!',
       differentPassword: 'Senhas não conferem',
@@ -42,7 +40,10 @@ const pt_br = {
         change2: 'Senha de login da Web',
         change3: 'Senha root do sistema (senha de login SSH)',
         change4: 'Para redefinir as senhas, pressione e segure o botão BOOT no NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Senha atual',
+      passwordLength: 'A senha deve ter entre 8 e 72 caracteres',
+      invalidCurrentPassword: 'A senha atual está incorreta'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -60,6 +61,17 @@ const pt_br = {
         passPlaceholder: 'AP senha',
         verifyBtn: 'Verificar'
       }
+    },
+    desktop: {
+      readOnly: 'Somente leitura',
+      readOnlyTip:
+        'Esta conta não pode enviar entrada de teclado ou mouse para a máquina de destino, portanto o console apenas exibe a tela.'
+    },
+    noConsole: {
+      title: 'Esta conta não tem acesso ao console',
+      description:
+        'Foram concedidas outras capacidades. Abra uma das páginas que ela pode usar ou peça a um administrador acesso ao console.',
+      nothing: 'Esta conta ainda não tem permissões. Peça a um administrador para conceder.'
     },
     screen: {
       scale: 'Escala',
@@ -217,27 +229,44 @@ const pt_br = {
         disable: 'Desabilitar modo Somente-HID'
       }
     },
-    image: {
-      title: 'Imagens',
-      loading: 'Carregando...',
-      empty: 'Nada Encontrado',
+    storage: {
+      title: 'Imagens e compartilhamento de arquivos',
+      empty:
+        'Ainda não há imagens. Envie uma ISO ou IMG, ou copie uma para o disco a partir da máquina remota.',
+      notAttached: 'Nada montado',
+      attached: 'Montado: {{name}}',
+      eject: 'Ejetar',
+      mount: 'Montar',
       mountMode: 'Modo de montagem',
-      mountFailed: 'Falha na Montagem',
-      mountDesc:
-        'Em alguns sistemas, é necessário ejetar o disco virtual no host remoto antes de montar a imagem.',
-      unmountFailed: 'Falha na desmontagem',
-      unmountDesc:
-        'Em alguns sistemas, é necessário ejetar manualmente do host remoto antes de desmontar a imagem.',
-      refresh: 'Atualizar a lista de imagens',
-      attention: 'Atenção',
-      deleteConfirm: 'Tem certeza que deseja excluir esta imagem?',
-      okBtn: 'Sim',
-      cancelBtn: 'Não',
+      mountModeDisk: 'Armazenamento em massa',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Abrir o gerenciador de arquivos',
+      refresh: 'Atualizar',
+      delete: 'Excluir',
+      deleteTitle: 'Excluir mídia',
+      deleteConfirm: 'Excluir {{name}}? Os arquivos dentro dele serão perdidos.',
+      downloadImage: 'Baixar a imagem',
+      typePartition: 'Arquivos compartilhados',
+      volumeLabel: 'Disco removível',
+      groups: {
+        share: 'Compartilhamento de arquivos',
+        images: 'Imagens'
+      },
+      failed: 'A operação falhou',
+      hidOnly: 'Modo somente HID: o disco virtual não está disponível',
+      disabled: 'O disco virtual está desativado (Configurações - Dispositivo)',
+      force: {
+        title: 'Retomar a mídia à força?',
+        desc: 'A máquina remota ainda está usando esta mídia. Retomá-la reenumera o dispositivo USB e pode perder tudo o que ela ainda não gravou no disco.',
+        menuHint:
+          'A máquina remota está usando esta mídia. Abra o gerenciador de arquivos para retomá-la à força.'
+      },
       tips: {
         title: 'Como fazer upload',
         usb1: 'Conecte o NanoKVM ao seu computador via USB.',
-        usb2: 'Certifique-se de que o disco virtual está montado (Configurações - Disco Virtual).',
+        usb2: 'Nesta página, monte os arquivos compartilhados no modo de armazenamento em massa.',
         usb3: 'Abra o disco virtual no seu computador e copie o arquivo de imagem para o diretório raiz do disco virtual.',
+        usb4: 'Ejete o disco quando a cópia terminar: a imagem aparecerá na lista.',
         scp1: 'Certifique-se de que o NanoKVM e seu computador estão na mesma rede local.',
         scp2: 'Abra um terminal no seu computador e use o comando SCP para fazer upload do arquivo de imagem para o diretório /data no NanoKVM.',
         scp3: 'Exemplo: scp seu-caminho-da-imagem root@seu-ip-nanokvm:/data',
@@ -247,7 +276,70 @@ const pt_br = {
         tf3: 'Insira o cartão TF em um leitor de cartão e conecte-o ao seu computador.',
         tf4: 'Copie o arquivo de imagem para o diretório /data no cartão TF.',
         tf5: 'Insira o cartão TF no NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Processando {{name}}'
+      },
+      enableDisk: {
+        title: 'Ativar o disco virtual?',
+        desc: 'Montar uma mídia exige o disco virtual, que está desativado no momento. Ativá-lo agora? O teclado e o mouse da máquina remota serão desconectados por um instante.',
+        menuHint: 'O disco virtual está desativado. Ative-o em Configurações - Dispositivo.',
+        askDevice:
+          'O disco virtual está desativado. Uma conta com a permissão de dispositivo precisa ativá-lo primeiro.'
+      },
+      add: {
+        title: 'Adicionar mídia',
+        upload: 'Enviar uma ISO ou IMG',
+        fromUrl: 'Baixar de uma URL',
+        url: 'URL da imagem',
+        urlRequired: 'Informe uma URL',
+        onlyImages: 'Só é possível montar arquivos .iso e .img',
+        dropHint: 'Arraste uma ISO ou IMG aqui, ou clique para escolher um arquivo',
+        cdromOnlyIso: 'Um CD-ROM só pode conter uma imagem ISO 9660',
+        uploadFailed: 'Falha no envio',
+        downloadFailed: 'Falha no download',
+        uploading: 'Enviando {{name}}',
+        downloading: 'Baixando {{name}}',
+        done: '{{name}} está pronto',
+        checksumFailed: 'A imagem não corresponde ao checksum SHA-256.',
+        blocked: 'A máquina remota está usando o disco',
+        copyHint:
+          'Você também pode copiar uma imagem para a partição de dados via SCP, ou a partir da máquina remota.'
+      },
+      files: {
+        selectMedium: 'Selecione uma mídia para ver os arquivos dentro dela.',
+        reasonAttached: 'Esta mídia está conectada à máquina remota.',
+        reasonAttachedHint:
+          'Ejete-a primeiro: a máquina remota precisa liberar o disco antes que seus arquivos possam ser lidos.',
+        reasonNotBrowsable:
+          'Esta mídia contém um sistema de arquivos que o gerenciador não consegue abrir.',
+        reasonNoLoop: 'Este dispositivo não consegue montar imagens de disco (sem suporte a loop).',
+        reasonISOImage:
+          'Uma imagem ISO 9660 não pode ser navegada aqui. Ela ainda pode ser montada na máquina remota.',
+        empty: 'Esta pasta está vazia',
+        noMatch: 'Nenhum arquivo corresponde à busca.',
+        free: '{{size}} livres',
+        search: 'Buscar nesta pasta',
+        sort: {
+          name: 'Nome',
+          size: 'Tamanho',
+          type: 'Tipo',
+          asc: 'Crescente',
+          desc: 'Decrescente'
+        },
+        upload: 'Enviar um arquivo para a mídia',
+        deleteFolderTitle: 'Excluir pasta',
+        deleteFolderConfirm:
+          'Excluir a pasta {{name}} e todo o seu conteúdo? Esta ação não pode ser desfeita.',
+        uploading: 'Enviando…',
+        uploadFailed: 'Falha no envio',
+        download: 'Baixar',
+        delete: 'Excluir',
+        deleteTitle: 'Excluir arquivo',
+        deleteConfirm: 'Excluir {{name}} da mídia?'
+      },
+      yes: 'Sim',
+      no: 'Não'
     },
     script: {
       title: 'Scripts',
@@ -289,19 +381,11 @@ const pt_br = {
       ok: 'Ok'
     },
     download: {
-      title: 'Baixador de Imagens',
-      input: 'Por favor, digite uma URL de imagem remota',
-      ok: 'Ok',
-      disabled: 'A partição /data é RO, então não podemos baixar a imagem',
-      uploadbox: 'Solte o arquivo aqui ou clique para selecionar',
-      inputfile: 'Por favor insira o arquivo de imagem',
-      NoISO: 'Sem ISO',
+      disabled:
+        'A partição de dados fica somente leitura enquanto a máquina remota a usa: novas imagens não podem ser gravadas, mas os arquivos existentes continuam podendo ser baixados.',
       sha256: 'SHA-256 (opcional)',
       sha256Placeholder: 'Digite um checksum SHA-256 de 64 caracteres',
       invalidSHA256: 'SHA-256 deve ser uma sequência hexadecimal de 64 caracteres',
-      failed: 'Falha no download',
-      success: 'Download concluído',
-      checksumFailed: 'Falha no download: a verificação SHA-256 falhou',
       cancel: 'Cancelar',
       cancelFailed: 'Falha ao cancelar o download'
     },
@@ -840,7 +924,13 @@ const pt_br = {
         reboot: 'Reiniciar',
         rebootDesc: 'Tem certeza de que deseja reiniciar o NanoKVM?',
         okBtn: 'Sim',
-        cancelBtn: 'Não'
+        cancelBtn: 'Não',
+        diskLocked: 'Desligado enquanto uma imagem estiver montada (ligá-lo cancela a montagem)',
+        diskCancelMount:
+          'Ativar o disco virtual cancela a imagem montada e interrompe um download ou upload de imagem em andamento. Continuar?',
+        diskBreakDownload: 'Ativar o disco virtual interrompe o download de imagens. Continuar?',
+        attention: 'Atenção',
+        updateFailed: 'Falha ao atualizar o dispositivo virtual'
       },
       network: {
         title: 'Rede',
@@ -1276,23 +1366,23 @@ const pt_br = {
       account: {
         title: 'Conta',
         webAccount: 'Nome da Conta Web',
-        role: 'Função',
-        roles: {
-          admin: 'Administrador',
-          user: 'Usuário'
-        },
         password: 'Senha',
         updateBtn: 'Alterar',
         logoutBtn: 'Sair',
         logoutDesc: 'Tem certeza de que deseja sair?',
         okBtn: 'Sim',
         cancelBtn: 'Não',
+        role: 'Função',
+        roles: {
+          admin: 'Administrador',
+          user: 'Usuário'
+        },
         users: {
           title: 'Usuários',
           create: 'Criar usuário',
           enabled: 'Ativado',
           disabled: 'Desativado',
-          deviceOwner: 'Dono do dispositivo',
+          deviceOwner: 'Proprietário do dispositivo',
           resetPassword: 'Redefinir senha',
           delete: 'Excluir',
           deleteConfirm: 'Excluir este usuário e revogar todas as sessões dele?',
@@ -1301,7 +1391,67 @@ const pt_br = {
           passwordUpdated: 'Senha atualizada',
           loadFailed: 'Falha ao carregar os usuários',
           saveFailed: 'Falha ao salvar o usuário',
-          deleteFailed: 'Falha ao excluir o usuário'
+          deleteFailed: 'Falha ao excluir o usuário',
+          editPermissions: 'Permissões',
+          mcpLossTitle: 'Revogar acesso MCP',
+          mcpLossDesc:
+            '{{name}} perderá o acesso MCP. A chave de API do MCP é compartilhada por todo o dispositivo, então uma cópia continua funcionando até a chave ser regenerada. Regenerá-la desconecta todos os clientes MCP até que recebam a nova chave.',
+          mcpLossRotate: 'Regenerar a chave de API do MCP',
+          mcpLossKeep:
+            'A chave atual continua válida, e quem tiver uma cópia ainda pode controlar o teclado e o mouse. Você pode regenerá-la depois nas configurações do MCP.',
+          mcpKeyRotated: 'Chave de API do MCP regenerada. Os clientes MCP precisam da nova chave.'
+        },
+        permissions: {
+          title: 'Permissões',
+          editTitle: 'Editar permissões',
+          save: 'Salvar',
+          saved: 'Salvo',
+          close: 'Fechar',
+          groupConsole: 'Console',
+          groupTarget: 'Máquina de destino',
+          groupLibrary: 'Biblioteca de mídia',
+          groupHost: 'Este dispositivo',
+          groupServices: 'Serviços',
+          consoleView: 'Ver a tela',
+          consoleControl: 'Teclado e mouse',
+          power: 'Energia e despertar',
+          mediumAttach: 'Conectar uma mídia',
+          libraryRead: 'Navegar na biblioteca',
+          libraryWrite: 'Gerenciar a biblioteca',
+          terminal: 'Terminal e scripts',
+          device: 'Configurações do dispositivo',
+          network: 'Configurações de rede',
+          update: 'Atualização do sistema',
+          mcp: 'Serviço MCP',
+          tailscale: 'Tailscale',
+          ai: 'Assistente de IA',
+          effectConsoleView:
+            'Mostra a tela de destino e define o modo de vídeo, a resolução, a taxa de quadros e a qualidade compartilhados por todos os espectadores.',
+          effectConsoleControl: 'Envia entrada de teclado e mouse para a máquina de destino.',
+          effectPower:
+            'Liga, desliga e reinicia a máquina de destino, e gerencia a lista de dispositivos Wake-on-LAN.',
+          effectMediumAttach:
+            'Monta e ejeta mídias na máquina de destino, e troca arquivos com ela pela partição compartilhada.',
+          effectLibraryRead: 'Lista e baixa as imagens e os arquivos dentro delas.',
+          effectLibraryWrite: 'Envia, cria e exclui imagens, e altera os arquivos dentro delas.',
+          effectTerminal: 'Fornece um shell root neste dispositivo, sem passar pela sessão web.',
+          effectDevice:
+            'Permite ativar SSH (também root), reiniciar o dispositivo, entregar a partição de dados bruta à máquina de destino e alterar OLED, HDMI, mDNS, memória e swap.',
+          effectNetwork: 'Altera Wi-Fi, DNS e TLS, o que pode tirar este dispositivo da rede.',
+          effectUpdate: 'Instala firmware e pacotes de aplicativo.',
+          effectMcp:
+            'Emite uma chave de API de todo o dispositivo que controla teclado, mouse e capturas fora da sessão web; uma cópia continua válida após revogar a permissão, a menos que a chave seja regenerada, o que é oferecido ao remover a permissão.',
+          effectTailscale: 'Conecta este dispositivo a uma malha VPN.',
+          effectAi:
+            'Controla o dispositivo por uma interface local que as outras permissões não limitam, então equivale ao controle total do dispositivo.',
+          fullControlWarning: 'Estas permissões equivalem ao controle total do dispositivo:',
+          emptyWarning: 'Esta conta não terá nenhuma função e só poderá entrar.',
+          impliedBy: 'Incluído por {{name}}',
+          grantCount_one: '{{count}} permissão',
+          grantCount: '{{count}} permissões',
+          adminAll: 'Administradores têm todas as permissões',
+          catalogFailed:
+            'Não foi possível carregar a lista de permissões. Feche esta janela e tente novamente.'
         }
       }
     },

@@ -13,7 +13,7 @@ import (
 func extensionsRouter(r *gin.Engine) {
 	api := r.Group("/api/extensions").Use(
 		middleware.CheckToken(),
-		middleware.RequireRole(authn.RoleAdmin),
+		middleware.RequirePermission(authn.PermTailscale),
 	)
 
 	ts := tailscale.NewService()
@@ -29,22 +29,30 @@ func extensionsRouter(r *gin.Engine) {
 	api.POST("/tailscale/stop", ts.Stop)           // tailscale stop
 	api.POST("/tailscale/restart", ts.Restart)     // tailscale restart
 
+	// The tunnels have no grant in the permission catalog, and a custom tunnel
+	// binary runs as root, so they stay with the administrator role rather than
+	// following the tailscale grant the group above carries.
+	admin := r.Group("/api/extensions").Use(
+		middleware.CheckToken(),
+		middleware.RequireRole(authn.RoleAdmin),
+	)
+
 	names := []proto.TunnelName{proto.TunnelWstunnel, proto.TunnelNewt}
 	for _, name := range names {
 		tn := tunnel.NewService(name)
 		group := "/tunnel/" + string(name)
 
-		api.GET(group+"/status", tn.GetStatus)       // get tunnel status
-		api.GET(group+"/config", tn.GetConfig)       // get tunnel config
-		api.POST(group+"/config", tn.SetConfig)      // update tunnel config
-		api.POST(group+"/start", tn.Start)           // start tunnel
-		api.POST(group+"/stop", tn.Stop)             // stop tunnel
-		api.POST(group+"/restart", tn.Restart)       // restart tunnel
-		api.GET(group+"/logs", tn.GetLogs)           // get tunnel logs
-		api.GET(group+"/memory", tn.GetMemoryLimit)  // get tunnel memory limit
-		api.POST(group+"/memory", tn.SetMemoryLimit) // set tunnel memory limit
-		api.POST(group+"/binary", tn.UploadBinary)   // upload a custom tunnel binary
-		api.DELETE(group+"/binary", tn.DeleteBinary) // remove the custom tunnel binary
+		admin.GET(group+"/status", tn.GetStatus)       // get tunnel status
+		admin.GET(group+"/config", tn.GetConfig)       // get tunnel config
+		admin.POST(group+"/config", tn.SetConfig)      // update tunnel config
+		admin.POST(group+"/start", tn.Start)           // start tunnel
+		admin.POST(group+"/stop", tn.Stop)             // stop tunnel
+		admin.POST(group+"/restart", tn.Restart)       // restart tunnel
+		admin.GET(group+"/logs", tn.GetLogs)           // get tunnel logs
+		admin.GET(group+"/memory", tn.GetMemoryLimit)  // get tunnel memory limit
+		admin.POST(group+"/memory", tn.SetMemoryLimit) // set tunnel memory limit
+		admin.POST(group+"/binary", tn.UploadBinary)   // upload a custom tunnel binary
+		admin.DELETE(group+"/binary", tn.DeleteBinary) // remove the custom tunnel binary
 	}
 
 	tunnel.Reconcile(names)

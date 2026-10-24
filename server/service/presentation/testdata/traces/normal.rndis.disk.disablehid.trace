@@ -33,6 +33,8 @@ symlink	os_desc/c.1	configs/c.1
 mkdir	functions/mass_storage.disk0
 symlink	configs/c.1/mass_storage.disk0	functions/mass_storage.disk0
 write	functions/mass_storage.disk0/lun.0/removable	310a
+write	functions/mass_storage.disk0/lun.0/ro	300a
+write	functions/mass_storage.disk0/lun.0/cdrom	300a
 write	functions/mass_storage.disk0/lun.0/inquiry_string	4e616e6f4b564d20555342204d6173732053746f72616765303532300a
 write	functions/mass_storage.disk0/lun.0/file	2f6465762f6d6d63626c6b3070330a
 write	UDC	343334303030302e7573620a

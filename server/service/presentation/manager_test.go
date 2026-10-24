@@ -247,7 +247,7 @@ func TestGadgetMutatorsAreRefusedWhileTheUDCIsOnLoan(t *testing.T) {
 	}{
 		{name: "apply", run: func(m *Manager) error { return m.Apply(ctx, ProfileStandard) }},
 		{name: "set mode", run: func(m *Manager) error { return m.SetMode(ctx, ModeNormal) }},
-		{name: "set lun", run: func(m *Manager) error { return m.SetLUN(ctx, LUN{File: "/data/disk.img"}) }},
+		{name: "set lun", run: func(m *Manager) error { return m.SetLUN(ctx, LUN{File: "/data/disk.img"}, false) }},
 		{name: "rebind", run: func(m *Manager) error { return m.Rebind(ctx) }},
 		{name: "reset phy", run: func(m *Manager) error { return m.ResetPHY(ctx) }},
 		{name: "set media slots", run: func(m *Manager) error { return m.SetMediaSlots(ctx, []string{"cam"}, nil, nil) }},
@@ -301,7 +301,7 @@ func TestReclaimingTheUDCEndsTheLoan(t *testing.T) {
 		t.Fatalf("reclaim: %v", err)
 	}
 
-	if err := manager.SetLUN(ctx, LUN{File: "/data/disk.img"}); err != nil {
+	if err := manager.SetLUN(ctx, LUN{File: "/data/disk.img"}, false); err != nil {
 		t.Fatalf("set lun after the session ended: %v", err)
 	}
 	if bound := ops.Bound(); bound != dwc2Device {
@@ -363,7 +363,7 @@ func TestALoanIsDroppedOnceTheGadgetIsBoundAgain(t *testing.T) {
 	}
 
 	restarted := NewManager(NewStore(), ops, staticV1)
-	if err := restarted.SetLUN(ctx, LUN{File: "/data/disk.img"}); err != nil {
+	if err := restarted.SetLUN(ctx, LUN{File: "/data/disk.img"}, false); err != nil {
 		t.Fatalf("set lun after a restart: %v", err)
 	}
 }

@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { ConfigProvider, Spin, theme } from 'antd';
+import { App, ConfigProvider, Spin, theme } from 'antd';
 import ReactDOM from 'react-dom/client';
 import { ErrorBoundary } from 'react-error-boundary';
 import { HelmetProvider } from 'react-helmet-async';
@@ -14,6 +14,12 @@ import './assets/styles/index.css';
 const renderApp = () => {
   const themeConfig = {
     algorithm: theme.darkAlgorithm,
+    token: {
+      // Share the app's font stack (and the CJK punctuation override it starts
+      // with) instead of antd's default, so a tooltip and the page around it
+      // draw 、 and 。 with the same face.
+      fontFamily: 'var(--app-font)'
+    },
     components: {
       Collapse: {
         headerPadding: 0,
@@ -34,7 +40,12 @@ const renderApp = () => {
         <ErrorBoundary FallbackComponent={MainError}>
           <HelmetProvider>
             <ConfigProvider theme={themeConfig}>
-              <RouterProvider router={router} />
+              {/* Ant Design renders dialogs opened through its static helpers
+                  in their own root: without App they fall back to the light
+                  theme, which is why a confirm used to look out of place. */}
+              <App>
+                <RouterProvider router={router} />
+              </App>
             </ConfigProvider>
           </HelmetProvider>
         </ErrorBoundary>

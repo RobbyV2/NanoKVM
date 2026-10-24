@@ -11,14 +11,20 @@ import (
 
 func sourcesRouter(r *gin.Engine, service *sources.Service) {
 	service.SetUSBBackend(webusb.NewBackend())
-	api := r.Group("/api").Use(middleware.CheckToken())
-	api.GET("/sources", service.Get)
-	api.GET("/sources/events", service.Events)
-	api.GET("/sources/ws", service.SourceSocket)
-	api.POST("/sources/bindings", service.Claim)
-	api.POST("/sources/bindings/:sink/resume", service.Resume)
-	api.POST("/sources/bindings/:sink/takeover", service.Takeover)
-	api.DELETE("/sources/bindings/:sink", service.Release)
+	// Reading the slot state is part of watching the console. Binding a browser
+	// camera, microphone, speaker or USB device into a slot reaches the target
+	// machine the way keyboard and mouse input does, so it follows the control
+	// grant; the source socket is the transport for exactly those bindings.
+	view := r.Group("/api").Use(middleware.CheckToken(), middleware.RequirePermission(authn.PermConsoleView))
+	view.GET("/sources", service.Get)
+	view.GET("/sources/events", service.Events)
+
+	control := r.Group("/api").Use(middleware.CheckToken(), middleware.RequirePermission(authn.PermConsoleControl))
+	control.GET("/sources/ws", service.SourceSocket)
+	control.POST("/sources/bindings", service.Claim)
+	control.POST("/sources/bindings/:sink/resume", service.Resume)
+	control.POST("/sources/bindings/:sink/takeover", service.Takeover)
+	control.DELETE("/sources/bindings/:sink", service.Release)
 
 	admin := r.Group("/api").Use(middleware.CheckToken(), middleware.RequireRole(authn.RoleAdmin))
 	admin.PUT("/sources/sinks", service.SetSinks)

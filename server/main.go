@@ -22,6 +22,7 @@ import (
 	"NanoKVM-Server/service/picoclaw"
 	"NanoKVM-Server/service/presentation"
 	"NanoKVM-Server/service/startup"
+	"NanoKVM-Server/service/storage/diskfs"
 	"NanoKVM-Server/service/vm"
 	"NanoKVM-Server/service/vm/jiggler"
 	"NanoKVM-Server/service/vnc"
@@ -44,6 +45,7 @@ const (
 	// script's twenty-second wait on SIGINT, so TERM and KILL never have to.
 	shutdownMediaBudget  = 8 * time.Second
 	shutdownUSBBudget    = 2 * time.Second
+	shutdownMountBudget  = 2 * time.Second
 	shutdownVisionBudget = 3 * time.Second
 
 	// How long SIGINT can stay ignored behind a shell the vision library ran
@@ -104,6 +106,13 @@ func initialize() {
 	})
 	startup.Run("mouse jiggler", 5*time.Second, func() error {
 		jiggler.GetJiggler().Run()
+		return nil
+	})
+	// A medium left mounted by a crash or a restart keeps its loop device
+	// busy; nothing can be mounted by this process yet, so whatever is there
+	// is stale.
+	startup.Run("stale media mounts", 5*time.Second, func() error {
+		diskfs.CleanupStale()
 		return nil
 	})
 }
@@ -251,6 +260,13 @@ func shutdown(reason string) {
 			if manager := presentation.Current(); manager != nil {
 				return manager.Detach()
 			}
+			return nil
+		}},
+		// The file manager's loop mounts of disk images. Releasing them here
+		// leaves no loop device bound to an image the next start would refuse
+		// to mount; the next start's cleanup is the backstop for a crash.
+		startup.Step{Name: "media mounts", Budget: shutdownMountBudget, Run: func() error {
+			diskfs.CleanupStale()
 			return nil
 		}},
 		startup.Step{Name: "kvm vision", Budget: shutdownVisionBudget, Run: func() error {

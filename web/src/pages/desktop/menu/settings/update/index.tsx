@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/contexts/auth.ts';
 import { LoadingOutlined, RocketOutlined, SmileOutlined } from '@ant-design/icons';
 import { Alert, Button, Divider, Result, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,12 @@ type UpdateProps = {
 
 export const Update = ({ setIsLocked }: UpdateProps) => {
   const { t } = useTranslation();
+  const { account } = useAuth();
+  // The A/B kernel slots are administrator state. The update grant installs
+  // packages, so an account holding only that grant probes the server through
+  // a route it may call while it waits for the restart.
+  const isAdmin = account.role === 'admin';
+  const probe = isAdmin ? api.getKernel : api.getPreviewUpdates;
 
   const [status, setStatus] = useState('');
   const [currentVersion, setCurrentVersion] = useState('');
@@ -38,8 +45,8 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
 
     let kernel: KernelState | null = null;
     try {
-      const rsp: any = await api.getKernel();
-      if (rsp.code === 0 && rsp.data) kernel = rsp.data;
+      const rsp: any = isAdmin ? await api.getKernel() : null;
+      if (rsp?.code === 0 && rsp.data) kernel = rsp.data;
     } catch {
       kernel = null;
     }
@@ -73,7 +80,7 @@ export const Update = ({ setIsLocked }: UpdateProps) => {
   }
 
   function reload(isRebooting: boolean) {
-    reloadWhenBack(isRebooting, api.getKernel, () => {
+    reloadWhenBack(isRebooting, probe, () => {
       setIsLocked(false);
       setErrMsg('');
       window.location.reload();

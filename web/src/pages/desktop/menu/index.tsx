@@ -17,9 +17,7 @@ import { MenuBoundary } from '@/components/error-boundary.tsx';
 
 import { KeyboardLedStatus } from '../keyboard-led-status';
 import { Devices } from './devices';
-import { DownloadImage } from './download.tsx';
 import { Fullscreen } from './fullscreen';
-import { Image } from './image';
 import { Keyboard } from './keyboard';
 import { Mouse } from './mouse';
 import { Collapse, Expand } from './operations';
@@ -28,13 +26,20 @@ import { Power } from './power';
 import { Screen } from './screen';
 import { Script } from './script';
 import { Settings } from './settings';
+import { Storage } from './storage';
 import { Terminal } from './terminal';
 import { Wol } from './wol';
 
 export const Menu = () => {
   const nodeRef = useRef<HTMLDivElement | null>(null);
-  const { account } = useAuth();
-  const isAdmin = account.role === 'admin';
+  const { hasPermission } = useAuth();
+  // Every media grant implies reading the library, so this alone decides whether
+  // the storage menu has anything to show.
+  const canLibrary = hasPermission('library.read');
+  const canControl = hasPermission('console.control');
+  const canTerminal = hasPermission('terminal');
+  const canAi = hasPermission('ai');
+  const canPower = hasPermission('power');
 
   const menuDisabledItems = useAtomValue(menuDisabledItemsAtom);
   const menuCloseSignal = useAtomValue(menuCloseSignalAtom);
@@ -120,49 +125,49 @@ export const Menu = () => {
             <MenuBoundary name="screen">
               <Screen />
             </MenuBoundary>
-            <MenuBoundary name="keyboard">
-              <Keyboard />
-            </MenuBoundary>
+            {canControl && (
+              <MenuBoundary name="keyboard">
+                <Keyboard />
+              </MenuBoundary>
+            )}
             <MenuBoundary name="mouse">
               <Mouse />
             </MenuBoundary>
-            <MenuBoundary name="devices">
-              <Devices />
-            </MenuBoundary>
+            {canControl && (
+              <MenuBoundary name="devices">
+                <Devices />
+              </MenuBoundary>
+            )}
             <Divider type="vertical" />
 
-            {isAdmin && isEnabled('image') && (
-              <MenuBoundary name="image">
-                <Image />
+            {canLibrary && isEnabled('storage') && (
+              <MenuBoundary name="storage">
+                <Storage />
               </MenuBoundary>
             )}
-            {isAdmin && isEnabled('download') && (
-              <MenuBoundary name="download">
-                <DownloadImage />
-              </MenuBoundary>
-            )}
-            {isAdmin && isEnabled('terminal') && (
+            {canTerminal && isEnabled('terminal') && (
               <MenuBoundary name="terminal">
                 <Terminal />
               </MenuBoundary>
             )}
-            {isAdmin && isEnabled('script') && (
+            {canTerminal && isEnabled('script') && (
               <MenuBoundary name="script">
                 <Script />
               </MenuBoundary>
             )}
-            {isEnabled('wol') && (
+            {canPower && isEnabled('wol') && (
               <MenuBoundary name="wol">
                 <Wol />
               </MenuBoundary>
             )}
 
-            {(isEnabled('wol') ||
-              (isAdmin && ['image', 'download', 'script', 'terminal'].some(isEnabled))) && (
+            {((canPower && isEnabled('wol')) ||
+              (canLibrary && isEnabled('storage')) ||
+              (canTerminal && ['script', 'terminal'].some(isEnabled))) && (
               <Divider type="vertical" />
             )}
 
-            {isAdmin && isEnabled('picoclaw') && (
+            {canAi && isEnabled('picoclaw') && (
               <>
                 <MenuBoundary name="picoclaw">
                   <Picoclaw />
@@ -171,7 +176,7 @@ export const Menu = () => {
               </>
             )}
 
-            {isEnabled('power') && (
+            {canPower && isEnabled('power') && (
               <>
                 <MenuBoundary name="power">
                   <Power />

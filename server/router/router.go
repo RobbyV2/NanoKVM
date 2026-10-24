@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"NanoKVM-Server/service/auth"
 	"NanoKVM-Server/service/controlmode"
 	"NanoKVM-Server/service/exit"
 	"NanoKVM-Server/service/hid"
@@ -15,6 +16,8 @@ import (
 	"NanoKVM-Server/service/presentation"
 	"NanoKVM-Server/service/sources"
 	"NanoKVM-Server/service/startup"
+	"NanoKVM-Server/service/storage"
+	"NanoKVM-Server/service/ws"
 
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
@@ -54,6 +57,10 @@ func server(r *gin.Engine) {
 	presentationManager := presentation.GetManager()
 	sourceService.SetSlotManager(presentationManager)
 	presentationManager.SetObserver(mediaManager)
+	// The virtual disk serves the data partition this device also mounts at
+	// /data. The guard is in place before the attach below, so the first bind
+	// already settles which side may write it.
+	storage.GuardDataPartition(presentationManager)
 	// Wire the HID quiescer here rather than leaving it to whichever handler
 	// happens to reach hid.Manager() first. Until it is wired the manager never
 	// pushes the report-ID routes, so a collapsed HID layout - one interface
@@ -103,6 +110,8 @@ func server(r *gin.Engine) {
 		exitManager.OnAttach(context.WithoutCancel(ctx))
 		return nil
 	})
+
+	auth.SessionNotifier = ws.GetManager().NotifyUser
 
 	authRouter(r)
 	applicationRouter(r)

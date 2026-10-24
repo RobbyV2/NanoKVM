@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useAuth } from '@/contexts/auth.ts';
 import { Button, Input } from 'antd';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,10 @@ interface UpdateProps {
 
 export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdateProps) => {
   const { t } = useTranslation();
+  const { account } = useAuth();
+  // The kernel slot route is administrator-only; any route the update grant
+  // reaches tells the wait that the server is back.
+  const probe = account.role === 'admin' ? api.getKernel : api.getPreviewUpdates;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [sha256Checksum, setSha256Checksum] = useState('');
@@ -94,7 +99,7 @@ export const Offline = ({ status, setStatus, setIsLocked, setErrMsg }: UpdatePro
       })
       .then((isRebooting) => {
         if (isRebooting) setStatus('rebooting');
-        reloadWhenBack(!!isRebooting, api.getKernel, () => {
+        reloadWhenBack(!!isRebooting, probe, () => {
           setIsLocked(false);
           window.location.reload();
         });

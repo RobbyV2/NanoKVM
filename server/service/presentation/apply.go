@@ -277,11 +277,16 @@ func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 		linked[name] = true
 	}
 
+	keepMedium := keepsRuntimeMedium(linked, plan)
+
 	ops := make([]Op, 0, len(plan.Ops))
 	var removed []string
 	for _, op := range plan.Ops {
 		if op.Kind == OpRmdir {
 			removed = append(removed, op.Path+"/")
+		}
+		if keepMedium && op.Kind == OpWrite && isMediumAttr(op.Path) {
+			continue
 		}
 		if op.Kind == OpWrite && linked[writtenFunction(op.Path)] && !underRemoved(removed, op.Path) {
 			if current, err := m.ops.ReadFile(op.Path); err == nil && bytes.Equal(current, op.Data) {
@@ -289,6 +294,9 @@ func (m *Manager) dropRedundantWrites(before Snapshot, plan Plan) Plan {
 			}
 		}
 		ops = append(ops, op)
+	}
+	if linked[diskFunctionName] && !keepMedium {
+		ops = releaseMediumFirst(ops, plan)
 	}
 	plan.Ops = ops
 	return plan
@@ -343,6 +351,9 @@ func (m *Manager) execute(op Op, udc string) error {
 	case OpMkdir:
 		return m.ops.Mkdir(op.Path)
 	case OpWrite:
+		if err := m.guardPlanWrite(op); err != nil {
+			return err
+		}
 		return m.ops.WriteFile(op.Path, op.Data)
 	case OpSymlink:
 		return m.ops.Symlink(op.Target, op.Path)
@@ -510,61 +521,4 @@ func (m *Manager) rebind(ctx context.Context) error {
 		return fmt.Errorf("rebind: %w", err)
 	}
 	return m.bind()
-}
-
-func lunAttr(attr string) string {
-	return functionsDir + "/" + diskFunctionName + "/" + lunDir + "/" + attr
-}
-
-// Ordering constraint 3: the LUN attributes carry no refcnt check, but ro and
-// cdrom return -EBUSY while lun.0/file is open, so the file is released first.
-// S03usbdev:136,142 rewrite removable and inquiry_string on every start, so this
-// runtime state is deliberately not part of the profile (H7). The exception is
-// an inquiry_string the active profile set for itself, which a mount would
-// otherwise throw away every time the disk changed.
-func (m *Manager) setLUN(ctx context.Context, lun LUN) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("set lun: %w", err)
-	}
-
-	if lun.File == "" || lun.CDROM {
-		flag := []byte(boolBit(lun.File != "" && lun.CDROM))
-		if err := m.ops.WriteFile(lunAttr("file"), []byte("\n")); err != nil {
-			return fmt.Errorf("release backing file: %w", err)
-		}
-		for _, attr := range [...]string{"ro", "cdrom"} {
-			if err := m.ops.WriteFile(lunAttr(attr), flag); err != nil {
-				return fmt.Errorf("set %s: %w", lunAttr(attr), err)
-			}
-		}
-	}
-	inquiry := lun.inquiry()
-	if chosen := m.store.ActiveInquiry(); chosen != "" {
-		inquiry = chosen
-	}
-	if err := m.ops.WriteFile(lunAttr("inquiry_string"), []byte(inquiry)); err != nil {
-		return fmt.Errorf("set %s: %w", lunAttr("inquiry_string"), err)
-	}
-
-	if err := m.ops.WriteFile(lunAttr("file"), []byte(lun.backingFile())); err != nil {
-		return fmt.Errorf("set %s: %w", lunAttr("file"), err)
-	}
-	return m.rebind(ctx)
-}
-
-func (m *Manager) readLUN() (LUN, error) {
-	file, err := m.ops.ReadFile(lunAttr("file"))
-	if err != nil {
-		return LUN{}, fmt.Errorf("read %s: %w", lunAttr("file"), err)
-	}
-	cdrom, err := m.ops.ReadFile(lunAttr("cdrom"))
-	if err != nil {
-		return LUN{}, fmt.Errorf("read %s: %w", lunAttr("cdrom"), err)
-	}
-
-	lun := LUN{File: strings.TrimSpace(string(file)), CDROM: strings.TrimSpace(string(cdrom)) == "1"}
-	if lun.File == DefaultDiskFile {
-		lun.File = ""
-	}
-	return lun, nil
 }

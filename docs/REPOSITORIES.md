@@ -34,6 +34,8 @@ checkout. A directory of built firmware is not an independent build system.
 | Exit tunnel | `server/service/exit/`, `server/proto/exit.go`, `nexit/` |
 | EDID | `server/service/edid/` |
 | A/B kernel installation | `server/service/bootslot/`, `server/service/application/kernel.go`, SDK `scripts/ab/` |
+| Virtual media and `/data` ownership | `server/service/storage/`, `web/src/pages/storage/`, presentation `SetLUN` and `DiskGuard` |
+| Accounts, roles and permissions | `server/authn/`, `server/middleware/`, `server/service/auth/`, `server/router/` |
 
 Per-package `CLAUDE.md` files define the relevant invariants. The browser webcam
 path sends JPEG/NKMF into UVC; HDMI H.264 and WebUSB are independent paths.
@@ -114,7 +116,17 @@ kernel. Browser-only corrections do not require a kernel update.
 ## Upstream and release contracts
 
 Preserve the fork's presentation, bridge, media, assistant, exit and packaging
-behavior during upstream merges. `S30rndis` resolves the live gadget NIC from
+behavior during upstream merges.
+
+Accounts carry a role and upstream's permission grants (`authn/permissions.go`);
+administrators hold every grant. Upstream routes use upstream's grants. Fork routes
+whose feature has no grant in that catalog (presentation, passthrough, EDID, VNC,
+favicon, bridge, tunnels, exit, assistant, media slots, kernel slots and startup
+status) stay behind `RequireRole(authn.RoleAdmin)`, and their settings panels render
+for administrators only. Browser media bindings follow the console grants:
+`console.view` reads slot state and `console.control` binds a source. When an
+upstream group's gate changes, move fork routes out of it rather than letting them
+inherit the new gate. `S30rndis` resolves the live gadget NIC from
 ConfigFS, supports NCM, matches DHCP daemons by config path and supports repeated
 start after a rebind. Do not replace those contracts with hardcoded `usb0` logic.
 
@@ -194,6 +206,13 @@ a kernel trial, `S02zram` configures swap, `S03usbdev` prepares the gadget and
 `S95nanokvm` starts the application. The presentation manager binds the UDC after
 its functions and media event subscriptions are ready. Never reorder binding
 ahead of the UVC subscription: this fork forwards UVC class requests to userspace.
+
+The virtual disk serves the data partition the device also mounts at `/data`, and
+only one side may write it. `S01fs` mounts `/data` read-only when `/boot/usb.disk0`
+says the disk serves the raw partition writable. At runtime the presentation manager
+owns the mass-storage LUN: `service/storage` changes the medium only through
+`SetLUN`, and its partition guard makes `/data` read-only before the partition is
+served writable and writable again once it is not, after every gadget change.
 
 `new_app_init()` copies a fixed init-script list, SDK image assembly has two
 script lists, and extensions can install their own seeds at service startup.

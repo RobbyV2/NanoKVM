@@ -5,23 +5,21 @@ const se = {
       login: 'Logga in',
       changePassword: 'Byt lösenord',
       terminal: 'Terminal',
-      wifi: 'Wi-Fi'
+      wifi: 'Wi-Fi',
+      storage: 'Avbildningar och fildelning'
     },
     auth: {
       login: 'Logga in',
       placeholderUsername: 'Användarnamn',
       placeholderPassword: 'Lösenord',
-      placeholderCurrentPassword: 'Nuvarande lösenord',
       placeholderPassword2: 'Vänligen ange lösenordet igen',
       noEmptyUsername: 'Användarnamn krävs',
       noEmptyPassword: 'Lösenord krävs',
-      passwordLength: 'Lösenordet måste vara mellan 8 och 72 tecken',
       noAccount: 'Kunde inte hämta användarinformation, uppdatera sidan eller återställ lösenordet',
       invalidUser: 'Ogiltigt användarnamn eller lösenord',
       locked: 'För många inloggningar, försök igen senare',
       globalLocked: 'System under skydd, försök igen senare',
       error: 'Oväntat fel',
-      invalidCurrentPassword: 'Det nuvarande lösenordet är fel',
       changePassword: 'Byt lösenord',
       changePasswordDesc: 'För din enhets säkerhet, byt lösenord!',
       differentPassword: 'Lösenorden matchar inte',
@@ -40,7 +38,10 @@ const se = {
         change2: 'Webbinloggningslösenord',
         change3: 'Systemets root-lösenord (SSH-lösenord)',
         change4: 'För att återställa lösenordet, håll in BOOT-knappen på NanoKVM.'
-      }
+      },
+      placeholderCurrentPassword: 'Nuvarande lösenord',
+      passwordLength: 'Lösenordet måste vara mellan 8 och 72 tecken',
+      invalidCurrentPassword: 'Nuvarande lösenord är fel'
     },
     wifi: {
       title: 'Wi-Fi',
@@ -58,6 +59,17 @@ const se = {
         passPlaceholder: 'AP lösenord',
         verifyBtn: 'Verifiera'
       }
+    },
+    desktop: {
+      readOnly: 'Endast visning',
+      readOnlyTip:
+        'Det här kontot kan inte skicka tangentbords- eller musindata till målmaskinen, så konsolen visar bara skärmen.'
+    },
+    noConsole: {
+      title: 'Det här kontot har ingen konsolåtkomst',
+      description:
+        'Det har fått andra behörigheter. Öppna någon av sidorna det kan använda, eller be en administratör om konsolåtkomst.',
+      nothing: 'Det här kontot har ännu inga behörigheter. Be en administratör att ge några.'
     },
     screen: {
       scale: 'Skala',
@@ -213,27 +225,44 @@ const se = {
         disable: 'Inaktivera Endast-HID-läge'
       }
     },
-    image: {
-      title: 'Avbildningar',
-      loading: 'Laddar...',
-      empty: 'Inget hittades',
+    storage: {
+      title: 'Avbildningar och fildelning',
+      empty:
+        'Inga avbildningar än. Ladda upp en ISO eller IMG, eller kopiera en till disken från måldatorn.',
+      notAttached: 'Inget monterat',
+      attached: 'Monterat: {{name}}',
+      eject: 'Mata ut',
+      mount: 'Montera',
       mountMode: 'Monteringsläge',
-      mountFailed: 'Montering misslyckades',
-      mountDesc:
-        'I vissa system måste den virtuella disken avmonteras på fjärrvärden innan avbildningen monteras.',
-      unmountFailed: 'Avmontering misslyckades',
-      unmountDesc:
-        'I vissa system måste du manuellt mata ut från fjärrvärden innan du avmonterar avbildningen.',
-      refresh: 'Uppdatera avbildningslistan',
-      attention: 'Observera',
-      deleteConfirm: 'Är du säker på att du vill ta bort denna avbildning?',
-      okBtn: 'Ja',
-      cancelBtn: 'Nej',
+      mountModeDisk: 'Massminne',
+      mountModeCdrom: 'CD-ROM',
+      openManager: 'Öppna filhanteraren',
+      refresh: 'Uppdatera',
+      delete: 'Ta bort',
+      deleteTitle: 'Ta bort medium',
+      deleteConfirm: 'Ta bort {{name}}? Filerna i den går förlorade.',
+      downloadImage: 'Hämta avbildningen',
+      typePartition: 'Delade filer',
+      volumeLabel: 'Flyttbar disk',
+      groups: {
+        share: 'Fildelning',
+        images: 'Avbildningar'
+      },
+      failed: 'Åtgärden misslyckades',
+      hidOnly: 'Endast HID-läge: den virtuella disken är inte tillgänglig',
+      disabled: 'Den virtuella disken är avstängd (Inställningar - Enhet)',
+      force: {
+        title: 'Ta tillbaka mediet med tvång?',
+        desc: 'Måldatorn använder fortfarande mediet. Att ta tillbaka det räknar upp USB-enheten på nytt och kan förlora allt den ännu inte har skrivit till disken.',
+        menuHint:
+          'Måldatorn använder mediet. Öppna filhanteraren för att ta tillbaka det med tvång.'
+      },
       tips: {
         title: 'Hur man laddar upp',
         usb1: 'Anslut NanoKVM till din dator via USB.',
-        usb2: 'Säkerställ att den virtuella disken är monterad (Inställningar - Virtuell Disk).',
+        usb2: 'Montera de delade filerna i masslagringsläge på den här sidan.',
         usb3: 'Öppna den virtuella disken på din dator och kopiera avbildningsfilen till rotkatalogen.',
+        usb4: 'Mata ut disken när kopieringen är klar: avbilden visas då i listan.',
         scp1: 'Säkerställ att NanoKVM och din dator är på samma lokala nätverk.',
         scp2: 'Öppna en terminal på din dator och använd SCP-kommandot för att ladda upp avbildningen till /data på NanoKVM.',
         scp3: 'Exempel: scp din-avbildningssökväg root@din-nanokvm-ip:/data',
@@ -243,7 +272,68 @@ const se = {
         tf3: 'Sätt in TF-kortet i en kortläsare och anslut till din dator.',
         tf4: 'Kopiera avbildningsfilen till /data på TF-kortet.',
         tf5: 'Sätt in TF-kortet i NanoKVM.'
-      }
+      },
+      job: {
+        running: 'Arbetar med {{name}}'
+      },
+      enableDisk: {
+        title: 'Aktivera den virtuella disken?',
+        desc: 'För att montera ett medium krävs den virtuella disken, som är avstängd just nu. Aktivera den? Måldatorns tangentbord och mus kopplas från ett ögonblick.',
+        menuHint: 'Den virtuella disken är avstängd. Aktivera den under Inställningar - Enhet.',
+        askDevice:
+          'Den virtuella disken är avstängd. Ett konto med enhetsbehörighet måste aktivera den först.'
+      },
+      add: {
+        title: 'Lägg till medium',
+        upload: 'Ladda upp en ISO eller IMG',
+        fromUrl: 'Hämta från en URL',
+        url: 'URL till avbildningen',
+        urlRequired: 'Ange en URL',
+        onlyImages: 'Bara .iso- och .img-filer kan monteras',
+        dropHint: 'Dra en ISO eller IMG hit, eller klicka för att välja en fil',
+        cdromOnlyIso: 'En CD-ROM kan bara innehålla en ISO 9660-avbildning',
+        uploadFailed: 'Uppladdningen misslyckades',
+        downloadFailed: 'Nedladdningen misslyckades',
+        uploading: 'Laddar upp {{name}}',
+        downloading: 'Laddar ner {{name}}',
+        done: '{{name}} är klar',
+        checksumFailed: 'Avbilden matchar inte SHA-256-kontrollsumman.',
+        blocked: 'Måldatorn använder disken',
+        copyHint:
+          'Du kan också kopiera en avbildning till datapartitionen via SCP, eller från måldatorn.'
+      },
+      files: {
+        selectMedium: 'Välj ett medium för att visa filerna på det.',
+        reasonAttached: 'Mediet är kopplat till måldatorn.',
+        reasonAttachedHint:
+          'Mata ut det först: måldatorn måste släppa disken innan filerna kan läsas.',
+        reasonNotBrowsable: 'Mediet innehåller ett filsystem som filhanteraren inte kan öppna.',
+        reasonNoLoop: 'Enheten kan inte montera diskavbildningar (inget loop-stöd).',
+        reasonISOImage:
+          'En ISO 9660-avbildning kan inte bläddras här. Den kan fortfarande monteras på måldatorn.',
+        empty: 'Mappen är tom',
+        noMatch: 'Inga filer matchar sökningen.',
+        free: '{{size}} ledigt',
+        search: 'Sök i mappen',
+        sort: {
+          name: 'Namn',
+          size: 'Storlek',
+          type: 'Typ',
+          asc: 'Stigande',
+          desc: 'Fallande'
+        },
+        upload: 'Ladda upp en fil till mediet',
+        deleteFolderTitle: 'Ta bort mapp',
+        deleteFolderConfirm: 'Ta bort mappen {{name}} och allt innehåll? Detta kan inte ångras.',
+        uploading: 'Laddar upp…',
+        uploadFailed: 'Uppladdningen misslyckades',
+        download: 'Hämta',
+        delete: 'Ta bort',
+        deleteTitle: 'Ta bort fil',
+        deleteConfirm: 'Ta bort {{name}} från mediet?'
+      },
+      yes: 'Ja',
+      no: 'Nej'
     },
     script: {
       title: 'Skript',
@@ -285,19 +375,11 @@ const se = {
       ok: 'Ok'
     },
     download: {
-      title: 'Avbildningshämtare',
-      input: 'Ange en fjärravbildnings-URL',
-      ok: 'Ok',
-      disabled: '/data partitionen är skrivskyddad, kan inte hämta avbildning',
-      uploadbox: 'Släpp filen här eller klicka för att välja',
-      inputfile: 'Vänligen ange bildfilen',
-      NoISO: 'Ingen ISO',
+      disabled:
+        'Datapartitionen är skrivskyddad medan måldatorn använder den: nya avbildningar kan inte skrivas, men befintliga filer går fortfarande att hämta.',
       sha256: 'SHA-256 (valfrie)',
       sha256Placeholder: 'Skriv inn en SHA-256-kontrollsum på 64 tegn',
       invalidSHA256: 'SHA-256 må være en heksadesimal streng på 64 tegn',
-      failed: 'Nedlasting mislyktes',
-      success: 'Nedlasting fullført',
-      checksumFailed: 'Nedlasting mislyktes: SHA-256-verifisering mislyktes',
       cancel: 'Avbryt',
       cancelFailed: 'Kunne ikke avbryte nedlastingen'
     },
@@ -838,7 +920,14 @@ const se = {
         reboot: 'Starta om',
         rebootDesc: 'Är du säker på att du vill starta om NanoKVM?',
         okBtn: 'Ja',
-        cancelBtn: 'Nej'
+        cancelBtn: 'Nej',
+        diskLocked: 'Avstängd medan en avbildning är monterad (aktivering avbryter monteringen)',
+        diskCancelMount:
+          'Att aktivera den virtuella disken avbryter den monterade avbildningen och avbryter en pågående nedladdning eller uppladdning. Fortsätta?',
+        diskBreakDownload:
+          'Att aktivera den virtuella disken avbryter nedladdningen av avbildningar. Fortsätta?',
+        attention: 'Observera',
+        updateFailed: 'Det gick inte att uppdatera den virtuella enheten'
       },
       network: {
         title: 'Nätverk',
@@ -1271,17 +1360,17 @@ const se = {
       account: {
         title: 'Konto',
         webAccount: 'Webbkonto-namn',
-        role: 'Roll',
-        roles: {
-          admin: 'Administratör',
-          user: 'Användare'
-        },
         password: 'Lösenord',
         updateBtn: 'Byt',
         logoutBtn: 'Logga ut',
         logoutDesc: 'Är du säker på att du vill logga ut?',
         okBtn: 'Ja',
         cancelBtn: 'Nej',
+        role: 'Roll',
+        roles: {
+          admin: 'Administratör',
+          user: 'Användare'
+        },
         users: {
           title: 'Användare',
           create: 'Skapa användare',
@@ -1290,13 +1379,74 @@ const se = {
           deviceOwner: 'Enhetens ägare',
           resetPassword: 'Återställ lösenord',
           delete: 'Ta bort',
-          deleteConfirm: 'Ta bort den här användaren och återkalla alla dennes sessioner?',
+          deleteConfirm: 'Ta bort användaren och återkalla alla dess sessioner?',
           created: 'Användare skapad',
           deleted: 'Användare borttagen',
-          passwordUpdated: 'Lösenord uppdaterat',
+          passwordUpdated: 'Lösenordet uppdaterat',
           loadFailed: 'Kunde inte läsa in användare',
           saveFailed: 'Kunde inte spara användaren',
-          deleteFailed: 'Kunde inte ta bort användaren'
+          deleteFailed: 'Kunde inte ta bort användaren',
+          editPermissions: 'Behörigheter',
+          mcpLossTitle: 'Ta bort MCP-åtkomst',
+          mcpLossDesc:
+            '{{name}} förlorar MCP-åtkomst. MCP-API-nyckeln delas av hela enheten, så en kopia fungerar tills nyckeln skapas på nytt. Att skapa den på nytt kopplar från alla MCP-klienter tills de får den nya nyckeln.',
+          mcpLossRotate: 'Skapa ny MCP-API-nyckel',
+          mcpLossKeep:
+            'Den nuvarande nyckeln förblir giltig, och den som har en kopia kan fortfarande styra tangentbord och mus. Du kan skapa en ny senare i MCP-inställningarna.',
+          mcpKeyRotated: 'Ny MCP-API-nyckel skapad. MCP-klienter behöver den nya nyckeln.'
+        },
+        permissions: {
+          title: 'Behörigheter',
+          editTitle: 'Redigera behörigheter',
+          save: 'Spara',
+          saved: 'Sparat',
+          close: 'Stäng',
+          groupConsole: 'Konsol',
+          groupTarget: 'Målmaskin',
+          groupLibrary: 'Mediabibliotek',
+          groupHost: 'Den här enheten',
+          groupServices: 'Tjänster',
+          consoleView: 'Se skärmen',
+          consoleControl: 'Tangentbord och mus',
+          power: 'Ström och väckning',
+          mediumAttach: 'Anslut en media',
+          libraryRead: 'Bläddra i biblioteket',
+          libraryWrite: 'Hantera biblioteket',
+          terminal: 'Terminal och skript',
+          device: 'Enhetsinställningar',
+          network: 'Nätverksinställningar',
+          update: 'Systemuppdatering',
+          mcp: 'MCP-tjänst',
+          tailscale: 'Tailscale',
+          ai: 'AI-assistent',
+          effectConsoleView:
+            'Visar målmaskinens skärm och anger videoläge, upplösning, bildfrekvens och kvalitet som alla tittare delar.',
+          effectConsoleControl: 'Skickar tangentbords- och musinmatning till målmaskinen.',
+          effectPower:
+            'Slår på, stänger av och startar om målmaskinen samt hanterar listan med Wake-on-LAN-enheter.',
+          effectMediumAttach:
+            'Monterar och matar ut media på målmaskinen och utbyter filer med den via den delade partitionen.',
+          effectLibraryRead: 'Listar och hämtar avbildningarna och filerna i dem.',
+          effectLibraryWrite:
+            'Laddar upp, skapar och tar bort avbildningar och ändrar filerna i dem.',
+          effectTerminal: 'Ger ett root-skal på den här enheten, utan webbsessionen emellan.',
+          effectDevice:
+            'Gör det möjligt att slå på SSH (också root), starta om enheten, lämna den råa datapartitionen till målmaskinen och ändra OLED, HDMI, mDNS, minne och swap.',
+          effectNetwork:
+            'Ändrar Wi-Fi, DNS och TLS, vilket kan koppla bort den här enheten från nätet.',
+          effectUpdate: 'Installerar firmware och programpaket.',
+          effectMcp:
+            'Utfärdar en API-nyckel för hela enheten som styr tangentbord, mus och skärmbilder utanför webbsessionen; en kopia fungerar även efter att behörigheten tagits bort om inte nyckeln skapas på nytt, vilket erbjuds när behörigheten tas bort.',
+          effectTailscale: 'Ansluter den här enheten till ett VPN-nät.',
+          effectAi:
+            'Styr enheten via ett lokalt gränssnitt som de övriga behörigheterna inte begränsar, så det motsvarar full kontroll över enheten.',
+          fullControlWarning: 'Dessa behörigheter motsvarar full kontroll över enheten:',
+          emptyWarning: 'Det här kontot får inga funktioner alls och kan bara logga in.',
+          impliedBy: 'Ingår via {{name}}',
+          grantCount_one: '{{count}} behörighet',
+          grantCount: '{{count}} behörigheter',
+          adminAll: 'Administratörer har alla behörigheter',
+          catalogFailed: 'Behörighetslistan kunde inte läsas in. Stäng dialogen och försök igen.'
         }
       }
     },

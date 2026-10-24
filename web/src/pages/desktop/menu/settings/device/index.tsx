@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/auth.ts';
 import { Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +14,10 @@ import { VirtualDevices } from './virtual-devices.tsx';
 
 export const Device = () => {
   const { t } = useTranslation();
+  const { account } = useAuth();
+  // The media slots reshape the USB presentation, which stays with the
+  // administrator role.
+  const isAdmin = account.role === 'admin';
 
   return (
     <>
@@ -25,11 +30,16 @@ export const Device = () => {
         <Hdmi />
         <Divider className="opacity-50" />
 
+        {/* The emulated USB devices are device settings, like the rest of the tab */}
         <VirtualDevices />
         <Divider className="opacity-50" />
 
-        <MediaSlots />
-        <Divider className="opacity-50" />
+        {isAdmin && (
+          <>
+            <MediaSlots />
+            <Divider className="opacity-50" />
+          </>
+        )}
 
         <Oled />
         <MouseJiggler />

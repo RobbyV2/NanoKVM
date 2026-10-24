@@ -12,7 +12,6 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import * as api from '@/api/extensions/tunnel.ts';
-import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 
 import { BinarySource } from './binary.tsx';
 import { EnvTable } from './env.tsx';
@@ -334,7 +333,7 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
         {logs.length === 0 ? (
           <span className="text-xs text-neutral-500">{t('settings.tunnel.logsEmpty')}</span>
         ) : (
-          <ScrollArea className="h-[220px] rounded bg-neutral-800/60 p-2">
+          <div className="h-[220px] overflow-y-auto rounded bg-neutral-800/60 p-2">
             <div className="flex flex-col font-mono text-xs text-neutral-300">
               {logs.map((line, index) => (
                 <span key={index} className="whitespace-pre-wrap break-all">
@@ -342,7 +341,7 @@ export const Tunnel = ({ service, setIsLocked }: TunnelProps) => {
                 </span>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 

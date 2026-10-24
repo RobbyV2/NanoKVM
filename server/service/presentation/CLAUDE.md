@@ -117,12 +117,47 @@ Regenerate with the command in the header of `testdata/gen_traces.sh`:
 docker run --rm -v $PWD:/repo alpine:3.22 sh /repo/server/service/presentation/testdata/gen_traces.sh /repo
 ```
 
+The normal-mode traces end in the stock script's `write UDC` line, which a regeneration
+no longer records: `S03usbdev` leaves the bind to the server and binds only from a
+background fallback the tracer does not follow, while the plan `Compile` emits for a
+fresh gadget still ends in `OpBind`. Keep that line when regenerating and compare the
+rest of each trace against the script's output.
+
 It runs the unmodified logic of `kvmapp/system/init.d/S03usbdev` and `S03usbhid` under
 BusyBox ash against a sandbox tree, relocating only the four absolute roots the scripts
 reach outside the gadget. `mkdir`, `ln`, `cat`, `ls` and `echo` are replaced by shell
 functions rather than PATH stubs, because `echo` is an ash builtin and a PATH stub can
 never intercept it. Regenerate only when the init scripts change. Regenerating to make a
 failing test pass throws away the reason the test exists.
+
+## The disk medium is runtime state
+
+What the disk function's LUN serves belongs to `service/storage`, which changes it only
+through `SetLUN`. `setLUN` releases the medium with an empty-line write to `lun.0/file`,
+then writes `ro`, `cdrom` and `inquiry_string` on every change, then the new file, and
+rebinds. A host that locked the medium makes the release return `ErrMediumLocked`; with
+`force` the controller is unbound first, which clears that lock, and bound again whatever
+happens. An empty `File` leaves no medium attached. `Product` names the medium in the
+inquiry data, padded by bytes to the 16-byte field, and an `inquiry_string` the active
+profile chose for itself still wins. The USB product string is profile identity, so a
+mounted image never renames the composite device.
+
+A profile apply that keeps the disk linked does not re-point it. `keepsRuntimeMedium`
+drops the plan's `file`, `ro` and `cdrom` writes whenever the linked disk's profile names
+`DefaultDiskFile`, so an unrelated change (a camera mode, the HID layout, the network
+protocol) neither ejects a mounted image nor writes a flag the kernel refuses under an
+open file. A profile that names a file of its own still re-points the disk, and
+`releaseMediumFirst` releases the medium ahead of any flag that has to change. A disk the
+plan creates gets the compiled values, which match `S03usbdev`.
+
+The data partition has a second owner: the device mounts it at `/data`, and the host and
+the device must never both write it. `DiskGuard` (implemented by `service/storage`) is
+asked `ServePartition` before any write that makes the LUN serve `DefaultDiskFile`
+writable, from `setLUN` and from a plan's `lun.0/file` write alike, and a refusal fails the
+change before anything is released. `Settled` runs at the end of every `withGadgetLock`
+section with whether the linked disk now serves the partition writable. Both run under the
+gadget lock, which is what orders them against every other change to the LUN. The guard is
+installed before `Attach`, so the first bind of a start already settles `/data`.
 
 ## Compile is pure, Ops is the boundary
 
@@ -257,10 +292,9 @@ HID-only marker.
 against `0x0510` or `0x0623` second, and any `0x05xx` third. The tolerant tier exists
 because the old marker was an accident of the kernel version. A vendor bump to 5.15
 yields `0x050f` or `0x0515`, and without the tolerant tier `GetMode` returns
-`invalid mode flag`, which breaks `/api/hid/mode`, breaks `/api/storage/image/mounted`
-(`storage/image.go` hard-fails the endpoint on a `GetMode` error) and makes `SetHidMode`
-miss its already-in-that-mode short circuit and reboot the device. Do not tighten it to
-an exact match.
+`invalid mode flag`, which breaks `/api/hid/mode` and makes `SetHidMode` miss its
+already-in-that-mode short circuit and reboot the device. Do not tighten it to an exact
+match.
 
 ## The capability table, and why six IN is silicon
 

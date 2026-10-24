@@ -1,6 +1,6 @@
 import { createHashRouter, Outlet } from 'react-router-dom';
 
-import { AdminRoute, ProtectedRoute } from '@/components/auth';
+import { PermissionRoute, ProtectedRoute } from '@/components/auth';
 import { RouteError } from '@/components/error-boundary';
 import { Root } from '@/components/root';
 
@@ -37,9 +37,9 @@ export const router = createHashRouter([
       {
         errorElement: <RouteError />,
         element: (
-          <AdminRoute>
+          <PermissionRoute permission="terminal">
             <Outlet />
-          </AdminRoute>
+          </PermissionRoute>
         ),
         children: [
           {
@@ -48,6 +48,24 @@ export const router = createHashRouter([
             lazy: async () => {
               const { Terminal } = await import('./pages/terminal');
               return { Component: Terminal };
+            }
+          }
+        ]
+      },
+      {
+        errorElement: <RouteError />,
+        element: (
+          <PermissionRoute permission="library.read">
+            <Outlet />
+          </PermissionRoute>
+        ),
+        children: [
+          {
+            path: 'storage',
+            errorElement: <RouteError />,
+            lazy: async () => {
+              const { Storage } = await import('./pages/storage');
+              return { Component: Storage };
             }
           }
         ]
